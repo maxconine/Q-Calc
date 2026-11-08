@@ -886,18 +886,31 @@ fn sample_with(
 
 /// Native only: [`sample_with`] evenly in log x (a domain above 0), for a logarithmic x axis, which uneven
 /// samples would leave bare at its low end.
-fn sample_log(f: &dyn Fn(f64) -> Option<f64>, domain: (f64, f64), count: Option<f64>) -> Vec<GraphPoint> {
+fn sample_log(
+    f: &dyn Fn(f64) -> Option<f64>,
+    domain: (f64, f64),
+    count: Option<f64>,
+) -> Vec<GraphPoint> {
     let (l0, l1) = (jsmath::ln(domain.0), jsmath::ln(domain.1));
     let mut points: Vec<GraphPoint> = sample_with(&|t| f(jsmath::exp(t)), (l0, l1), count)
         .into_iter()
-        .map(|p| GraphPoint { x: jsmath::exp(p.x), y: p.y })
+        .map(|p| GraphPoint {
+            x: jsmath::exp(p.x),
+            y: p.y,
+        })
         .collect();
     // the ends exactly, not exp(ln(x))
     if let Some(p) = points.first_mut() {
-        *p = GraphPoint { x: domain.0, y: f(domain.0) };
+        *p = GraphPoint {
+            x: domain.0,
+            y: f(domain.0),
+        };
     }
     if let Some(p) = points.last_mut() {
-        *p = GraphPoint { x: domain.1, y: f(domain.1) };
+        *p = GraphPoint {
+            x: domain.1,
+            y: f(domain.1),
+        };
     }
     points
 }
@@ -1383,7 +1396,11 @@ pub fn build_graph(input: &str, options: &GraphOptions) -> Option<GraphResult> {
 
 /// `build_graph` from a parsed intent; `native` adds what only the native panels show (finer implicit curves,
 /// their turning points and intercepts, a surface's critical points and 3D grid, a pannable y).
-pub(crate) fn build_intent(intent: GraphIntent, options: &GraphOptions, native: bool) -> GraphResult {
+pub(crate) fn build_intent(
+    intent: GraphIntent,
+    options: &GraphOptions,
+    native: bool,
+) -> GraphResult {
     if intent.expression.is_empty() || intent.bounds_error.is_some() {
         let msg = intent.bounds_error.clone().unwrap_or_else(|| {
             if intent
@@ -1577,7 +1594,8 @@ pub fn build_native_graph(input: &str, options: &GraphOptions) -> Option<GraphRe
             })
             .collect();
         let close = |a: &CriticalPoint, b: &CriticalPoint| a.x == b.x && a.y == b.y;
-        r.critical_points.retain(|c| !marks.iter().any(|m| close(m, c)));
+        r.critical_points
+            .retain(|c| !marks.iter().any(|m| close(m, c)));
         marks.append(&mut r.critical_points);
         r.critical_points = marks;
     }

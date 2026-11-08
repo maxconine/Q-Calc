@@ -8,7 +8,11 @@ const MAX_SYMBOLIC_DET: usize = 10;
 
 pub(super) fn identity<F: Cells>(f: &F, n: usize) -> G<F::C> {
     (0..n)
-        .map(|i| (0..n).map(|j| if i == j { f.one() } else { f.zero() }).collect())
+        .map(|i| {
+            (0..n)
+                .map(|j| if i == j { f.one() } else { f.zero() })
+                .collect()
+        })
         .collect()
 }
 
@@ -23,7 +27,9 @@ pub(super) fn transpose<C: Clone>(g: &[Vec<C>]) -> G<C> {
 }
 
 pub(super) fn scale<F: Cells>(f: &F, g: &[Vec<F::C>], k: &F::C) -> G<F::C> {
-    g.iter().map(|r| r.iter().map(|v| f.mul(v, k)).collect()).collect()
+    g.iter()
+        .map(|r| r.iter().map(|v| f.mul(v, k)).collect())
+        .collect()
 }
 
 pub(super) fn sub<F: Cells>(f: &F, a: &[Vec<F::C>], b: &[Vec<F::C>]) -> G<F::C> {
@@ -74,11 +80,15 @@ pub(super) fn shift<F: Cells>(f: &F, a: &[Vec<F::C>], lambda: &F::C) -> G<F::C> 
 }
 
 pub(super) fn trace<F: Cells>(f: &F, a: &[Vec<F::C>]) -> F::C {
-    a.iter().enumerate().fold(f.zero(), |s, (i, r)| f.add(&s, &r[i]))
+    a.iter()
+        .enumerate()
+        .fold(f.zero(), |s, (i, r)| f.add(&s, &r[i]))
 }
 
 pub(super) fn dot<F: Cells>(f: &F, u: &[F::C], v: &[F::C]) -> F::C {
-    u.iter().zip(v).fold(f.zero(), |s, (x, y)| f.add(&s, &f.mul(x, y)))
+    u.iter()
+        .zip(v)
+        .fold(f.zero(), |s, (x, y)| f.add(&s, &f.mul(x, y)))
 }
 
 pub(super) fn column<C: Clone>(g: &[Vec<C>], j: usize) -> Vec<C> {
@@ -192,7 +202,9 @@ pub(super) fn det_expand<F: Cells>(f: &F, g: &[Vec<F::C>]) -> Option<F::C> {
     let mut dp: Vec<Option<F::C>> = vec![None; 1 << n];
     dp[0] = Some(f.one());
     for mask in 0..(1usize << n) {
-        let Some(cur) = dp[mask].clone() else { continue };
+        let Some(cur) = dp[mask].clone() else {
+            continue;
+        };
         if f.is_zero(&cur) {
             continue;
         }
@@ -207,7 +219,11 @@ pub(super) fn det_expand<F: Cells>(f: &F, g: &[Vec<F::C>]) -> Option<F::C> {
             // each column already used to the right of j is one inversion
             let inversions = (mask >> (j + 1)).count_ones();
             let term = f.mul(&cur, &g[row][j]);
-            let term = if inversions % 2 == 1 { f.neg(&term) } else { term };
+            let term = if inversions % 2 == 1 {
+                f.neg(&term)
+            } else {
+                term
+            };
             let slot = &mut dp[mask | (1 << j)];
             *slot = Some(match slot.take() {
                 Some(s) => f.add(&s, &term),
@@ -335,7 +351,12 @@ pub(super) fn solve<F: Cells>(f: &F, a: &[Vec<F::C>], b: &[F::C]) -> Solution<F:
     let aug: G<F::C> = a
         .iter()
         .zip(b)
-        .map(|(r, v)| r.iter().cloned().chain(std::iter::once(v.clone())).collect())
+        .map(|(r, v)| {
+            r.iter()
+                .cloned()
+                .chain(std::iter::once(v.clone()))
+                .collect()
+        })
         .collect();
     let red = reduce(f, &aug, true);
     if red.pivots.contains(&n) {
@@ -379,7 +400,13 @@ pub(super) fn charpoly<F: Cells>(f: &F, a: &[Vec<F::C>]) -> XR<Vec<F::C>> {
             .map(|(i, r)| {
                 r.iter()
                     .enumerate()
-                    .map(|(j, v)| if i == j { f.add(v, &c[n - k + 1]) } else { v.clone() })
+                    .map(|(j, v)| {
+                        if i == j {
+                            f.add(v, &c[n - k + 1])
+                        } else {
+                            v.clone()
+                        }
+                    })
                     .collect()
             })
             .collect();
@@ -397,7 +424,11 @@ pub(super) fn orthogonalize<F: Cells>(f: &F, vs: &[Vec<F::C>]) -> Vec<Vec<F::C>>
         let mut w = v.clone();
         for u in &out {
             let k = f.div(&dot(f, v, u), &dot(f, u, u));
-            w = w.iter().zip(u).map(|(x, y)| f.sub(x, &f.mul(&k, y))).collect();
+            w = w
+                .iter()
+                .zip(u)
+                .map(|(x, y)| f.sub(x, &f.mul(&k, y)))
+                .collect();
         }
         if w.iter().any(|x| !f.is_zero(x)) {
             out.push(f.tidy_vec(w));
@@ -455,14 +486,24 @@ pub(super) fn lu<F: Cells>(f: &F, a: &[Vec<F::C>]) -> Lu<F::C> {
                 .iter()
                 .zip(&pivot_row)
                 .enumerate()
-                .map(|(j, (v, p))| if j == k { f.zero() } else { f.sub(v, &f.mul(&fac, p)) })
+                .map(|(j, (v, p))| {
+                    if j == k {
+                        f.zero()
+                    } else {
+                        f.sub(v, &f.mul(&fac, p))
+                    }
+                })
                 .collect();
         }
     }
     let swapped = perm.iter().enumerate().any(|(i, p)| i != *p);
     let pm = swapped.then(|| {
         (0..m)
-            .map(|i| (0..m).map(|j| if perm[i] == j { f.one() } else { f.zero() }).collect())
+            .map(|i| {
+                (0..m)
+                    .map(|j| if perm[i] == j { f.one() } else { f.zero() })
+                    .collect()
+            })
             .collect()
     });
     (pm, l, u)
@@ -470,8 +511,7 @@ pub(super) fn lu<F: Cells>(f: &F, a: &[Vec<F::C>]) -> Lu<F::C> {
 
 pub(super) fn is_symmetric<F: Cells>(f: &F, a: &[Vec<F::C>]) -> bool {
     let n = a.len();
-    n == a[0].len()
-        && (0..n).all(|i| (0..i).all(|j| f.is_zero(&f.sub(&a[i][j], &a[j][i]))))
+    n == a[0].len() && (0..n).all(|i| (0..i).all(|j| f.is_zero(&f.sub(&a[i][j], &a[j][i]))))
 }
 
 /// `A = L Lᵀ` for a symmetric positive definite A.
@@ -482,7 +522,9 @@ pub(super) fn cholesky<F: Cells>(f: &F, a: &[Vec<F::C>]) -> XR<G<F::C>> {
     let n = a.len();
     let mut l = zeros(f, n, n);
     for j in 0..n {
-        let s = (0..j).fold(a[j][j].clone(), |s, k| f.sub(&s, &f.mul(&l[j][k], &l[j][k])));
+        let s = (0..j).fold(a[j][j].clone(), |s, k| {
+            f.sub(&s, &f.mul(&l[j][k], &l[j][k]))
+        });
         match f.sign(&s) {
             Some(1) => {}
             Some(_) => return fail("not positive definite, so no Cholesky factor"),
@@ -490,7 +532,9 @@ pub(super) fn cholesky<F: Cells>(f: &F, a: &[Vec<F::C>]) -> XR<G<F::C>> {
         }
         l[j][j] = f.sqrt(&s).ok_or(XFail::NotExact)?;
         for i in j + 1..n {
-            let s = (0..j).fold(a[i][j].clone(), |s, k| f.sub(&s, &f.mul(&l[i][k], &l[j][k])));
+            let s = (0..j).fold(a[i][j].clone(), |s, k| {
+                f.sub(&s, &f.mul(&l[i][k], &l[j][k]))
+            });
             l[i][j] = f.div(&s, &l[j][j]);
         }
     }
@@ -528,7 +572,12 @@ fn row_basis_raw<F: Cells>(f: &F, g: &[Vec<F::C>]) -> G<F::C> {
 }
 
 /// The sizes of the Jordan blocks for λ, largest first, from the ranks of (A − λI)^k.
-pub(super) fn jordan_blocks<F: Cells>(f: &F, a: &[Vec<F::C>], lambda: &F::C, mult: usize) -> XR<Vec<usize>> {
+pub(super) fn jordan_blocks<F: Cells>(
+    f: &F,
+    a: &[Vec<F::C>],
+    lambda: &F::C,
+    mult: usize,
+) -> XR<Vec<usize>> {
     let n = a.len();
     let b = shift(f, a, lambda);
     let mut ranks = vec![n];

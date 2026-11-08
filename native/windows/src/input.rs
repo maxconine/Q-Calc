@@ -12,9 +12,11 @@
 //! group into runs (a second apart at most), symbol swaps don't break them, a click or an arrow does.
 //!
 //! Drawing (`FieldView::paint`): the faint lead (inferred `(`s and the chained `ans`), the text with unit and
-//! known-word colours, a radical's bar over its radicand, ∫ Σ Π limits small beside the sign (upper over lower,
-//! empty ones as muted boxes), the blank-reason squiggle, the missing unit offered in a gap, the completion's ghost
-//! and the inferred `)`s after the end, the IME composition underlined at the caret, and a blinking caret.
+//! known-word colours, a root's sign and bar as one stroke, ∫ Σ Π limits small beside the sign (upper over lower,
+//! empty ones as muted boxes, the caret's a shade darker), the blank-reason squiggle, the missing unit offered in a
+//! gap, the completion's ghost and the inferred `)`s after the end, the IME composition underlined at the caret,
+//! and a blinking caret (the size of the limit or stacked slot it's in). With "stacked fractions and powers" on,
+//! `/` and `^` stack what's typed (stacked.rs) and the line is drawn in pieces (stacked_layout.rs).
 
 use qcalc_core::app::bounds::{self, Bound};
 use qcalc_core::app::undo::{self as core_undo, EditKind, Undo, UndoState};
@@ -31,6 +33,9 @@ pub struct Decorations {
     pub squiggle: Option<(u32, u32)>,
     /// a unit offered where a number was owed one (missingUnit): drawn muted in a gap at `at`
     pub offer: Option<(u32, String)>,
+    /// each trig argument that gets a faint `°` / ` rad` (core `angle_spans`): (where it starts, where its mark
+    /// goes)
+    pub angles: Vec<(u32, u32)>,
 }
 
 impl Decorations {
@@ -42,6 +47,17 @@ impl Decorations {
             .chain(self.squiggle.iter())
             .all(|&(_, b)| b <= len16)
             && self.offer.as_ref().is_none_or(|(a, _)| *a <= len16)
+            && self.angles.iter().all(|&(_, at)| at <= len16)
+    }
+
+    /// The angle marks to draw with the caret at `caret`: each argument's, unless the caret is in it (being typed,
+    /// its mark would sit where the caret does; it shows once the caret leaves).
+    pub fn angle_marks(&self, caret: u32) -> Vec<u32> {
+        self.angles
+            .iter()
+            .filter(|&&(start, at)| caret < start || caret > at)
+            .map(|&(_, at)| at)
+            .collect()
     }
 }
 
@@ -114,6 +130,10 @@ pub struct Field {
     /// "keep words": typed words stay words (settings.keepWords)
     pub keep_words: bool,
     clock: fn() -> f64,
+    /// "stacked fractions and powers" (settings.stackedMath, stacked.rs): `/` and `^` stack what's typed
+    stacked: bool,
+    /// the line's stacks while `stacked` is on (empty otherwise), kept with the text
+    stacks: crate::stacked::Parsed,
 }
 
 impl Default for Field {
@@ -127,6 +147,8 @@ impl Default for Field {
             limits: Vec::new(),
             keep_words: false,
             clock: now_ms,
+            stacked: false,
+            stacks: crate::stacked::Parsed::default(),
         }
     }
 }
@@ -167,6 +189,19 @@ impl Field {
         &self.limits
     }
 
+    /// The line's stacked fractions and powers (none while the setting is off).
+    pub fn stacks(&self) -> &crate::stacked::Parsed {
+        &self.stacks
+    }
+
+    /// Turns "stacked fractions and powers" on or off (settings.stackedMath).
+    pub fn set_stacked(&mut self, on: bool) {
+        if self.stacked != on {
+            self.stacked = on;
+            self.refreshed();
+        }
+    }
+
     #[cfg(test)]
     fn set_clock(&mut self, clock: fn() -> f64) {
         self.clock = clock;
@@ -178,6 +213,16 @@ impl Field {
             bounds::bounds_in(&self.text)
         } else {
             Vec::new()
+        };
+        self.stacks = if self.stacked && crate::stacked::may_stack(&self.text) {
+            let limits: Vec<(usize, usize)> = self
+                .limits
+                .iter()
+                .map(|b| (b.sign.max(0) as usize, b.end.max(0) as usize))
+                .collect();
+            crate::stacked::parse(&self.units(), &limits)
+        } else {
+            crate::stacked::Parsed::default()
         };
     }
 
@@ -232,10 +277,11 @@ impl Field {
 
     /// Clears the line and its undo (a new showing, a restored draft).
     pub fn reset(&mut self, text: &str) {
-        let (keep, clock) = (self.keep_words, self.clock);
+        let (keep, clock, stacked) = (self.keep_words, self.clock, self.stacked);
         *self = Field::default();
         self.keep_words = keep;
         self.clock = clock;
+        self.stacked = stacked;
         self.text = text.to_string();
         self.caret = self.text.len();
         self.anchor = self.caret;
@@ -292,6 +338,9 @@ impl Field {
 
     /// One typed character.
     pub fn type_char(&mut self, c: char) {
+        if self.stacked && self.stacked_typing(c) {
+            return;
+        }
         let (a, b) = self.selection();
         if let Some((t, s, e)) = crate::text_rules::wrap(&self.text, a, b, c) {
             self.text = t;
@@ -458,14 +507,21 @@ impl Field {
     fn move_to(&mut self, i: usize, extend: bool) {
         let dir = if i >= self.caret { 1 } else { -1 };
         let i = if extend { i } else { self.snapped(i, dir) };
+        let i = self.stack_snapped(i);
         self.caret = i;
         if !extend {
             self.anchor = i;
+        } else if self.on_stacks() {
+            self.grow_selection();
         }
         self.break_run();
     }
 
     pub fn left(&mut self, word: bool, extend: bool) {
+        if extend && !word && self.on_stacks() {
+            self.stack_extend(false);
+            return;
+        }
         let i = if self.has_selection() && !extend {
             self.selection().0
         } else if word {
@@ -477,6 +533,10 @@ impl Field {
     }
 
     pub fn right(&mut self, word: bool, extend: bool) {
+        if extend && !word && self.on_stacks() {
+            self.stack_extend(true);
+            return;
+        }
         let i = if self.has_selection() && !extend {
             self.selection().1
         } else if word {
@@ -509,6 +569,9 @@ impl Field {
         let end = self.text[..end].trim_end().len().max(start);
         self.anchor = start;
         self.caret = end;
+        if self.on_stacks() {
+            self.grow_selection();
+        }
         self.break_run();
     }
 
@@ -518,8 +581,14 @@ impl Field {
             if self.caret == 0 {
                 return false;
             }
+            if word && self.on_stacks() {
+                return self.stack_delete(self.word_left(self.caret));
+            }
             if !word {
                 if self.bound_key("Backspace") {
+                    return true;
+                }
+                if self.on_stacks() && self.stack_backspace() {
                     return true;
                 }
                 if let Some((t, c)) =
@@ -534,6 +603,8 @@ impl Field {
             } else {
                 self.prev(self.caret)
             };
+        } else if self.keep_slot_selected() {
+            return true;
         }
         let (a, b) = self.selection();
         self.text.replace_range(a..b, "");
@@ -558,11 +629,16 @@ impl Field {
             if !word && self.bound_key("Delete") {
                 return true;
             }
+            if self.on_stacks() && self.stack_delete_forward(word) {
+                return true;
+            }
             self.anchor = if word {
                 self.word_right(self.caret)
             } else {
                 self.next(self.caret)
             };
+        } else if self.keep_slot_selected() {
+            return true;
         }
         let (a, b) = self.selection();
         self.text.replace_range(a..b, "");
@@ -578,6 +654,9 @@ impl Field {
             return None;
         }
         let s = self.selected_text().to_string();
+        if self.keep_slot_selected() {
+            return Some(s);
+        }
         let (a, b) = self.selection();
         self.text.replace_range(a..b, "");
         self.caret = a;
@@ -645,6 +724,255 @@ impl Field {
     }
 }
 
+/// Stacked fractions and powers (stacked.rs): the typing, moves, selections and deletes that keep a stack whole.
+/// Each runs only while the setting is on and the line has a stack, so a line without one is as it always was.
+impl Field {
+    fn units(&self) -> Vec<u16> {
+        self.text.encode_utf16().collect()
+    }
+
+    fn on_stacks(&self) -> bool {
+        self.stacked && !self.stacks.is_empty()
+    }
+
+    fn at16(&self, i: usize) -> usize {
+        self.to_utf16(i) as usize
+    }
+
+    /// The caret at UTF-16 `c`, nothing selected.
+    fn caret_to16(&mut self, c: usize) {
+        self.caret = self.index_of_utf16(c as u32);
+        self.anchor = self.caret;
+        self.break_run();
+    }
+
+    /// A stacked.rs edit made: the caret moved alone, or the line replaced (`kind` for undo).
+    fn take_edit(&mut self, e: crate::stacked::Edit, kind: Option<EditKind>) {
+        let text = String::from_utf16_lossy(&e.text);
+        if text == self.text {
+            self.caret_to16(e.caret);
+        } else {
+            let caret = self.index16_in(&text, e.caret as u32);
+            self.replace_all(text, caret, kind);
+        }
+    }
+
+    /// `/`, `^`, `)` and a term after a stack, while the setting is on: true when the key was taken.
+    fn stacked_typing(&mut self, c: char) -> bool {
+        use crate::stacked;
+        let (a, b) = self.selection();
+        let (a16, b16) = (self.at16(a), self.at16(b));
+        // a ∫ Σ Π's limits are never stacked: typed there, `/` and `^` are the line's own
+        if self
+            .limits
+            .iter()
+            .any(|l| a16 as i64 > l.sign && a16 as i64 <= l.end)
+        {
+            return false;
+        }
+        let u = self.units();
+        let edit = match c {
+            '/' | '÷' => Some(stacked::slash_key(&u, a16, b16)),
+            '^' if a == b => {
+                // a ∫ Σ Π's `^` moves between its limits first
+                if self.bound_key("^") {
+                    return true;
+                }
+                stacked::power_key(&u, a16)
+            }
+            ')' if a == b => {
+                if let Some(to) = stacked::close_key(&self.stacks, a16) {
+                    self.caret_to16(stacked::snap(&self.stacks, to, a16, u.len()));
+                    return true;
+                }
+                None
+            }
+            _ if a == b && c.len_utf16() == 1 => {
+                stacked::term_after_stack(&u, &self.stacks, a16, c as u32 as u16)
+            }
+            _ => None,
+        };
+        let Some(e) = edit else { return false };
+        self.text = String::from_utf16_lossy(&e.text);
+        self.caret = self.index_of_utf16(e.caret as u32);
+        self.anchor = self.caret;
+        self.after_typing();
+        self.recorded(Some(EditKind::Insert));
+        true
+    }
+
+    /// Byte `i`, moved off a place the caret never stops (StackedMath.dead), on the way it was going.
+    fn stack_snapped(&self, i: usize) -> usize {
+        if !self.on_stacks() {
+            return i;
+        }
+        let (to, from) = (self.at16(i), self.at16(self.caret));
+        let s = crate::stacked::snap(&self.stacks, to, from, self.at16(self.text.len()));
+        if s == to {
+            i
+        } else {
+            self.index_of_utf16(s as u32)
+        }
+    }
+
+    /// The selection grown to whole stacks (StackedMath.expand), its anchor kept on the side it was.
+    fn grow_selection(&mut self) {
+        let (lo, hi) = self.selection();
+        if lo == hi {
+            return;
+        }
+        let n = self.at16(self.text.len());
+        let (glo, ghi) = crate::stacked::expand(&self.stacks, self.at16(lo), self.at16(hi), n);
+        let (glo, ghi) = (
+            self.index_of_utf16(glo as u32),
+            self.index_of_utf16(ghi as u32),
+        );
+        if self.anchor <= self.caret {
+            (self.anchor, self.caret) = (glo, ghi);
+        } else {
+            (self.anchor, self.caret) = (ghi, glo);
+        }
+    }
+
+    /// Shift+← / Shift+→: the moving end one place on, skipping the dead ones; a step that would leave the grown
+    /// selection as it was goes on until it changes it (out of a stack taken whole, say).
+    fn stack_extend(&mut self, forward: bool) {
+        let n = self.at16(self.text.len());
+        let before = self.selection();
+        let anchor = self.at16(self.anchor);
+        let mut c = self.at16(self.caret);
+        loop {
+            let from = c;
+            c = if forward {
+                (c + 1).min(n)
+            } else {
+                c.saturating_sub(1)
+            };
+            c = crate::stacked::snap(&self.stacks, c, from, n);
+            if c == anchor {
+                self.caret_to16(c);
+                return;
+            }
+            let (lo, hi) = (anchor.min(c), anchor.max(c));
+            let (glo, ghi) = crate::stacked::expand(&self.stacks, lo, hi, n);
+            let grown = (
+                self.index_of_utf16(glo as u32),
+                self.index_of_utf16(ghi as u32),
+            );
+            if grown != before || c == from {
+                if anchor <= c {
+                    (self.anchor, self.caret) = grown;
+                } else {
+                    (self.caret, self.anchor) = grown;
+                }
+                break;
+            }
+        }
+        self.break_run();
+    }
+
+    /// ↑ from a denominator to its numerator, ↓ back, to the place nearest across (`x(i)`: the caret place
+    /// before UTF-16 `i` as drawn). False outside a fraction: the key goes on to the history.
+    pub fn stack_vertical(&mut self, up: bool, x: impl Fn(usize) -> f32) -> bool {
+        if !self.on_stacks() || self.has_selection() {
+            return false;
+        }
+        match crate::stacked::vertical(&self.stacks, self.at16(self.caret), up, x) {
+            Some(to) => {
+                self.caret_to16(to);
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// Backspace after a stack steps in; at a slot's start it takes the stack apart; emptying a bare slot leaves
+    /// an empty `()`.
+    fn stack_backspace(&mut self) -> bool {
+        let c = self.at16(self.caret);
+        if let Some(e) = crate::stacked::backspace(&self.units(), &self.stacks, c) {
+            self.take_edit(e, Some(EditKind::Delete));
+            return true;
+        }
+        let prev = self.at16(self.prev(self.caret));
+        self.keep_slot(prev, c)
+    }
+
+    /// Delete before a hidden `/ ^ ( ) ·` steps over it; Ctrl+Delete keeps to the slot or takes whole stacks.
+    fn stack_delete_forward(&mut self, word: bool) -> bool {
+        if word {
+            return self.stack_delete(self.word_right(self.caret));
+        }
+        let c = self.at16(self.caret);
+        let n = self.at16(self.text.len());
+        if self.stacks.hidden.contains(&c) {
+            let mut to = c;
+            while to < n && self.stacks.hidden.contains(&to) {
+                to += 1;
+            }
+            self.caret_to16(crate::stacked::snap(&self.stacks, to, c, n));
+            return true;
+        }
+        let next = self.at16(self.next(self.caret));
+        self.keep_slot(c, next)
+    }
+
+    /// A word delete to byte `to`: inside a slot it stops at the slot's edge (at the edge it's a plain Backspace or
+    /// Delete), outside one it takes whole stacks.
+    fn stack_delete(&mut self, to: usize) -> bool {
+        let u = self.units();
+        let (c, to16) = (self.at16(self.caret), self.at16(to));
+        let range = crate::stacked::deletion(&self.stacks, c, to16, u.len(), |i| {
+            crate::stacked::term_at(&u, i)
+        });
+        let Some((lo, hi)) = range else {
+            return if to16 < c {
+                self.backspace(false)
+            } else {
+                self.delete(false)
+            };
+        };
+        if self.keep_slot(lo, hi) {
+            return true;
+        }
+        let mut text = u[..lo].to_vec();
+        text.extend_from_slice(&u[hi..]);
+        self.take_edit(
+            crate::stacked::Edit { text, caret: lo },
+            Some(EditKind::Delete),
+        );
+        true
+    }
+
+    /// Deleting all of a bare slot (UTF-16 `lo..hi`, the 42 of `42/(12)`) leaves an empty `()` with the caret in
+    /// it, so the stack keeps its shape (StackedMath.emptying).
+    fn keep_slot(&mut self, lo: usize, hi: usize) -> bool {
+        if !self.on_stacks() {
+            return false;
+        }
+        let Some(at) = crate::stacked::emptying(&self.stacks, lo, hi) else {
+            return false;
+        };
+        let u = self.units();
+        let mut text = u[..lo].to_vec();
+        text.extend("()".encode_utf16());
+        text.extend_from_slice(&u[hi..]);
+        self.take_edit(
+            crate::stacked::Edit {
+                text,
+                caret: at + 1,
+            },
+            Some(EditKind::Delete),
+        );
+        true
+    }
+
+    fn keep_slot_selected(&mut self) -> bool {
+        let (a, b) = self.selection();
+        self.on_stacks() && self.keep_slot(self.at16(a), self.at16(b))
+    }
+}
+
 #[cfg(windows)]
 pub use view::*;
 
@@ -652,6 +980,7 @@ pub use view::*;
 mod view {
     use super::{Decorations, Field, radicand_ranges};
     use crate::render::{Canvas, Color, Rect, caret_x, hit, measure, size, with_alpha};
+    use crate::stacked_layout::{self as stacked, Geom};
     use windows::Win32::Graphics::DirectWrite::{
         DWRITE_TEXT_RANGE, IDWriteTextLayout, IDWriteTextLayout1,
     };
@@ -674,6 +1003,8 @@ mod view {
         pub placeholder: &'a str,
         /// the caret's blink phase: false draws no caret this frame
         pub caret_on: bool,
+        /// what an angle mark says: `°` in degrees, ` rad` in radians
+        pub angle_mark: &'a str,
     }
 
     #[derive(PartialEq)]
@@ -681,6 +1012,10 @@ mod view {
         text: String,
         offer: Option<(u32, String)>,
         bounds_on: bool,
+        /// the angle marks inside the line (each opens a gap after its argument), and their text
+        marks: (Vec<u32>, String),
+        /// the line has stacked fractions or powers (the setting is on)
+        stacked: bool,
     }
 
     /// Small layouts drawn every frame (ghost parens, `ans`, the completion, the placeholder) kept a while.
@@ -703,6 +1038,8 @@ mod view {
         ghosts: Vec<(String, IDWriteTextLayout)>,
         /// the faint `ans`'s box at the last paint, window DIPs (its hover label, word_tip.rs)
         pub ans_rect: Option<Rect>,
+        /// where a stacked line's places and pieces go (stacked_layout.rs), made with the layout
+        geom: Option<Geom>,
     }
 
     /// One limit to draw small beside its sign: its text, where it goes, and which.
@@ -710,7 +1047,12 @@ mod view {
         start: u32,
         end: u32,
         upper: bool,
+        /// which sign's
+        bound: usize,
     }
+
+    /// The caret drawn by the line itself (in a limit or a stacked slot): x, top and height, window DIPs.
+    type OwnCaret = (f32, f32, f32);
 
     fn range(a: u32, b: u32) -> DWRITE_TEXT_RANGE {
         DWRITE_TEXT_RANGE {
@@ -726,7 +1068,10 @@ mod view {
         /// Where UTF-16 `a..b` of the text was drawn at the last paint: (left, right), window DIPs (word_tip.rs).
         pub fn span_x(&self, a: u32, b: u32) -> Option<(f32, f32)> {
             let (_, l) = self.cached.as_ref()?;
-            Some((self.text_x + caret_x(l, a), self.text_x + caret_x(l, b)))
+            Some((
+                self.text_x + x_at(&self.geom, l, a),
+                self.text_x + x_at(&self.geom, l, b),
+            ))
         }
 
         /// A small one-line layout at the display size, from the cache when it was drawn lately.
@@ -750,12 +1095,15 @@ mod view {
             c: &Canvas,
             field: &Field,
             deco: Option<&Decorations>,
+            marks: (Vec<u32>, String),
             h: f32,
         ) -> Option<IDWriteTextLayout> {
             let key = Key {
                 text: field.text().to_string(),
                 offer: deco.and_then(|d| d.offer.clone()),
                 bounds_on: !field.limits().is_empty(),
+                marks,
+                stacked: !field.stacks().is_empty(),
             };
             if let Some((k, l)) = &self.cached
                 && *k == key
@@ -764,6 +1112,10 @@ mod view {
             }
             let l = c.gfx.layout(field.text(), &c.gfx.fonts.display, 0.0, h)?;
             let l1: Option<IDWriteTextLayout1> = l.cast().ok();
+            // a stacked line's slots small, its hidden `/ ^ ( )` slivers (stacked_layout.rs)
+            let stacks = field.stacks();
+            let looks = (!stacks.is_empty())
+                .then(|| stacked::apply_sizes(&l, stacks, key.text.encode_utf16().count()));
             // SAFETY: setters on a live layout, ranges inside the text
             unsafe {
                 for b in field.limits() {
@@ -800,17 +1152,33 @@ mod view {
                         }
                     }
                 }
-                if let Some(d) = deco
-                    && let (Some((at, text)), Some(l1)) = (&d.offer, &l1)
-                    && *at > 0
-                {
+                // the offered unit's and the angle marks' gaps, after the character before each
+                let mut gaps: Vec<(u32, f32)> = Vec::new();
+                let mut gap = |at: u32, text: &str| {
                     let w = c
                         .gfx
                         .layout(text, &c.gfx.fonts.display, 0.0, h)
                         .map_or(0.0, |o| measure(&o).0);
-                    let _ = l1.SetCharacterSpacing(0.0, w, 0.0, range(at - 1, *at));
+                    match gaps.iter_mut().find(|g| g.0 == at) {
+                        Some(g) => g.1 += w,
+                        None => gaps.push((at, w)),
+                    }
+                };
+                for &at in &key.marks.0 {
+                    gap(at, &key.marks.1);
+                }
+                if let Some((at, text)) = deco.and_then(|d| d.offer.as_ref())
+                    && *at > 0
+                {
+                    gap(*at, text);
+                }
+                if let Some(l1) = &l1 {
+                    for (at, w) in gaps {
+                        let _ = l1.SetCharacterSpacing(0.0, w, 0.0, range(at - 1, at));
+                    }
                 }
             }
+            self.geom = looks.map(|looks| stacked::build(c, &l, &key.text, stacks, looks, h));
             self.cached = Some((key, l.clone()));
             Some(l)
         }
@@ -819,7 +1187,14 @@ mod view {
         pub fn paint(&mut self, c: &Canvas, field: &Field, r: Rect, focused: bool, x: &Extras) {
             self.rect = r;
             let t = c.theme;
-            c.push_clip(Rect::new(r.x - 2.0, r.y - 6.0, r.w + 4.0, r.h + 12.0));
+            // a stacked line reaches past its row, a fraction in a denominator lower still
+            let room = if field.stacks().is_empty() { 6.0 } else { 14.0 };
+            c.push_clip(Rect::new(
+                r.x - 2.0,
+                r.y - room,
+                r.w + 4.0,
+                r.h + 2.0 * room,
+            ));
             let len16 = field.to_utf16(field.text().len());
             let deco = x.deco.filter(|d| d.fits(len16));
             // the faint lead: the inferred `(`s, then the chained `ans`
@@ -857,24 +1232,51 @@ mod view {
                 if !x.placeholder.is_empty()
                     && let Some(l) = self.ghost(c, x.placeholder, r.h)
                 {
+                    let roots = radicand_ranges(x.placeholder);
+                    if !roots.is_empty() {
+                        hide_signs(c, &l, &roots);
+                    }
                     c.text_plain(&l, r.x, r.y, with_alpha(t.muted, 0.8));
-                    for (a, b) in radicand_ranges(x.placeholder) {
-                        radical_bar(c, &l, r.x, r.y, a, b, with_alpha(t.muted, 0.8));
+                    let base = r.y + stacked::baseline(&l);
+                    for &(a, b) in &roots {
+                        root(
+                            c,
+                            &l,
+                            &None,
+                            r.x,
+                            base,
+                            (a, b),
+                            x.placeholder,
+                            with_alpha(t.muted, 0.8),
+                        );
                     }
                 }
             }
-            let Some(layout) = self.layout(c, field, deco, r.h) else {
+            let caret16 = field.to_utf16(field.caret());
+            let marks = deco.map_or_else(Vec::new, |d| d.angle_marks(caret16));
+            let inside: Vec<u32> = marks
+                .iter()
+                .copied()
+                .filter(|&at| at > 0 && at < len16)
+                .collect();
+            let mark_text = if marks.is_empty() { "" } else { x.angle_mark };
+            let Some(layout) =
+                self.layout(c, field, deco, (inside.clone(), mark_text.to_string()), r.h)
+            else {
                 c.pop_clip();
                 return;
             };
-            let caret16 = field.to_utf16(field.caret());
+            let geom = self.geom.take();
+            let xat = |p: u32| x_at(&geom, &layout, p);
             let comp_w = self.composition.as_ref().map_or(0.0, |comp| {
                 c.gfx
                     .layout(&comp.text, &c.gfx.fonts.display, 0.0, r.h)
                     .map_or(0.0, |l| measure(&l).0)
             });
-            let caret = caret_x(&layout, caret16);
-            let (w, _) = measure(&layout);
+            let caret = xat(caret16);
+            let w = geom
+                .as_ref()
+                .map_or_else(|| measure(&layout).0, |g| g.width);
             let ghost = x
                 .completion
                 .filter(|_| field.caret_at_end() && self.composition.is_none());
@@ -894,20 +1296,23 @@ mod view {
             self.text_x = x0;
             if field.has_selection() {
                 let (a, b) = field.selection();
-                let (xa, xb) = (
-                    caret_x(&layout, field.to_utf16(a)),
-                    caret_x(&layout, field.to_utf16(b)),
-                );
-                c.fill_round(
-                    Rect::new(x0 + xa, r.y + r.h * 0.5 - 15.0, xb - xa, 30.0),
-                    3.0,
-                    t.selection,
-                );
+                let (a, b) = (field.to_utf16(a), field.to_utf16(b));
+                // a stacked selection's highlight takes in its fractions' bars, and the slots above and below
+                let ((xa, xb), (top, h)) = match &geom {
+                    Some(g) => (
+                        g.span(a, b),
+                        g.band(a, b).unwrap_or((r.h * 0.5 - 18.0, 36.0)),
+                    ),
+                    None => ((xat(a), xat(b)), (r.h * 0.5 - 15.0, 30.0)),
+                };
+                c.fill_round(Rect::new(x0 + xa, r.y + top, xb - xa, h), 3.0, t.selection);
             }
             // a composition opens a gap at the caret: the text after it moves right
             let split = self.composition.is_some().then_some(caret);
             let draw = |color: Color, from: f32, to: f32| {
-                if let Some(at) = split {
+                if let Some(g) = &geom {
+                    g.draw(c, &layout, x0, r.y, r.h, color);
+                } else if let Some(at) = split {
                     clip_x(c, x0 + from, x0 + to.min(at), r, || {
                         c.text(&layout, x0, r.y, color)
                     });
@@ -920,6 +1325,7 @@ mod view {
                     clip_x(c, x0 + from, x0 + to, r, || c.text(&layout, x0, r.y, color));
                 }
             };
+            let roots = radicand_ranges(field.text());
             if !field.text().is_empty() {
                 // .quick-word in accent mixed 85% with ink, .quick-unit in the accent: drawing effects on the
                 // layout, so the line is still one draw
@@ -943,7 +1349,24 @@ mod view {
                         }
                     }
                 }
+                // a root's sign is drawn with its bar (`root`), and a stack's hidden characters not at all
+                if !roots.is_empty() {
+                    hide_signs(c, &layout, &roots);
+                }
+                if !field.stacks().is_empty()
+                    && let Some(clear) = c.own_brush(with_alpha(t.ink, 0.0))
+                {
+                    for &k in &field.stacks().hidden {
+                        // SAFETY: a setter on a live layout, the range inside the text
+                        let _ = unsafe {
+                            layout.SetDrawingEffect(&clear, range(k as u32, k as u32 + 1))
+                        };
+                    }
+                }
                 draw(t.ink, -1000.0, w + 1000.0);
+            }
+            if let Some(g) = &geom {
+                g.decorate(c, x0, r.y);
             }
             let shift = |p: u32| {
                 if split.is_some() && p >= caret16 {
@@ -952,31 +1375,65 @@ mod view {
                     0.0
                 }
             };
-            // a radical's bar over what it takes
-            for (a, b) in radicand_ranges(field.text()) {
-                radical_bar(c, &layout, x0 + shift(a), r.y, a, b, t.ink);
+            // a root's sign and the bar over what it takes, one stroke
+            // (the baseline asked of the layout only for a line with a root)
+            let base = if roots.is_empty() {
+                0.0
+            } else {
+                r.y + geom
+                    .as_ref()
+                    .map_or_else(|| stacked::baseline(&layout), |g| g.base)
+            };
+            for &(a, b) in &roots {
+                root(
+                    c,
+                    &layout,
+                    &geom,
+                    x0 + shift(a),
+                    base,
+                    (a, b),
+                    field.text(),
+                    t.ink,
+                );
             }
-            self.limits(c, field, &layout, x0, r);
+            let in_limit = (focused && !field.has_selection())
+                .then(|| crate::stacked::limit_slot(field.limits(), caret16 as usize))
+                .flatten();
+            let limit_caret = self.limits(c, field, &xat, x0, r, (in_limit, caret16));
             if let Some(d) = deco {
                 // .quick-squiggle: a wavy line, muted at 70%, under where a blank answer stops reading
                 if let Some((a, b)) = d.squiggle {
-                    let (xa, xb) = (caret_x(&layout, a), caret_x(&layout, b));
+                    let (xa, xb) = (xat(a), xat(b));
                     squiggle(
                         c,
                         x0 + xa,
                         x0 + xb,
-                        r.y + r.h * 0.5 + 13.0,
+                        // under a stacked line's denominators
+                        r.y + r.h * 0.5 + if geom.is_some() { 19.0 } else { 13.0 },
                         with_alpha(t.muted, 0.7),
                     );
                 }
                 // the unit offered after its number, muted, in the gap opened for it
+                let mut offer_at = None;
                 if let Some((at, text)) = &d.offer
                     && *at > 0
                     && let Some(l) = self.ghost(c, text, r.h)
                 {
                     let ow = measure(&l).0;
-                    let end = caret_x(&layout, *at);
+                    let end = xat(*at);
                     c.text_plain(&l, x0 + end - ow, r.y, t.muted);
+                    offer_at = Some((*at, ow));
+                }
+                // the angle marks inside the line, in the gaps opened after their arguments (before an offer's)
+                if !inside.is_empty()
+                    && let Some(l) = self.ghost(c, mark_text, r.h)
+                {
+                    let mw = measure(&l).0;
+                    for &at in &inside {
+                        let ow = offer_at.filter(|o| o.0 == at).map_or(0.0, |o| o.1);
+                        let end = xat(at) + shift(at);
+                        c.text_plain(&l, x0 + end - ow - mw, r.y, t.muted);
+                    }
                 }
             }
             // after the end: the completion's rest (caret at the end), then the inferred `)`s
@@ -985,6 +1442,14 @@ mod view {
                 && let Some(l) = self.ghost(c, g, r.h)
             {
                 c.text_plain(&l, tail, r.y, with_alpha(t.muted, 0.8));
+                tail += measure(&l).0;
+            }
+            // an angle mark for an argument still open at the end of the line
+            if marks.contains(&len16)
+                && len16 > 0
+                && let Some(l) = self.ghost(c, mark_text, r.h)
+            {
+                c.text_plain(&l, tail, r.y, t.muted);
                 tail += measure(&l).0;
             }
             let trailing = deco.map_or(0, |d| d.trailing);
@@ -1006,27 +1471,54 @@ mod view {
             } else {
                 self.caret_at = x0 + caret;
             }
-            if focused && x.caret_on {
-                let mid = r.y + r.h * 0.5;
-                let half = size::DISPLAY * 0.62;
-                c.line(
-                    self.caret_at + 0.5,
-                    mid - half,
-                    self.caret_at + 0.5,
-                    mid + half,
-                    1.5,
-                    // grey, never the accent: a green caret read as a selection or a mode
-                    t.muted,
-                );
+            // in a ∫ Σ Π limit or a stacked slot the caret is that size and at that height
+            let own: Option<OwnCaret> = if self.composition.is_some() || field.has_selection() {
+                None
+            } else {
+                limit_caret.or_else(|| {
+                    let (cx, top, h) = geom.as_ref()?.caret(caret16 as usize)?;
+                    Some((x0 + cx, r.y + top, h))
+                })
+            };
+            // a stacked line's selection shows no caret (it would stand at the line's full height through a slot)
+            if focused && x.caret_on && !(geom.is_some() && field.has_selection()) {
+                // grey, never the accent: a green caret read as a selection or a mode
+                if let Some((cx, top, h)) = own {
+                    c.fill(Rect::new(cx - 0.75, top, 1.5, h), t.muted);
+                } else {
+                    let mid = r.y + r.h * 0.5;
+                    let half = size::DISPLAY * 0.62;
+                    c.line(
+                        self.caret_at + 0.5,
+                        mid - half,
+                        self.caret_at + 0.5,
+                        mid + half,
+                        1.5,
+                        t.muted,
+                    );
+                }
             }
+            if let Some((cx, _, _)) = own {
+                self.caret_at = cx;
+            }
+            self.geom = geom;
             c.pop_clip();
         }
 
-        /// ∫ Σ Π limits: drawn small beside the sign, upper over lower; empty ones as muted boxes.
-        fn limits(&self, c: &Canvas, field: &Field, layout: &IDWriteTextLayout, x0: f32, r: Rect) {
+        /// ∫ Σ Π limits: drawn small beside the sign, upper over lower; empty ones as muted boxes, the one the caret
+        /// is in (`at`: which sign's, upper or not) a shade darker. The caret's own rect when it's in a limit.
+        fn limits(
+            &self,
+            c: &Canvas,
+            field: &Field,
+            xat: &dyn Fn(u32) -> f32,
+            x0: f32,
+            r: Rect,
+            (at, caret16): (Option<(usize, bool)>, u32),
+        ) -> Option<OwnCaret> {
             let limits = field.limits();
             if limits.is_empty() {
-                return;
+                return None;
             }
             let t = c.theme;
             let small = size::DISPLAY * LIMIT_SCALE;
@@ -1034,13 +1526,17 @@ mod view {
             let box_w = small * 0.62;
             let box_h = small * 0.8;
             let mut slots: Vec<(Limit, f32)> = Vec::new();
-            for b in limits {
-                let sign_end = caret_x(layout, b.sign as u32 + 1);
+            for (bound, b) in limits.iter().enumerate() {
+                // a bare sign carries its boxes' room itself (`layout`): they stand at its glyph's end
+                let bare = b.end == b.sign + 1;
+                let sign_end =
+                    xat(b.sign as u32 + 1) - if bare { small * 0.62 * 2.0 + 4.0 } else { 0.0 };
                 slots.push((
                     Limit {
                         start: b.lower.start as u32,
                         end: b.lower.end as u32,
                         upper: false,
+                        bound,
                     },
                     sign_end,
                 ));
@@ -1052,20 +1548,24 @@ mod view {
                         start: us,
                         end: ue,
                         upper: true,
+                        bound,
                     },
                     sign_end,
                 ));
             }
+            let mut caret = None;
+            let em = small;
             // the limits' text was laid out small and kept in the line (so the caret has its places); it is
             // drawn again raised or lowered, over a background-coloured patch of the line
             for (s, _) in &slots {
                 if s.end > s.start {
-                    let xa = x0 + caret_x(layout, s.start);
-                    let xb = x0 + caret_x(layout, s.end);
+                    let xa = x0 + xat(s.start);
+                    let xb = x0 + xat(s.end);
                     c.fill(Rect::new(xa.min(xb), r.y, (xb - xa).abs(), r.h), t.bg);
                 }
             }
             for (s, sign_end) in &slots {
+                let here = at == Some((s.bound, s.upper));
                 if s.end > s.start {
                     let u: Vec<u16> = field
                         .text()
@@ -1074,7 +1574,7 @@ mod view {
                         .take((s.end - s.start) as usize)
                         .collect();
                     let text = String::from_utf16_lossy(&u);
-                    let xa = x0 + caret_x(layout, s.start);
+                    let xa = x0 + xat(s.start);
                     let y = if s.upper {
                         mid - small * 1.15
                     } else {
@@ -1086,6 +1586,12 @@ mod view {
                             let _ = l.SetFontSize(small, range(0, s.end - s.start));
                         }
                         c.text(&l, xa, y, t.ink);
+                        // the caret on this limit's baseline, at its size (limitCaretRect)
+                        if here {
+                            let base = y + stacked::baseline(&l);
+                            let into = caret16.saturating_sub(s.start).min(s.end - s.start);
+                            caret = Some((xa + caret_x(&l, into), base - em * 0.92, em * 1.15));
+                        }
                     }
                 } else {
                     let bx = x0 + sign_end + if s.upper { small * 0.3 } else { small * 0.05 };
@@ -1097,19 +1603,73 @@ mod view {
                     c.fill_round(
                         Rect::new(bx, by, box_w, box_h),
                         small * 0.14,
-                        with_alpha(t.muted, 0.18),
+                        with_alpha(t.muted, if here { 0.32 } else { 0.18 }),
                     );
+                    // in an empty limit, the middle of its box
+                    if here {
+                        caret = Some((bx + box_w * 0.5, by - em * 0.12, box_h + em * 0.24));
+                    }
                 }
             }
+            caret
         }
 
         /// The UTF-16 position under window DIP point (x, y) (clicks), from the last layout.
         pub fn hit(&self, x: f32, y: f32) -> u32 {
-            match &self.cached {
-                Some((_, l)) => hit(l, x - self.text_x, y - self.rect.y),
-                None => 0,
+            match (&self.cached, &self.geom) {
+                // the place nearest, by its slot's height too
+                (Some(_), Some(g)) => g.stop_near(x - self.text_x, y - self.rect.y),
+                (Some((_, l)), None) => hit(l, x - self.text_x, y - self.rect.y),
+                (None, _) => 0,
             }
         }
+    }
+
+    /// The caret place before UTF-16 `p`: a stacked line's own, or the layout's.
+    fn x_at(geom: &Option<Geom>, l: &IDWriteTextLayout, p: u32) -> f32 {
+        match geom {
+            Some(g) => g.x(p),
+            None => caret_x(l, p),
+        }
+    }
+
+    /// Each root's sign (before its radicand, `roots`) drawn as nothing: `root` draws it with its bar.
+    fn hide_signs(c: &Canvas, l: &IDWriteTextLayout, roots: &[(u32, u32)]) {
+        if let Some(clear) = c.own_brush(with_alpha(c.theme.ink, 0.0)) {
+            for &(a, _) in roots {
+                // SAFETY: a setter on a live layout, the range inside its text
+                let _ = unsafe { l.SetDrawingEffect(&clear, range(a - 1, a)) };
+            }
+        }
+    }
+
+    /// A typed root's sign and the bar over its radicand `a..b` (UTF-16 in `text`), one smooth stroke with a gap
+    /// under the bar, as Desmos draws it (RootSign); `base` the line's baseline, window DIPs.
+    #[allow(clippy::too_many_arguments)]
+    fn root(
+        c: &Canvas,
+        l: &IDWriteTextLayout,
+        geom: &Option<Geom>,
+        x0: f32,
+        base: f32,
+        (a, b): (u32, u32),
+        text: &str,
+        color: Color,
+    ) {
+        let (left, sign_end, end) = (x_at(geom, l, a - 1), x_at(geom, l, a), x_at(geom, l, b));
+        let (size, raise) = geom
+            .as_ref()
+            .map_or((size::DISPLAY, 0.0), |g| g.look_of(a as usize - 1));
+        let cube = text.encode_utf16().nth(a as usize - 1) == Some(0x221B);
+        stacked::draw_root(
+            c,
+            (x0 + left, sign_end - left),
+            x0 + end,
+            base - raise,
+            size,
+            cube,
+            color,
+        );
     }
 
     fn text_width(c: &Canvas, text: &str, (a, b): (u32, u32), size: f32) -> f32 {
@@ -1148,21 +1708,6 @@ mod view {
             b: a.b + (b.b - a.b) * t,
             a: a.a + (b.a - a.a) * t,
         }
-    }
-
-    /// The bar over a radicand (UTF-16 range a..b), as Radical.tsx draws it.
-    fn radical_bar(
-        c: &Canvas,
-        l: &IDWriteTextLayout,
-        x0: f32,
-        y: f32,
-        a: u32,
-        b: u32,
-        color: Color,
-    ) {
-        let (xa, xb) = (caret_x(l, a), caret_x(l, b));
-        let top = y + 36.0 * 0.5 - size::DISPLAY * 0.5;
-        c.fill(Rect::new(x0 + xa, top, xb - xa, 1.3), color);
     }
 
     /// A wavy underline from xa to xb at y.
@@ -1485,5 +2030,162 @@ mod tests {
         };
         assert!(d.fits(4));
         assert!(!d.fits(3));
+    }
+
+    #[test]
+    fn an_angle_mark_hides_while_the_caret_is_in_its_argument() {
+        // `50sin(26.87) + cos(x)`: the arguments are 6..11 and 18..19
+        let d = Decorations {
+            angles: vec![(6, 11), (18, 19)],
+            ..Decorations::default()
+        };
+        assert_eq!(d.angle_marks(0), vec![11, 19]);
+        assert_eq!(d.angle_marks(8), vec![19]);
+        assert_eq!(d.angle_marks(11), vec![19]);
+        assert_eq!(d.angle_marks(12), vec![11, 19]);
+        assert!(!d.fits(18));
+    }
+
+    fn stacked(s: &str) -> Field {
+        let mut f = Field::default();
+        f.set_clock(fixed);
+        f.set_stacked(true);
+        for u in s.encode_utf16() {
+            f.char16(u);
+        }
+        f
+    }
+
+    fn put(f: &mut Field, s: &str) {
+        for u in s.encode_utf16() {
+            f.char16(u);
+        }
+    }
+
+    #[test]
+    fn stacked_typing_keeps_plain_maths() {
+        // 5x/32+x^3, → twice, x: (5x/(32+x³))·x
+        let mut f = stacked("5x/32+x^3");
+        assert_eq!(f.text(), "(5x)/(32+x^(3))");
+        f.right(false, false);
+        f.right(false, false);
+        put(&mut f, "x");
+        assert_eq!(f.text(), "(5x)/(32+x^(3))·x");
+        // `)` steps out of a slot, and a stack before `^` is bracketed
+        let mut g = stacked("1/2)");
+        assert_eq!((g.text(), g.caret()), ("1/(2)", 5));
+        put(&mut g, "^");
+        assert_eq!(g.text(), "(1/(2))^()");
+        // off, `/` and `^` are plain characters
+        let h = typed("5x/32+x^3");
+        assert_eq!(h.text(), "5x/32+x^3");
+        assert!(h.stacks().is_empty());
+    }
+
+    #[test]
+    fn up_and_down_move_between_numerator_and_denominator() {
+        // 1/2, ↑, 0, ↓, 5: 10/25 (x as drawn: the numerator over the denominator, centred)
+        let mut f = stacked("1/2");
+        assert_eq!(f.text(), "1/(2)");
+        assert!(f.stack_vertical(true, |i| [3.0, 9.0, 9.0, 3.0, 9.0, 9.0][i]));
+        assert_eq!(f.caret(), 1);
+        put(&mut f, "0");
+        assert_eq!(f.text(), "10/(2)");
+        assert!(f.stack_vertical(false, |i| [0.0, 6.0, 12.0, 12.0, 3.0, 9.0, 9.0][i]));
+        put(&mut f, "5");
+        assert_eq!(f.text(), "10/(25)");
+        // outside a fraction the key goes on to the history
+        f.end(false);
+        assert!(!f.stack_vertical(true, |i| i as f32));
+        assert!(!typed("1/2").stack_vertical(true, |i| i as f32));
+    }
+
+    #[test]
+    fn stacked_moves_selections_and_deletes() {
+        let mut f = stacked("42/12");
+        f.right(false, false);
+        put(&mut f, "*12/23*12");
+        f.right(false, false);
+        put(&mut f, "12");
+        assert_eq!(f.text(), "42/(12)*12/(23*12)·12");
+        assert_eq!(f.caret(), f.text().len());
+        // ← never stops on a place that looks the same as the one beside it
+        let mut stops = vec![f.to_utf16(f.caret())];
+        for _ in 0..30 {
+            f.left(false, false);
+            stops.push(f.to_utf16(f.caret()));
+        }
+        for dead in [3, 11, 19] {
+            assert!(!stops.contains(&dead), "{dead} in {stops:?}");
+        }
+        assert_eq!(*stops.last().unwrap(), 0);
+        // Home, →, Shift+→ ×3: the first fraction whole, then the `*`
+        f.home(false);
+        f.right(false, false);
+        f.right(false, true);
+        assert_eq!(f.selected_text(), "2");
+        f.right(false, true);
+        assert_eq!(f.selected_text(), "42/(12)");
+        f.right(false, true);
+        assert_eq!(f.selected_text(), "42/(12)*");
+        // back again: out of the stack in one step
+        f.left(false, true);
+        assert_eq!(f.selected_text(), "42/(12)");
+        // Select All then Backspace clears the line
+        let mut g = f.clone();
+        g.select_all();
+        g.backspace(false);
+        assert_eq!(g.text(), "");
+        // Home, Delete twice: an empty box over 12, and 7 fills it
+        let mut g = f.clone();
+        g.home(false);
+        g.delete(false);
+        g.delete(false);
+        assert_eq!(g.text(), "()/(12)*12/(23*12)·12");
+        put(&mut g, "7");
+        assert!(g.text().starts_with("(7)/(12)"));
+        // Backspace twice after 42 does the same
+        let mut g = f.clone();
+        g.home(false);
+        g.right(false, false);
+        g.right(false, false);
+        g.backspace(false);
+        g.backspace(false);
+        assert!(g.text().starts_with("()/(12)"));
+        assert_eq!(g.caret(), 1);
+        // Delete before a hidden `)` steps over it
+        let mut g = stacked("1/2");
+        g.delete(false);
+        assert_eq!((g.text(), g.caret()), ("1/(2)", 5));
+        // Ctrl+Backspace in 23*12 takes only what's before the caret in that denominator, and on the last 12 leaves
+        // no stray `·`
+        let mut g = f.clone();
+        g.set_caret_utf16(17, false);
+        g.backspace(true);
+        assert_eq!(g.text(), "42/(12)*12/(23*)·12");
+        g.backspace(true);
+        assert_eq!(g.text(), "42/(12)*12/(23)·12");
+        g.backspace(true);
+        assert_eq!(g.text(), "42/(12)*12/()·12");
+        let mut g = f.clone();
+        g.end(false);
+        g.backspace(true);
+        assert_eq!(g.text(), "42/(12)*12/(23*12)");
+        // Backspace after a stack steps in, and at a slot's start takes the stack apart
+        let mut g = stacked("1/2");
+        g.right(false, false);
+        g.backspace(false);
+        assert_eq!((g.text(), g.caret()), ("1/(2)", 4));
+        g.backspace(false);
+        assert_eq!(g.text(), "1/()");
+        g.backspace(false);
+        assert_eq!((g.text(), g.caret()), ("1", 1));
+        // a selection inside one slot stays; cut of a bare slot leaves its box
+        let mut g = stacked("42/12");
+        g.home(false);
+        g.right(false, true);
+        g.right(false, true);
+        assert_eq!(g.cut().as_deref(), Some("42"));
+        assert_eq!(g.text(), "()/(12)");
     }
 }

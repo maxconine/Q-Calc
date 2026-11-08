@@ -23,11 +23,6 @@ use crate::system_numeric::{
 use crate::types::{AngleMode, DefaultUnits, Value};
 use crate::units::{SiQuantity, reads_as_unit, si_quantity, si_value};
 
-
-
-
-
-
 #[derive(Clone, Debug)]
 struct Aff<C> {
     k: C,
@@ -71,7 +66,6 @@ fn scale_a<F: Field>(a: &Aff<F::C>, c: &F::C, f: &F) -> Aff<F::C> {
 fn sub_a<F: Field>(a: &Aff<F::C>, b: &Aff<F::C>, f: &F) -> Aff<F::C> {
     add_a(a, &scale_a(b, &f.neg(&f.one()), f), f)
 }
-
 
 fn wrap(s: &str) -> String {
     static PLAIN: Lazy = Lazy::new(|| js(r"^[-\d/]+$", ""));
@@ -417,7 +411,6 @@ fn walk_aff<F: Field>(
     }
 }
 
-
 fn finish<F: Field>(rows: &[Vec<F::C>], f: &F, variables: &[String]) -> SystemResult {
     let Some((pivots, rows)) = eliminate(rows, f) else {
         return SystemResult::inconsistent(variables);
@@ -527,7 +520,6 @@ fn solve_linear(diffs: &[&Node], variables: &[String], params: &[String]) -> Opt
     let rows = matrix_from(diffs, variables, &RAT, &const_rat)?;
     Some(finish(&rows, &RAT, variables))
 }
-
 
 fn parse_rat_str(s: &str) -> Option<Rat> {
     static RE: Lazy = Lazy::new(|| js(r"^(-?\d+)(?:\/(-?\d+))?$", ""));
@@ -2293,12 +2285,18 @@ pub fn parse_equation_list(text: &str) -> Option<Vec<String>> {
         .map(|e| e.trim().to_string())
         .collect();
     let one_eq = |e: &str| {
-        e.matches('=').count() == 1 && !e.contains("==") && !e.contains("<=") && !e.contains(">=") && !e.contains("!=")
+        e.matches('=').count() == 1
+            && !e.contains("==")
+            && !e.contains("<=")
+            && !e.contains(">=")
+            && !e.contains("!=")
     };
     if !(2..=5).contains(&parts.len()) || parts.iter().any(|e| e.is_empty() || !one_eq(e)) {
         return None;
     }
-    let all_assignments = parts.iter().all(|e| e.split_once('=').is_some_and(|(l, _)| jsre::test(&NAME, l)));
+    let all_assignments = parts
+        .iter()
+        .all(|e| e.split_once('=').is_some_and(|(l, _)| jsre::test(&NAME, l)));
     (!all_assignments).then_some(parts)
 }
 

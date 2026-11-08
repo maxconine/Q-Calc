@@ -10,7 +10,9 @@
 //!   are solved; the answer shows in the bar's answer slot (`slot`), partial as soon as the equations typed so
 //!   far settle a value, units carried through (the settings' default units).
 //! - Native only: the rows open as soon as `sys N` is typed, the caret in the first; Tab / Shift+Tab go round
-//!   them and → at the end of one types in its grey parens.
+//!   them (Tab on the line goes down to the first) and → at the end of one types in its grey parens; an answer
+//!   reads in decimals unless fraction form is on (core `systemDecimals`), solved again when that changes;
+//!   Ctrl+Backspace in an equation empties it, and in an empty one closes the system and clears the line.
 //! - Keys: ↵ goes to the next row and saves from the last; ↑ ↓ (and Tab) move between rows, ↑ from the first back
 //!   to the line, ↓ from the line to the first row; Esc closes the panel and clears the line; Ctrl+Backspace (or
 //!   Ctrl+Delete) on the line resets to calculating. Ctrl+V of several equations into a row fills the system from
@@ -138,6 +140,8 @@ pub struct SysState {
     pub answer: Option<SysAnswer>,
     /// the rows changed and haven't been sent to the engine yet
     unsolved: bool,
+    /// fraction form and sig figs at the last solve: a change solves again (the answer's decimals follow them)
+    solved_with: (bool, i64),
     /// a drag-select in a row is under way
     selecting: bool,
     views: RefCell<Vec<RowView>>,
@@ -157,6 +161,7 @@ impl SysState {
             focus: Some(0),
             answer: None,
             unsolved: true,
+            solved_with: (false, 0),
             selecting: false,
             views: RefCell::new(lines.iter().map(|_| RowView::default()).collect()),
         }
@@ -218,7 +223,7 @@ pub fn follow(m: &mut BarModel, engine: &EngineThread) {
         close(m, engine);
         return;
     }
-    if s.unsolved {
+    if s.unsolved || s.solved_with != (m.settings.fraction_mode, m.settings.sig_figs) {
         solve(m, engine);
     }
 }
@@ -275,6 +280,8 @@ pub fn reopen(m: &mut BarModel, i: usize) -> bool {
 fn solve(m: &mut BarModel, engine: &EngineThread) {
     let Some(s) = &mut m.systems else { return };
     s.unsolved = false;
+    let (fractions, figs) = (m.settings.fraction_mode, m.settings.sig_figs);
+    s.solved_with = (fractions, figs);
     let lines = s.lines();
     let angle = if m.settings.angle_mode == "rad" {
         "rad"
@@ -293,6 +300,21 @@ fn solve(m: &mut BarModel, engine: &EngineThread) {
                     display: v.get("display")?.as_str()?.to_string(),
                     message: v.get("message") == Some(&serde_json::Value::Bool(true)),
                 })
+            })
+            .map(|mut a| {
+                // native only: fractions only with fraction form on
+                if !fractions && !a.message {
+                    let args = serde_json::json!([a.display, figs.clamp(2, 16)]).to_string();
+                    if let Some(plain) = cx
+                        .engine
+                        .call_json("lib/answer".into(), "systemDecimals".into(), args)
+                        .ok()
+                        .and_then(|j| serde_json::from_str::<String>(&j).ok())
+                    {
+                        a.display = plain;
+                    }
+                }
+                a
             });
         done(move |app| {
             if let Some(s) = &mut app.model.systems
@@ -463,6 +485,11 @@ pub fn key_down<F: FnOnce() -> Option<String>>(
                 focus(m, 0);
                 Ok(Outcome::Handled)
             }
+            // native only: from the line, Tab goes down to the first equation of an open system
+            TAB if plain && m.systems.is_some() => {
+                focus(m, 0);
+                Ok(Outcome::Handled)
+            }
             ESC if m.systems.is_some() => {
                 reset(m, engine);
                 Ok(Outcome::Handled)
@@ -502,6 +529,22 @@ pub fn key_down<F: FnOnce() -> Option<String>>(
         DOWN if !ctrl => {
             if i + 1 < n {
                 focus(m, i + 1);
+            }
+            return Ok(Outcome::Handled);
+        }
+        // Ctrl+Backspace (the Mac's ⌘⌫) empties the equation wherever the caret is; in an empty one it closes the
+        // system for a fresh line
+        BACK if ctrl && !mods.shift => {
+            if m.systems
+                .as_ref()
+                .and_then(|s| s.rows.get(i))
+                .is_some_and(|f| f.text().trim().is_empty())
+            {
+                reset(m, engine);
+            } else if let Some(f) = m.systems.as_mut().and_then(|s| s.rows.get_mut(i)) {
+                let before = f.text().to_string();
+                f.set_text("");
+                edited(m, engine, i, &before);
             }
             return Ok(Outcome::Handled);
         }

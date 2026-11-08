@@ -15,8 +15,8 @@ use crate::scientific::{NAMES, ScientificContext, names_pattern, split_glued_fun
 use crate::simplify::{ExactFormOptions, exact_form, wants_exact_form};
 use crate::stubs::{self, SolveContext, Solved};
 use crate::types::{
-    AngleMode, EvaluateOptions, LineKind, LineResult, MatrixPart, MatrixParts, Meas, UserFunction, Value,
-    ValueKind,
+    AngleMode, EvaluateOptions, LineKind, LineResult, MatrixPart, MatrixParts, Meas, UserFunction,
+    Value, ValueKind,
 };
 use crate::typst_input::typst_to_ascii;
 use crate::units::{is_improper_unit_conversion, quantity_text, reads_as_unit, try_convert};
@@ -260,7 +260,11 @@ fn parts_for<'p>(names: &[String], parts: &'p [MatrixPart]) -> Result<Vec<&'p Ma
     if let Some(p) = chosen.iter().find(|p| p.literal.is_none()) {
         return Err(format!(
             "can't store {}",
-            if p.label.is_empty() { &p.display } else { &p.label }
+            if p.label.is_empty() {
+                &p.display
+            } else {
+                &p.label
+            }
         ));
     }
     Ok(chosen)
@@ -296,11 +300,13 @@ pub fn matrix_stores(line: &str, options: &EvaluateOptions) -> Vec<(String, Stri
 
 fn matrix_parts(m: &stubs::MatrixAnswer) -> Option<MatrixParts> {
     let stored = m.to_store().cloned();
-    (!m.parts.is_empty() || !m.steps.is_empty() || stored.is_some() || m.message).then(|| MatrixParts {
-        parts: m.parts.clone(),
-        steps: m.steps.clone(),
-        stored,
-        message: m.message,
+    (!m.parts.is_empty() || !m.steps.is_empty() || stored.is_some() || m.message).then(|| {
+        MatrixParts {
+            parts: m.parts.clone(),
+            steps: m.steps.clone(),
+            stored,
+            message: m.message,
+        }
     })
 }
 
@@ -622,7 +628,8 @@ impl<'o> Sheet<'o> {
 
         // `solve({eq1, eq2}, x = 1, y = 2)`; `solve(A, b)` of two matrices is the matrix reader's (native only)
         let fn_names: Vec<String> = self.functions.keys().cloned().collect();
-        let of_matrices = stubs::looks_like_matrix(&with_quantities(&line, &self.quantities), &fn_names);
+        let of_matrices =
+            stubs::looks_like_matrix(&with_quantities(&line, &self.quantities), &fn_names);
         if !of_matrices && let Some(call) = stubs::parse_system_call(&line) {
             let answer = stubs::solve_system_call(
                 &call.equations,
@@ -640,9 +647,13 @@ impl<'o> Sheet<'o> {
         // `2x + y = 5, x - y = 1` on one line, `solve …` or not; only when it solves (native only)
         if !of_matrices
             && let Some(equations) = stubs::parse_equation_list(&line)
-            && let Some(answer) =
-                stubs::solve_system_call(&equations, &[], self.angle_mode, &self.options.default_units)
-                    .filter(|a| !a.is_empty())
+            && let Some(answer) = stubs::solve_system_call(
+                &equations,
+                &[],
+                self.angle_mode,
+                &self.options.default_units,
+            )
+            .filter(|a| !a.is_empty())
         {
             return LineResult {
                 raw: raw.into(),
@@ -991,9 +1002,17 @@ impl<'o> Sheet<'o> {
             )
         });
         let c = EQ.captures(line).ok()??;
-        let (m, var, rhs) = (jsre::group(&c, 1).trim(), jsre::group(&c, 2), jsre::group(&c, 3).trim());
+        let (m, var, rhs) = (
+            jsre::group(&c, 1).trim(),
+            jsre::group(&c, 2),
+            jsre::group(&c, 3).trim(),
+        );
         let is_matrix = |t: &str| with_quantities(t, &self.quantities).contains('[');
-        let stored_matrix = |t: &str| self.quantities.get(t).is_some_and(|q| q.trim_start().starts_with('['));
+        let stored_matrix = |t: &str| {
+            self.quantities
+                .get(t)
+                .is_some_and(|q| q.trim_start().starts_with('['))
+        };
         // `2x = [4 6]` is a scalar times x; the left must be a matrix (`[…]`, a stored one, or a call of them)
         let m_matrix = m.ends_with(']') && is_matrix(m)
             || stored_matrix(m)
@@ -1005,7 +1024,12 @@ impl<'o> Sheet<'o> {
     }
 
     /// The answer to `Ax = b`, named by its unknown: `x = [0.8; 1.4]`.
-    fn solved_matrix_line(&mut self, raw: &str, mut m: stubs::MatrixAnswer, var: &str) -> LineResult {
+    fn solved_matrix_line(
+        &mut self,
+        raw: &str,
+        mut m: stubs::MatrixAnswer,
+        var: &str,
+    ) -> LineResult {
         if !m.message {
             fn named(var: &str, s: &str) -> String {
                 format!("{var} = {}", s.strip_prefix("x = ").unwrap_or(s))
@@ -1016,7 +1040,10 @@ impl<'o> Sheet<'o> {
                 if p.label.is_empty() || p.label == "x" {
                     let body = |t: &str| t.strip_prefix("x = ").unwrap_or(t).to_string();
                     p.typst = format!("{var} = {}", body(&p.typst));
-                    p.exact_typst = p.exact_typst.as_deref().map(|t| format!("{var} = {}", body(t)));
+                    p.exact_typst = p
+                        .exact_typst
+                        .as_deref()
+                        .map(|t| format!("{var} = {}", body(t)));
                     p.label = var.to_string();
                 }
             }
@@ -1026,7 +1053,12 @@ impl<'o> Sheet<'o> {
 
     /// `L, U = lu(A)`: each name keeps its part, matched in order, or by label when fewer names are given
     /// (`L, U` of a `P, L, U`). `ans` keeps the first.
-    fn multi_matrix_line(&mut self, raw: &str, m: stubs::MatrixAnswer, names: &[String]) -> LineResult {
+    fn multi_matrix_line(
+        &mut self,
+        raw: &str,
+        m: stubs::MatrixAnswer,
+        names: &[String],
+    ) -> LineResult {
         if m.message {
             return self.matrix_line(raw, m, None);
         }

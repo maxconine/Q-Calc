@@ -4,7 +4,9 @@
 //! - different currencies in one sum, answered in the first: `$5 + €3`, `£10 - $2 to yen`
 //! - a currency on its own, as one of it: `usd to eur`
 
-use super::currency::{Currency, CurrencyRates, Money, convert_currency, currency_word, parse_money};
+use super::currency::{
+    Currency, CurrencyRates, Money, convert_currency, currency_word, parse_money,
+};
 use super::{PhraseAnswer, amount, caps, g, js_re, money, normalize};
 use crate::format::format_number;
 use crate::jsre::Lazy;
@@ -166,7 +168,9 @@ mod tests {
             ..rates()
         };
         assert_eq!(
-            answer("gbp to yen", Some(&dated), 12.0).map(|a| a.display).as_deref(),
+            answer("gbp to yen", Some(&dated), 12.0)
+                .map(|a| a.display)
+                .as_deref(),
             Some("1 GBP = 200 JPY (Nov 5)")
         );
         // one currency is the web's own sum

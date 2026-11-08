@@ -16,6 +16,7 @@ mod log;
 mod matrix_text;
 mod perf;
 mod place;
+mod stacked;
 mod store;
 mod text_rules;
 mod tour;
@@ -53,6 +54,12 @@ mod games;
 #[cfg(windows)]
 mod graph;
 #[cfg(windows)]
+mod graph3d;
+#[cfg(windows)]
+mod graph_settings;
+#[cfg(windows)]
+mod graph_view;
+#[cfg(windows)]
 mod heap;
 #[cfg(windows)]
 mod history;
@@ -77,6 +84,8 @@ mod net;
 #[cfg(windows)]
 mod notice;
 #[cfg(windows)]
+mod rate_tip;
+#[cfg(windows)]
 mod rates;
 #[cfg(windows)]
 mod relay;
@@ -96,8 +105,13 @@ mod share_debug;
 mod share_drop;
 #[cfg(windows)]
 mod share_keys;
+mod sheet_page;
 #[cfg(windows)]
 mod sheets;
+#[cfg(windows)]
+mod sheets_typst;
+#[cfg(windows)]
+mod stacked_layout;
 #[cfg(windows)]
 mod systems;
 #[cfg(windows)]
@@ -116,6 +130,8 @@ mod warp;
 mod window;
 #[cfg(windows)]
 mod word_tip;
+#[cfg(windows)]
+mod working;
 #[cfg(windows)]
 mod wrap;
 

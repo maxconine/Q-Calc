@@ -26,8 +26,17 @@ pub fn foot_marks(text: &str) -> Cow<'_, str> {
     }
     let out = jsre::replace_all(&MIXED, &marked, |c| {
         // after feet, `6'5 3/8"` adds: `6' + (5+3/8) in`
-        let feet = if jsre::group(c, 1).is_empty() { "" } else { "' + " };
-        format!("{feet}({}+{}/{}) in", jsre::group(c, 2), jsre::group(c, 3), jsre::group(c, 4))
+        let feet = if jsre::group(c, 1).is_empty() {
+            ""
+        } else {
+            "' + "
+        };
+        format!(
+            "{feet}({}+{}/{}) in",
+            jsre::group(c, 2),
+            jsre::group(c, 3),
+            jsre::group(c, 4)
+        )
     })
     .into_owned();
     Cow::Owned(out)
@@ -36,9 +45,7 @@ pub fn foot_marks(text: &str) -> Cow<'_, str> {
 /// Inches with a fraction were typed (`3/8"`, `5 3/8"`), so the answer is in fractions of an inch too: the finest
 /// denominator typed, and at least sixteenths.
 fn typed_inch_fraction(line: &str) -> Option<f64> {
-    static FRACTION: Lazy = Lazy::new(|| {
-        js(r#"\d+/(\d+)\)?\s*(?:"|(?:in|inch|inches)\b)"#, "")
-    });
+    static FRACTION: Lazy = Lazy::new(|| js(r#"\d+/(\d+)\)?\s*(?:"|(?:in|inch|inches)\b)"#, ""));
     let mut finest: Option<f64> = None;
     for c in FRACTION.captures_iter(line).flatten() {
         let d: f64 = c.get(1)?.as_str().parse().ok()?;
@@ -71,9 +78,20 @@ pub fn inch_fraction(inches: f64, denominator: f64) -> String {
 fn feet_and_fraction(inches: f64, denominator: f64, split: bool) -> String {
     let sign = if inches < 0.0 { "-" } else { "" };
     let ticks = (inches.abs() * denominator).round();
-    let about = if (ticks - inches.abs() * denominator).abs() < 1e-6 { "" } else { "≈ " };
-    let feet = if split { (ticks / (12.0 * denominator)).floor() } else { 0.0 };
-    let rest = inch_fraction((ticks - feet * 12.0 * denominator) / denominator, denominator);
+    let about = if (ticks - inches.abs() * denominator).abs() < 1e-6 {
+        ""
+    } else {
+        "≈ "
+    };
+    let feet = if split {
+        (ticks / (12.0 * denominator)).floor()
+    } else {
+        0.0
+    };
+    let rest = inch_fraction(
+        (ticks - feet * 12.0 * denominator) / denominator,
+        denominator,
+    );
     match (feet == 0.0, rest == "0") {
         (true, _) => format!("{about}{sign}{rest} in"),
         (false, true) => format!("{about}{sign}{feet} ft"),
@@ -146,7 +164,10 @@ fn unit_id(value: &Value) -> Option<&str> {
     if value.kind != ValueKind::Number || !value.n.is_finite() || value.complex.is_some() {
         return None;
     }
-    value.unit_id.as_deref().filter(|u| *u == "ft" || *u == "in")
+    value
+        .unit_id
+        .as_deref()
+        .filter(|u| *u == "ft" || *u == "in")
 }
 
 fn inches_of(value: &Value) -> Option<f64> {
@@ -208,7 +229,12 @@ fn converts(line: &str) -> bool {
 
 /// Native only: ⌥↑ / ⌥↓ on a length in feet or inches: inches, feet and inches, then feet. `shown` is the answer
 /// as the bar shows it now. None at either end, or for any other unit.
-pub fn step_feet_inches(value: &Value, shown: &str, dir: i32, sig_figs: f64) -> Option<(Value, String)> {
+pub fn step_feet_inches(
+    value: &Value,
+    shown: &str,
+    dir: i32,
+    sig_figs: f64,
+) -> Option<(Value, String)> {
     let inches = inches_of(value)?;
     static SPLIT: Lazy = Lazy::new(|| js(r"\d\s*ft\s+[\d./ ]+\s*in$", ""));
     let at = if jsre::test(&SPLIT, shown.trim()) {
@@ -229,11 +255,17 @@ pub fn step_feet_inches(value: &Value, shown: &str, dir: i32, sig_figs: f64) -> 
         ..value.clone()
     };
     Some(match to {
-        0 => (unit("in", inches), format!("{} in", format_number(inches, sig_figs))),
+        0 => (
+            unit("in", inches),
+            format!("{} in", format_number(inches, sig_figs)),
+        ),
         1 => (unit("ft", inches / 12.0), feet_and_inches(inches, sig_figs)),
         _ => {
             let feet = inches / 12.0;
-            (unit("ft", feet), format!("{} ft", format_number(feet, sig_figs)))
+            (
+                unit("ft", feet),
+                format!("{} ft", format_number(feet, sig_figs)),
+            )
         }
     })
 }

@@ -46,9 +46,9 @@ pub mod measure;
 pub mod isolate;
 pub mod solve;
 // native only: the working for a line
+pub(crate) mod exact;
 pub mod steps;
 pub mod system;
-pub(crate) mod exact;
 pub mod system_numeric;
 pub mod unit_solve;
 // ---- WP-CALCULUS ----
@@ -61,9 +61,9 @@ pub mod jsstr;
 pub mod sums;
 
 // ---- WP-GRAPH ----
+pub mod feet_inches;
 pub mod graph;
 pub mod graph_native;
-pub mod feet_inches;
 
 pub use evaluate::{evaluate_line, evaluate_sheet};
 pub use types::{EvaluateOptions, LineResult, Value};

@@ -49,7 +49,13 @@ pub fn answer_item() -> Option<usize> {
 /// Whether a spot is something a click does something with (the hand cursor).
 fn clickable(app: &App, spot: Spot) -> bool {
     match spot {
-        Spot::Answer(_) => true,
+        Spot::Answer(i) => app
+            .bar
+            .layout
+            .live
+            .items
+            .get(i)
+            .is_some_and(|it| it.copy.is_some()),
         Spot::Slot => false,
         Spot::Row(r, Some(k)) => tip_of(app, Spot::Row(r, Some(k))).is_some(),
         Spot::Row(_, None) => false,
@@ -77,7 +83,8 @@ fn tip_of(app: &App, spot: Spot) -> Option<(String, crate::render::Rect)> {
     match spot {
         Spot::Answer(i) => {
             let item = app.bar.layout.live.items.get(i)?;
-            crate::answer::tip(&app.bar.layout.live, i).map(|t| (t.to_string(), item.rect))
+            crate::answer::tip(&app.bar.layout.live, i)
+                .map(|t| (crate::rate_tip::tip(app, &t), item.rect))
         }
         Spot::Row(r, Some(k)) => crate::history::tip_at(app, r, k),
         Spot::Row(_, None) => None,
@@ -104,6 +111,9 @@ fn spot_moved(app: &mut App, at: Option<(f32, f32)>) {
     app.model.touch();
     tip::hide();
     crate::later::cancel("hover-tip");
+    if let Some(Spot::Answer(_)) = spot {
+        crate::rate_tip::ask(app);
+    }
     if let Some(spot) = spot
         && tip_of(app, spot).is_some()
     {

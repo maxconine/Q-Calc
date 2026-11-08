@@ -20,7 +20,12 @@ pub(super) enum Kind<C> {
     /// A value in the matrix's own field.
     Field(C),
     /// `p + sign·q·√r` over the rationals (r < 0 is `q·√|r|·i`).
-    Quad { p: Rat, q: Rat, r: BigInt, sign: i32 },
+    Quad {
+        p: Rat,
+        q: Rat,
+        r: BigInt,
+        sign: i32,
+    },
     /// Only known to float digits.
     Num,
 }
@@ -54,7 +59,9 @@ fn r_div(a: &Rat, b: &Rat) -> Rat {
 }
 
 fn peval(p: &[Rat], x: &Rat) -> Rat {
-    p.iter().rev().fold(ri(0), |acc, c| r_add(&r_mul(&acc, x), c))
+    p.iter()
+        .rev()
+        .fold(ri(0), |acc, c| r_add(&r_mul(&acc, x), c))
 }
 
 /// p / (x − r), for a root r.
@@ -126,7 +133,12 @@ fn float_poly(p: &[Rat]) -> Vec<f64> {
 #[derive(Clone, Debug)]
 enum Root {
     Rat(Rat),
-    Quad { p: Rat, q: Rat, r: BigInt, sign: i32 },
+    Quad {
+        p: Rat,
+        q: Rat,
+        r: BigInt,
+        sign: i32,
+    },
     Num(C64),
 }
 
@@ -246,7 +258,11 @@ fn group<C: Clone>(eigs: Vec<Eig<C>>, same: impl Fn(&Eig<C>, &Eig<C>) -> bool) -
         b.z.0
             .partial_cmp(&a.z.0)
             .unwrap_or(std::cmp::Ordering::Equal)
-            .then(b.z.1.partial_cmp(&a.z.1).unwrap_or(std::cmp::Ordering::Equal))
+            .then(
+                b.z.1
+                    .partial_cmp(&a.z.1)
+                    .unwrap_or(std::cmp::Ordering::Equal),
+            )
     });
     out
 }
@@ -265,7 +281,9 @@ fn is_triangular<F: Cells>(f: &F, a: &[Vec<F::C>]) -> bool {
 }
 
 pub(super) fn approx_grid<F: Cells>(f: &F, a: &[Vec<F::C>]) -> Option<G<f64>> {
-    a.iter().map(|r| r.iter().map(|c| f.approx(c)).collect()).collect()
+    a.iter()
+        .map(|r| r.iter().map(|c| f.approx(c)).collect())
+        .collect()
 }
 
 fn num_eig<C>(z: C64) -> Eig<C> {
@@ -279,15 +297,22 @@ fn num_eig<C>(z: C64) -> Eig<C> {
 fn float_eigs<F: Cells>(f: &F, a: &[Vec<F::C>]) -> XR<Vec<Eig<F::C>>> {
     let g = approx_grid(f, a).ok_or(XFail::NotExact)?;
     let n = g.len();
-    let symmetric = (0..n).all(|i| (0..i).all(|j| (g[i][j] - g[j][i]).abs() <= 1e-12 * (g[i][j].abs() + 1.0)));
+    let symmetric =
+        (0..n).all(|i| (0..i).all(|j| (g[i][j] - g[j][i]).abs() <= 1e-12 * (g[i][j].abs() + 1.0)));
     let zs: Vec<C64> = if symmetric {
-        numeric::sym_eigen(&g).0.into_iter().map(|v| (v, 0.0)).collect()
+        numeric::sym_eigen(&g)
+            .0
+            .into_iter()
+            .map(|v| (v, 0.0))
+            .collect()
     } else {
         let ff = super::exact_eval::F64Field::new();
         let cp = algebra::charpoly(&ff, &g)?;
         numeric::poly_roots(&cp)
     };
-    Ok(group(zs.into_iter().map(num_eig).collect(), |a, b| close(a.z, b.z)))
+    Ok(group(zs.into_iter().map(num_eig).collect(), |a, b| {
+        close(a.z, b.z)
+    }))
 }
 
 pub(super) fn eigenvalues<F: Cells>(f: &F, a: &[Vec<F::C>]) -> XR<Spectrum<F::C>> {
@@ -356,19 +381,23 @@ pub(super) fn eigenvalues<F: Cells>(f: &F, a: &[Vec<F::C>]) -> XR<Spectrum<F::C>
         let four = f.lift(&ri(4));
         let disc = f.sub(&f.mul(&tr, &tr), &f.mul(&four, &det));
         let wrap = |s: String| {
-            if s.chars().skip(1).any(|c| c == '+' || c == '-' || c == ' ' || c == '/') {
+            if s.chars()
+                .skip(1)
+                .any(|c| c == '+' || c == '-' || c == ' ' || c == '/')
+            {
                 format!("({s})")
             } else {
                 s
             }
         };
-        return Ok(Spectrum::Symbolic(format!(
-            "({} ± sqrt({}))/2",
-            f.show(&tr),
-            f.show(&disc)
-        )
-        .replace("(0 ± ", "(±")
-        .replace(&format!("sqrt({})", wrap(f.show(&disc))), &format!("sqrt({})", f.show(&disc)))));
+        return Ok(Spectrum::Symbolic(
+            format!("({} ± sqrt({}))/2", f.show(&tr), f.show(&disc))
+                .replace("(0 ± ", "(±")
+                .replace(
+                    &format!("sqrt({})", wrap(f.show(&disc))),
+                    &format!("sqrt({})", f.show(&disc)),
+                ),
+        ));
     }
     fail("eigenvalues of a matrix with symbols go up to 2×2; charpoly gives its polynomial")
 }
@@ -466,9 +495,7 @@ pub(super) fn values_part<F: Cells>(f: &F, fmt: &Fmt, eigs: &[Eig<F::C>]) -> Par
                             ..
                         },
                     ) => p == p2 && q == q2 && r == r2,
-                    (Kind::Num, Kind::Num) => {
-                        e.z.1 != 0.0 && close((e.z.0, -e.z.1), eigs[j].z)
-                    }
+                    (Kind::Num, Kind::Num) => e.z.1 != 0.0 && close((e.z.0, -e.z.1), eigs[j].z),
                     _ => false,
                 }
         });
@@ -481,7 +508,11 @@ pub(super) fn values_part<F: Cells>(f: &F, fmt: &Fmt, eigs: &[Eig<F::C>]) -> Par
                 if r.is_negative() {
                     dec.push(format!("{}{m}", conjugates(fmt, e.z)));
                 } else {
-                    dec.push(format!("{}{m}, {}{m}", fmt.complex(e.z), fmt.complex(eigs[j].z)));
+                    dec.push(format!(
+                        "{}{m}, {}{m}",
+                        fmt.complex(e.z),
+                        fmt.complex(eigs[j].z)
+                    ));
                 }
             }
             (Some(j), _) => {
@@ -509,7 +540,12 @@ pub(super) fn values_part<F: Cells>(f: &F, fmt: &Fmt, eigs: &[Eig<F::C>]) -> Par
 }
 
 /// A basis of the eigenspace for one eigenvalue, as entries.
-pub(super) fn eigenvectors<F: Cells>(f: &F, fmt: &Fmt, a: &[Vec<F::C>], e: &Eig<F::C>) -> Vec<Vec<Cell>> {
+pub(super) fn eigenvectors<F: Cells>(
+    f: &F,
+    fmt: &Fmt,
+    a: &[Vec<F::C>],
+    e: &Eig<F::C>,
+) -> Vec<Vec<Cell>> {
     match &e.kind {
         Kind::Field(l) if !f.is_float() => algebra::null_space(f, &algebra::shift(f, a, l))
             .iter()
@@ -598,13 +634,28 @@ pub(super) fn diagonalize<F: Cells>(
     let zero = fmt.cell(f, &f.zero());
     let p = algebra::transpose(&cols);
     let d = (0..n)
-        .map(|i| (0..n).map(|j| if i == j { diag[i].clone() } else { zero.clone() }).collect())
+        .map(|i| {
+            (0..n)
+                .map(|j| {
+                    if i == j {
+                        diag[i].clone()
+                    } else {
+                        zero.clone()
+                    }
+                })
+                .collect()
+        })
         .collect();
     Ok((p, d))
 }
 
 /// The Jordan form, from the block sizes of each eigenvalue.
-pub(super) fn jordan<F: Cells>(f: &F, fmt: &Fmt, a: &[Vec<F::C>], eigs: &[Eig<F::C>]) -> XR<Vec<Vec<Cell>>> {
+pub(super) fn jordan<F: Cells>(
+    f: &F,
+    fmt: &Fmt,
+    a: &[Vec<F::C>],
+    eigs: &[Eig<F::C>],
+) -> XR<Vec<Vec<Cell>>> {
     let n = a.len();
     let zero = fmt.cell(f, &f.zero());
     let one = fmt.cell(f, &f.one());
@@ -615,7 +666,9 @@ pub(super) fn jordan<F: Cells>(f: &F, fmt: &Fmt, a: &[Vec<F::C>], eigs: &[Eig<F:
             Kind::Field(l) if !f.is_float() => algebra::jordan_blocks(f, a, l, e.mult)?,
             _ if e.mult == 1 => vec![1],
             _ => {
-                return fail("can't find this Jordan form exactly: a repeated eigenvalue isn't a whole number or fraction");
+                return fail(
+                    "can't find this Jordan form exactly: a repeated eigenvalue isn't a whole number or fraction",
+                );
             }
         };
         let cell = eig_cell(f, fmt, e);

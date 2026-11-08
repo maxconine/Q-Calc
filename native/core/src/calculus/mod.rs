@@ -1946,13 +1946,23 @@ fn indefinite_parts(text: &str) -> Option<(String, String)> {
     if body.starts_with(['_', '^']) || BOUNDS.is_match(&body).unwrap_or(false) {
         return None;
     }
-    let named = [jsre::group(&c, 2), jsre::group(&c, 3)].into_iter().find(|g| !g.is_empty()).map(str::to_string);
+    let named = [jsre::group(&c, 2), jsre::group(&c, 3)]
+        .into_iter()
+        .find(|g| !g.is_empty())
+        .map(str::to_string);
     let v = match named {
         Some(v) => v,
         None => {
             // the body's own letters (`sin`, `e` and the like are words or constants, not the variable)
-            let words: Vec<String> = WORD.find_iter(&body).flatten().map(|m| m.as_str().to_string()).collect();
-            ["x", "t", "θ"].into_iter().find(|v| words.iter().any(|w| w == v))?.to_string()
+            let words: Vec<String> = WORD
+                .find_iter(&body)
+                .flatten()
+                .map(|m| m.as_str().to_string())
+                .collect();
+            ["x", "t", "θ"]
+                .into_iter()
+                .find(|v| words.iter().any(|w| w == v))?
+                .to_string()
         }
     };
     Some((body, v))

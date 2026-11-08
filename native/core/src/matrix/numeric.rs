@@ -74,12 +74,16 @@ pub(super) fn poly_roots(coeffs: &[f64]) -> Vec<C64> {
     } else if n > 0 {
         // Starting points on a circle of radius between the smallest and largest root bound, off the real axis.
         let upper = 1.0 + monic[..n].iter().fold(0.0_f64, |m, x| m.max(x.abs()));
-        let geo = crate::scientific::functions::jsmath::pow(monic[0].abs(), 1.0 / n as f64).max(1e-3);
+        let geo =
+            crate::scientific::functions::jsmath::pow(monic[0].abs(), 1.0 / n as f64).max(1e-3);
         let radius = geo.min(upper);
         let mut z: Vec<C64> = (0..n)
             .map(|k| {
                 let t = 2.0 * std::f64::consts::PI * k as f64 / n as f64 + 0.4;
-                (radius * crate::scientific::functions::jsmath::cos(t), radius * crate::scientific::functions::jsmath::sin(t))
+                (
+                    radius * crate::scientific::functions::jsmath::cos(t),
+                    radius * crate::scientific::functions::jsmath::sin(t),
+                )
             })
             .collect();
         for _ in 0..800 {
@@ -100,7 +104,11 @@ pub(super) fn poly_roots(coeffs: &[f64]) -> Vec<C64> {
                     }
                 }
                 let denom = csub((1.0, 0.0), cmul(ratio, sum));
-                let w = if cabs(denom) == 0.0 { ratio } else { cdiv(ratio, denom) };
+                let w = if cabs(denom) == 0.0 {
+                    ratio
+                } else {
+                    cdiv(ratio, denom)
+                };
                 if !(w.0.is_finite() && w.1.is_finite()) {
                     continue;
                 }
@@ -170,11 +178,13 @@ pub(super) fn poly_roots(coeffs: &[f64]) -> Vec<C64> {
 /// Only the symmetric part of `a` is used.
 pub(super) fn sym_eigen(a: &[Vec<f64>]) -> (Vec<f64>, Vec<Vec<f64>>) {
     let n = a.len();
-    let mut m: Vec<Vec<f64>> =
-        (0..n).map(|i| (0..n).map(|j| 0.5 * (a[i][j] + a[j][i])).collect()).collect();
+    let mut m: Vec<Vec<f64>> = (0..n)
+        .map(|i| (0..n).map(|j| 0.5 * (a[i][j] + a[j][i])).collect())
+        .collect();
     let mut v = identity(n);
     for _ in 0..100 {
-        let off: f64 = (0..n).flat_map(|i| (0..n).filter(move |&j| j != i).map(move |j| (i, j)))
+        let off: f64 = (0..n)
+            .flat_map(|i| (0..n).filter(move |&j| j != i).map(move |j| (i, j)))
             .map(|(i, j)| m[i][j] * m[i][j])
             .sum();
         let total: f64 = m.iter().flatten().map(|x| x * x).sum();
@@ -215,7 +225,9 @@ pub(super) fn sym_eigen(a: &[Vec<f64>]) -> (Vec<f64>, Vec<Vec<f64>>) {
     let mut order: Vec<usize> = (0..n).collect();
     order.sort_by(|&i, &j| m[j][j].total_cmp(&m[i][i]));
     let values = order.iter().map(|&i| m[i][i]).collect();
-    let vectors = (0..n).map(|r| order.iter().map(|&c| v[r][c]).collect()).collect();
+    let vectors = (0..n)
+        .map(|r| order.iter().map(|&c| v[r][c]).collect())
+        .collect();
     (values, vectors)
 }
 
@@ -268,7 +280,10 @@ pub(super) fn complex_null_space(a: &[Vec<C64>], tol: f64) -> Vec<Vec<C64>> {
             let x = m[row][free];
             v[pc] = (-x.0, -x.1);
         }
-        let big = v.iter().copied().fold((0.0, 0.0), |b, x| if cabs(x) > cabs(b) { x } else { b });
+        let big = v
+            .iter()
+            .copied()
+            .fold((0.0, 0.0), |b, x| if cabs(x) > cabs(b) { x } else { b });
         let mut v: Vec<C64> = v.into_iter().map(|x| cdiv(x, big)).collect();
         if let Some(i) = v.iter().position(|&x| cabs(csub(x, (1.0, 0.0))) < 1e-15) {
             v[i] = (1.0, 0.0);
@@ -295,7 +310,9 @@ pub(super) fn svd(a: &[Vec<f64>]) -> (Vec<Vec<f64>>, Vec<f64>, Vec<Vec<f64>>) {
     };
     let k = m.min(n);
     for j in 0..n {
-        let big = (0..n).map(|i| v[i][j]).fold(0.0_f64, |b, x| if x.abs() > b.abs() { x } else { b });
+        let big = (0..n)
+            .map(|i| v[i][j])
+            .fold(0.0_f64, |b, x| if x.abs() > b.abs() { x } else { b });
         if big < 0.0 {
             for row in v.iter_mut() {
                 row[j] = -row[j];
@@ -347,11 +364,15 @@ fn svd_tall(a: &[Vec<f64>]) -> (Vec<Vec<f64>>, Vec<f64>, Vec<Vec<f64>>) {
             break;
         }
     }
-    let norms: Vec<f64> = (0..n).map(|j| w.iter().map(|r| r[j] * r[j]).sum::<f64>().sqrt()).collect();
+    let norms: Vec<f64> = (0..n)
+        .map(|j| w.iter().map(|r| r[j] * r[j]).sum::<f64>().sqrt())
+        .collect();
     let mut order: Vec<usize> = (0..n).collect();
     order.sort_by(|&i, &j| norms[j].total_cmp(&norms[i]));
     let s: Vec<f64> = order.iter().map(|&j| norms[j]).collect();
-    let vs: Vec<Vec<f64>> = (0..n).map(|r| order.iter().map(|&c| v[r][c]).collect()).collect();
+    let vs: Vec<Vec<f64>> = (0..n)
+        .map(|r| order.iter().map(|&c| v[r][c]).collect())
+        .collect();
     let smax = s.first().copied().unwrap_or(0.0);
     let cutoff = (m.max(n) as f64) * EPS * smax;
     // Columns of U for the nonzero singular values, then completed to an orthonormal basis of R^m.
@@ -369,7 +390,9 @@ fn svd_tall(a: &[Vec<f64>]) -> (Vec<Vec<f64>>, Vec<f64>, Vec<Vec<f64>>) {
         *x = 0.0;
     }
     complete_basis(&mut ucols, m);
-    let u: Vec<Vec<f64>> = (0..m).map(|r| ucols.iter().map(|c| c[r]).collect()).collect();
+    let u: Vec<Vec<f64>> = (0..m)
+        .map(|r| ucols.iter().map(|c| c[r]).collect())
+        .collect();
     (u, s, vs)
 }
 
@@ -408,7 +431,10 @@ pub(super) fn expm(a: &[Vec<f64>]) -> Vec<Vec<f64>> {
         squarings = crate::scientific::functions::jsmath::log2(norm / 0.5).ceil() as i32;
     }
     let scale = 0.5_f64.powi(squarings);
-    let b: Vec<Vec<f64>> = a.iter().map(|r| r.iter().map(|x| x * scale).collect()).collect();
+    let b: Vec<Vec<f64>> = a
+        .iter()
+        .map(|r| r.iter().map(|x| x * scale).collect())
+        .collect();
     let mut sum = identity(n);
     let mut term = identity(n);
     for k in 1..=30 {
@@ -451,8 +477,11 @@ pub(super) fn sqrtm(a: &[Vec<f64>]) -> Option<Vec<Vec<f64>>> {
         let zi = inverse(&z)?;
         let ny: Vec<Vec<f64>> = avg(&y, &zi);
         let nz: Vec<Vec<f64>> = avg(&z, &yi);
-        let diff: Vec<Vec<f64>> =
-            ny.iter().zip(&y).map(|(r, s)| r.iter().zip(s).map(|(p, q)| p - q).collect()).collect();
+        let diff: Vec<Vec<f64>> = ny
+            .iter()
+            .zip(&y)
+            .map(|(r, s)| r.iter().zip(s).map(|(p, q)| p - q).collect())
+            .collect();
         let change = norm1(&diff);
         y = ny;
         z = nz;
@@ -469,39 +498,55 @@ pub(super) fn sqrtm(a: &[Vec<f64>]) -> Option<Vec<Vec<f64>>> {
     }
     let sq = matmul(&y, &y);
     let resid: f64 = norm1(
-        &sq.iter().zip(a).map(|(r, s)| r.iter().zip(s).map(|(p, q)| p - q).collect()).collect::<Vec<Vec<f64>>>(),
+        &sq.iter()
+            .zip(a)
+            .map(|(r, s)| r.iter().zip(s).map(|(p, q)| p - q).collect())
+            .collect::<Vec<Vec<f64>>>(),
     );
     (resid <= 1e-8 * norm1(a).max(1.0)).then_some(y)
 }
 
 /// The n×n identity.
 fn identity(n: usize) -> Vec<Vec<f64>> {
-    (0..n).map(|i| (0..n).map(|j| if i == j { 1.0 } else { 0.0 }).collect()).collect()
+    (0..n)
+        .map(|i| (0..n).map(|j| if i == j { 1.0 } else { 0.0 }).collect())
+        .collect()
 }
 
 /// The transpose of `a`.
 fn transpose(a: &[Vec<f64>]) -> Vec<Vec<f64>> {
     let cols = a.first().map_or(0, Vec::len);
-    (0..cols).map(|j| a.iter().map(|r| r[j]).collect()).collect()
+    (0..cols)
+        .map(|j| a.iter().map(|r| r[j]).collect())
+        .collect()
 }
 
 /// The product `a · b`.
 fn matmul(a: &[Vec<f64>], b: &[Vec<f64>]) -> Vec<Vec<f64>> {
     let cols = b.first().map_or(0, Vec::len);
     a.iter()
-        .map(|r| (0..cols).map(|j| r.iter().zip(b).map(|(x, brow)| x * brow[j]).sum()).collect())
+        .map(|r| {
+            (0..cols)
+                .map(|j| r.iter().zip(b).map(|(x, brow)| x * brow[j]).sum())
+                .collect()
+        })
         .collect()
 }
 
 /// The entrywise mean (a + b)/2.
 fn avg(a: &[Vec<f64>], b: &[Vec<f64>]) -> Vec<Vec<f64>> {
-    a.iter().zip(b).map(|(r, s)| r.iter().zip(s).map(|(p, q)| 0.5 * (p + q)).collect()).collect()
+    a.iter()
+        .zip(b)
+        .map(|(r, s)| r.iter().zip(s).map(|(p, q)| 0.5 * (p + q)).collect())
+        .collect()
 }
 
 /// The 1-norm (largest absolute column sum) of `a`.
 fn norm1(a: &[Vec<f64>]) -> f64 {
     let cols = a.first().map_or(0, Vec::len);
-    (0..cols).map(|j| a.iter().map(|r| r[j].abs()).sum::<f64>()).fold(0.0, f64::max)
+    (0..cols)
+        .map(|j| a.iter().map(|r| r[j].abs()).sum::<f64>())
+        .fold(0.0, f64::max)
 }
 
 /// The inverse of the square matrix `a` by Gauss–Jordan with partial pivoting; None when it is (numerically)
@@ -551,7 +596,9 @@ mod tests {
 
     fn mclose(a: &[Vec<f64>], b: &[Vec<f64>], tol: f64) -> bool {
         a.len() == b.len()
-            && a.iter().zip(b).all(|(r, s)| r.len() == s.len() && r.iter().zip(s).all(|(x, y)| close(*x, *y, tol)))
+            && a.iter().zip(b).all(|(r, s)| {
+                r.len() == s.len() && r.iter().zip(s).all(|(x, y)| close(*x, *y, tol))
+            })
     }
 
     fn is_orthogonal(q: &[Vec<f64>]) -> bool {
@@ -630,7 +677,11 @@ mod tests {
         let h = 0.5f64.sqrt();
         assert!(close(vecs[0][0].abs(), h, 1e-13) && close(vecs[1][0].abs(), h, 1e-13));
         assert!(close(vecs[0][0] * vecs[1][0], 0.5, 1e-13));
-        let a = vec![vec![4.0, 1.0, 2.0], vec![1.0, 3.0, 0.0], vec![2.0, 0.0, 5.0]];
+        let a = vec![
+            vec![4.0, 1.0, 2.0],
+            vec![1.0, 3.0, 0.0],
+            vec![2.0, 0.0, 5.0],
+        ];
         let (vals, vecs) = sym_eigen(&a);
         assert!(vals.windows(2).all(|w| w[0] >= w[1]));
         assert!(is_orthogonal(&vecs));
@@ -652,7 +703,10 @@ mod tests {
         assert_eq!(ns[0][0], (1.0, 0.0));
         assert!(close(ns[0][1].0, -0.5, 1e-15) && ns[0][1].1 == 0.0);
         // [[-i, -1], [1, -i]] (A - iI for the rotation [[0,-1],[1,0]]): null vector (1, -i) up to scale
-        let a = vec![vec![(0.0, -1.0), (-1.0, 0.0)], vec![(1.0, 0.0), (0.0, -1.0)]];
+        let a = vec![
+            vec![(0.0, -1.0), (-1.0, 0.0)],
+            vec![(1.0, 0.0), (0.0, -1.0)],
+        ];
         let ns = complex_null_space(&a, 1e-10);
         assert_eq!(ns.len(), 1);
         let v = &ns[0];
@@ -680,16 +734,25 @@ mod tests {
             vec![vec![3.0, 2.0], vec![2.0, 3.0], vec![2.0, -2.0]],
             vec![vec![1.0, 2.0], vec![2.0, 4.0]],
             vec![vec![0.0, 0.0], vec![0.0, 0.0]],
-            vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0], vec![7.0, 8.0, 10.0]],
+            vec![
+                vec![1.0, 2.0, 3.0],
+                vec![4.0, 5.0, 6.0],
+                vec![7.0, 8.0, 10.0],
+            ],
         ] {
             let (m, n) = (a.len(), a[0].len());
             let (u, s, v) = svd(&a);
-            assert_eq!((u.len(), u[0].len(), s.len(), v.len(), v[0].len()), (m, m, m.min(n), n, n));
+            assert_eq!(
+                (u.len(), u[0].len(), s.len(), v.len(), v[0].len()),
+                (m, m, m.min(n), n, n)
+            );
             assert!(is_orthogonal(&u) && is_orthogonal(&v), "{a:?}");
             assert!(s.windows(2).all(|w| w[0] >= w[1]) && s.iter().all(|&x| x >= 0.0));
             assert!(mclose(&reconstruct(&u, &s, &v, m, n), &a, 1e-12), "{a:?}");
             for col in transpose(&v) {
-                let big = col.iter().fold(0.0_f64, |b, &x| if x.abs() > b.abs() { x } else { b });
+                let big = col
+                    .iter()
+                    .fold(0.0_f64, |b, &x| if x.abs() > b.abs() { x } else { b });
                 assert!(big > 0.0);
             }
         }
@@ -704,11 +767,31 @@ mod tests {
         let e = expm(&[vec![0.0, 1.0], vec![0.0, 0.0]]);
         assert!(mclose(&e, &[vec![1.0, 1.0], vec![0.0, 1.0]], 1e-15));
         let e = expm(&[vec![1.0, 0.0], vec![0.0, 2.0]]);
-        assert!(mclose(&e, &[vec![crate::scientific::functions::jsmath::exp(1.0), 0.0], vec![0.0, crate::scientific::functions::jsmath::exp(2.0)]], 1e-13));
+        assert!(mclose(
+            &e,
+            &[
+                vec![crate::scientific::functions::jsmath::exp(1.0), 0.0],
+                vec![0.0, crate::scientific::functions::jsmath::exp(2.0)]
+            ],
+            1e-13
+        ));
         // Rotation generator: e^[[0,-t],[t,0]] = [[cos t, -sin t],[sin t, cos t]]
         let t = 5.0f64;
         let e = expm(&[vec![0.0, -t], vec![t, 0.0]]);
-        assert!(mclose(&e, &[vec![crate::scientific::functions::jsmath::cos(t), -crate::scientific::functions::jsmath::sin(t)], vec![crate::scientific::functions::jsmath::sin(t), crate::scientific::functions::jsmath::cos(t)]], 1e-12));
+        assert!(mclose(
+            &e,
+            &[
+                vec![
+                    crate::scientific::functions::jsmath::cos(t),
+                    -crate::scientific::functions::jsmath::sin(t)
+                ],
+                vec![
+                    crate::scientific::functions::jsmath::sin(t),
+                    crate::scientific::functions::jsmath::cos(t)
+                ]
+            ],
+            1e-12
+        ));
         assert!(mclose(&expm(&vec![vec![0.0; 3]; 3]), &identity(3), 0.0));
     }
 
@@ -726,6 +809,9 @@ mod tests {
         assert!(mclose(&r, &[vec![1.0, 0.5], vec![0.0, 1.0]], 1e-13));
         assert!(sqrtm(&[vec![-1.0, 0.0], vec![0.0, 4.0]]).is_none());
         assert!(sqrtm(&[vec![-1.0, 0.0], vec![0.0, -1.0]]).is_none());
-        assert_eq!(sqrtm(&[vec![0.0, 0.0], vec![0.0, 0.0]]), Some(vec![vec![0.0; 2]; 2]));
+        assert_eq!(
+            sqrtm(&[vec![0.0, 0.0], vec![0.0, 0.0]]),
+            Some(vec![vec![0.0; 2]; 2])
+        );
     }
 }

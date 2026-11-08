@@ -99,10 +99,17 @@ impl<F: Cells> Ev<'_, '_, F> {
         }
         let cells = self.vec_cells(vs);
         let mut p = if rows {
-            let parts: Vec<Part> = cells.iter().map(|v| grid_part(None, std::slice::from_ref(v))).collect();
+            let parts: Vec<Part> = cells
+                .iter()
+                .map(|v| grid_part(None, std::slice::from_ref(v)))
+                .collect();
             Part {
                 label: None,
-                display: parts.iter().map(|p| p.display.clone()).collect::<Vec<_>>().join(", "),
+                display: parts
+                    .iter()
+                    .map(|p| p.display.clone())
+                    .collect::<Vec<_>>()
+                    .join(", "),
                 exact: parts.iter().any(|p| p.exact.is_some()).then(|| {
                     parts
                         .iter()
@@ -118,7 +125,11 @@ impl<F: Cells> Ev<'_, '_, F> {
         p.display = format!("span{{{}}}", p.display);
         p.exact = p.exact.map(|e| format!("span{{{e}}}"));
         // stored, a basis is the matrix with those columns (or rows)
-        let g = if rows { vs.to_vec() } else { algebra::from_columns(vs) };
+        let g = if rows {
+            vs.to_vec()
+        } else {
+            algebra::from_columns(vs)
+        };
         p.literal = grid_part(None, &self.cells(&g)).literal;
         done(vec![p])
     }
@@ -139,11 +150,17 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
     let key = match key {
         "qc_dot" | "qc_cross" if args.len() == 2 => {
             let (u, v) = (vector(&args[0]), vector(&args[1]));
-            let n = if key == "qc_dot" { u.as_ref().map(Vec::len) } else { Some(3) };
+            let n = if key == "qc_dot" {
+                u.as_ref().map(Vec::len)
+            } else {
+                Some(3)
+            };
             match (u, v) {
                 // two rows or two columns; a column times a row is still their product
                 (Some(u), Some(v))
-                    if Some(u.len()) == n && v.len() == u.len() && is_row(&args[0]) == is_row(&args[1]) =>
+                    if Some(u.len()) == n
+                        && v.len() == u.len()
+                        && is_row(&args[0]) == is_row(&args[1]) =>
                 {
                     &key[3..]
                 }
@@ -178,15 +195,23 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
             Ok(X::Num(algebra::det(f, &a)?))
         }
         "transpose" => Ok(X::Grid(algebra::transpose(&ev.grid(one(&mut args)?)?))),
-        "trace" | "tr" => Ok(X::Num(algebra::trace(f, &ev.square(one(&mut args)?, "trace")?))),
+        "trace" | "tr" => Ok(X::Num(algebra::trace(
+            f,
+            &ev.square(one(&mut args)?, "trace")?,
+        ))),
         "rank" => {
             let r = algebra::rank(f, &ev.grid(one(&mut args)?)?);
             Ok(X::Num(f.lift(&ri(r as i64))))
         }
-        "rref" => Ok(X::Grid(algebra::reduce(f, &ev.grid(one(&mut args)?)?, true).m)),
+        "rref" => Ok(X::Grid(
+            algebra::reduce(f, &ev.grid(one(&mut args)?)?, true).m,
+        )),
         "norm" => {
             let g = ev.grid(one(&mut args)?)?;
-            let sum = g.iter().flatten().fold(f.zero(), |s, v| f.add(&s, &f.mul(v, v)));
+            let sum = g
+                .iter()
+                .flatten()
+                .fold(f.zero(), |s, v| f.add(&s, &f.mul(v, v)));
             f.sqrt(&sum).map(X::Num).ok_or(XFail::NotExact)
         }
         "identity" | "eye" => {
@@ -246,7 +271,10 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
                     if let Some(x) = p.exact.take().or_else(|| c.rich.then(|| p.display.clone())) {
                         p.exact = Some(x);
                         // the exact form names λ exactly too
-                        p.label = Some(format!("λ = {}: ", c.exact.clone().unwrap_or(c.dec.clone())));
+                        p.label = Some(format!(
+                            "λ = {}: ",
+                            c.exact.clone().unwrap_or(c.dec.clone())
+                        ));
                     }
                     p
                 })
@@ -276,7 +304,10 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
             let a = ev.square(one(&mut args)?, "diagonalize")?;
             let eigs = ev.spectrum(&a)?;
             let (p, d) = eigen::diagonalize(f, fmt, &a, &eigs)?;
-            Ok(done(vec![grid_part(Some("P = ".into()), &p), grid_part(Some("D = ".into()), &d)]))
+            Ok(done(vec![
+                grid_part(Some("P = ".into()), &p),
+                grid_part(Some("D = ".into()), &d),
+            ]))
         }
         "jordan" => {
             let a = ev.square(one(&mut args)?, "the Jordan form")?;
@@ -293,19 +324,31 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
                     let g = ev.grid(args.remove(0))?;
                     let n = g[0].len();
                     if n < 2 {
-                        return fail(format!("{key} takes A and b, or one augmented matrix [A | b]"));
+                        return fail(format!(
+                            "{key} takes A and b, or one augmented matrix [A | b]"
+                        ));
                     }
                     let b = algebra::column(&g, n - 1);
-                    (g.into_iter().map(|mut r| {
-                        r.pop();
-                        r
-                    }).collect::<G<F::C>>(), b)
+                    (
+                        g.into_iter()
+                            .map(|mut r| {
+                                r.pop();
+                                r
+                            })
+                            .collect::<G<F::C>>(),
+                        b,
+                    )
                 }
                 2 => {
-                    let b = vector(&args[1]).ok_or_else(|| XFail::Matrix(format!("{key}'s b must be a vector")))?;
+                    let b = vector(&args[1])
+                        .ok_or_else(|| XFail::Matrix(format!("{key}'s b must be a vector")))?;
                     (ev.grid(args.remove(0))?, b)
                 }
-                _ => return fail(format!("{key} takes A and b, or one augmented matrix [A | b]")),
+                _ => {
+                    return fail(format!(
+                        "{key} takes A and b, or one augmented matrix [A | b]"
+                    ));
+                }
             };
             if a.len() != b.len() {
                 return fail(format!(
@@ -330,26 +373,43 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
             }
             match algebra::solve(f, &a, &b) {
                 Solution::Unique(x) => Ok(X::Grid(x.into_iter().map(|c| vec![c]).collect())),
-                Solution::Inconsistent => fail("no solution: the equations contradict each other (try lsq for the closest fit)"),
-                Solution::Family { particular, directions } => {
+                Solution::Inconsistent => fail(
+                    "no solution: the equations contradict each other (try lsq for the closest fit)",
+                ),
+                Solution::Family {
+                    particular,
+                    directions,
+                } => {
                     let p = grid_part(None, &cell_column(&ev.vec_cells(&[particular])[0]));
                     let ds: Vec<Part> = ev
                         .vec_cells(&directions)
                         .iter()
                         .map(|v| grid_part(None, &cell_column(v)))
                         .collect();
-                    let zero_particular = p.display.split(|c: char| !c.is_ascii_digit() && c != '.').all(|d| d.is_empty() || d.chars().all(|c| c == '0' || c == '.'));
+                    let zero_particular = p
+                        .display
+                        .split(|c: char| !c.is_ascii_digit() && c != '.')
+                        .all(|d| d.is_empty() || d.chars().all(|c| c == '0' || c == '.'));
                     let write = |pick: &dyn Fn(&Part) -> String| {
-                        let mut out = if zero_particular { String::new() } else { pick(&p) };
+                        let mut out = if zero_particular {
+                            String::new()
+                        } else {
+                            pick(&p)
+                        };
                         for (k, d) in ds.iter().enumerate() {
                             let term = format!("{}*{}", FREE[k % FREE.len()], pick(d));
-                            out = if out.is_empty() { term } else { format!("{out} + {term}") };
+                            out = if out.is_empty() {
+                                term
+                            } else {
+                                format!("{out} + {term}")
+                            };
                         }
                         out
                     };
                     let display = write(&|q: &Part| q.display.clone());
                     let rich = p.exact.is_some() || ds.iter().any(|d| d.exact.is_some());
-                    let exact = rich.then(|| write(&|q: &Part| q.exact.clone().unwrap_or(q.display.clone())));
+                    let exact = rich
+                        .then(|| write(&|q: &Part| q.exact.clone().unwrap_or(q.display.clone())));
                     let names = FREE[..ds.len().min(FREE.len())].join(", ");
                     Ok(done(vec![Part {
                         label: Some("x = ".into()),
@@ -363,7 +423,8 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
         }
         "coords" => {
             takes(key, &args, 2, "a vector and a basis matrix")?;
-            let v = vector(&args[0]).ok_or_else(|| XFail::Matrix("coords takes a vector and a basis matrix".into()))?;
+            let v = vector(&args[0])
+                .ok_or_else(|| XFail::Matrix("coords takes a vector and a basis matrix".into()))?;
             let b = ev.grid(args.remove(1))?;
             match algebra::solve(f, &b, &v) {
                 Solution::Unique(x) => Ok(X::Grid(x.into_iter().map(|c| vec![c]).collect())),
@@ -390,7 +451,12 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
             if args.len() == 2 {
                 let g = ev.grid(args.remove(0))?;
                 let j = ev.index(args.remove(0), g[0].len(), "the column")?;
-                return Ok(X::Grid(algebra::column(&g, j).into_iter().map(|c| vec![c]).collect()));
+                return Ok(X::Grid(
+                    algebra::column(&g, j)
+                        .into_iter()
+                        .map(|c| vec![c])
+                        .collect(),
+                ));
             }
             let g = ev.grid(one(&mut args)?)?;
             Ok(ev.span(&algebra::pivot_columns(f, &g), false))
@@ -421,8 +487,14 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
             Ok(X::Grid(algebra::from_columns(&q)))
         }
         "proj" => {
-            takes(key, &args, 2, "two vectors, or a vector and a matrix to project onto")?;
-            let u = vector(&args[0]).ok_or_else(|| XFail::Matrix("proj's first argument must be a vector".into()))?;
+            takes(
+                key,
+                &args,
+                2,
+                "two vectors, or a vector and a matrix to project onto",
+            )?;
+            let u = vector(&args[0])
+                .ok_or_else(|| XFail::Matrix("proj's first argument must be a vector".into()))?;
             let onto = match vector(&args[1]) {
                 Some(v) if v.len() == u.len() => {
                     let vv = algebra::dot(f, &v, &v);
@@ -442,7 +514,11 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
             let a = algebra::from_columns(&algebra::pivot_columns(f, &onto));
             let at = algebra::transpose(&a);
             let uc: G<F::C> = u.into_iter().map(|c| vec![c]).collect();
-            let x = algebra::mul(f, &algebra::inverse(f, &algebra::mul(f, &at, &a)?)?, &algebra::mul(f, &at, &uc)?)?;
+            let x = algebra::mul(
+                f,
+                &algebra::inverse(f, &algebra::mul(f, &at, &a)?)?,
+                &algebra::mul(f, &at, &uc)?,
+            )?;
             let p = algebra::mul(f, &a, &x)?;
             Ok(shaped(algebra::column(&p, 0), &args[0]))
         }
@@ -467,14 +543,23 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
             // the calculator's acos, so the angle comes in the user's angle mode
             let text = match f.as_rat(&f.div(&f.mul(&uv, &uv), &f.mul(&uu, &vv))) {
                 Some(c2) if c2 == ri(0) => "0".to_string(),
-                Some(c2) if c2 == ri(1) => if a > 0.0 { "1".into() } else { "-1".into() },
+                Some(c2) if c2 == ri(1) => {
+                    if a > 0.0 {
+                        "1".into()
+                    } else {
+                        "-1".into()
+                    }
+                }
                 _ => crate::jsnum::to_string(cos),
             };
             let angle = match ev.opts.scalar {
                 Some(read) => read(&format!("acos({text})")).ok_or(XFail::NotExact)?,
                 None => crate::scientific::functions::jsmath::acos(cos),
             };
-            Ok(done(vec![text_part(None, crate::format::format_number(super::tidy(angle, 1.0), ev.opts.sig_figs))]))
+            Ok(done(vec![text_part(
+                None,
+                crate::format::format_number(super::tidy(angle, 1.0), ev.opts.sig_figs),
+            )]))
         }
         "unit" | "normalize" => {
             let a = one(&mut args)?;
@@ -492,7 +577,12 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
                 let a = ev.square(args.remove(0), "the cofactor matrix")?;
                 return Ok(X::Grid(algebra::cofactors(f, &a)?));
             }
-            takes(key, &args, 3, "a matrix and a row and column, like minor(A, 1, 2)")?;
+            takes(
+                key,
+                &args,
+                3,
+                "a matrix and a row and column, like minor(A, 1, 2)",
+            )?;
             let a = ev.square(args.remove(0), key)?;
             let n = a.len();
             if n < 2 {
@@ -508,12 +598,22 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
         }
         "entry" if args.len() == 2 => {
             // one index into a vector
-            let v = vector(&args[0]).ok_or_else(|| XFail::Matrix("one index is for a vector; a matrix takes a row and a column, like A[1, 2]".into()))?;
+            let v = vector(&args[0]).ok_or_else(|| {
+                XFail::Matrix(
+                    "one index is for a vector; a matrix takes a row and a column, like A[1, 2]"
+                        .into(),
+                )
+            })?;
             let i = ev.index(args.remove(1), v.len(), "the index")?;
             Ok(X::Num(v[i].clone()))
         }
         "entry" => {
-            takes(key, &args, 3, "a matrix and a row and column, like entry(A, 1, 2)")?;
+            takes(
+                key,
+                &args,
+                3,
+                "a matrix and a row and column, like entry(A, 1, 2)",
+            )?;
             let g = ev.grid(args.remove(0))?;
             let i = ev.index(args.remove(0), g.len(), "the row")?;
             let j = ev.index(args.remove(0), g[0].len(), "the column")?;
@@ -527,7 +627,11 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
             match key {
                 "kron" => Ok(X::Grid(
                     (0..m * p)
-                        .map(|i| (0..n * q).map(|j| f.mul(&a[i / p][j / q], &b[i % p][j % q])).collect())
+                        .map(|i| {
+                            (0..n * q)
+                                .map(|j| f.mul(&a[i / p][j / q], &b[i % p][j % q]))
+                                .collect()
+                        })
                         .collect(),
                 )),
                 "hadamard" => {
@@ -545,10 +649,15 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
                     if m != p {
                         return fail("augment needs matrices with the same number of rows");
                     }
-                    Ok(X::Grid(a.into_iter().zip(b).map(|(mut r, s)| {
-                        r.extend(s);
-                        r
-                    }).collect()))
+                    Ok(X::Grid(
+                        a.into_iter()
+                            .zip(b)
+                            .map(|(mut r, s)| {
+                                r.extend(s);
+                                r
+                            })
+                            .collect(),
+                    ))
                 }
                 _ => {
                     if n != q {
@@ -563,7 +672,11 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
                 return fail(format!("{key} takes a size, like {key}(2, 3)"));
             }
             let m = ev.index(args.remove(0), 20, "the size")? + 1;
-            let n = if args.is_empty() { m } else { ev.index(args.remove(0), 20, "the size")? + 1 };
+            let n = if args.is_empty() {
+                m
+            } else {
+                ev.index(args.remove(0), 20, "the size")? + 1
+            };
             let v = if key == "zeros" { f.zero() } else { f.one() };
             Ok(X::Grid(vec![vec![v; n]; m]))
         }
@@ -572,17 +685,28 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
             if let Some(v) = vector(&a) {
                 let n = v.len();
                 return Ok(X::Grid(
-                    (0..n).map(|i| (0..n).map(|j| if i == j { v[i].clone() } else { f.zero() }).collect()).collect(),
+                    (0..n)
+                        .map(|i| {
+                            (0..n)
+                                .map(|j| if i == j { v[i].clone() } else { f.zero() })
+                                .collect()
+                        })
+                        .collect(),
                 ));
             }
             let g = ev.square(a, "diag")?;
-            Ok(X::Grid((0..g.len()).map(|i| vec![g[i][i].clone()]).collect()))
+            Ok(X::Grid(
+                (0..g.len()).map(|i| vec![g[i][i].clone()]).collect(),
+            ))
         }
 
         // ---- checks ----
         "issymmetric" => {
             let g = ev.grid(one(&mut args)?)?;
-            Ok(done(vec![verdict(g.len() == g[0].len() && algebra::is_symmetric(f, &g), None)]))
+            Ok(done(vec![verdict(
+                g.len() == g[0].len() && algebra::is_symmetric(f, &g),
+                None,
+            )]))
         }
         "isorthogonal" => {
             let g = ev.grid(one(&mut args)?)?;
@@ -592,20 +716,32 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
             }
             let qtq = algebra::mul(f, &algebra::transpose(&g), &g)?;
             let id = algebra::identity(f, n);
-            Ok(done(vec![verdict(algebra::sub(f, &qtq, &id).iter().flatten().all(|c| f.is_zero(c)), None)]))
+            Ok(done(vec![verdict(
+                algebra::sub(f, &qtq, &id)
+                    .iter()
+                    .flatten()
+                    .all(|c| f.is_zero(c)),
+                None,
+            )]))
         }
         "isinvertible" => {
             let a = ev.square(one(&mut args)?, "isinvertible")?;
             let d = algebra::det(f, &a)?;
             let c = fmt.cell(f, &d);
-            Ok(done(vec![verdict(!f.is_zero(&d), Some(format!("det = {}", c.exact.unwrap_or(c.dec))))]))
+            Ok(done(vec![verdict(
+                !f.is_zero(&d),
+                Some(format!("det = {}", c.exact.unwrap_or(c.dec))),
+            )]))
         }
         "isdiagonalizable" => {
             let a = ev.square(one(&mut args)?, "isdiagonalizable")?;
             let eigs = ev.spectrum(&a)?;
             Ok(done(vec![match eigen::diagonalize(f, fmt, &a, &eigs) {
                 Ok(_) => verdict(true, None),
-                Err(XFail::Matrix(m)) => verdict(false, m.strip_prefix("not diagonalizable: ").map(str::to_string)),
+                Err(XFail::Matrix(m)) => verdict(
+                    false,
+                    m.strip_prefix("not diagonalizable: ").map(str::to_string),
+                ),
                 Err(e) => return Err(e),
             }]))
         }
@@ -619,7 +755,12 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
                 let lead: G<F::C> = a[..k].iter().map(|r| r[..k].to_vec()).collect();
                 match f.sign(&algebra::det(f, &lead)?) {
                     Some(1) => {}
-                    Some(_) => return Ok(done(vec![verdict(false, Some(format!("the leading {k}×{k} minor isn't positive")))])),
+                    Some(_) => {
+                        return Ok(done(vec![verdict(
+                            false,
+                            Some(format!("the leading {k}×{k} minor isn't positive")),
+                        )]));
+                    }
                     None => return Err(XFail::NotExact),
                 }
             }
@@ -628,7 +769,10 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
         "islinind" | "independent" => {
             let vs = ev.columns_of(key, args)?;
             let r = algebra::rank(f, &algebra::from_columns(&vs));
-            Ok(done(vec![verdict(r == vs.len(), Some(format!("rank {r} of {}", vs.len())))]))
+            Ok(done(vec![verdict(
+                r == vs.len(),
+                Some(format!("rank {r} of {}", vs.len())),
+            )]))
         }
 
         // ---- decompositions ----
@@ -650,15 +794,25 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
             if orth.len() < cols.len() {
                 return fail("qr needs independent columns");
             }
-            let q = algebra::from_columns(&orth.iter().map(|v| algebra::unit(f, v)).collect::<XR<Vec<_>>>()?);
+            let q = algebra::from_columns(
+                &orth
+                    .iter()
+                    .map(|v| algebra::unit(f, v))
+                    .collect::<XR<Vec<_>>>()?,
+            );
             let r = algebra::mul(f, &algebra::transpose(&q), &g)?;
-            Ok(done(vec![grid_part(Some("Q = ".into()), &ev.cells(&q)), grid_part(Some("R = ".into()), &ev.cells(&r))]))
+            Ok(done(vec![
+                grid_part(Some("Q = ".into()), &ev.cells(&q)),
+                grid_part(Some("R = ".into()), &ev.cells(&r)),
+            ]))
         }
         "svd" => {
             let g = ev.floats(&ev.grid(one(&mut args)?)?)?;
             let (u, s, v) = numeric::svd(&g);
             let (m, n) = (g.len(), g[0].len());
-            let sigma: G<f64> = (0..m).map(|i| (0..n).map(|j| if i == j { s[i] } else { 0.0 }).collect()).collect();
+            let sigma: G<f64> = (0..m)
+                .map(|i| (0..n).map(|j| if i == j { s[i] } else { 0.0 }).collect())
+                .collect();
             Ok(done(vec![
                 grid_part(Some("U = ".into()), &ev.float_cells(&u)),
                 grid_part(Some("Σ = ".into()), &ev.float_cells(&sigma)),
@@ -668,7 +822,10 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
         "cond" => {
             let g = ev.floats(&ev.grid(one(&mut args)?)?)?;
             let (_, s, _) = numeric::svd(&g);
-            let (max, min) = (s.first().copied().unwrap_or(0.0), s.last().copied().unwrap_or(0.0));
+            let (max, min) = (
+                s.first().copied().unwrap_or(0.0),
+                s.last().copied().unwrap_or(0.0),
+            );
             if min <= 1e-14 * max {
                 return Ok(done(vec![words_part("∞ (singular)")]));
             }
@@ -685,7 +842,11 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
             let out = if key == "expm" {
                 numeric::expm(&g)
             } else {
-                numeric::sqrtm(&g).ok_or_else(|| XFail::Matrix("no real square root (a negative or repeated zero eigenvalue)".into()))?
+                numeric::sqrtm(&g).ok_or_else(|| {
+                    XFail::Matrix(
+                        "no real square root (a negative or repeated zero eigenvalue)".into(),
+                    )
+                })?
             };
             Ok(done(vec![grid_part(None, &ev.float_cells(&out))]))
         }

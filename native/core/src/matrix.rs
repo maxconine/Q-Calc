@@ -216,39 +216,125 @@ fn new_call_re(names: &[String]) -> jsre::Regex {
 /// independent?` (native only).
 fn sentences(expr: &str) -> String {
     const ARG: &str = r"(.+?)";
-    static RULES: std::sync::LazyLock<Vec<(jsre::Regex, &'static str)>> = std::sync::LazyLock::new(|| {
-        let r = |p: String, to: &'static str| (js(&format!(r"^\s*(?:find\s+|compute\s+|what\s+is\s+|what's\s+)?(?:the\s+|an?\s+)?{p}\s*\??\s*$"), "i"), to);
-        vec![
-            r(format!(r"(?:vector\s+)?proj(?:ection)?\s+of\s+{ARG}\s+(?:onto|on)\s+{ARG}"), "proj"),
-            r(format!(r"angle\s+between\s+{ARG}\s+and\s+{ARG}"), "angle"),
-            r(format!(r"(?:dot|inner|scalar)\s+product\s+of\s+{ARG}\s+and\s+{ARG}"), "dot"),
-            r(format!(r"(?:cross|vector)\s+product\s+of\s+{ARG}\s+and\s+{ARG}"), "cross"),
-            r(format!(r"(?:magnitude|length)\s+of\s+{ARG}"), "norm"),
-            r(format!(r"unit\s+vector\s+(?:of\s+|for\s+|along\s+|in\s+the\s+direction\s+of\s+)?{ARG}"), "unit"),
-            r(format!(r"orthonormal\s+basis\s+(?:of|for)\s+{ARG}"), "gramschmidt"),
-            r(format!(r"(?:gram[-\s]*schmidt|orthonormali[sz]e)\s+(?:of\s+|on\s+)?{ARG}"), "gramschmidt"),
-            r(format!(r"basis\s+(?:of|for)\s+(?:the\s+)?(?:null\s*space|kernel)\s+of\s+{ARG}"), "nullspace"),
-            r(format!(r"basis\s+(?:of|for)\s+(?:the\s+)?column\s+space\s+of\s+{ARG}"), "colspace"),
-            r(format!(r"basis\s+(?:of|for)\s+(?:the\s+)?row\s+space\s+of\s+{ARG}"), "rowspace"),
-            r(format!(r"(?:dim(?:ension)?\s+(?:of\s+)?(?:the\s+)?(?:null\s*space|null|kernel)|nullity)\s+(?:of\s+)?{ARG}"), "nullity"),
-            r(format!(r"dim(?:ension)?\s+(?:of\s+)?(?:the\s+)?(?:column\s+space|col|row\s+space|row)\s+(?:of\s+)?{ARG}"), "rank"),
-            r(format!(r"(?:least\s+squares|lsq)\s+(?:solution\s+|fit\s+)?(?:of\s+|for\s+|to\s+)?{ARG}"), "lsq"),
-            r(format!(r"(?:is|check\s+if)\s+{ARG}\s+invertible"), "isinvertible"),
-            r(format!(r"(?:is|check\s+if)\s+{ARG}\s+symmetric"), "issymmetric"),
-            r(format!(r"(?:is|check\s+if)\s+{ARG}\s+orthogonal"), "isorthogonal"),
-            r(format!(r"(?:is|check\s+if)\s+{ARG}\s+diagonali[sz]able"), "isdiagonalizable"),
-            r(format!(r"(?:is|check\s+if)\s+{ARG}\s+positive\s+definite"), "isposdef"),
-            r(format!(r"(?:are|is|check\s+if)\s+{ARG}\s+linearly\s+independent"), "islinind"),
-        ]
-    });
+    static RULES: std::sync::LazyLock<Vec<(jsre::Regex, &'static str)>> = std::sync::LazyLock::new(
+        || {
+            let r = |p: String, to: &'static str| {
+                (
+                    js(
+                        &format!(
+                            r"^\s*(?:find\s+|compute\s+|what\s+is\s+|what's\s+)?(?:the\s+|an?\s+)?{p}\s*\??\s*$"
+                        ),
+                        "i",
+                    ),
+                    to,
+                )
+            };
+            vec![
+                r(
+                    format!(r"(?:vector\s+)?proj(?:ection)?\s+of\s+{ARG}\s+(?:onto|on)\s+{ARG}"),
+                    "proj",
+                ),
+                r(format!(r"angle\s+between\s+{ARG}\s+and\s+{ARG}"), "angle"),
+                r(
+                    format!(r"(?:dot|inner|scalar)\s+product\s+of\s+{ARG}\s+and\s+{ARG}"),
+                    "dot",
+                ),
+                r(
+                    format!(r"(?:cross|vector)\s+product\s+of\s+{ARG}\s+and\s+{ARG}"),
+                    "cross",
+                ),
+                r(format!(r"(?:magnitude|length)\s+of\s+{ARG}"), "norm"),
+                r(
+                    format!(
+                        r"unit\s+vector\s+(?:of\s+|for\s+|along\s+|in\s+the\s+direction\s+of\s+)?{ARG}"
+                    ),
+                    "unit",
+                ),
+                r(
+                    format!(r"orthonormal\s+basis\s+(?:of|for)\s+{ARG}"),
+                    "gramschmidt",
+                ),
+                r(
+                    format!(r"(?:gram[-\s]*schmidt|orthonormali[sz]e)\s+(?:of\s+|on\s+)?{ARG}"),
+                    "gramschmidt",
+                ),
+                r(
+                    format!(
+                        r"basis\s+(?:of|for)\s+(?:the\s+)?(?:null\s*space|kernel)\s+of\s+{ARG}"
+                    ),
+                    "nullspace",
+                ),
+                r(
+                    format!(r"basis\s+(?:of|for)\s+(?:the\s+)?column\s+space\s+of\s+{ARG}"),
+                    "colspace",
+                ),
+                r(
+                    format!(r"basis\s+(?:of|for)\s+(?:the\s+)?row\s+space\s+of\s+{ARG}"),
+                    "rowspace",
+                ),
+                r(
+                    format!(
+                        r"(?:dim(?:ension)?\s+(?:of\s+)?(?:the\s+)?(?:null\s*space|null|kernel)|nullity)\s+(?:of\s+)?{ARG}"
+                    ),
+                    "nullity",
+                ),
+                r(
+                    format!(
+                        r"dim(?:ension)?\s+(?:of\s+)?(?:the\s+)?(?:column\s+space|col|row\s+space|row)\s+(?:of\s+)?{ARG}"
+                    ),
+                    "rank",
+                ),
+                r(
+                    format!(
+                        r"(?:least\s+squares|lsq)\s+(?:solution\s+|fit\s+)?(?:of\s+|for\s+|to\s+)?{ARG}"
+                    ),
+                    "lsq",
+                ),
+                r(
+                    format!(r"(?:is|check\s+if)\s+{ARG}\s+invertible"),
+                    "isinvertible",
+                ),
+                r(
+                    format!(r"(?:is|check\s+if)\s+{ARG}\s+symmetric"),
+                    "issymmetric",
+                ),
+                r(
+                    format!(r"(?:is|check\s+if)\s+{ARG}\s+orthogonal"),
+                    "isorthogonal",
+                ),
+                r(
+                    format!(r"(?:is|check\s+if)\s+{ARG}\s+diagonali[sz]able"),
+                    "isdiagonalizable",
+                ),
+                r(
+                    format!(r"(?:is|check\s+if)\s+{ARG}\s+positive\s+definite"),
+                    "isposdef",
+                ),
+                r(
+                    format!(r"(?:are|is|check\s+if)\s+{ARG}\s+linearly\s+independent"),
+                    "islinind",
+                ),
+            ]
+        },
+    );
     for (re, to) in RULES.iter() {
-        let Ok(Some(c)) = re.captures(expr) else { continue };
-        let args: Vec<String> = (1..c.len()).filter_map(|i| c.get(i)).map(|m| m.as_str().trim().to_string()).collect();
+        let Ok(Some(c)) = re.captures(expr) else {
+            continue;
+        };
+        let args: Vec<String> = (1..c.len())
+            .filter_map(|i| c.get(i))
+            .map(|m| m.as_str().trim().to_string())
+            .collect();
         // `least squares A b` names two operands with a space between
         let args = match *to {
             "lsq" if args.len() == 1 => two_operands(&args[0]).unwrap_or(args),
             // `are u, v and w linearly independent`
-            "islinind" => args[0].split(" and ").flat_map(|p| p.split(',')).map(|p| p.trim().to_string()).filter(|p| !p.is_empty()).collect(),
+            "islinind" => args[0]
+                .split(" and ")
+                .flat_map(|p| p.split(','))
+                .map(|p| p.trim().to_string())
+                .filter(|p| !p.is_empty())
+                .collect(),
             _ => args,
         };
         return format!("{to}({})", args.join(", "));
@@ -268,10 +354,16 @@ fn two_operands(s: &str) -> Option<Vec<String>> {
                     let rest = s[i + 1..].trim_start();
                     let rest = rest.strip_prefix(',').unwrap_or(rest).trim();
                     let rest = rest.strip_prefix("and ").unwrap_or(rest).trim();
-                    return (!rest.is_empty()).then(|| vec![s[..=i].trim().to_string(), rest.to_string()]);
+                    return (!rest.is_empty())
+                        .then(|| vec![s[..=i].trim().to_string(), rest.to_string()]);
                 }
             }
-            ',' if depth == 0 => return Some(vec![s[..i].trim().to_string(), s[i + 1..].trim().to_string()]),
+            ',' if depth == 0 => {
+                return Some(vec![
+                    s[..i].trim().to_string(),
+                    s[i + 1..].trim().to_string(),
+                ]);
+            }
             _ => {}
         }
     }
@@ -355,7 +447,8 @@ fn phrases(expr: &str) -> String {
 
 /// A line the generic evaluator takes: one of its own functions with a matrix about.
 fn looks_new(expr: &str, functions: &[String]) -> bool {
-    if jsre::test(&MAKER_CALL, expr) && !functions.iter().any(|f| MAKERS.split('|').any(|m| m == f)) {
+    if jsre::test(&MAKER_CALL, expr) && !functions.iter().any(|f| MAKERS.split('|').any(|m| m == f))
+    {
         return true;
     }
     if !expr.contains('[') {
@@ -1089,18 +1182,24 @@ fn identity_symbol(expr: &str) -> String {
     }
     // the rows of the first bracketed matrix: `[[1, 2], [3, 4]]` or `[1 2; 3 4]`
     let Some(open) = s.find('[') else { return s };
-    let Some(end) = operand_end(&s, open) else { return s };
+    let Some(end) = operand_end(&s, open) else {
+        return s;
+    };
     let inner = &s[open + 1..end - 1];
     let rows = if inner.trim_start().starts_with('[') {
         let mut depth = 0;
-        inner.chars().filter(|&c| {
-            match c {
-                '[' | '(' => depth += 1,
-                ']' | ')' => depth -= 1,
-                _ => {}
-            }
-            depth == 0 && c == ','
-        }).count() + 1
+        inner
+            .chars()
+            .filter(|&c| {
+                match c {
+                    '[' | '(' => depth += 1,
+                    ']' | ')' => depth -= 1,
+                    _ => {}
+                }
+                depth == 0 && c == ','
+            })
+            .count()
+            + 1
     } else {
         inner.matches(';').count() + 1
     };
@@ -1119,7 +1218,9 @@ fn indexing(expr: &str) -> String {
             if bytes[i] != b'[' || !matches!(bytes[i - 1], b']' | b')') {
                 continue;
             }
-            let Some(end) = operand_end(&out, i) else { continue };
+            let Some(end) = operand_end(&out, i) else {
+                continue;
+            };
             let inner = &out[i + 1..end - 1];
             if inner.contains(['[', ';', '|']) {
                 continue;
@@ -1129,7 +1230,11 @@ fn indexing(expr: &str) -> String {
                 continue;
             }
             // where the indexed thing starts: its bracket, or its call's name
-            let (close, open) = if bytes[i - 1] == b']' { (b']', b'[') } else { (b')', b'(') };
+            let (close, open) = if bytes[i - 1] == b']' {
+                (b']', b'[')
+            } else {
+                (b')', b'(')
+            };
             let mut depth = 0;
             let mut start = None;
             for k in (0..i).rev() {
@@ -1145,14 +1250,23 @@ fn indexing(expr: &str) -> String {
             }
             let Some(mut start) = start else { continue };
             if open == b'(' {
-                while start > 0 && (bytes[start - 1].is_ascii_alphanumeric() || bytes[start - 1] == b'_') {
+                while start > 0
+                    && (bytes[start - 1].is_ascii_alphanumeric() || bytes[start - 1] == b'_')
+                {
                     start -= 1;
                 }
             }
-            found = Some((start, i, end, items.iter().map(|t| t.to_string()).collect::<Vec<_>>()));
+            found = Some((
+                start,
+                i,
+                end,
+                items.iter().map(|t| t.to_string()).collect::<Vec<_>>(),
+            ));
             break;
         }
-        let Some((start, i, end, items)) = found else { break };
+        let Some((start, i, end, items)) = found else {
+            break;
+        };
         let m = &out[start..i];
         let call = match items.as_slice() {
             [a] => format!("entry({m}, {a})"),
@@ -1171,7 +1285,9 @@ fn indexing(expr: &str) -> String {
 fn word_forms(expr: &str) -> String {
     static WORD: Lazy = Lazy::new(|| {
         js(
-            &format!(r"(?<![A-Za-z_])(?:the\s+)?({WORDS}|{NEW_WORDS})\s+(?:of\s+)?(?=[\[(A-Za-z0-9])"),
+            &format!(
+                r"(?<![A-Za-z_])(?:the\s+)?({WORDS}|{NEW_WORDS})\s+(?:of\s+)?(?=[\[(A-Za-z0-9])"
+            ),
             "i",
         )
     });
@@ -1204,7 +1320,8 @@ fn prep(expr: &str) -> String {
     static PRIME: Lazy = Lazy::new(|| js(r"([\])])\s*'", ""));
     // `x^T x`: a product after the transpose mark, not `T x`
     static T_THEN: Lazy = Lazy::new(|| js(r"(\^\s*T|ᵀ)\s+(?=[\[(A-Za-z0-9])", ""));
-    let expr = jsre::replace_all(&T_THEN, expr, |c| format!("{} * ", jsre::group(c, 1))).into_owned();
+    let expr =
+        jsre::replace_all(&T_THEN, expr, |c| format!("{} * ", jsre::group(c, 1))).into_owned();
     let expr = expr.as_str();
     // the input's word rule (prettyTokens, QuickInput's and the native bars') turns a typed `dot(` into `·(`: a `·`
     // with nothing to multiply before it is still the dot product's call, as `dot([1; 2; 3], [4 5 6])` is 32
@@ -1212,7 +1329,9 @@ fn prep(expr: &str) -> String {
     let expr = jsre::replace_all(&DOT_CALL, expr, |c| {
         format!("{}{}dot", jsre::group(c, 1), jsre::group(c, 2))
     });
-    let expr = identity_symbol(&indexing(&rotations(&augmented(&products(&phrases(&expr))))));
+    let expr = identity_symbol(&indexing(&rotations(&augmented(&products(&phrases(
+        &expr,
+    ))))));
     // `3[[1, 2]]` and `k [1 2]` scale; mathjs would read a bracket after a value as an index
     let s = word_forms(&backslash(&spaced(&expr)));
     // `null` is the parser's constant, so the call goes by its long name
@@ -1277,7 +1396,11 @@ fn backslash(expr: &str) -> String {
         let left = out[..i].trim_end();
         let start = match left.as_bytes().last() {
             Some(b')') | Some(b']') => {
-                let (close, open) = if left.ends_with(')') { (b')', b'(') } else { (b']', b'[') };
+                let (close, open) = if left.ends_with(')') {
+                    (b')', b'(')
+                } else {
+                    (b']', b'[')
+                };
                 let mut depth = 0;
                 let mut at = None;
                 for (k, ch) in left.bytes().enumerate().rev() {
@@ -1304,7 +1427,9 @@ fn backslash(expr: &str) -> String {
         let rest = &out[i + 1..];
         let skip = rest.len() - rest.trim_start().len();
         let r0 = i + 1 + skip;
-        let Some(end) = operand_end(&out, r0) else { break };
+        let Some(end) = operand_end(&out, r0) else {
+            break;
+        };
         out = format!(
             "{}solve({}, {}){}",
             &out[..start],
@@ -1405,14 +1530,23 @@ fn bar_of(expr: &str) -> Option<usize> {
 
 fn node_answer(node: &Node, bare: bool, opts: &MatrixOptions<'_>) -> Option<MatrixAnswer> {
     if uses_new(node, opts.functions) {
-        return Some(generic_answer(exact_eval::exact_answer(node, opts, true), bare, opts));
+        return Some(generic_answer(
+            exact_eval::exact_answer(node, opts, true),
+            bare,
+            opts,
+        ));
     }
     let exact = exact_eval::exact_answer(node, opts, false);
     let from_exact = |exact: Option<exact_eval::Exact>| match &exact {
         Some(exact_eval::Exact::Value {
             approx: Some(approx),
             ..
-        }) => Some(with_exact(numeric_answer(approx.clone(), opts), exact, bare, opts)),
+        }) => Some(with_exact(
+            numeric_answer(approx.clone(), opts),
+            exact,
+            bare,
+            opts,
+        )),
         _ => None,
     };
     match eval_node(node, opts) {
@@ -1460,7 +1594,9 @@ fn generic_answer(
             let display = a.display();
             let exact = a.exact().filter(|e| *e != display);
             let (display, exact) = match exact {
-                Some(e) if opts.fraction_mode && !e.contains("sqrt") && !e.contains('i') => (e, None),
+                Some(e) if opts.fraction_mode && !e.contains("sqrt") && !e.contains('i') => {
+                    (e, None)
+                }
                 other => (display, other),
             };
             MatrixAnswer {
@@ -1473,7 +1609,9 @@ fn generic_answer(
                 },
                 // a lone number (`nullity`) is a number
                 n: match a.parts.as_slice() {
-                    [p] if p.label.is_none() && !p.words => p.literal.as_deref().and_then(|l| l.parse::<f64>().ok()),
+                    [p] if p.label.is_none() && !p.words => {
+                        p.literal.as_deref().and_then(|l| l.parse::<f64>().ok())
+                    }
                     _ => None,
                 },
                 parts: show::public_parts(&a),

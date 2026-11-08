@@ -37,12 +37,24 @@ fn labeled_parts() {
     let m = parts("eig([1 2; 3 4])");
     assert_eq!(m.parts[0].label, "λ");
     assert_eq!(m.parts[0].exact.as_deref(), Some("(5 ± sqrt(33))/2"));
-    assert!(m.parts[0].exact_typst.as_deref().is_some_and(|t| t.contains("sqrt(33)")));
+    assert!(
+        m.parts[0]
+            .exact_typst
+            .as_deref()
+            .is_some_and(|t| t.contains("sqrt(33)"))
+    );
 
     // Σ is a name, not a sum
-    assert!(parts("svd([3 0; 0 4])").parts[1].typst.starts_with("Sigma = "));
+    assert!(
+        parts("svd([3 0; 0 4])").parts[1]
+            .typst
+            .starts_with("Sigma = ")
+    );
     // words stay words; a general solution keeps its note apart
-    assert_eq!(parts("isinvertible([1 2; 2 4])").parts[0].typst, r#""no (det = 0)""#);
+    assert_eq!(
+        parts("isinvertible([1 2; 2 4])").parts[0].typst,
+        r#""no (det = 0)""#
+    );
     let family = parts("solve([1 2 3; 2 4 6], [6; 12])");
     assert_eq!(family.parts[0].label, "x");
     assert_eq!(family.parts[0].note.as_deref(), Some("(any t, s)"));
@@ -67,14 +79,26 @@ fn row_operation_steps() {
 
     let det = ops("det([0 2 1; 1 1 1; 2 1 3])");
     assert_eq!(det[1], "R₁ ↔ R₂");
-    assert_eq!(det.last().map(String::as_str), Some("det = −(1 · 2 · 3/2) = -3 (one swap flips the sign)"));
+    assert_eq!(
+        det.last().map(String::as_str),
+        Some("det = −(1 · 2 · 3/2) = -3 (one swap flips the sign)")
+    );
 
     let inv = ops("inv([2 1; 1 1])");
-    assert_eq!(inv.last().map(String::as_str), Some("the right side is the inverse"));
-    assert_eq!(parts("inv([2 1; 1 1])").steps[0].display, "[2 1 | 1 0; 1 1 | 0 1]");
+    assert_eq!(
+        inv.last().map(String::as_str),
+        Some("the right side is the inverse")
+    );
+    assert_eq!(
+        parts("inv([2 1; 1 1])").steps[0].display,
+        "[2 1 | 1 0; 1 1 | 0 1]"
+    );
 
     assert_eq!(ops("[2 1; 1 3] \\ [3; 5]").len(), 5);
-    assert_eq!(ops("rank([1 2; 2 4])").last().map(String::as_str), Some("rank = 1 (rows with a pivot)"));
+    assert_eq!(
+        ops("rank([1 2; 2 4])").last().map(String::as_str),
+        Some("rank = 1 (rows with a pivot)")
+    );
     // symbols are carried through exactly
     assert_eq!(ops("det([k 2; 3 k])")[1], "R₂ → R₂ − (3/k)R₁");
     // nothing to do, nothing to show
@@ -124,9 +148,18 @@ fn history_reads_parts_back() {
         json!({"id": "4", "expr": "N = 2 * [k 1; 1 k]", "display": "[2*k 2; 2 2*k]"}),
     ];
     let q = history_quantities(&rows);
-    assert_eq!(q.get("L").and_then(|v| v.as_str()), Some("[[1, 0], [1.5, 1]]"));
-    assert_eq!(q.get("U").and_then(|v| v.as_str()), Some("[[4, 3], [0, -1.5]]"));
-    assert_eq!(q.get("M").and_then(|v| v.as_str()), Some("[[k, 2], [3, k]]"));
+    assert_eq!(
+        q.get("L").and_then(|v| v.as_str()),
+        Some("[[1, 0], [1.5, 1]]")
+    );
+    assert_eq!(
+        q.get("U").and_then(|v| v.as_str()),
+        Some("[[4, 3], [0, -1.5]]")
+    );
+    assert_eq!(
+        q.get("M").and_then(|v| v.as_str()),
+        Some("[[k, 2], [3, k]]")
+    );
     let options = EvaluateOptions {
         quantities: q
             .iter()

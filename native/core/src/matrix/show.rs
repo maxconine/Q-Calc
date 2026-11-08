@@ -7,9 +7,9 @@ use num_traits::{One, Zero};
 use super::exact_eval::{Cells, compact, rat_f64};
 use crate::app::typst_math::to_typst_math;
 use crate::exact::Rat;
-use crate::types::MatrixPart;
 use crate::format::format_number;
 use crate::jsnum;
+use crate::types::MatrixPart;
 
 /// A complex number as (re, im).
 pub(super) type C64 = (f64, f64);
@@ -35,7 +35,10 @@ pub(super) fn shows_whole(r: &Rat) -> bool {
     }
     let s = jsnum::to_string(rat_f64(r));
     let mant = s.split('e').next().unwrap_or("");
-    let digits = mant.chars().filter(char::is_ascii_digit).skip_while(|c| *c == '0');
+    let digits = mant
+        .chars()
+        .filter(char::is_ascii_digit)
+        .skip_while(|c| *c == '0');
     digits.count() <= 6
 }
 
@@ -201,7 +204,11 @@ fn grid_text(g: &[Vec<Cell>], pick: impl Fn(&Cell) -> String) -> String {
     format!(
         "[{}]",
         g.iter()
-            .map(|r| r.iter().map(|c| compact(&pick(c))).collect::<Vec<_>>().join(" "))
+            .map(|r| r
+                .iter()
+                .map(|c| compact(&pick(c)))
+                .collect::<Vec<_>>()
+                .join(" "))
             .collect::<Vec<_>>()
             .join("; ")
     )
@@ -224,7 +231,11 @@ pub(super) fn grid_part(label: Option<String>, g: &[Vec<Cell>]) -> Part {
                 .map(|r| format!(
                     "[{}]",
                     r.iter()
-                        .map(|c| if c.z.0.is_nan() || rich { exact_of(c) } else { c.dec.clone() })
+                        .map(|c| if c.z.0.is_nan() || rich {
+                            exact_of(c)
+                        } else {
+                            c.dec.clone()
+                        })
                         .collect::<Vec<_>>()
                         .join(", ")
                 ))
@@ -249,7 +260,11 @@ pub(super) fn column(v: &[Cell]) -> Vec<Vec<Cell>> {
 /// Column vectors written one after another: `[1; 0], [0; 1]`.
 pub(super) fn vectors_part(label: Option<String>, vs: &[Vec<Cell>]) -> Part {
     let parts: Vec<Part> = vs.iter().map(|v| grid_part(None, &column(v))).collect();
-    let display = parts.iter().map(|p| p.display.clone()).collect::<Vec<_>>().join(", ");
+    let display = parts
+        .iter()
+        .map(|p| p.display.clone())
+        .collect::<Vec<_>>()
+        .join(", ");
     let exact = parts.iter().any(|p| p.exact.is_some()).then(|| {
         parts
             .iter()
@@ -275,7 +290,13 @@ pub(super) fn number_part(label: Option<String>, c: &Cell) -> Part {
         label,
         display: c.dec.clone(),
         exact: c.rich.then(|| exact_of(c)).filter(|e| *e != c.dec),
-        literal: (c.z.1 == 0.0).then(|| if c.z.0.is_nan() || c.rich { exact_of(c) } else { c.dec.clone() }),
+        literal: (c.z.1 == 0.0).then(|| {
+            if c.z.0.is_nan() || c.rich {
+                exact_of(c)
+            } else {
+                c.dec.clone()
+            }
+        }),
         ..Part::default()
     }
 }
@@ -312,10 +333,20 @@ pub(super) fn poly_part(label: Option<String>, coeffs: &[Cell], var: &str) -> Pa
                 _ => format!("{var}^{k}"),
             };
             // a compound coefficient is bracketed; a plain one keeps its sign outside
-            let compound = text.chars().skip(1).any(|ch| ch == '+' || ch == '-' || ch == ' ');
+            let compound = text
+                .chars()
+                .skip(1)
+                .any(|ch| ch == '+' || ch == '-' || ch == ' ');
             let (neg, mag) = match text.strip_prefix('-') {
                 Some(m) if !compound => (true, m.to_string()),
-                _ => (false, if compound { format!("({text})") } else { text.clone() }),
+                _ => (
+                    false,
+                    if compound {
+                        format!("({text})")
+                    } else {
+                        text.clone()
+                    },
+                ),
             };
             let body = if power.is_empty() {
                 mag
@@ -347,12 +378,10 @@ pub(super) fn poly_part(label: Option<String>, coeffs: &[Cell], var: &str) -> Pa
 /// `yes` or `no`, with why.
 pub(super) fn verdict(yes: bool, why: Option<String>) -> Part {
     let word = if yes { "yes" } else { "no" };
-    words_part(
-        match why {
-            Some(w) => format!("{word} ({w})"),
-            None => word.to_string(),
-        },
-    )
+    words_part(match why {
+        Some(w) => format!("{word} ({w})"),
+        None => word.to_string(),
+    })
 }
 
 fn quoted(s: &str) -> String {
@@ -360,7 +389,11 @@ fn quoted(s: &str) -> String {
 }
 
 fn value_typst(p: &Part, value: &str) -> String {
-    let v = if p.words { quoted(value) } else { to_typst_math(value) };
+    let v = if p.words {
+        quoted(value)
+    } else {
+        to_typst_math(value)
+    };
     match &p.note {
         Some(n) => format!("{v} quad {}", quoted(n)),
         None => v,
@@ -371,15 +404,27 @@ fn value_typst(p: &Part, value: &str) -> String {
 fn public_part(p: &Part) -> MatrixPart {
     let label = p.label.as_deref().unwrap_or("");
     let colon = label.trim_end().ends_with(':');
-    let name = label.trim_end().trim_end_matches([':', '=']).trim_end().to_string();
+    let name = label
+        .trim_end()
+        .trim_end_matches([':', '='])
+        .trim_end()
+        .to_string();
     let typst = |value: &str| {
         let v = value_typst(p, value);
         if name.is_empty() {
             return v;
         }
         // `Σ` is a sum sign to the converter; as a name it's the letter
-        let n = if name == "Σ" { "Sigma".to_string() } else { to_typst_math(&name) };
-        if colon { format!("{n} : quad {v}") } else { format!("{n} = {v}") }
+        let n = if name == "Σ" {
+            "Sigma".to_string()
+        } else {
+            to_typst_math(&name)
+        };
+        if colon {
+            format!("{n} : quad {v}")
+        } else {
+            format!("{n} = {v}")
+        }
     };
     MatrixPart {
         typst: typst(&p.display),

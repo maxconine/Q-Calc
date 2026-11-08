@@ -36,10 +36,17 @@ fn keywords(lower: &str) -> Vec<(usize, usize)> {
     let mut out = Vec::new();
     let mut from = 0;
     while let Some(i) = lower[from..].find("mat").map(|i| i + from) {
-        let len = if lower[i..].starts_with("matrix") { 6 } else { 3 };
+        let len = if lower[i..].starts_with("matrix") {
+            6
+        } else {
+            3
+        };
         from = i + len;
         if lower[..i].chars().next_back().is_some_and(word)
-            || lower[i + len..].chars().next().is_some_and(char::is_alphabetic)
+            || lower[i + len..]
+                .chars()
+                .next()
+                .is_some_and(char::is_alphabetic)
         {
             continue;
         }
@@ -66,15 +73,26 @@ pub fn grid_command(text: &str) -> Option<GridSpot> {
         let after = &text[end..];
         let after_t = after.trim_start();
         let mut cols = rows;
-        if let Some(x) = after_t.chars().next().filter(|c| matches!(c, 'x' | 'X' | '×' | '*')) {
+        if let Some(x) = after_t
+            .chars()
+            .next()
+            .filter(|c| matches!(c, 'x' | 'X' | '×' | '*'))
+        {
             let more = after_t[x.len_utf8()..].trim_start();
             let (c, clen) = digits(more);
             if clen > 0 {
                 cols = c;
-                end += (after.len() - after_t.len()) + x.len_utf8() + (after_t[x.len_utf8()..].len() - more.len()) + clen;
+                end += (after.len() - after_t.len())
+                    + x.len_utf8()
+                    + (after_t[x.len_utf8()..].len() - more.len())
+                    + clen;
             }
         }
-        if text[end..].chars().next().is_some_and(|c| c.is_alphanumeric()) {
+        if text[end..]
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_alphanumeric())
+        {
             continue;
         }
         if !(1..=MAX).contains(&rows) || !(1..=MAX).contains(&cols) {
@@ -103,7 +121,11 @@ pub fn grid_hint(text: &str) -> Option<String> {
     let lower = text.trim_end().to_ascii_lowercase();
     let (i, kw) = *keywords(&lower).last()?;
     let size = lower[i + kw..].trim();
-    if !size.chars().all(|c| c.is_ascii_digit() || "x× ".contains(c)) || (kw == 3 && size.is_empty()) {
+    if !size
+        .chars()
+        .all(|c| c.is_ascii_digit() || "x× ".contains(c))
+        || (kw == 3 && size.is_empty())
+    {
         return None;
     }
     let too_big = size
@@ -139,7 +161,10 @@ fn split_top(s: &str, sep: impl Fn(char) -> bool) -> Vec<String> {
 /// stand alone (`1 - 2` is one cell, as the reader takes it).
 fn row_cells(row: &str) -> Vec<String> {
     if split_top(row, |c| c == ',').len() > 1 {
-        return split_top(row, |c| c == ',').iter().map(|c| c.trim().to_string()).collect();
+        return split_top(row, |c| c == ',')
+            .iter()
+            .map(|c| c.trim().to_string())
+            .collect();
     }
     let words: Vec<String> = split_top(row, char::is_whitespace)
         .into_iter()
@@ -174,14 +199,23 @@ fn cells_of(literal: &str) -> Option<Vec<Vec<String>>> {
                 let r = r.trim();
                 r.strip_prefix('[')
                     .and_then(|r| r.strip_suffix(']'))
-                    .map(|r| split_top(r, |c| c == ',').iter().map(|c| c.trim().to_string()).collect())
+                    .map(|r| {
+                        split_top(r, |c| c == ',')
+                            .iter()
+                            .map(|c| c.trim().to_string())
+                            .collect()
+                    })
             })
             .collect::<Option<_>>()?
     } else {
-        split_top(inner, |c| c == ';').iter().map(|r| row_cells(r.trim())).collect()
+        split_top(inner, |c| c == ';')
+            .iter()
+            .map(|r| row_cells(r.trim()))
+            .collect()
     };
     let cols = rows.first()?.len();
-    let fits = rows.len() <= MAX && (1..=MAX).contains(&cols) && rows.iter().all(|r| r.len() == cols);
+    let fits =
+        rows.len() <= MAX && (1..=MAX).contains(&cols) && rows.iter().all(|r| r.len() == cols);
     fits.then_some(rows)
 }
 
@@ -252,14 +286,26 @@ mod tests {
     #[test]
     fn commands() {
         let s = grid_command("matrix 3x3").expect("a grid");
-        assert_eq!((s.start, s.end, s.cells.len(), s.cells[0].len()), (0, 10, 3, 3));
+        assert_eq!(
+            (s.start, s.end, s.cells.len(), s.cells[0].len()),
+            (0, 10, 3, 3)
+        );
         let s = grid_command("det(matrix 2×4)").expect("a grid");
-        assert_eq!((s.start, s.end, s.cells.len(), s.cells[0].len()), (4, 14, 2, 4));
-        assert_eq!(grid_command("A = Matrix 2").map(|s| (s.start, s.end)), Some((4, 12)));
+        assert_eq!(
+            (s.start, s.end, s.cells.len(), s.cells[0].len()),
+            (4, 14, 2, 4)
+        );
+        assert_eq!(
+            grid_command("A = Matrix 2").map(|s| (s.start, s.end)),
+            Some((4, 12))
+        );
         assert!(grid_command("matrix 9x9").is_none());
         assert!(grid_command("mymatrix 2x2").is_none());
         assert!(grid_command("matrix").is_none());
-        assert_eq!(grid_hint("det(matrix 3x2)").as_deref(), Some("↵ opens a 3×2 grid"));
+        assert_eq!(
+            grid_hint("det(matrix 3x2)").as_deref(),
+            Some("↵ opens a 3×2 grid")
+        );
         let ask = Some("what size? rows × columns: matrix 2x2, matrix 3x3…");
         assert_eq!(grid_hint("matrix").as_deref(), ask);
         assert_eq!(grid_hint("Matrix ").as_deref(), ask);
@@ -276,7 +322,10 @@ mod tests {
         assert!(grid_hint("matrix A").is_none());
         // `mat` is short for it, once a size starts
         assert_eq!(grid_command("mat 2x2").map(|s| s.cells.len()), Some(2));
-        assert_eq!(grid_command("det(mat 3)").map(|s| (s.start, s.end)), Some((4, 9)));
+        assert_eq!(
+            grid_command("det(mat 3)").map(|s| (s.start, s.end)),
+            Some((4, 9))
+        );
         assert_eq!(grid_hint("mat 2x2").as_deref(), Some("↵ opens a 2×2 grid"));
         assert_eq!(grid_hint("mat 3x").as_deref(), ask);
         assert!(grid_hint("mat").is_none());
@@ -295,17 +344,26 @@ mod tests {
         // the caret outside every matrix: the last one
         let s = grid_at("[1 2] * [3; 4] + 5", 18).expect("a grid");
         assert_eq!(s.cells, vec![vec!["3"], vec!["4"]]);
-        assert_eq!(grid_at("[1 - 2 3]", 0).expect("a grid").cells, vec![vec!["1 - 2", "3"]]);
+        assert_eq!(
+            grid_at("[1 - 2 3]", 0).expect("a grid").cells,
+            vec![vec!["1 - 2", "3"]]
+        );
         assert!(grid_at("[1 2 | 3]", 0).is_none());
         assert!(grid_at("[1 2; 3]", 0).is_none());
         assert!(grid_at("2 + 2", 0).is_none());
         // offsets in UTF-16 units
-        assert_eq!(grid_at("π·[1 2]", 7).map(|s| (s.start, s.end)), Some((2, 7)));
+        assert_eq!(
+            grid_at("π·[1 2]", 7).map(|s| (s.start, s.end)),
+            Some((2, 7))
+        );
     }
 
     #[test]
     fn writing() {
-        let cells = vec![vec!["1".to_string(), "".into()], vec!["a + b".into(), "-3".into()]];
+        let cells = vec![
+            vec!["1".to_string(), "".into()],
+            vec!["a + b".into(), "-3".into()],
+        ];
         assert_eq!(grid_literal(&cells), "[1 0; a+b -3]");
     }
 }

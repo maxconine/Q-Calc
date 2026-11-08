@@ -28,10 +28,16 @@ fn sheet(lines: &[&str]) -> Vec<String> {
 fn float_answers_are_unchanged() {
     assert_eq!(show("det([1 2; 3 4])"), "-2");
     assert_eq!(show("[1 2; 3 4] * [5; 6]"), "[17; 39]");
-    assert_eq!(both("inv([1 2; 3 4])"), ("[-2 1; 1.5 -0.5]".into(), Some("[-2 1; 3/2 -1/2]".into())));
+    assert_eq!(
+        both("inv([1 2; 3 4])"),
+        ("[-2 1; 1.5 -0.5]".into(), Some("[-2 1; 3/2 -1/2]".into()))
+    );
     assert_eq!(show("inv([1 2; 2 4])"), "no inverse (determinant is 0)");
     assert_eq!(show("rank([1 2; 2 4])"), "1");
-    assert_eq!(show("[1 2] + [1 2 3]"), "can't add 1×2 and 1×3: sizes must match");
+    assert_eq!(
+        show("[1 2] + [1 2 3]"),
+        "can't add 1×2 and 1×3: sizes must match"
+    );
 }
 
 #[test]
@@ -56,10 +62,7 @@ fn ill_conditioned_but_exact() {
 
 #[test]
 fn square_roots_stay_exact() {
-    assert_eq!(
-        both("det([sqrt(2) 1; 1 sqrt(2)])"),
-        ("1".into(), None)
-    );
+    assert_eq!(both("det([sqrt(2) 1; 1 sqrt(2)])"), ("1".into(), None));
     // written as the calculator writes a surd (`2sqrt(2)`, `sqrt(2)/2`)
     assert_eq!(exact("det([sqrt(3) 1; 0 2])").as_deref(), Some("2sqrt(3)"));
     assert_eq!(
@@ -89,7 +92,10 @@ fn symbols_inside_a_matrix() {
 fn symbolic_inverse() {
     assert_eq!(show("inv([k 0; 0 2])"), "[1/k 0; 0 1/2]");
     let d = show("inv([a b; c d])");
-    assert!(d.contains("d") && d.contains("a*d") && d.starts_with('['), "{d}");
+    assert!(
+        d.contains("d") && d.contains("a*d") && d.starts_with('['),
+        "{d}"
+    );
 }
 
 #[test]
@@ -105,10 +111,7 @@ fn stored_symbolic_matrices() {
         sheet(&["A = [k 2; 3 k]", "det(A)", "A * [1; 1]"]),
         vec!["", "k^2 - 6", "[k+2; k+3]"]
     );
-    assert_eq!(
-        sheet(&["k = 4", "det([k 2; 3 k])"]),
-        vec!["4", "10"]
-    );
+    assert_eq!(sheet(&["k = 4", "det([k 2; 3 k])"]), vec!["4", "10"]);
 }
 
 #[test]

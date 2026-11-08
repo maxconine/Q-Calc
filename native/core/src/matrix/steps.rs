@@ -233,9 +233,17 @@ impl<F: Cells> Log<'_, F> {
 }
 
 /// The steps for `key` applied to `args`, already evaluated; empty when it has none to show.
-pub(super) fn run<F: Cells>(ev: &Ev<'_, '_, F>, key: &str, args: Vec<G<F::C>>, bar: Option<usize>) -> XR<Vec<MatrixStep>> {
+pub(super) fn run<F: Cells>(
+    ev: &Ev<'_, '_, F>,
+    key: &str,
+    args: Vec<G<F::C>>,
+    bar: Option<usize>,
+) -> XR<Vec<MatrixStep>> {
     let f = ev.f;
-    let cells: usize = args.iter().map(|g| g.len() * g.first().map_or(0, Vec::len)).sum();
+    let cells: usize = args
+        .iter()
+        .map(|g| g.len() * g.first().map_or(0, Vec::len))
+        .sum();
     if cells > MAX_CELLS || args.is_empty() {
         return Ok(Vec::new());
     }
@@ -272,7 +280,10 @@ pub(super) fn run<F: Cells>(ev: &Ev<'_, '_, F>, key: &str, args: Vec<G<F::C>>, b
             start(&mut log, &m);
             let (swaps, pivots) = log.eliminate(&mut m, n, false);
             if pivots.len() < n {
-                log.remark("det = 0 (a column has no pivot)".into(), "det = 0 quad \"(a column has no pivot)\"".into());
+                log.remark(
+                    "det = 0 (a column has no pivot)".into(),
+                    "det = 0 quad \"(a column has no pivot)\"".into(),
+                );
             } else {
                 let diag: Vec<String> = (0..n).map(|i| log.show(&m[i][i])).collect();
                 let mut d = (0..n).fold(f.one(), |acc, i| f.mul(&acc, &m[i][i]));
@@ -281,14 +292,24 @@ pub(super) fn run<F: Cells>(ev: &Ev<'_, '_, F>, key: &str, args: Vec<G<F::C>>, b
                 }
                 let product = diag
                     .iter()
-                    .map(|s| if s.starts_with('-') || s.contains(' ') { format!("({s})") } else { s.clone() })
+                    .map(|s| {
+                        if s.starts_with('-') || s.contains(' ') {
+                            format!("({s})")
+                        } else {
+                            s.clone()
+                        }
+                    })
                     .collect::<Vec<_>>()
                     .join(" · ");
                 let product_typst = diag
                     .iter()
                     .map(|s| {
                         let t = to_typst_math(s);
-                        if s.starts_with('-') || s.contains(' ') { format!("({t})") } else { t }
+                        if s.starts_with('-') || s.contains(' ') {
+                            format!("({t})")
+                        } else {
+                            t
+                        }
                     })
                     .collect::<Vec<_>>()
                     .join(" dot ");
@@ -309,7 +330,11 @@ pub(super) fn run<F: Cells>(ev: &Ev<'_, '_, F>, key: &str, args: Vec<G<F::C>>, b
                     format!(
                         "det = {product_typst} = {}{}",
                         to_typst_math(&value),
-                        if swapped.is_empty() { String::new() } else { format!(" quad {:?}", swapped.trim()) }
+                        if swapped.is_empty() {
+                            String::new()
+                        } else {
+                            format!(" quad {:?}", swapped.trim())
+                        }
                     ),
                 );
             }
@@ -317,7 +342,11 @@ pub(super) fn run<F: Cells>(ev: &Ev<'_, '_, F>, key: &str, args: Vec<G<F::C>>, b
         ("inv" | "inverse", [a]) if a.len() == a.first().map_or(0, Vec::len) => {
             let n = a.len();
             let id = super::algebra::identity(f, n);
-            let mut m: G<F::C> = a.iter().zip(&id).map(|(r, i)| r.iter().chain(i).cloned().collect()).collect();
+            let mut m: G<F::C> = a
+                .iter()
+                .zip(&id)
+                .map(|(r, i)| r.iter().chain(i).cloned().collect())
+                .collect();
             log.bar = Some(n);
             start(&mut log, &m);
             let (_, pivots) = log.eliminate(&mut m, n, true);
@@ -335,7 +364,11 @@ pub(super) fn run<F: Cells>(ev: &Ev<'_, '_, F>, key: &str, args: Vec<G<F::C>>, b
         }
         ("solve", [a, b]) if a.len() == b.len() => {
             let n = a.first().map_or(0, Vec::len);
-            let mut m: G<F::C> = a.iter().zip(b).map(|(r, s)| r.iter().chain(s).cloned().collect()).collect();
+            let mut m: G<F::C> = a
+                .iter()
+                .zip(b)
+                .map(|(r, s)| r.iter().chain(s).cloned().collect())
+                .collect();
             log.bar = Some(n);
             start(&mut log, &m);
             log.eliminate(&mut m, n, true);

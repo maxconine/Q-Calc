@@ -112,7 +112,11 @@ pub(super) fn rat_f64(r: &Rat) -> f64 {
         (Some(n), Some(d)) if n.is_finite() && d.is_finite() => n / d,
         _ => {
             // a huge numerator or denominator: scale both down by the same power of ten
-            let shift = r.n.to_string().len().max(r.d.to_string().len()).saturating_sub(300) as u32;
+            let shift =
+                r.n.to_string()
+                    .len()
+                    .max(r.d.to_string().len())
+                    .saturating_sub(300) as u32;
             let p = BigInt::from(10).pow(shift);
             (&r.n / &p).to_f64().unwrap_or(f64::NAN) / (&r.d / &p).to_f64().unwrap_or(f64::NAN)
         }
@@ -179,13 +183,25 @@ impl Cells for RadField {
             let body = if radicand.is_one() {
                 crate::exact::rstr(&rat(num, den))
             } else {
-                let coeff = if num.is_one() { String::new() } else { num.to_string() };
-                let over = if den.is_one() { String::new() } else { format!("/{den}") };
+                let coeff = if num.is_one() {
+                    String::new()
+                } else {
+                    num.to_string()
+                };
+                let over = if den.is_one() {
+                    String::new()
+                } else {
+                    format!("/{den}")
+                };
                 format!("{coeff}sqrt({radicand}){over}")
             };
             parts.push((k.n.is_negative(), body));
         }
-        if parts.is_empty() { "0".into() } else { join_signed(&parts) }
+        if parts.is_empty() {
+            "0".into()
+        } else {
+            join_signed(&parts)
+        }
     }
     fn approx(&self, c: &Vec<Rat>) -> Option<f64> {
         let primes = self.primes.borrow();
@@ -285,7 +301,11 @@ impl Cells for RfField {
         if d == "1" {
             return n;
         }
-        let num = if has_sign_after_first(&n) { format!("({n})") } else { n };
+        let num = if has_sign_after_first(&n) {
+            format!("({n})")
+        } else {
+            n
+        };
         let den = if has_sign_after_first(&d) || d.contains('*') {
             format!("({d})")
         } else {
@@ -448,7 +468,10 @@ impl<F: Cells> Ev<'_, '_, F> {
         let f = self.f;
         // floats read an entry like `sin(30)` or `2^0.5` as the calculator does
         if f.is_float()
-            && !matches!(node, Node::Constant(_) | Node::Symbol(_) | Node::Parenthesis(_))
+            && !matches!(
+                node,
+                Node::Constant(_) | Node::Symbol(_) | Node::Parenthesis(_)
+            )
             && let Some(scalar) = self.opts.scalar
             && !has_matrix_part(node).map_err(|_| XFail::NotExact)?
         {
@@ -462,7 +485,9 @@ impl<F: Cells> Ev<'_, '_, F> {
                 if let Some(v) = self.opts.variables.get(name) {
                     return self.number(*v).map(X::Num);
                 }
-                if (in_array || loose_unknown(name)) && let Some(c) = f.param(name) {
+                if (in_array || loose_unknown(name))
+                    && let Some(c) = f.param(name)
+                {
                     return Ok(X::Num(c));
                 }
                 match constant(name) {
@@ -509,9 +534,9 @@ impl<F: Cells> Ev<'_, '_, F> {
                     return Err(XFail::NotExact);
                 };
                 if *op == Op::Pow && is_t(r) {
-                    return Ok(X::Grid(super::algebra::transpose(&self.grid(
-                        self.eval(l, in_array)?,
-                    )?)));
+                    return Ok(X::Grid(super::algebra::transpose(
+                        &self.grid(self.eval(l, in_array)?)?,
+                    )));
                 }
                 let a = self.eval(l, in_array)?;
                 let b = self.eval(r, in_array)?;
@@ -551,8 +576,12 @@ impl<F: Cells> Ev<'_, '_, F> {
                             }
                             Ok(X::Grid(out))
                         }
-                        (_, X::Num(k)) if *op == Op::DotDivide && f.is_zero(&k) => fail("can't divide by 0"),
-                        (a, X::Num(k)) if *op == Op::DotDivide => self.mul(a, X::Num(f.div(&f.one(), &k))),
+                        (_, X::Num(k)) if *op == Op::DotDivide && f.is_zero(&k) => {
+                            fail("can't divide by 0")
+                        }
+                        (a, X::Num(k)) if *op == Op::DotDivide => {
+                            self.mul(a, X::Num(f.div(&f.one(), &k)))
+                        }
                         (a, b) if *op == Op::DotMultiply => self.mul(a, b),
                         _ => Err(XFail::NotExact),
                     },
@@ -614,7 +643,10 @@ impl<F: Cells> Ev<'_, '_, F> {
                 .collect();
             return Ok(X::Grid(vec![row]));
         }
-        if items.iter().all(|v| matches!(v, X::Grid(g) if g.len() == 1)) {
+        if items
+            .iter()
+            .all(|v| matches!(v, X::Grid(g) if g.len() == 1))
+        {
             let rows: G<F::C> = items
                 .into_iter()
                 .filter_map(|v| match v {
@@ -772,7 +804,9 @@ fn params_of(node: &Node, opts: &MatrixOptions<'_>) -> Option<Vec<String>> {
 fn cells_of(node: &Node) -> usize {
     match node {
         Node::Array(items) => items.iter().map(cells_of).sum::<usize>().max(1),
-        Node::Function { args, .. } | Node::Operator { args, .. } => args.iter().map(cells_of).sum(),
+        Node::Function { args, .. } | Node::Operator { args, .. } => {
+            args.iter().map(cells_of).sum()
+        }
         Node::Parenthesis(c) => cells_of(c),
         _ => 0,
     }
@@ -824,7 +858,11 @@ fn finish<F: Cells>(f: &F, v: X<F::C>) -> Exact {
             let text = format!(
                 "[{}]",
                 g.iter()
-                    .map(|r| r.iter().map(|c| compact(&f.show(c))).collect::<Vec<_>>().join(" "))
+                    .map(|r| r
+                        .iter()
+                        .map(|c| compact(&f.show(c)))
+                        .collect::<Vec<_>>()
+                        .join(" "))
                     .collect::<Vec<_>>()
                     .join("; ")
             );
@@ -919,7 +957,11 @@ fn steps_in<F: Cells>(
 
 /// The row operations behind a line like `rref(A)` or `A \ b`, in the most exact field that holds its entries.
 /// `bar` is where a typed `[A | b]` divides its columns.
-pub(super) fn steps(node: &Node, opts: &MatrixOptions<'_>, bar: Option<usize>) -> Vec<crate::types::MatrixStep> {
+pub(super) fn steps(
+    node: &Node,
+    opts: &MatrixOptions<'_>,
+    bar: Option<usize>,
+) -> Vec<crate::types::MatrixStep> {
     let Node::Function { callee, args } = node else {
         return Vec::new();
     };
