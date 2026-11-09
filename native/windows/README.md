@@ -72,8 +72,9 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `cheats.rs` | `?` / `help`: the cheat sheet where the tape is |
 | `line.rs` | the input line's side: decorations, squiggle, completion, the draft, the empty bar's rotating examples (and counting opens), the d/dt chips, the caret's blink |
 | `text_rules.rs` | typing rules: words to symbols, bracket pairing and wrapping, flattened pastes |
-| `stacked.rs` | stacked fractions and powers (Settings, off by default), pure: what's stacked, dead caret places, the `/` `^` `)` edits, selections and deletes that keep a stack whole |
-| `stacked_layout.rs` | how the line draws them (places, runs, bars, boxes, the slot caret, clicks), the ↑ ↓ key, and a typed root's one-stroke sign |
+| `stacked.rs` | stacked fractions and powers (Settings, off by default), pure: what's stacked, dead caret places, the keys as MathQuill has them (`/` `^` `)` `√` ⌫ ⌦ ↑ ↓ Home End), selections and deletes that keep a stack whole, room around signs, and TeX's sizes and gaps (`tex`, `extent`, `fits`); the Mac's 120 headless checks in `stacked/tests.rs` |
+| `stacked_layout.rs` | how the line draws them (places, runs, bars, grown brackets, boxes, the slot caret, clicks, the line's move to show a tall stack), the ↑ ↓ key, and a typed root's one-stroke sign, as tall as a stack it takes |
+| `stacked_text.rs` | a history row's expression drawn stacked (fractions, powers, roots, grown brackets) while the setting is on, never cut off by its row |
 | `drag.rs` | moving and widening the bar, remembered per monitor |
 | `keys.rs` | the in-bar keybind router (`settings.keybinds` over the Windows defaults); `close_front_sheet` for Ctrl+W |
 | `hotkey.rs` | the global shortcut: chord parsing, RegisterHotKey with retries, re-registration triggers, the "held by X" guess |
@@ -87,7 +88,8 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `graph.rs` | the graph panel under the composer (`graph x^2`, `plot …`, `graph a; b`): state, sampling, pan / zoom / orbit, the panel's fields |
 | `graph_view.rs` | the graph panel drawn (the plot's base pass cached as a bitmap, the pointer's pass over it) and the pointer over it |
 | `graph3d.rs` | the graph's 3D view as maths: the cube's projection, clipping, the depth-sorted scene, the patch under the pointer |
-| `graph_settings.rs` | the graph's settings (the head's wrench): `graphPrefs` in settings.json and the per-graph controls |
+| `graph_settings.rs` | the graph's settings and export cards (the head's wrench and camera): `graphPrefs` in settings.json and the per-graph controls |
+| `graph_export.rs` | the graph's picture: equations typeset by Typst over the plot at 3×, saved to the Desktop and copied as PNG |
 | `matrices.rs` | the matrix grid (`matrix 3x3`, Ctrl+G), the steps chip and card (Ctrl+R), matrix answers in the slot |
 | `matrix_text.rs` | pure: a matrix answer's slot text, its dual's shared label, the grid's moves and writing |
 | `systems.rs` | `sys2`…`sys5`: equation rows under the composer, solved live, saved as one row |

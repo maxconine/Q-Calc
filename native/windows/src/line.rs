@@ -524,6 +524,7 @@ pub fn will_hide(m: &mut BarModel, engine: &EngineThread) {
         let d = Draft {
             expr: text,
             saved_at: now_ms(),
+            grid: crate::matrices::draft_grid(m),
         };
         m.line.draft = Some(Some(d.clone()));
         engine.submit(Lane::Misc, move |_| {
@@ -557,6 +558,7 @@ pub fn will_show(
                 m.field.reset(&d.expr);
                 m.text_changed(engine);
             }
+            crate::matrices::restore_draft(d.grid);
         }
         other => {
             if other.is_some() || seconds <= 0 || !m.field.text().is_empty() {

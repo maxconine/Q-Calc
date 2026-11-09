@@ -88,8 +88,9 @@ budgets in `native/windows/AGENTS.md`. Done by porting from `MAC_CHANGES_TO_PORT
 
 Written on the Mac: `windows/src/matrices.rs` (grid card, steps chip and card, keys, clicks, wheel) and the pure
 `windows/src/matrix_text.rs` (tested on the Mac), with hooks in model, window, app, answer, typst_row and keys. It
-type-checks and is clippy-clean for `x86_64-pc-windows-msvc` from the Mac, but hasn't been run on Windows yet: the
-checks are in `windows/PORT_linear_algebra.md`, Phase 5.
+type-checks and is clippy-clean for `x86_64-pc-windows-msvc` from the Mac. It was run and checked on Windows for
+3.0.2 (branch `win-port-302`), with the Mac's later grid changes (`mat`, Ctrl+Backspace, the draft, grid memory);
+what's left is under "Open questions for the Mac side" in `windows/MAC_CHANGES_TO_PORT.md`.
 
 ## Testing
 - Unit tests per operation in `matrix.rs`/`exact/` with known textbook answers (exact and decimal).

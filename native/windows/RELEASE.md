@@ -2,6 +2,16 @@
 
 **From 3.0.2, a `v*` tag releases the Mac only.** `windows.yml` no longer runs on a tag push, so Windows users stay on 2.0.15 until the native app has been tried on a Windows PC. To ship Windows for a release, go to Actions → **Windows** → Run workflow on that release's tag, with *publish* ticked (and *native_windows* ticked for the native app). To go back to every tag releasing Windows, put the `push: tags: v*` trigger back at the top of `windows.yml`. The steps below describe a tag push; read them as that hand run.
 
+## Releasing 3.0.2 on Windows
+
+The Mac has shipped 3.0.2 from tag `v3.0.2`; Windows hasn't, and Windows users are on 2.0.15 (the Tauri app). Shipping Windows 3.0.2 moves every one of them to the native app, so:
+
+1. **Port and test first.** Work through `MAC_CHANGES_TO_PORT.md` (the runbook's steps), then try the installer on a real Windows PC: a fresh install, an upgrade over 2.0.15 keeping settings and history, Start-menu launch, the hotkey (including a custom one such as Alt+Q), and sign-in launch staying hidden.
+2. **Keep the version at 3.0.2.** Commit fixes to `main` without bumping `package.json`. A hand run takes its version from `package.json` and attaches to the existing `v3.0.2` release, so Windows 3.0.2 can include Windows-only fixes made after the tag. Bump to 3.0.3 only if the Mac should ship again too.
+3. **Fix the release notes first.** The run applies `RELEASE_NOTES_v3.0.2.md` from the commit it runs on, and that file says Windows stays on 2.0.15. On `main`, remove that line, add the two native installers to the downloads table (`Q-Calc-3.0.2-x64-native-setup.exe` for most PCs, `Q-Calc-3.0.2-arm64-native-setup.exe` for Arm), add the SmartScreen line under Known issues (see `RELEASE_NOTES_v3.0.1.md`), and add what's new for Windows users coming from 2.0.15.
+4. **Run it.** Actions → **Windows** → Run workflow on `main`, with *publish* and *native_windows* both ticked. It builds x64 and arm64, attaches them, `latest-native.json` and `latest.json` to `v3.0.2`, and Tauri installs update themselves to the native app within a day.
+5. **Update the download page.** In `docs/index.html`, point the Windows links at the 3.0.2 native installers (they're on 2.0.15).
+
 From 3.0 the Windows release is the native app. A `v*` tag builds the native installers. `latest.json`, the feed every Tauri install (2.0.x) reads, then points at those installers, so each Tauri install updates itself to the native app within a day. The native installer replaces the Tauri app in place: same folder (`%LOCALAPPDATA%\Q Calc`), same **Installed apps** entry, same Start menu shortcut and sign-in entry. Settings, keybinds and rates live in `%APPDATA%\com.maxconine.qcalc`, which both apps share, and `migrate.rs` moves the Tauri app's history at the first launch.
 
 The switch is `NATIVE_WINDOWS` in `.github/workflows/windows.yml`. A tag push always takes it. A hand run has a *native_windows* box, ticked by default.

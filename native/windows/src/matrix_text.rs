@@ -252,9 +252,110 @@ impl Grid {
     }
 }
 
+/// The last `mat` / `matrix` word in `text` (`BarModel.matrixWord`): its UTF-16 range, lit as a known word and
+/// named `matrix` on hover while the line asks for a grid.
+pub fn matrix_word(text: &str) -> Option<(u32, u32)> {
+    let chars: Vec<(usize, char)> = text.char_indices().collect();
+    let mut found = None;
+    for (i, &(at, _)) in chars.iter().enumerate() {
+        let before_ok = i == 0 || {
+            let p = chars[i - 1].1;
+            !(p.is_ascii_alphanumeric() || p == '_')
+        };
+        if !before_ok {
+            continue;
+        }
+        for word in ["matrix", "mat"] {
+            if !text
+                .get(at..at + word.len())
+                .is_some_and(|w| w.eq_ignore_ascii_case(word))
+            {
+                continue;
+            }
+            let end = at + word.len();
+            let after_ok = text[end..]
+                .chars()
+                .next()
+                .is_none_or(|c| !c.is_ascii_alphabetic());
+            if after_ok {
+                let a = utf16_len(&text[..at]) as u32;
+                found = Some((a, a + word.len() as u32));
+                break;
+            }
+        }
+    }
+    found
+}
+
+/// A line ending in a bare `mat` while history stores a `mat` of its own (`storesMat`): that's the name, not the
+/// grid.
+pub fn stores_mat<'a>(typed: &str, exprs: impl IntoIterator<Item = &'a str>) -> bool {
+    let t = typed.trim_end();
+    let cut = t.len().saturating_sub(3);
+    let ends_mat = t.get(cut..).is_some_and(|w| w.eq_ignore_ascii_case("mat"))
+        && t[..cut]
+            .chars()
+            .next_back()
+            .is_none_or(|c| !(c.is_ascii_alphanumeric() || c == '_'));
+    ends_mat
+        && exprs.into_iter().any(|e| {
+            e.trim_start()
+                .strip_prefix("mat")
+                .is_some_and(|rest| rest.trim_start().starts_with('='))
+        })
+}
+
+/// The lines committed with a matrix the grid wrote (`GridMemory`), newest last: `line` noted once more, the
+/// newest 200 kept.
+pub fn remember(lines: &mut Vec<String>, line: &str) {
+    lines.retain(|l| l != line);
+    lines.push(line.to_string());
+    let extra = lines.len().saturating_sub(GRID_LINES_KEPT);
+    lines.drain(..extra);
+}
+
+pub const GRID_LINES_KEPT: usize = 200;
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_matrix_word_and_a_stored_mat() {
+        assert_eq!(matrix_word("mat 2x2"), Some((0, 3)));
+        assert_eq!(matrix_word("det(matrix 3x3)"), Some((4, 10)));
+        assert_eq!(matrix_word("Matrix"), Some((0, 6)));
+        // the last one counts; a longer word or a name with digits doesn't
+        assert_eq!(matrix_word("mat + mat 2x2"), Some((6, 9)));
+        assert_eq!(matrix_word("format"), None);
+        assert_eq!(matrix_word("mats"), None);
+        assert_eq!(matrix_word("x1mat"), None);
+        assert_eq!(matrix_word("√mat 2x2"), Some((1, 4)));
+        assert!(stores_mat("det(mat", ["mat = [1 2; 3 4]"]));
+        assert!(stores_mat("mat ", ["  mat=[1]"]));
+        assert!(!stores_mat("mat", ["matrix = 2"]));
+        assert!(!stores_mat("mat 2x2", ["mat = [1 2; 3 4]"]));
+        assert!(!stores_mat("format", ["mat = 1"]));
+        assert!(!stores_mat("mat", Vec::<&str>::new()));
+        // short lines ending in a wide character are no `mat` (and no panic)
+        for t in ["√(", "√", "x√", "π", "2π", "ma"] {
+            assert!(!stores_mat(t, ["mat = 1"]));
+        }
+        assert!(stores_mat("√mat", ["mat = 1"]));
+    }
+
+    #[test]
+    fn grid_lines_keep_the_newest_200() {
+        let mut lines = Vec::new();
+        for i in 0..205 {
+            remember(&mut lines, &format!("det([{i}])"));
+        }
+        remember(&mut lines, "det([10])");
+        assert_eq!(lines.len(), 200);
+        assert_eq!(lines.first().map(String::as_str), Some("det([5])"));
+        assert_eq!(lines.last().map(String::as_str), Some("det([10])"));
+        assert_eq!(lines.iter().filter(|l| *l == "det([10])").count(), 1);
+    }
 
     #[test]
     fn matrix_answers_read_as_typeset() {

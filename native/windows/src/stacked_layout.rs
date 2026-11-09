@@ -1,5 +1,6 @@
 //! How the input line draws its maths (StackedLayout.swift, RadicalText.swift `RootSign`): stacked fractions and
-//! powers (stacked.rs says what's stacked), and a typed root's sign and bar as one stroke.
+//! powers (stacked.rs says what's stacked and how big each slot is, by TeX's rules), brackets grown around them, room
+//! around the signs, and a typed root's sign and bar as one stroke (as tall as a stack it takes).
 //!
 //! A stack is drawn from the line's one DirectWrite layout. Each slot's characters are made small in it and the
 //! hidden ones (`/ ^ ( ) ·`) all but vanish, so the layout keeps every character's advance; but DirectWrite never
@@ -8,11 +9,18 @@
 //! (`Geom::xs`: the layout's own advances, plus each stack's room and pull-back), and the layout is drawn in runs,
 //! each moved sideways and up or down to where it goes and clipped to its own glyphs. Everything the field draws by
 //! position (selection, caret, squiggle, offered unit) asks `xs`, so a line with stacks draws as one without.
+//!
+//! The line sits on a plain line's baseline in the composer's 72 DIPs (the 36 DIP row and 18 above and below it);
+//! a line too tall for that moves up or down until all of it shows (`Geom::dy`, updateInset), and one that still
+//! doesn't fit at 90% fractions is set in TeX's text style (stacked.rs `fits`).
 
 use crate::render::{Canvas, Color, Rect, caret_x, size, with_alpha};
-use crate::stacked::{self, Look, Parsed};
+use crate::stacked::{self, Look, Parsed, tex};
 use std::cell::{OnceCell, RefCell};
-use windows::Win32::Graphics::Direct2D::Common::{D2D1_FIGURE_BEGIN_HOLLOW, D2D1_FIGURE_END_OPEN};
+use windows::Win32::Graphics::Direct2D::Common::{
+    D2D1_BEZIER_SEGMENT, D2D1_FIGURE_BEGIN_FILLED, D2D1_FIGURE_BEGIN_HOLLOW,
+    D2D1_FIGURE_END_CLOSED, D2D1_FIGURE_END_OPEN,
+};
 use windows::Win32::Graphics::Direct2D::{
     D2D1_CAP_STYLE_ROUND, D2D1_DASH_STYLE_SOLID, D2D1_LINE_JOIN_ROUND,
     D2D1_STROKE_STYLE_PROPERTIES, ID2D1StrokeStyle,
@@ -24,13 +32,17 @@ use windows_numerics::Vector2;
 
 /// A hidden character's size, a sliver of the line's (as the ∫ Σ Π limits' separators).
 const HIDDEN: f32 = size::DISPLAY * 0.01;
+/// How far the line may reach above and below its 36 DIP row: the composer's room (stackRoom).
+pub const ROOM: f32 = 18.0;
 
-/// A fraction's bar: from `x`, `w` wide, `axis` above the line's baseline; its fraction takes `start..end`.
+/// A fraction's bar: from `x`, `w` wide, `axis` above the line's baseline, `thick` thick; its fraction takes
+/// `start..end`.
 #[derive(Clone, Copy, Debug)]
 struct Bar {
     x: f32,
     w: f32,
     axis: f32,
+    thick: f32,
     start: usize,
     end: usize,
 }
@@ -43,6 +55,21 @@ struct Hole {
     x: f32,
     raise: f32,
     size: f32,
+}
+
+/// Shown brackets drawn as tall as the stack they hold (TallBracket): `( )` or `[ ]` at `open` and `close`, centred
+/// `axis` over the line's baseline, `half` each way; `width` the glyph's own advance and `room` the more it gets on
+/// its inner side.
+#[derive(Clone, Copy, Debug)]
+struct Tall {
+    open: usize,
+    close: usize,
+    square: bool,
+    axis: f32,
+    half: f32,
+    size: f32,
+    width: f32,
+    room: f32,
 }
 
 /// A run of the layout drawn as one piece: characters `a..b`, which the layout put at `from` and the line puts at
@@ -58,20 +85,35 @@ struct Run {
     pad_r: f32,
 }
 
+/// Each character's size and raise, each slot's look, and a fraction's size in the line (`top`: 90%, or 70% on a
+/// line too tall for the bar).
+pub struct Sizes {
+    sizes: Vec<f32>,
+    raise: Vec<f32>,
+    looks: Vec<Look>,
+    top: f32,
+}
+
 /// Where a stacked line's places and pieces go, from the layout's left and top.
 pub struct Geom {
     /// the caret place before each UTF-16 position, 0 to the line's length
     pub xs: Vec<f32>,
     pub width: f32,
-    /// the line's baseline from the layout's top
+    /// the line's baseline from the layout's top (moved by `dy`)
     pub base: f32,
+    /// how far the line is moved down so all of it shows (up when negative)
+    pub dy: f32,
     /// each character's size and raise
     sizes: Vec<f32>,
     raise: Vec<f32>,
     looks: Vec<Look>,
+    top: f32,
     runs: Vec<Run>,
     bars: Vec<Bar>,
     holes: Vec<Hole>,
+    talls: Vec<Tall>,
+    /// how far back the caret at each place is drawn: the middle of a spaced sign's room
+    shift: Vec<f32>,
     /// the line's stacks
     parsed: Parsed,
 }
@@ -89,10 +131,21 @@ fn range(a: usize, b: usize) -> DWRITE_TEXT_RANGE {
     }
 }
 
+/// Whether a line with no stack still gets a geometry while the setting is on: one with a sign to give room to.
+pub fn spaced(text: &str) -> bool {
+    text.contains(['+', '-', '−', '=', '<', '>', '≤', '≥', '±', '≠', ';', ','])
+}
+
 /// The slots' sizes and the hidden characters' sliver set on the line's layout (before the limits' own and the
-/// gaps): what `build` measures. Returns each character's size and raise, and each slot's look.
-pub fn apply_sizes(l: &IDWriteTextLayout, p: &Parsed, n: usize) -> (Vec<f32>, Vec<f32>, Vec<Look>) {
-    let (sizes, raise, looks) = stacked::looks(p, n, size::DISPLAY);
+/// gaps): what `build` measures. A line too tall for the composer at Desmos's 90% fractions is set in TeX's text
+/// style (70%).
+pub fn apply_sizes(l: &IDWriteTextLayout, p: &Parsed, n: usize) -> Sizes {
+    let top = if p.is_empty() || stacked::fits(p, size::DISPLAY, 36.0 + 2.0 * ROOM) {
+        stacked::FRACTION_SCALE
+    } else {
+        tex::SCRIPT
+    };
+    let (sizes, raise, looks) = stacked::looks(p, n, size::DISPLAY, top);
     // SAFETY: setters on a live layout, ranges inside the text
     unsafe {
         for look in &looks {
@@ -104,7 +157,12 @@ pub fn apply_sizes(l: &IDWriteTextLayout, p: &Parsed, n: usize) -> (Vec<f32>, Ve
             let _ = l.SetFontSize(HIDDEN, range(k, k + 1));
         }
     }
-    (sizes, raise, looks)
+    Sizes {
+        sizes,
+        raise,
+        looks,
+        top,
+    }
 }
 
 /// A one-line layout's baseline from its top.
@@ -139,17 +197,24 @@ fn reference(c: &Canvas, h: f32) -> (f32, f32) {
     (y + lines[0].baseline, lines[0].height)
 }
 
+/// How far a line `(height, depth)` from its baseline at `at` (from the view's top, `room` tall) moves so all of
+/// it shows: its baseline stays a plain line's until the stacks would run off the bottom or the top
+/// (updateInset).
+pub fn shift_into(e: (f32, f32), rooted: bool, at: f32, room: f32) -> f32 {
+    let (lowest, highest) = stacked::baseline_range(e, rooted, size::DISPLAY, room);
+    let to = if lowest > highest {
+        (lowest + highest) / 2.0
+    } else {
+        at.clamp(lowest, highest)
+    };
+    to - at
+}
+
 /// The stacked line's places and pieces, from its layout once the sizes (`apply_sizes`), the limits' and the gaps'
 /// spacing are on it.
-pub fn build(
-    c: &Canvas,
-    l: &IDWriteTextLayout,
-    text: &str,
-    p: &Parsed,
-    (sizes, raise, looks): (Vec<f32>, Vec<f32>, Vec<Look>),
-    h: f32,
-) -> Geom {
-    let n = sizes.len();
+pub fn build(c: &Canvas, l: &IDWriteTextLayout, text: &str, p: &Parsed, sz: Sizes, h: f32) -> Geom {
+    let u: Vec<u16> = text.encode_utf16().collect();
+    let n = sz.sizes.len().min(u.len());
     let (base, line_h) = reference(c, h);
     // SAFETY: a setter on a live layout: the line keeps the display size's height and baseline
     unsafe {
@@ -161,34 +226,59 @@ pub fn build(
     }
     let from: Vec<f32> = (0..=n).map(|i| caret_x(l, i as u32)).collect();
     let adv: Vec<f32> = (0..n).map(|k| from[k + 1] - from[k]).collect();
-    let (xs, bars, holes, extra) = places(p, &sizes, &raise, &adv);
-    let width = xs[n];
-    let runs = runs(p, &raise, &extra, &from);
-    PLACES.with(|s| *s.borrow_mut() = (text.to_string(), xs.clone()));
+    let pl = places(p, &u[..n], &sz, &adv);
+    let width = pl.xs[n];
+    let runs = runs(p, &sz.raise, &pl.extra, &from);
+    let dy = if p.is_empty() {
+        0.0
+    } else {
+        let e = stacked::extent(p, 0, n, size::DISPLAY, size::DISPLAY, sz.top);
+        shift_into(e, stacked::rooted(p), base + ROOM, h + 2.0 * ROOM)
+    };
+    PLACES.with(|s| *s.borrow_mut() = (text.to_string(), pl.xs.clone()));
     Geom {
-        xs,
+        xs: pl.xs,
         width,
-        base,
-        sizes,
-        raise,
-        looks,
+        base: base + dy,
+        dy,
+        sizes: sz.sizes,
+        raise: sz.raise,
+        looks: sz.looks,
+        top: sz.top,
         runs,
-        bars,
-        holes,
+        bars: pl.bars,
+        holes: pl.holes,
+        talls: pl.talls,
+        shift: pl.shift,
         parsed: p.clone(),
     }
 }
 
+/// What `places` works out.
+struct Places {
+    xs: Vec<f32>,
+    bars: Vec<Bar>,
+    holes: Vec<Hole>,
+    talls: Vec<Tall>,
+    /// each character's added advance
+    extra: Vec<f32>,
+    shift: Vec<f32>,
+}
+
+/// A slot's size and raise, from its look.
+fn look_of(looks: &[Look], slot: stacked::Slot, or: (f32, f32)) -> (f32, f32) {
+    looks
+        .iter()
+        .find(|l| l.lo == slot.lo && l.hi == slot.hi)
+        .map_or(or, |l| (l.size, l.offset))
+}
+
 /// The places (StackTypesetter's pen): each character's advance `adv`, plus the room each stack makes and the
-/// pull back to its denominator, inner stacks first so an outer slot's width takes in the stacks inside it.
-/// Returns the caret places, the bars, the holes and each character's added advance.
-fn places(
-    p: &Parsed,
-    sizes: &[f32],
-    raise: &[f32],
-    adv: &[f32],
-) -> (Vec<f32>, Vec<Bar>, Vec<Hole>, Vec<f32>) {
+/// pull back to its denominator, inner stacks first so an outer slot's width takes in the stacks inside it; then
+/// the room grown brackets get, and the room around signs.
+fn places(p: &Parsed, u: &[u16], sz: &Sizes, adv: &[f32]) -> Places {
     let n = adv.len();
+    let (sizes, raise, looks, top) = (&sz.sizes, &sz.raise, &sz.looks, sz.top);
     let mut extra = vec![0.0f32; n];
     let mut lead = 0.0f32;
     // each bar and box with the character it hangs from, `x` from that character's place (known only at the end)
@@ -199,9 +289,9 @@ fn places(
     let mut order: Vec<&stacked::Stack> = p.stacks.iter().collect();
     order.sort_by_key(|s| s.end - s.start);
     for s in order {
-        let f = stacked::small(sizes[s.op]);
-        let hole = f * 0.62;
         let (parent, base) = (sizes[s.op], raise[s.op]);
+        let f = stacked::slot_size(parent, s.fraction, size::DISPLAY, top);
+        let hole = f * 0.62;
         if let (true, Some(num)) = (s.fraction, s.num) {
             let den = s.slot;
             let nw = if num.is_empty() {
@@ -214,21 +304,20 @@ fn places(
             } else {
                 width(&extra, den.lo, den.hi)
             };
-            let pad = f * 0.18;
+            let pad = f * stacked::BAR_OVERHANG;
             let w = nw.max(dw) + 2.0 * pad;
             let room = (w - nw) / 2.0;
-            let axis = base + parent * 0.25;
             if let Some(o) = num.open {
                 extra[o] += room + if num.is_empty() { hole } else { 0.0 };
                 if num.is_empty() {
-                    let raise = axis + 1.5 + f * 0.08;
+                    let (size, raise) = look_of(looks, num, (f, base));
                     holes.push((
                         o,
                         Hole {
                             open: o,
                             x: room,
                             raise,
-                            size: f,
+                            size,
                         },
                     ));
                 }
@@ -244,14 +333,14 @@ fn places(
                 && den.is_empty()
             {
                 extra[o] += hole;
-                let raise = axis - 1.5 - f * 0.72;
+                let (size, raise) = look_of(looks, den, (f, base));
                 holes.push((
                     o,
                     Hole {
                         open: o,
                         x: 0.0,
                         raise,
-                        size: f,
+                        size,
                     },
                 ));
             }
@@ -266,7 +355,8 @@ fn places(
                 Bar {
                     x: -shift,
                     w,
-                    axis,
+                    axis: base + parent * tex::AXIS,
+                    thick: (parent * tex::RULE).max(1.0),
                     start: s.start,
                     end: s.end,
                 },
@@ -276,14 +366,14 @@ fn places(
                 && s.slot.is_empty()
             {
                 extra[o] += hole;
-                let raise = base + parent * 0.36;
+                let (size, raise) = look_of(looks, s.slot, (f, base));
                 holes.push((
                     o,
                     Hole {
                         open: o,
                         x: 0.0,
                         raise,
-                        size: f,
+                        size,
                     },
                 ));
             }
@@ -296,6 +386,36 @@ fn places(
         if d < n {
             extra[d] += sizes[d] * 0.14;
         }
+    }
+    // shown brackets around a stack: their glyphs hidden, drawn as tall as what they hold, with a little more room
+    // as they grow
+    let mut talls = Vec::new();
+    for b in p.tall.iter().filter(|b| b.close < n) {
+        let s = sizes[b.open];
+        let e = stacked::extent(p, b.open + 1, b.close, s, size::DISPLAY, top);
+        let half = tex::bracket_half(e.0, e.1, s);
+        let room = (s * 0.25).min((half * 2.0 - s).max(0.0) * 0.08);
+        talls.push(Tall {
+            open: b.open,
+            close: b.close,
+            square: u[b.open] == 0x5B,
+            axis: raise[b.open] + s * tex::AXIS,
+            half,
+            size: s,
+            width: adv[b.open],
+            room,
+        });
+        extra[b.open] += room;
+        extra[b.close - 1] += room;
+    }
+    // room around the signs (setting on only), and the caret in the middle of it
+    let mut shift = vec![0.0f32; n + 1];
+    let (room, sh) = stacked::spacing(u, &p.hidden, |k| sizes[k]);
+    for (k, v) in room {
+        extra[k] += v;
+    }
+    for (k, v) in sh {
+        shift[k] = v;
     }
     let mut xs = Vec::with_capacity(n + 1);
     let mut x = lead;
@@ -318,13 +438,20 @@ fn places(
             ..h
         })
         .collect();
-    (xs, bars, holes, extra)
+    Places {
+        xs,
+        bars,
+        holes,
+        talls,
+        extra,
+        shift,
+    }
 }
 
 /// The runs to draw: unbroken stretches of shown characters at one height that the line keeps together as the
 /// layout has them.
 fn runs(p: &Parsed, raise: &[f32], extra: &[f32], from: &[f32]) -> Vec<Run> {
-    let n = raise.len();
+    let n = extra.len();
     let mut out = Vec::new();
     let shown = |k: usize| !p.hidden.contains(&k);
     let mut a = 0;
@@ -449,6 +576,11 @@ impl Geom {
             .unwrap_or(0.0)
     }
 
+    /// Where the caret at UTF-16 `i` is drawn: beside a spaced sign, in the middle of its room (caretShift).
+    pub fn caret_x(&self, i: u32) -> f32 {
+        self.x(i) - self.shift.get(i as usize).copied().unwrap_or(0.0)
+    }
+
     /// A character's size and raise (the line's own past its end).
     pub fn look_of(&self, k: usize) -> (f32, f32) {
         (
@@ -469,27 +601,44 @@ impl Geom {
         (l, r)
     }
 
-    /// Draws the line's text in its runs, `x0`, `y` the layout's top-left; the layout's drawing effects colour it.
+    /// Draws the line's text in its runs, `x0`, `y` the row's top-left; the layout's drawing effects colour it.
     pub fn draw(&self, c: &Canvas, l: &IDWriteTextLayout, x0: f32, y: f32, h: f32, color: Color) {
         for r in &self.runs {
             let at = x0 + self.xs[r.a];
             c.push_clip(Rect::new(
                 at - r.pad_l,
-                y - 14.0,
+                y - ROOM,
                 r.w + r.pad_l + r.pad_r,
-                h + 28.0,
+                h + 2.0 * ROOM,
             ));
-            c.text(l, at - r.from, y - r.raise, color);
+            c.text(l, at - r.from, y + self.dy - r.raise, color);
             c.pop_clip();
         }
     }
 
-    /// The bars and the empty slots' boxes.
+    /// The bars, the grown brackets and the empty slots' boxes.
     pub fn decorate(&self, c: &Canvas, x0: f32, y: f32) {
         let t = c.theme;
         let base = y + self.base;
         for b in &self.bars {
-            c.fill(Rect::new(x0 + b.x, base - b.axis - 0.6, b.w, 1.2), t.ink);
+            c.fill(
+                Rect::new(x0 + b.x, base - b.axis - b.thick / 2.0, b.w, b.thick),
+                t.ink,
+            );
+        }
+        for b in &self.talls {
+            let (top, bottom) = (base - b.axis - b.half, base - b.axis + b.half);
+            let w = b.width + b.room;
+            tall_bracket(
+                c,
+                (x0 + self.x(b.open as u32), w),
+                (top, bottom),
+                b.size,
+                (b.square, false),
+                t.ink,
+            );
+            let r = x0 + self.x(b.close as u32) - b.room;
+            tall_bracket(c, (r, w), (top, bottom), b.size, (b.square, true), t.ink);
         }
         for h in &self.holes {
             c.fill_round(
@@ -516,25 +665,25 @@ impl Geom {
         Some((self.base - look.offset - look.size * 0.95, look.size * 1.25))
     }
 
-    /// The caret at UTF-16 `caret` when it's in a slot: (x, top, height), the slot's size, from the layout's
-    /// top-left; None outside the slots (the line's own caret).
+    /// The caret at UTF-16 `caret` while the line has stacks: (x, top, height), the size of the slot it's in (the
+    /// line's outside them), from the layout's top-left; None on a line with no stack (the line's own caret).
     pub fn caret(&self, caret: usize) -> Option<(f32, f32, f32)> {
         let p = &self.parsed;
-        let look = stacked::look_at(p, &self.looks, caret)?;
-        let slot = p.slot(caret)?;
-        let mut x = self.x(caret as u32);
+        if p.is_empty() {
+            return None;
+        }
+        let (size, offset) = stacked::look_at(p, &self.looks, caret)
+            .map_or((size::DISPLAY, 0.0), |l| (l.size, l.offset));
+        let mut x = self.caret_x(caret as u32);
         // in an empty slot, the middle of its box
-        if slot.is_empty()
+        if let Some(slot) = p.slot(caret)
+            && slot.is_empty()
             && let Some(o) = slot.open
             && let Some(h) = self.holes.iter().find(|h| h.open == o)
         {
             x = h.x + h.size * 0.31;
         }
-        Some((
-            x,
-            self.base - look.offset - look.size * 0.92,
-            look.size * 1.15,
-        ))
+        Some((x, self.base - offset - size * 0.92, size * 1.15))
     }
 
     /// The caret place nearest a click at (x, y) from the layout's top-left, by its slot's height too.
@@ -555,6 +704,93 @@ impl Geom {
         }
         best.0 as u32
     }
+
+    /// Where the blank-answer squiggle under UTF-16 `a..b` goes, from the layout's top: under the lowest character
+    /// it marks (a slot's sit lower, smaller), never past the composer's bottom (`h` the row's height).
+    pub fn squiggle_y(&self, a: u32, b: u32, h: f32) -> f32 {
+        let low = (a as usize..b as usize)
+            .filter(|k| !self.parsed.hidden.contains(k) && *k < self.sizes.len())
+            .map(|k| self.base - self.raise[k] + self.sizes[k] * tex::DEPTH)
+            .fold(f32::MIN, f32::max);
+        let low = if low == f32::MIN {
+            self.base + size::DISPLAY * tex::DEPTH
+        } else {
+            low
+        };
+        (low + 1.0).min(h + ROOM - 1.0)
+    }
+
+    /// A root over the radicand `a..b` (UTF-16) at `size` that takes a stack: its bar's top and its foot, from the
+    /// layout's top, as tall as what it takes (TeX's rule 11: the bar its gap over what's under it, the foot under
+    /// it), and the line's baseline under it. None for a root over plain text.
+    pub fn root_over(&self, a: usize, b: usize, size: f32) -> Option<(f32, f32, f32)> {
+        let p = &self.parsed;
+        let s = p.stacks.iter().find(|s| s.start >= a && s.end <= b)?;
+        let baseline = self.base - self.raise.get(s.op).copied().unwrap_or(0.0);
+        let e = stacked::extent(p, a, b, size, size::DISPLAY, self.top);
+        let plain = root_points(0.0, 1.0, 1.0, baseline, size);
+        let lw = stacked::root_line_width(size);
+        let top = plain[3]
+            .1
+            .min(baseline - e.0 - tex::radical_gap(size) - lw / 2.0);
+        let foot = plain[2].1.max(baseline + e.1 + tex::RULE * size);
+        Some((top, foot, baseline))
+    }
+}
+
+// ---- a bracket as tall as what it holds (TallBracketShape)
+
+/// A bracket drawn as tall as what it holds: a round one a crescent thickest at its middle, a square one a bar with
+/// feet. In a box `width` wide from `left` (the opening one's glyph and the room after it, the closing one's room
+/// before it and its glyph), from `top` to `bottom`, y growing down. The line and the history's rows draw it.
+pub fn tall_bracket(
+    c: &Canvas,
+    (left, width): (f32, f32),
+    (top, bottom): (f32, f32),
+    size: f32,
+    (square, closing): (bool, bool),
+    color: Color,
+) {
+    let t = (size * 0.07).max(1.0);
+    // mirrored for the closing one: x measured from the box's right edge
+    let x = |v: f32| if closing { left + width - v } else { left + v };
+    let span = |a: f32, b: f32| (x(a).min(x(b)), (x(b) - x(a)).abs());
+    if square {
+        let foot = (width * 0.6).min(size * 0.3);
+        let stem = width * 0.3;
+        let (sx, sw) = span(stem, stem + t);
+        let (fx, fw) = span(stem, stem + foot);
+        c.fill(Rect::new(sx, top, sw, bottom - top), color);
+        c.fill(Rect::new(fx, top, fw, t * 0.8), color);
+        c.fill(Rect::new(fx, bottom - t * 0.8, fw, t * 0.8), color);
+        return;
+    }
+    let (tip, bulge, h) = (width * 0.78, width * 0.12, bottom - top);
+    let v = |x: f32, y: f32| Vector2 { X: x, Y: y };
+    // SAFETY: a fresh geometry opened, filled and closed here, drawn inside the frame
+    unsafe {
+        let Ok(geo) = c.gfx.d2d.CreatePathGeometry() else {
+            return;
+        };
+        let Ok(sink) = geo.Open() else { return };
+        sink.BeginFigure(v(x(tip), top), D2D1_FIGURE_BEGIN_FILLED);
+        sink.AddBezier(&D2D1_BEZIER_SEGMENT {
+            point1: v(x(bulge), top + h * 0.2),
+            point2: v(x(bulge), bottom - h * 0.2),
+            point3: v(x(tip), bottom),
+        });
+        sink.AddLine(v(x(tip + t * 0.25), bottom));
+        sink.AddBezier(&D2D1_BEZIER_SEGMENT {
+            point1: v(x(bulge + t * 1.6), bottom - h * 0.22),
+            point2: v(x(bulge + t * 1.6), top + h * 0.22),
+            point3: v(x(tip + t * 0.25), top),
+        });
+        sink.EndFigure(D2D1_FIGURE_END_CLOSED);
+        if sink.Close().is_err() {
+            return;
+        }
+        c.rt().FillGeometry(&geo, c.brush(color), None);
+    }
 }
 
 // ---- a typed root: sign and bar, one stroke (RootSign)
@@ -563,8 +799,20 @@ impl Geom {
 /// to `end`. `left` and `width` are the sign's own room; `size` the sign's size; y grows down.
 pub fn root_points(left: f32, width: f32, end: f32, baseline: f32, size: f32) -> [(f32, f32); 5] {
     // Segoe UI's cap height; the top is clear of what's under it, as Desmos leaves it
-    let top = baseline - size * 0.7 - size * 0.2;
+    let top = baseline - size * tex::CAP - size * 0.2;
     let foot = baseline + size * 0.02;
+    root_points_between(left, width, end, top, foot)
+}
+
+/// The same line between a given top and foot: a root over a stack reaches from above its numerator to below its
+/// denominator.
+pub fn root_points_between(
+    left: f32,
+    width: f32,
+    end: f32,
+    top: f32,
+    foot: f32,
+) -> [(f32, f32); 5] {
     let height = foot - top;
     [
         (left + width * 0.1, foot - height * 0.36),
@@ -606,7 +854,19 @@ pub fn draw_root(
     color: Color,
 ) {
     let pts = root_points(left, width, end, baseline, size);
-    let stroke = (size / 17.0).max(1.0);
+    stroke_root(c, &pts, (left, baseline), size, cube, color);
+}
+
+/// The stroke through `pts` (`root_points`), and a cube root's 3 in the crook of a sign at `left` on `baseline`.
+pub fn stroke_root(
+    c: &Canvas,
+    pts: &[(f32, f32); 5],
+    (left, baseline): (f32, f32),
+    size: f32,
+    cube: bool,
+    color: Color,
+) {
+    let stroke = stacked::root_line_width(size);
     // SAFETY: a fresh geometry opened, filled and closed here, drawn inside the frame
     unsafe {
         let Ok(geo) = c.gfx.d2d.CreatePathGeometry() else {
@@ -641,7 +901,7 @@ pub fn draw_root(
                 let _ = l.SetFontSize(small, range(0, 1));
             }
             // its top at the crook: the cap height and a little above the baseline
-            let top = baseline - size * 0.7 - size * 0.24;
+            let top = baseline - size * tex::CAP - size * 0.24;
             c.text_plain(&l, left, top - small * 0.25, color);
         }
     }
@@ -655,43 +915,71 @@ mod tests {
         s.encode_utf16().collect()
     }
 
-    #[test]
-    fn a_denominator_goes_back_under_its_numerator() {
-        // (12)/(3): every shown character 10 wide at its size, the hidden ones nothing
-        let t = u("(12)/(3)");
-        let p = stacked::parse(&t, &[]);
-        let (sizes, raise, _) = stacked::looks(&p, t.len(), 24.0);
-        let adv: Vec<f32> = (0..t.len())
+    /// `t`'s places with every shown character 10 wide at its size and the hidden ones nothing
+    fn laid(t: &str) -> (Parsed, Places) {
+        let v = u(t);
+        let p = stacked::parse(&v, &[]);
+        let (sizes, raise, looks) = stacked::looks(&p, v.len(), 24.0, stacked::FRACTION_SCALE);
+        let adv: Vec<f32> = (0..v.len())
             .map(|k| if p.hidden.contains(&k) { 0.0 } else { 10.0 })
             .collect();
-        let (xs, bars, _, _) = places(&p, &sizes, &raise, &adv);
-        let bar = bars[0];
-        // the bar is as wide as the numerator and its padding, and starts the line
-        let pad = stacked::small(24.0) * 0.18;
+        let sz = Sizes {
+            sizes,
+            raise,
+            looks,
+            top: stacked::FRACTION_SCALE,
+        };
+        let pl = places(&p, &v, &sz, &adv);
+        (p, pl)
+    }
+
+    #[test]
+    fn a_denominator_goes_back_under_its_numerator() {
+        let (_, pl) = laid("(12)/(3)");
+        let bar = pl.bars[0];
+        // the bar is as wide as the numerator and its overhang, and starts the line
+        let pad = 21.6 * stacked::BAR_OVERHANG;
         assert!((bar.w - (20.0 + 2.0 * pad)).abs() < 1e-3);
         assert!(bar.x.abs() < 1e-3);
-        // the numerator starts at the padding, the denominator centred under it
-        assert!((xs[1] - pad).abs() < 1e-3);
-        assert!((xs[6] - (bar.w - 10.0) / 2.0).abs() < 1e-3);
-        // and the line goes on past the bar's end
-        assert!((xs[8] - bar.w).abs() < 1e-3);
+        assert!((bar.thick - 1.0).abs() < 1e-3);
+        // the numerator starts at the overhang, the denominator centred under it, the line on past the bar
+        assert!((pl.xs[1] - pad).abs() < 1e-3);
+        assert!((pl.xs[6] - (bar.w - 10.0) / 2.0).abs() < 1e-3);
+        assert!((pl.xs[8] - bar.w).abs() < 1e-3);
     }
 
     #[test]
     fn a_fraction_that_starts_the_line_is_centred_too() {
-        // 1/12345: a bare numerator at the line's start, the line itself starting further on
-        let t = u("1/(12345)");
-        let p = stacked::parse(&t, &[]);
-        let (sizes, raise, _) = stacked::looks(&p, t.len(), 24.0);
-        let adv: Vec<f32> = (0..t.len())
-            .map(|k| if p.hidden.contains(&k) { 0.0 } else { 10.0 })
-            .collect();
-        let (xs, bars, _, _) = places(&p, &sizes, &raise, &adv);
-        let bar = bars[0];
+        let (_, pl) = laid("1/(12345)");
+        let bar = pl.bars[0];
         assert!(bar.x.abs() < 1e-3);
-        // the numerator's middle over the bar's middle
-        assert!(((xs[0] + 5.0) - (bar.x + bar.w / 2.0)).abs() < 1e-3);
-        assert!(((xs[3] + 25.0) - (bar.x + bar.w / 2.0)).abs() < 1e-3);
+        assert!(((pl.xs[0] + 5.0) - (bar.x + bar.w / 2.0)).abs() < 1e-3);
+        assert!(((pl.xs[3] + 25.0) - (bar.x + bar.w / 2.0)).abs() < 1e-3);
+    }
+
+    #[test]
+    fn signs_get_room_and_brackets_grow() {
+        // 1+2: 4.8 each side of the + at 24, the caret beside it in the middle of that room
+        let (_, pl) = laid("1+2");
+        assert!((pl.xs[1] - 14.8).abs() < 1e-3 && (pl.xs[2] - 29.6).abs() < 1e-3);
+        assert!((pl.shift[1] - 2.4).abs() < 1e-3 && (pl.shift[2] - 2.4).abs() < 1e-3);
+        // brackets around a fraction: as tall as it, centred on the axis, with room inside
+        let (p, pl) = laid("2(1/(2)+1)");
+        assert_eq!(pl.talls.len(), 1);
+        let b = pl.talls[0];
+        let e = stacked::extent(&p, 2, 9, 24.0, 24.0, stacked::FRACTION_SCALE);
+        // TeX's delimiters: 90.1% of what they hold, and taller than a digit
+        assert!(b.axis + b.half >= 0.9 * e.0 && b.half - b.axis >= 0.85 * e.1);
+        assert!(b.axis + b.half > 24.0 * tex::HEIGHT);
+        assert!(b.room > 0.0 && pl.extra[1] >= b.room);
+    }
+
+    #[test]
+    fn a_tall_line_moves_until_all_of_it_shows() {
+        // a plain line's baseline stays; one too deep for the composer goes up, one too tall down
+        assert_eq!(shift_into((17.8, 5.0), false, 44.0, 72.0), 0.0);
+        assert!(shift_into((17.8, 40.0), false, 44.0, 72.0) < 0.0);
+        assert!(shift_into((50.0, 2.0), false, 44.0, 72.0) > 0.0);
     }
 
     #[test]
@@ -702,5 +990,7 @@ mod tests {
         // the foot is the lowest point, just under the baseline; the top clear of the text
         assert!(pts[2].1 > 30.0 && pts[2].1 < 31.0);
         assert!(pts[4].1 < 30.0 - 24.0 * 0.7);
+        let tall = root_points_between(0.0, 10.0, 50.0, 2.0, 60.0);
+        assert_eq!((tall[3].1, tall[2].1), (2.0, 60.0));
     }
 }

@@ -56,6 +56,8 @@ mod graph;
 #[cfg(windows)]
 mod graph3d;
 #[cfg(windows)]
+mod graph_export;
+#[cfg(windows)]
 mod graph_settings;
 #[cfg(windows)]
 mod graph_view;
@@ -112,6 +114,8 @@ mod sheets;
 mod sheets_typst;
 #[cfg(windows)]
 mod stacked_layout;
+#[cfg(windows)]
+mod stacked_text;
 #[cfg(windows)]
 mod systems;
 #[cfg(windows)]
