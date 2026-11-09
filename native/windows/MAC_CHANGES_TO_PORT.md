@@ -10,6 +10,8 @@ A running list, kept by whoever changes the Mac app. How to work through it: `PO
 
 **Status of this list:** written from the Mac, then ported and run on Windows on branch `win-mac-port` (6 Nov 2026). New Mac changes go below as before.
 
+**Releases (3.0.2):** a `v*` tag now releases the Mac only, and Windows ships by a hand run of the Windows workflow. See the top of `RELEASE.md`.
+
 ## Checks to run first
 
 ```

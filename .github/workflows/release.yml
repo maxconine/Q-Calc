@@ -89,6 +89,11 @@ jobs:
               --title "Q Calc ${VERSION}" \
               --generate-notes
           fi
+          # the repo's notes for this version, when it has them (windows.yml did this, and it no longer runs on a tag)
+          NOTES="RELEASE_NOTES_v${VERSION}.md"
+          if [[ -f "$NOTES" ]]; then
+            gh release edit "$TAG" --notes-file "$NOTES"
+          fi
 
       - name: Update Homebrew cask and appcast
         env:

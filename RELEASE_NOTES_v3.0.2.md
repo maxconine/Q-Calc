@@ -1,5 +1,7 @@
 ## Q Calc 3.0.2: matrices, the working, and a bigger graph
 
+This release is for the Mac. On Windows, Q Calc stays on 2.0.15 for now.
+
 **If you already have Q Calc, you don't need to do anything.** It updates itself to 3.0.2 the usual way, and your settings, keybinds and history come with it.
 
 ### What's new
@@ -29,14 +31,11 @@
 | --- | --- |
 | `Q-Calc-3.0.2-apple-silicon.zip` | Macs with Apple silicon (M1 and later) |
 | `Q-Calc-3.0.2-intel.zip` | Intel Macs |
-| `Q-Calc-3.0.2-x64-native-setup.exe` | most Windows PCs (Intel and AMD) |
-| `Q-Calc-3.0.2-arm64-native-setup.exe` | Arm PCs (Snapdragon) |
 
 On the Mac, unzip and drag **Q Calc** to Applications. It runs on macOS 12 and later.
 
 ### Known issues
 
 - **The Mac app isn't notarized yet.** Opened by hand the first time, macOS may say it can't check it for malware: right-click **Q Calc** › **Open**, or allow it in System Settings › Privacy & Security. Automatic updates never show this.
-- **The Windows installer isn't code-signed yet.** Windows SmartScreen may say *Windows protected your PC*: click **More info → Run anyway**. Automatic updates never show this.
 
 Found a problem? Use the [feedback form](https://forms.gle/acunzzzwuMZUmMiF9) or [open an issue](https://github.com/maxconine/Q-Calc/issues).

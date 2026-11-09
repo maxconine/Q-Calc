@@ -1,5 +1,7 @@
 # Shipping a Windows release (v3.0.0: the native app)
 
+**From 3.0.2, a `v*` tag releases the Mac only.** `windows.yml` no longer runs on a tag push, so Windows users stay on 2.0.15 until the native app has been tried on a Windows PC. To ship Windows for a release, go to Actions → **Windows** → Run workflow on that release's tag, with *publish* ticked (and *native_windows* ticked for the native app). To go back to every tag releasing Windows, put the `push: tags: v*` trigger back at the top of `windows.yml`. The steps below describe a tag push; read them as that hand run.
+
 From 3.0 the Windows release is the native app. A `v*` tag builds the native installers. `latest.json`, the feed every Tauri install (2.0.x) reads, then points at those installers, so each Tauri install updates itself to the native app within a day. The native installer replaces the Tauri app in place: same folder (`%LOCALAPPDATA%\Q Calc`), same **Installed apps** entry, same Start menu shortcut and sign-in entry. Settings, keybinds and rates live in `%APPDATA%\com.maxconine.qcalc`, which both apps share, and `migrate.rs` moves the Tauri app's history at the first launch.
 
 The switch is `NATIVE_WINDOWS` in `.github/workflows/windows.yml`. A tag push always takes it. A hand run has a *native_windows* box, ticked by default.
