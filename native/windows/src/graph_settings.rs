@@ -1,7 +1,8 @@
-//! The graph's settings, under the head's wrench (the Mac's GraphSettings.swift, Desmos's graph settings): what's
-//! kept between launches (`GraphPrefs`, the `graphPrefs` object in settings.json) and what's set per graph
-//! (`GraphState`'s labels, windows, steps and log axes). The Mac shows them in a popover; here they open as a
-//! block of controls inside the panel, laid out in rows that wrap (graph.rs draws them from `controls`).
+//! The graph's settings, under the head's wrench, and its export, under the camera (the Mac's GraphSettings.swift,
+//! Desmos's graph settings): what's kept between launches (`GraphPrefs`, the `graphPrefs` object in settings.json)
+//! and what's set per graph (`GraphState`'s labels, windows, steps and log axes). Both open as a rounded card inside
+//! the panel (a popup would take the keys from the bar, which hides it): rows of a name, controls that wrap, and a
+//! line saying what they do (graph_view.rs lays them out from `settings` and `export`).
 //!
 //! Number fields read `pi`, `π`, `e` and a multiple of them (`2pi`), and are committed with ↵, Tab or a click
 //! elsewhere (NumberField); the label fields apply as they're typed.
@@ -51,6 +52,20 @@ impl GraphPrefs {
     pub fn from_value(v: &serde_json::Value) -> GraphPrefs {
         serde_json::from_value(v.clone()).unwrap_or_default()
     }
+
+    /// GraphPrefs.load: as kept, with the settings taken out of the panel (text size, reverse contrast, arrows,
+    /// hiding an axis, lock viewport, the graph's own degrees) back at their defaults, so none is left on with no
+    /// way to see it.
+    pub fn load(v: &serde_json::Value) -> GraphPrefs {
+        let kept = GraphPrefs::from_value(v);
+        GraphPrefs {
+            grid: kept.grid,
+            polar: kept.polar,
+            axis_numbers: kept.axis_numbers,
+            minor_grid: kept.minor_grid,
+            ..GraphPrefs::default()
+        }
+    }
 }
 
 thread_local! {
@@ -66,7 +81,7 @@ pub fn prefs() -> GraphPrefs {
         let prefs = crate::store::settings_path()
             .and_then(|path| std::fs::read_to_string(path).ok())
             .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
-            .map(|v| GraphPrefs::from_value(&v["graphPrefs"]))
+            .map(|v| GraphPrefs::load(&v["graphPrefs"]))
             .unwrap_or_default();
         p.set(Some(prefs));
         prefs
@@ -101,41 +116,54 @@ impl FieldId {
     }
 }
 
-/// A two- or three-way choice.
+/// A two-way choice.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Seg {
-    TextSize,
     GridKind,
     XScale,
     YScale,
-    Angles,
 }
 
-/// A checkbox.
+/// A setting that's on or off: a rounded cell, in ink with a tick when on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Check {
-    ReverseContrast,
     Grid,
-    Arrows,
-    AxisNumbers,
     MinorGrid,
-    XAxis,
-    YAxis,
-    LockViewport,
+    AxisNumbers,
+    /// the export's "Label key points" (this graph's, not kept)
+    LabelPoints,
 }
 
-/// One control in the settings block, in reading order; `Break` starts a row.
+/// A button: Zoom square (a cell), or the export's Save picture (filled in the accent).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Button {
+    ZoomSquare,
+    Save,
+}
+
+/// One control in a row, in reading order.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Ctl {
+    /// a word between fields (`to`, `step`)
     Text(String),
-    Check(Check, &'static str, bool),
+    /// a caption-sized note beside the controls
+    Note(String),
+    Cell(Check, &'static str, bool, bool),
     Seg(Seg, Vec<&'static str>, usize, bool),
     Field(FieldId, String, &'static str, f32),
-    ZoomSquare(bool),
-    Break,
+    Button(Button, &'static str, bool),
 }
 
-/// What the block shows for the graph: `three_d` swaps y's window for z's, `log` is (x, y) on log scales.
+/// A row of the card: its name (blank lines the controls up under the others'), its controls and what it does.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Row {
+    pub name: &'static str,
+    pub ctls: Vec<Ctl>,
+    pub about: Option<&'static str>,
+}
+
+/// What the cards show for the graph: `three_d` swaps y's window for z's (and has no log scales), `log` is (x, y)
+/// on log scales.
 pub struct View {
     pub three_d: bool,
     pub x_label: String,
@@ -146,106 +174,116 @@ pub struct View {
     pub x_step: Option<f64>,
     pub y_step: Option<f64>,
     pub log: (bool, bool),
-    /// the calculator's angle mode, for "follow the calculator"
-    pub radians: bool,
+    pub label_points: bool,
 }
 
-/// The controls for `p` and `v` (GraphSettingsView's rows, flattened).
-pub fn controls(p: &GraphPrefs, v: &View) -> Vec<Ctl> {
+/// An axis's window `lo to hi`, its step and (2D) linear or log.
+fn range(ids: [FieldId; 3], w: (f64, f64), s: Option<f64>, log: Option<(Seg, bool)>) -> Vec<Ctl> {
     let mut out = vec![
-        Ctl::Seg(
-            Seg::TextSize,
-            vec!["A", "A+"],
-            usize::from(p.large_text),
-            true,
-        ),
-        Ctl::Check(
-            Check::ReverseContrast,
-            "reverse contrast",
-            p.reverse_contrast,
-        ),
-        Ctl::Seg(
-            Seg::Angles,
-            vec!["rad", "deg"],
-            usize::from(p.degrees.unwrap_or(!v.radians)),
-            true,
-        ),
-        Ctl::Break,
-        Ctl::Check(Check::Grid, "grid", p.grid),
-        Ctl::Seg(
-            Seg::GridKind,
-            vec!["cartesian", "polar"],
-            usize::from(p.polar),
-            p.grid,
-        ),
-        Ctl::Check(Check::Arrows, "arrows", p.arrows),
-        Ctl::Check(Check::AxisNumbers, "axis numbers", p.axis_numbers),
-        Ctl::Check(Check::MinorGrid, "minor gridlines", p.minor_grid),
-        Ctl::ZoomSquare(!v.log.0 && !v.log.1),
-        Ctl::Break,
+        Ctl::Field(ids[0], show(Some(w.0)), "", 96.0),
+        Ctl::Text("to".into()),
+        Ctl::Field(ids[1], show(Some(w.1)), "", 96.0),
+        Ctl::Text("step".into()),
+        Ctl::Field(ids[2], show(s), "auto", 56.0),
     ];
-    let (y_name, y_lo, y_hi) = if v.three_d {
-        ("z", FieldId::YLo, FieldId::YHi)
-    } else {
-        ("y", FieldId::YLo, FieldId::YHi)
-    };
-    out.extend([
-        Ctl::Check(Check::XAxis, "x-axis", p.show_x_axis),
-        Ctl::Field(FieldId::XLabel, v.x_label.clone(), "label", 64.0),
-        Ctl::Field(FieldId::XLo, show(Some(v.x.0)), "", 64.0),
-        Ctl::Text("≤ x ≤".into()),
-        Ctl::Field(FieldId::XHi, show(Some(v.x.1)), "", 64.0),
-        Ctl::Text("step".into()),
-        Ctl::Field(FieldId::XStep, show(v.x_step), "auto", 48.0),
-        Ctl::Break,
-        Ctl::Check(Check::YAxis, "y-axis", p.show_y_axis),
-        Ctl::Field(FieldId::YLabel, v.y_label.clone(), "label", 64.0),
-        Ctl::Field(y_lo, show(Some(v.y.0)), "", 64.0),
-        Ctl::Text(format!("≤ {y_name} ≤")),
-        Ctl::Field(y_hi, show(Some(v.y.1)), "", 64.0),
-        Ctl::Text("step".into()),
-        Ctl::Field(FieldId::YStep, show(v.y_step), "auto", 48.0),
-        Ctl::Break,
-    ]);
-    if !v.three_d {
-        out.extend([
-            Ctl::Text("x".into()),
-            Ctl::Seg(
-                Seg::XScale,
-                vec!["linear", "log"],
-                usize::from(v.log.0),
-                true,
-            ),
-            Ctl::Text("y".into()),
-            Ctl::Seg(
-                Seg::YScale,
-                vec!["linear", "log"],
-                usize::from(v.log.1),
-                true,
-            ),
-        ]);
+    if let Some((seg, on)) = log {
+        out.push(Ctl::Seg(seg, vec!["Linear", "Log"], usize::from(on), true));
     }
-    out.push(Ctl::Check(
-        Check::LockViewport,
-        "lock viewport",
-        p.lock_viewport,
-    ));
     out
 }
 
-/// A checkbox clicked.
-pub fn toggle(p: &mut GraphPrefs, c: Check) {
-    let slot = match c {
-        Check::ReverseContrast => &mut p.reverse_contrast,
-        Check::Grid => &mut p.grid,
-        Check::Arrows => &mut p.arrows,
-        Check::AxisNumbers => &mut p.axis_numbers,
-        Check::MinorGrid => &mut p.minor_grid,
-        Check::XAxis => &mut p.show_x_axis,
-        Check::YAxis => &mut p.show_y_axis,
-        Check::LockViewport => &mut p.lock_viewport,
+/// The settings card (GraphSettingsView): the grid, the x and y (or z) ranges with their steps and scales, and
+/// Zoom square. Only what changes the view is here: the bar has its own deg/rad switch.
+pub fn settings(p: &GraphPrefs, v: &View) -> Vec<Row> {
+    let mut out = vec![
+        Row {
+            name: "Grid",
+            ctls: vec![
+                Ctl::Cell(Check::Grid, "Grid", p.grid, true),
+                Ctl::Seg(
+                    Seg::GridKind,
+                    vec!["Cartesian", "Polar"],
+                    usize::from(p.polar),
+                    p.grid,
+                ),
+                Ctl::Cell(Check::MinorGrid, "Minor lines", p.minor_grid, true),
+                Ctl::Cell(Check::AxisNumbers, "Numbers", p.axis_numbers, true),
+            ],
+            about: Some(
+                "Lines behind the graph. Cartesian is squares; polar is rings a step apart with spokes every 15°.",
+            ),
+        },
+        Row {
+            name: "x range",
+            ctls: range(
+                [FieldId::XLo, FieldId::XHi, FieldId::XStep],
+                v.x,
+                v.x_step,
+                (!v.three_d).then_some((Seg::XScale, v.log.0)),
+            ),
+            about: Some(
+                "The window across. Type numbers or pi; Step is the gap between numbered lines (blank picks one).",
+            ),
+        },
+        Row {
+            name: if v.three_d { "z range" } else { "y range" },
+            ctls: range(
+                [FieldId::YLo, FieldId::YHi, FieldId::YStep],
+                v.y,
+                v.y_step,
+                (!v.three_d).then_some((Seg::YScale, v.log.1)),
+            ),
+            about: Some(if v.three_d {
+                "How high the box reaches. Step is the gap between numbered lines."
+            } else {
+                "The window up and down. Log spaces 1, 10, 100… evenly, for values that grow fast."
+            }),
+        },
+    ];
+    if !v.three_d {
+        out.push(Row {
+            name: "",
+            ctls: vec![
+                Ctl::Button(Button::ZoomSquare, "Zoom square", !v.log.0 && !v.log.1),
+                Ctl::Note("Reset (top right) goes back to the view the graph opened on.".into()),
+            ],
+            about: None,
+        });
+    }
+    out
+}
+
+/// The export card (GraphExportView): label the key points, name the axes, save the picture.
+pub fn export(v: &View) -> Vec<Row> {
+    let (y_name, y_hint) = if v.three_d {
+        ("z axis", "z")
+    } else {
+        ("y axis", "y")
     };
-    *slot = !*slot;
+    vec![Row {
+        name: "Export",
+        ctls: vec![
+            Ctl::Cell(Check::LabelPoints, "Label key points", v.label_points, true),
+            Ctl::Text("x axis".into()),
+            Ctl::Field(FieldId::XLabel, v.x_label.clone(), "x", 90.0),
+            Ctl::Text(y_name.into()),
+            Ctl::Field(FieldId::YLabel, v.y_label.clone(), y_hint, 90.0),
+            Ctl::Button(Button::Save, "Save picture", true),
+        ],
+        about: Some(
+            "Saves a PNG of the graph and its equations to the Desktop and copies it. Axis names show on the graph too.",
+        ),
+    }]
+}
+
+/// A kept checkbox clicked (the export's own is the graph's).
+pub fn toggle(p: &mut GraphPrefs, c: Check) {
+    match c {
+        Check::Grid => p.grid = !p.grid,
+        Check::MinorGrid => p.minor_grid = !p.minor_grid,
+        Check::AxisNumbers => p.axis_numbers = !p.axis_numbers,
+        Check::LabelPoints => {}
+    }
 }
 
 /// NumberField.show: `%.6g`, blank for none.
@@ -313,7 +351,7 @@ mod tests {
     }
 
     #[test]
-    fn prefs_default_and_read_partly() {
+    fn prefs_default_and_read_partly_and_the_removed_ones_reset() {
         let p = GraphPrefs::from_value(
             &serde_json::json!({ "polar": true, "minorGrid": false, "bogus": 1 }),
         );
@@ -325,12 +363,19 @@ mod tests {
         let back = serde_json::to_value(p).unwrap();
         assert_eq!(back["minorGrid"], false);
         let mut q = GraphPrefs::default();
-        toggle(&mut q, Check::LockViewport);
-        assert!(q.lock_viewport);
+        toggle(&mut q, Check::Grid);
+        assert!(!q.grid);
+        // GraphPrefs.load: what left the panel goes back to its default
+        let kept = serde_json::json!({ "polar": true, "largeText": true, "reverseContrast": true, "arrows": true,
+            "showXAxis": false, "showYAxis": false, "lockViewport": true, "degrees": true, "axisNumbers": false });
+        let l = GraphPrefs::load(&kept);
+        assert!(l.polar && !l.axis_numbers);
+        assert!(!l.large_text && !l.reverse_contrast && !l.arrows && !l.lock_viewport);
+        assert!(l.show_x_axis && l.show_y_axis && l.degrees.is_none());
     }
 
     #[test]
-    fn the_block_swaps_y_for_z_in_3d_and_drops_log_scales() {
+    fn the_cards_swap_y_for_z_in_3d_and_drop_log_scales() {
         let v = |three_d| View {
             three_d,
             x_label: String::new(),
@@ -340,14 +385,33 @@ mod tests {
             x_step: None,
             y_step: Some(2.0),
             log: (false, false),
-            radians: true,
+            label_points: true,
         };
-        let flat = controls(&GraphPrefs::default(), &v(false));
-        assert!(flat.contains(&Ctl::Text("≤ y ≤".into())));
-        assert!(flat.iter().any(|c| matches!(c, Ctl::Seg(Seg::XScale, ..))));
-        assert!(flat.contains(&Ctl::Field(FieldId::YStep, "2".into(), "auto", 48.0)));
-        let cube = controls(&GraphPrefs::default(), &v(true));
-        assert!(cube.contains(&Ctl::Text("≤ z ≤".into())));
-        assert!(!cube.iter().any(|c| matches!(c, Ctl::Seg(Seg::XScale, ..))));
+        let flat = settings(&GraphPrefs::default(), &v(false));
+        assert_eq!(
+            flat.iter().map(|r| r.name).collect::<Vec<_>>(),
+            ["Grid", "x range", "y range", ""]
+        );
+        let ctls: Vec<&Ctl> = flat.iter().flat_map(|r| &r.ctls).collect();
+        assert!(ctls.iter().any(|c| matches!(c, Ctl::Seg(Seg::XScale, ..))));
+        assert!(ctls.contains(&&Ctl::Field(FieldId::YStep, "2".into(), "auto", 56.0)));
+        assert!(flat.iter().all(|r| r.name.is_empty() || r.about.is_some()));
+        let cube = settings(&GraphPrefs::default(), &v(true));
+        assert_eq!(cube.len(), 3);
+        assert_eq!(cube[2].name, "z range");
+        assert!(
+            !cube
+                .iter()
+                .flat_map(|r| &r.ctls)
+                .any(|c| matches!(c, Ctl::Seg(Seg::XScale | Seg::YScale, ..)))
+        );
+        let ex = export(&v(true));
+        assert!(ex[0].ctls.contains(&Ctl::Text("z axis".into())));
+        assert!(ex[0].ctls.contains(&Ctl::Cell(
+            Check::LabelPoints,
+            "Label key points",
+            true,
+            true
+        )));
     }
 }

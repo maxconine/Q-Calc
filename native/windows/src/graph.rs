@@ -59,6 +59,15 @@ const MAX_SPAN: f64 = 1e6;
 pub const SNAP: f32 = 9.0;
 /// far off-plot samples are pinned this many plot heights away (the clip hides them)
 const V_LIMIT: f32 = 60.0;
+/// a 2D curve's samples: 4001, not the page's 401, which alias a zoomed-out sin x into a slow false wave; odd, so
+/// one lands on the window's middle (with an even count x² has two level samples across its turn)
+pub const SAMPLES: u32 = 4001;
+/// the chips shown before "+N more": the dozen nearest the middle of the view
+pub const CHIP_LIMIT: usize = 12;
+/// past this many marks (a zoomed-out sin x) none are drawn and the pointer doesn't snap
+pub const MARK_LIMIT: usize = 60;
+/// the equation number `all_critical` gives a crossing of two curves, which belongs to neither: drawn in the ink
+pub const CROSSING: usize = usize::MAX;
 
 // ---- pure logic ----
 
@@ -118,6 +127,72 @@ pub fn clamp_domain(lo: f64, hi: f64) -> (f64, f64) {
         hi = mid + MAX_SPAN / 2.0;
     }
     (lo, hi)
+}
+
+/// stepAtLeast: the least 1, 2 or 5 × 10ⁿ at or above `v`.
+pub fn step_at_least(v: f64) -> f64 {
+    if !(v > 0.0 && v.is_finite()) {
+        return 1.0;
+    }
+    let p = 10f64.powf(v.log10().floor());
+    [1.0, 2.0, 5.0, 10.0]
+        .into_iter()
+        .map(|m| m * p)
+        .find(|s| *s >= v * (1.0 - 1e-12))
+        .unwrap_or(10.0 * p)
+}
+
+/// A log axis's number for 10ᵏ (decade): written out from 0.001 to 1000, else as a power, as Desmos does (10⁴,
+/// 10⁻⁵).
+pub fn decade(k: i32) -> String {
+    if k.abs() <= 3 {
+        return if k >= 0 {
+            10i32.pow(k as u32).to_string()
+        } else {
+            format!("0.{}1", "0".repeat((-k - 1) as usize))
+        };
+    }
+    let sup = |c: char| match c {
+        '0' => '⁰',
+        '1' => '¹',
+        '2' => '²',
+        '3' => '³',
+        '4' => '⁴',
+        '5' => '⁵',
+        '6' => '⁶',
+        '7' => '⁷',
+        '8' => '⁸',
+        '9' => '⁹',
+        '-' => '⁻',
+        c => c,
+    };
+    format!("10{}", k.to_string().chars().map(sup).collect::<String>())
+}
+
+/// The square-cell y step for a fitted curve (squareYStep): with x's ticks `sx` apart over `lo…hi`, y's step is the
+/// least 1, 2 or 5 × 10ⁿ whose rows (as tall as x's columns are wide) hold `y`; the window is centred on it.
+pub fn square_fit(lo: f64, hi: f64, sx: f64, y: (f64, f64)) -> Option<((f64, f64), f64)> {
+    let rows = PLOT_ASPECT * (hi - lo) / sx;
+    if !(sx > 0.0 && rows.is_finite() && rows > 0.0 && hi > lo && y.1 > y.0) {
+        return None;
+    }
+    let sy = step_at_least((y.1 - y.0) / rows);
+    let mid = (y.0 + y.1) / 2.0;
+    Some(((mid - rows * sy / 2.0, mid + rows * sy / 2.0), sy))
+}
+
+/// A held y window's step at x's scale, when that is a round one (1, 2, 2.5 or 5 × 10ⁿ), so its cells stay
+/// square.
+pub fn held_step(lo: f64, hi: f64, sx: f64, y: (f64, f64)) -> Option<f64> {
+    let sy = sx * (y.1 - y.0) / (PLOT_ASPECT * (hi - lo));
+    if !(sy > 0.0 && sy.is_finite()) {
+        return None;
+    }
+    let m = sy / 10f64.powf(sy.log10().floor());
+    [1.0, 2.0, 2.5, 5.0, 10.0]
+        .iter()
+        .any(|r| (m - r).abs() < 1e-6 * r)
+        .then_some(sy)
 }
 
 /// `lo…hi` moved by `by` of its width (a log axis by that much of its decades).
@@ -287,7 +362,7 @@ pub fn layer_rgb(i: usize) -> Option<(f32, f32, f32)> {
         (0.20, 0.70, 0.72),
         (0.60, 0.60, 0.62),
     ];
-    (i > 0).then(|| PALETTE[(i - 1) % PALETTE.len()])
+    (i > 0 && i != CROSSING).then(|| PALETTE[(i - 1) % PALETTE.len()])
 }
 
 /// The tick rule (graphTicks'): steps of 1, 2 or 5 × 10ⁿ, about `count` across, the origin always one of them.
@@ -321,6 +396,8 @@ pub fn nice_ticks(lo: f64, hi: f64, count: usize) -> Vec<f64> {
 pub struct AxisGrid {
     pub major: Vec<(f64, String)>,
     pub minor: Vec<f64>,
+    /// how many minor cells a step holds
+    pub sub: Option<u32>,
 }
 
 impl AxisGrid {
@@ -335,15 +412,23 @@ pub fn tick_text(label: &str) -> String {
 }
 
 /// axisGrid: the step set in the settings, else decades on a log axis, else the engine's ticks; minor lines a
-/// fifth of a step (a quarter of a 2), or 2…9 of each decade.
-pub fn axis_grid(lo: f64, hi: f64, log: bool, step: Option<f64>, engine: &[GraphTick]) -> AxisGrid {
+/// fifth of a step (a quarter of a 2), or 2…9 of each decade; `fixed_sub` splits square cells as x's are split.
+pub fn axis_grid(
+    lo: f64,
+    hi: f64,
+    log: bool,
+    step: Option<f64>,
+    engine: &[GraphTick],
+    fixed_sub: Option<u32>,
+) -> AxisGrid {
     let mut out = AxisGrid::default();
     if !(hi > lo && lo.is_finite() && hi.is_finite()) {
         return out;
     }
     let subdivide = |out: &mut AxisGrid, base: f64, step: f64| {
         let mant = step / 10f64.powf(step.log10().floor());
-        let sub = if (mant - 2.0).abs() < 0.01 { 4 } else { 5 };
+        let sub = fixed_sub.unwrap_or(if (mant - 2.0).abs() < 0.01 { 4 } else { 5 });
+        out.sub = Some(sub);
         let ms = step / f64::from(sub);
         if ms <= 0.0 || (hi - lo) / ms > 1000.0 {
             return;
@@ -374,7 +459,7 @@ pub fn axis_grid(lo: f64, hi: f64, log: bool, step: Option<f64>, engine: &[Graph
         for k in a..=b {
             let v = 10f64.powi(k);
             if v >= lo * (1.0 - 1e-9) && v <= hi * (1.0 + 1e-9) && (k - a) % every == 0 {
-                out.major.push((v, fmt_g(v, 6)));
+                out.major.push((v, decade(k)));
             }
             if b - a <= 12 {
                 for m in 2..=9 {
@@ -397,6 +482,25 @@ pub fn axis_grid(lo: f64, hi: f64, log: bool, step: Option<f64>, engine: &[Graph
         }
     }
     out
+}
+
+/// Which points get a chip (indices into `all`, each point's (x, y), in its order): all of them when `every` or
+/// there are few, else the dozen nearest the middle of `window` (x_min, x_max, y_min, y_max).
+pub fn shown_points(all: &[(f64, f64)], window: [f64; 4], every: bool) -> Vec<usize> {
+    if every || all.len() <= CHIP_LIMIT {
+        return (0..all.len()).collect();
+    }
+    let (mx, my) = ((window[0] + window[1]) / 2.0, (window[2] + window[3]) / 2.0);
+    let (sx, sy) = (
+        (window[1] - window[0]).max(1e-300),
+        (window[3] - window[2]).max(1e-300),
+    );
+    let d = |i: usize| ((all[i].0 - mx) / sx).hypot((all[i].1 - my) / sy);
+    let mut near: Vec<usize> = (0..all.len()).collect();
+    near.sort_by(|a, b| d(*a).total_cmp(&d(*b)));
+    near.truncate(CHIP_LIMIT);
+    near.sort_unstable();
+    near
 }
 
 /// The mark nearest `p` within `snap` (viewBox units), if any.
@@ -479,6 +583,10 @@ pub struct Sample {
     pub layers: Vec<(u32, Option<Plot>)>,
     pub x_ticks: Vec<GraphTick>,
     pub y_ticks: Vec<GraphTick>,
+    /// where the curves cross one another (`Engine::graph_intersections`)
+    pub crossings: Vec<CriticalPoint>,
+    /// the y step that makes the grid's cells square (None when y is set by hand, log, or not fitted)
+    pub square_y_step: Option<f64>,
 }
 
 impl Sample {
@@ -564,6 +672,12 @@ pub struct GraphState {
     pub sample: Option<Rc<Sample>>,
     /// the settings block is open (the head's wrench)
     pub settings_open: bool,
+    /// the export block is open (the head's camera), and whether its picture labels the key points
+    pub export_open: bool,
+    pub label_points: bool,
+    /// every key point's chip, rather than the dozen nearest the middle; the box they then scroll in, DIPs down
+    pub all_points: bool,
+    pub chip_scroll: f32,
     /// a field in the panel with the keys, and its text
     pub focus: Option<FieldId>,
     pub edit: Field,
@@ -605,6 +719,10 @@ impl GraphState {
             pitch: HOME_PITCH,
             sample: None,
             settings_open: false,
+            export_open: false,
+            label_points: true,
+            all_points: false,
+            chip_scroll: 0.0,
             focus: None,
             edit: Field::default(),
             hover: None,
@@ -624,6 +742,7 @@ impl GraphState {
             (g.x_label, g.y_label, g.x_step, g.y_step, g.x_log, g.y_log) =
                 (o.x_label, o.y_label, o.x_step, o.y_step, o.x_log, o.y_log);
             g.settings_open = o.settings_open;
+            (g.export_open, g.label_points) = (o.export_open, o.label_points);
             g.generation = o.generation + 1;
         }
         g
@@ -631,6 +750,13 @@ impl GraphState {
 
     pub fn input(&self) -> String {
         format!("graph {}", self.expression)
+    }
+
+    /// holdY: a fitted y window held as it is, so a drag or zoom moves it rather than fitting it again.
+    pub fn hold_y(&mut self) {
+        if self.fixed_y.is_none() && self.y_max > self.y_min {
+            self.fixed_y = Some((self.y_min, self.y_max));
+        }
     }
 
     /// Something the layout or the plot's base pass reads changed.
@@ -730,7 +856,36 @@ impl GraphState {
                 out.extend(p.critical.iter().map(|c| (i + 1, *c)));
             }
         }
+        // where curves cross belongs to neither: marked in the ink (Desmos's grey dots)
+        if !three && let Some(s) = &self.sample {
+            out.extend(s.crossings.iter().map(|c| (CROSSING, *c)));
+        }
         out
+    }
+
+    /// Every curve's roots, each with its equation's number (the bar's 0), as the plot marks them.
+    pub fn all_roots(&self) -> Vec<(f64, usize)> {
+        let mut out: Vec<(f64, usize)> = self
+            .main()
+            .filter(|p| p.ok())
+            .map(|p| p.roots.iter().map(|&r| (r, 0)).collect())
+            .unwrap_or_default();
+        for (i, l) in self.layers.iter().enumerate() {
+            if let Some(p) = self.layer_plot(l).filter(|p| p.kind == Kind::Curve) {
+                out.extend(p.roots.iter().map(|&r| (r, i + 1)));
+            }
+        }
+        out
+    }
+
+    /// Few enough marks to draw and snap to (a zoomed-out sin x has hundreds, a solid strip).
+    pub fn sparse(&self) -> bool {
+        self.shows_3d() || self.all_critical().len() + self.all_roots().len() <= MARK_LIMIT
+    }
+
+    /// The square-cell y step of the newest sample.
+    pub fn square_y_step(&self) -> Option<f64> {
+        self.sample.as_ref()?.square_y_step
     }
 
     /// The heading over the chips: what the list holds for this kind of graph.
@@ -789,7 +944,7 @@ impl GraphState {
     }
 
     /// What the settings block shows.
-    pub fn settings_view(&self, radians: bool) -> gs::View {
+    pub fn settings_view(&self) -> gs::View {
         let three_d = self.shows_3d();
         gs::View {
             three_d,
@@ -804,7 +959,7 @@ impl GraphState {
             x_step: self.x_step,
             y_step: self.y_step,
             log: (self.x_log, self.y_log),
-            radians,
+            label_points: self.label_points,
         }
     }
 }
@@ -895,6 +1050,7 @@ struct Job {
     in3d: bool,
     x_log: bool,
     y_log: bool,
+    y_step: Option<f64>,
     home: bool,
 }
 
@@ -921,6 +1077,9 @@ pub fn graph_settings(options: EvalOptions, degrees: Option<bool>) -> EvalOption
 /// buildGraph for the window as it is (and, for a new expression, its home window first), off the UI thread.
 pub fn sample(m: &BarModel, engine: &EngineThread, home: bool) {
     let Some(g) = &m.graph else { return };
+    // a home sample a newer one replaced (`graph x^2;` typed on to `; 12x`) is asked for again: only a home view
+    // sets the window
+    let home = home || g.home.is_none();
     let job = Job {
         input: g.input(),
         expr: g.expression.clone(),
@@ -937,6 +1096,7 @@ pub fn sample(m: &BarModel, engine: &EngineThread, home: bool) {
         in3d: g.shows_3d(),
         x_log: g.x_log,
         y_log: g.y_log,
+        y_step: g.y_step,
         home,
     };
     let rows = m.rows.clone();
@@ -953,25 +1113,55 @@ pub fn sample(m: &BarModel, engine: &EngineThread, home: bool) {
 
 fn run(e: &Engine, job: Job, settings: EvalOptions) -> Landed {
     let (mut lo, mut hi, mut yc) = (job.lo, job.hi, job.y_center);
+    let home_options = GraphOptions {
+        domain_lo: None,
+        domain_hi: None,
+        sample_count: None,
+        find_roots: true,
+        aspect: Some(PLOT_ASPECT),
+        y_center: None,
+        surface: false,
+        x_log: false,
+    };
+    // the bar's equation and the others, as `graph …` lines
+    let inputs = || {
+        std::iter::once(job.input.clone())
+            .chain(job.layers.iter().map(|l| l.1.clone()))
+            .collect::<Vec<_>>()
+    };
     if job.home {
-        let w = e.graph_home(
-            job.input.clone(),
-            GraphOptions {
-                domain_lo: None,
-                domain_hi: None,
-                sample_count: None,
-                find_roots: true,
-                aspect: Some(PLOT_ASPECT),
-                y_center: None,
-                surface: false,
-                x_log: false,
-            },
-            settings.clone(),
-        );
+        let w = e.graph_home(job.input.clone(), home_options.clone(), settings.clone());
         if w.hi > w.lo {
             (lo, hi) = (w.lo, w.hi);
         }
         yc = w.y_center;
+        if !job.in3d {
+            // the window opens wide enough for every equation (`x² {3 < x < ∞}; x {x < 1}`)
+            for (_, input) in &job.layers {
+                let lw = e.graph_home(input.clone(), home_options.clone(), settings.clone());
+                if lw.hi > lw.lo && (lw.lo < lo || lw.hi > hi) {
+                    (lo, hi) = (lo.min(lw.lo), hi.max(lw.hi));
+                    yc = None;
+                }
+            }
+            // and wide enough for where they cross (`x²; 12x` meet at 12, past ±10), looking 10 times as far out; a
+            // crowd of crossings (sin x against 0.1) keeps the window as it is
+            if !job.layers.is_empty() && hi > lo {
+                let (mid, reach) = ((lo + hi) / 2.0, (hi - lo) * 5.0);
+                let xs: Vec<f64> = e
+                    .graph_intersections(inputs(), mid - reach, mid + reach, settings.clone())
+                    .iter()
+                    .map(|c| c.x)
+                    .collect();
+                let a = xs.iter().copied().fold(f64::INFINITY, f64::min);
+                let b = xs.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+                if !xs.is_empty() && xs.len() <= 12 && (a < lo || b > hi) {
+                    let pad = (b.max(hi) - a.min(lo)) * 0.12;
+                    (lo, hi) = (lo.min(a - pad), hi.max(b + pad));
+                    yc = None;
+                }
+            }
+        }
         if job.x_log && lo <= 0.0 {
             (lo, hi) = if hi > 0.0 {
                 (hi / 1000.0, hi)
@@ -981,6 +1171,7 @@ fn run(e: &Engine, job: Job, settings: EvalOptions) -> Landed {
         }
     }
     let in3d = job.in3d;
+    let log_x = job.x_log && lo > 0.0;
     // the options for a y window: a plot of x and y samples exactly it
     let options = |y: Option<(f64, f64)>| {
         let (mut aspect, mut center) = (if in3d { 1.0 } else { PLOT_ASPECT }, yc);
@@ -994,12 +1185,12 @@ fn run(e: &Engine, job: Job, settings: EvalOptions) -> Landed {
         GraphOptions {
             domain_lo: Some(lo),
             domain_hi: Some(hi),
-            sample_count: None,
+            sample_count: (!in3d).then_some(SAMPLES),
             find_roots: true,
             aspect: Some(aspect),
             y_center: center,
             surface: in3d,
-            x_log: job.x_log && lo > 0.0,
+            x_log: log_x,
         }
     };
     // the 3D view samples a square of x and y
@@ -1010,6 +1201,21 @@ fn run(e: &Engine, job: Job, settings: EvalOptions) -> Landed {
         .iter()
         .map(|(id, input)| (*id, e.graph(input.clone(), first.clone(), settings.clone())))
         .collect();
+    // where the curves cross, found with their own formulas
+    let crossings = if in3d || job.layers.is_empty() || result.is_none() {
+        Vec::new()
+    } else {
+        e.graph_intersections(inputs(), lo, hi, settings.clone())
+    };
+    let unit = result.as_ref().and_then(|r| r.angle_unit);
+    // about a dozen x ticks (Desmos's density), and with them square grid cells
+    let x_ticks = if result.is_some() {
+        e.graph_ticks(lo, hi, unit, if in3d { 6 } else { 12 })
+    } else {
+        Vec::new()
+    };
+    let sx = (x_ticks.len() >= 2).then(|| x_ticks[1].value - x_ticks[0].value);
+    let mut square = None;
     // y: as set; or fitted to every curve when the first is one (a plot of x and y keeps its own)
     let (mut y0, mut y1) = result
         .as_ref()
@@ -1046,6 +1252,26 @@ fn run(e: &Engine, job: Job, settings: EvalOptions) -> Landed {
                 y0 = y0.min(o.y_min);
                 y1 = y1.max(o.y_max);
             }
+            // the x axis comes into view when the curve nearly reaches it (within a third of its height), so its
+            // intercepts and the axes read; a curve far from it isn't flattened against it
+            if y1 > y0 {
+                let h = y1 - y0;
+                if y0 > 0.0 && y0 < h / 3.0 {
+                    y0 = -h * 0.05;
+                }
+                if y1 < 0.0 && -y1 < h / 3.0 {
+                    y1 = h * 0.05;
+                }
+            }
+            // square grid cells (as Desmos): y's rows as tall as x's columns are wide, centred on the curves
+            if !log_x
+                && job.y_step.is_none()
+                && let Some(sx) = sx
+                && let Some((y, step)) = square_fit(lo, hi, sx, (y0, y1))
+            {
+                (y0, y1) = y;
+                square = Some(step);
+            }
         }
         // the others' plots of x and y again, over this y
         let again = options(Some((y0, y1)));
@@ -1057,14 +1283,21 @@ fn run(e: &Engine, job: Job, settings: EvalOptions) -> Landed {
             }
         }
     }
-    let unit = result.as_ref().and_then(|r| r.angle_unit);
-    let (x_ticks, y_ticks) = if result.is_some() {
-        (
-            e.graph_ticks(lo, hi, unit, 6),
-            e.graph_ticks(y0, y1, None, 5),
-        )
+    // a held window keeps its cells square while x's ticks move to 1, 2, 5 steps
+    if square.is_none()
+        && !in3d
+        && !log_x
+        && !job.y_log
+        && job.y_step.is_none()
+        && let (Some(fy), Some(sx)) = (job.fixed_y, sx)
+        && hi > lo
+    {
+        square = held_step(lo, hi, sx, fy);
+    }
+    let y_ticks = if result.is_some() {
+        e.graph_ticks(y0, y1, None, 5)
     } else {
-        (Vec::new(), Vec::new())
+        Vec::new()
     };
     Landed {
         expr: job.expr,
@@ -1076,7 +1309,7 @@ fn run(e: &Engine, job: Job, settings: EvalOptions) -> Landed {
         sample: Sample {
             serial: SERIAL.fetch_add(1, Ordering::Relaxed),
             window: [lo, hi, y0, y1],
-            log: (job.x_log && lo > 0.0, job.y_log && y0 > 0.0),
+            log: (log_x, job.y_log && y0 > 0.0),
             main: result.map(Plot::new),
             layers: others
                 .into_iter()
@@ -1084,6 +1317,8 @@ fn run(e: &Engine, job: Job, settings: EvalOptions) -> Landed {
                 .collect(),
             x_ticks,
             y_ticks,
+            crossings,
+            square_y_step: square,
         },
     }
 }
@@ -1093,12 +1328,23 @@ fn landed(m: &mut BarModel, engine: &EngineThread, out: Landed) {
     if g.expression != out.expr {
         return;
     }
+    // the window is the panel's: a result that comes in after the view has moved on (a drag) is drawn in the
+    // current window, not put back to the one it was sampled for, which made the plot jump back. Only a home
+    // view sets it.
+    let current = (out.lo, out.hi) == (g.x_min, g.x_max) && out.y_center == g.y_center;
     if out.home {
         g.home = Some((out.lo, out.hi));
         g.home_y_center = out.y_center;
+        (g.x_min, g.x_max, g.y_center) = (out.lo, out.hi, out.y_center);
     }
-    (g.x_min, g.x_max, g.y_center) = (out.lo, out.hi, out.y_center);
-    if out.y.1 > out.y.0 {
+    let curve = out
+        .sample
+        .main
+        .as_ref()
+        .is_none_or(|p| p.kind == Kind::Curve);
+    if let Some(fy) = g.fixed_y.filter(|_| !g.shows_3d()) {
+        (g.y_min, g.y_max) = fy;
+    } else if out.y.1 > out.y.0 && (out.home || current || curve) {
         (g.y_min, g.y_max) = out.y;
     }
     // a surface opens in 3D: sample it again as a square, with its grid
@@ -1125,7 +1371,6 @@ fn landed(m: &mut BarModel, engine: &EngineThread, out: Landed) {
 /// and y, or a set y window, moves in y too). In 3D a drag turns the surface instead, unless `move3d` (shift, alt,
 /// the middle button), which slides the window along the floor (panGraph).
 pub fn pan(m: &mut BarModel, engine: &EngineThread, dx: f64, dy: f64, move3d: bool) {
-    let lock = gs::prefs().lock_viewport;
     let Some(g) = &mut m.graph else { return };
     if g.shows_3d() && !move3d {
         g.yaw += dx * std::f64::consts::PI;
@@ -1133,9 +1378,6 @@ pub fn pan(m: &mut BarModel, engine: &EngineThread, dx: f64, dy: f64, move3d: bo
         g.reading = None;
         g.bump();
         m.touch();
-        return;
-    }
-    if lock {
         return;
     }
     if g.shows_3d() {
@@ -1151,6 +1393,11 @@ pub fn pan(m: &mut BarModel, engine: &EngineThread, dx: f64, dy: f64, move3d: bo
             Some(g.y_center.unwrap_or((g.y_min + g.y_max) / 2.0) + dv * (g.y_max - g.y_min) / 2.0);
     } else {
         (g.x_min, g.x_max) = shifted(g.x_min, g.x_max, -dx, g.log_x());
+        // as Desmos, the view moves as one piece under the pointer: a fitted y window is held from the first drag
+        // on (fitting it again each move made the plot jump up and down), and moved at once, not after the sample
+        if g.kind() == Kind::Curve {
+            g.hold_y();
+        }
         if let Some((lo, hi)) = g.fixed_y {
             let y = shifted(lo, hi, dy, g.log_y());
             g.fixed_y = Some(y);
@@ -1171,7 +1418,7 @@ pub fn pan(m: &mut BarModel, engine: &EngineThread, dx: f64, dy: f64, move3d: bo
 /// zoomAt: the x window about `at` (a fraction across), kept within 1e-6 … 1e6 wide; a y or z window that's set
 /// (or a plot of x and y's) scales with it.
 pub fn zoom(m: &mut BarModel, engine: &EngineThread, factor: f64, at: f64) {
-    if gs::prefs().lock_viewport || !factor.is_finite() || factor <= 0.0 {
+    if !factor.is_finite() || factor <= 0.0 {
         return;
     }
     let Some(g) = &mut m.graph else { return };
@@ -1184,10 +1431,15 @@ pub fn zoom(m: &mut BarModel, engine: &EngineThread, factor: f64, at: f64) {
         return;
     }
     (g.x_min, g.x_max) = (lo, hi);
+    if !g.shows_3d() && g.kind() == Kind::Curve {
+        g.hold_y();
+    }
     if let Some((a, b)) = g.fixed_y {
         let y = scaled(a, b, factor, 0.5, g.log_y());
         g.fixed_y = Some(y);
-        (g.y_min, g.y_max) = y;
+        if !g.shows_3d() {
+            (g.y_min, g.y_max) = y;
+        }
     } else if g.kind() != Kind::Curve && !g.shows_3d() {
         (g.y_min, g.y_max) = scaled(g.y_min, g.y_max, factor, 0.5, false);
     }
@@ -1325,17 +1577,12 @@ pub fn set_log(m: &mut BarModel, engine: &EngineThread, x: Option<bool>, y: Opti
         }
     }
     if let Some(y) = y {
-        g.y_log = y;
-        if y {
-            let top = g.fixed_y.map_or(g.y_max, |f| f.1).max(0.0);
-            if g.fixed_y.map_or(g.y_min, |f| f.0) <= 0.0 {
-                g.fixed_y = Some(if top > 0.0 {
-                    (top / 1000.0, top)
-                } else {
-                    (0.1, 100.0)
-                });
-            }
+        // the y window fits the curves again on the new scale (on log, their positive values), as Desmos's does: a
+        // window held from the linear view cut e^x off below 24
+        if g.y_log != y {
+            g.fixed_y = None;
         }
+        g.y_log = y;
     }
     g.bump();
     m.touch();
@@ -1435,6 +1682,18 @@ pub fn key_down(m: &mut BarModel, vk: u32, mods: Mods, engine: &EngineThread) ->
     const LEFT: u32 = 0x25;
     const RIGHT: u32 = 0x27;
     const DELETE: u32 = 0x2E;
+    // Ctrl+= (or Ctrl++) and Ctrl+− zoom the graph in and out while it shows, as the head's buttons do
+    if m.graph.is_some() && mods.ctrl && !mods.alt && !mods.win {
+        let factor = match vk {
+            0xBB | 0x6B => Some(0.8),
+            0xBD | 0x6D => Some(1.25),
+            _ => None,
+        };
+        if let Some(f) = factor {
+            zoom(m, engine, f, 0.5);
+            return Some(Outcome::Handled);
+        }
+    }
     let id = m.graph.as_ref()?.focus?;
     match vk {
         ESC => {
@@ -1708,7 +1967,7 @@ mod tests {
     #[test]
     fn grids_take_a_set_step_or_decades_or_the_engines_ticks() {
         // a step of 2: minor lines a quarter of it
-        let g = axis_grid(-4.0, 4.0, false, Some(2.0), &[]);
+        let g = axis_grid(-4.0, 4.0, false, Some(2.0), &[], None);
         assert_eq!(
             g.major.iter().map(|m| m.0).collect::<Vec<_>>(),
             [-4.0, -2.0, 0.0, 2.0, 4.0]
@@ -1717,10 +1976,10 @@ mod tests {
         assert_eq!(g.minor.len(), 12);
         assert!(g.minor.contains(&-3.5) && !g.minor.contains(&-2.0));
         // a step of 5: fifths
-        let g = axis_grid(0.0, 10.0, false, Some(5.0), &[]);
+        let g = axis_grid(0.0, 10.0, false, Some(5.0), &[], None);
         assert_eq!(g.minor, [1.0, 2.0, 3.0, 4.0, 6.0, 7.0, 8.0, 9.0]);
         // log: decades, with 2…9 between
-        let g = axis_grid(1.0, 1000.0, true, None, &[]);
+        let g = axis_grid(1.0, 1000.0, true, None, &[], None);
         assert_eq!(
             g.major.iter().map(|m| m.0).collect::<Vec<_>>(),
             [1.0, 10.0, 100.0, 1000.0]
@@ -1737,6 +1996,7 @@ mod tests {
             false,
             None,
             &[t(-5.0, "-5"), t(0.0, "0"), t(5.0, "5"), t(10.0, "10")],
+            None,
         );
         assert_eq!(
             g.major,
@@ -1793,8 +2053,92 @@ mod tests {
             layers: layers.into_iter().map(|(l, p)| (l.id, Some(p))).collect(),
             x_ticks: Vec::new(),
             y_ticks: Vec::new(),
+            crossings: Vec::new(),
+            square_y_step: None,
         }));
         g
+    }
+
+    #[test]
+    fn crossings_are_key_points_in_the_ink_and_too_many_marks_draw_none() {
+        let mut g = state_with(
+            plot(
+                Kind::Curve,
+                vec![cp(CriticalKind::Min, 0.0, 0.0)],
+                vec![0.0],
+            ),
+            vec![],
+        );
+        if let Some(s) = g.sample.as_mut().and_then(Rc::get_mut) {
+            s.crossings = vec![cp(CriticalKind::Intersection, 12.0, 144.0)];
+        }
+        let all = g.all_critical();
+        assert_eq!(all.len(), 2);
+        assert_eq!(all[1].0, CROSSING);
+        assert_eq!(kind_name(all[1].1.kind), "intersection");
+        assert_eq!(layer_rgb(CROSSING), None);
+        assert!(g.sparse());
+        let many = (0..70)
+            .map(|i| cp(CriticalKind::Max, f64::from(i), 1.0))
+            .collect();
+        assert!(!state_with(plot(Kind::Curve, many, vec![]), vec![]).sparse());
+    }
+
+    #[test]
+    fn a_dozen_chips_nearest_the_middle() {
+        let all: Vec<(f64, f64)> = (0..30).map(|i| (f64::from(i) - 20.0, 0.0)).collect();
+        let shown = shown_points(&all, [-10.0, 10.0, -1.0, 1.0], false);
+        assert_eq!(shown.len(), CHIP_LIMIT);
+        // x = 0 is index 20; the nearest twelve run from x = -6 to 5 (ties to the lower), in order
+        assert!(shown.contains(&20) && shown.windows(2).all(|w| w[0] < w[1]));
+        assert!(!shown.contains(&0) && !shown.contains(&29));
+        assert_eq!(shown_points(&all, [-10.0, 10.0, -1.0, 1.0], true).len(), 30);
+        assert_eq!(
+            shown_points(&all[..5], [-10.0, 10.0, -1.0, 1.0], false),
+            [0, 1, 2, 3, 4]
+        );
+    }
+
+    #[test]
+    fn a_drag_holds_a_fitted_y_window() {
+        let mut g = state_with(plot(Kind::Curve, vec![], vec![]), vec![]);
+        (g.y_min, g.y_max) = (-3.0, 7.0);
+        g.hold_y();
+        assert_eq!(g.fixed_y, Some((-3.0, 7.0)));
+        (g.y_min, g.y_max) = (0.0, 1.0);
+        g.hold_y();
+        assert_eq!(g.fixed_y, Some((-3.0, 7.0)));
+    }
+
+    #[test]
+    fn square_cells_and_log_decades() {
+        assert_eq!(step_at_least(3.0), 5.0);
+        assert_eq!(step_at_least(0.2), 0.2);
+        assert_eq!(step_at_least(7.0), 10.0);
+        assert_eq!(step_at_least(-1.0), 1.0);
+        // x over -10…10 in steps of 2: 160/600 × 20 / 2 = 2.67 rows; y² of 0…100 needs steps of 50
+        let ((lo, hi), step) = square_fit(-10.0, 10.0, 2.0, (0.0, 100.0)).unwrap();
+        assert_eq!(step, 50.0);
+        assert!((hi - lo - step * PLOT_ASPECT * 10.0).abs() < 1e-9);
+        assert!(((lo + hi) / 2.0 - 50.0).abs() < 1e-9);
+        // a held window: y's step at x's scale when that's round
+        let y = (0.0, 2.5 * PLOT_ASPECT * 20.0 / 2.0);
+        assert!((held_step(-10.0, 10.0, 2.0, y).unwrap() - 2.5).abs() < 1e-9);
+        assert_eq!(held_step(-10.0, 10.0, 2.0, (0.0, 3.3)), None);
+        assert_eq!(decade(0), "1");
+        assert_eq!(decade(3), "1000");
+        assert_eq!(decade(-3), "0.001");
+        assert_eq!(decade(4), "10⁴");
+        assert_eq!(decade(-5), "10⁻⁵");
+        let g = axis_grid(1.0, 1e5, true, None, &[], None);
+        assert_eq!(g.major.last().unwrap().1, "10⁵");
+        // square cells split y's minor lines as x's are
+        assert_eq!(
+            axis_grid(0.0, 10.0, false, Some(5.0), &[], Some(4))
+                .minor
+                .len(),
+            6
+        );
     }
 
     fn cp(kind: CriticalKind, x: f64, y: f64) -> CriticalPoint {
