@@ -271,3 +271,24 @@ fn more_textbook_questions() {
     // not a matrix question
     assert_eq!(show("rotation 30"), "");
 }
+
+/// The bar writes `√` for a typed `sqrt`, so a root in an entry stays one entry (found on Windows).
+#[test]
+fn roots_and_pi_in_entries() {
+    assert_eq!(show("det([√3 1; 0 2])"), "3.46410161514");
+    assert_eq!(exact("det([√3 1; 0 2])").as_deref(), Some("2sqrt(3)"));
+    assert_eq!(show("det([√(3) 1; 0 2])"), "3.46410161514");
+    assert_eq!(show("[√3 1; 0 2]"), "[1.73205 1; 0 2]");
+    assert_eq!(show("[√3 -1; 1 √3]"), "[1.73205 -1; 1 1.73205]");
+    assert_eq!(show("[2√3 1; 0 2]"), "[3.4641 1; 0 2]");
+    assert_eq!(show("[√3 √2]"), "[1.73205 1.41421]");
+    assert_eq!(show("[1 -√2]"), "[1 -1.41421]");
+    assert_eq!(show("[∛8 1]"), "[2 1]");
+    assert_eq!(show("[π 1]"), "[3.14159 1]");
+    assert_eq!(show("[2π 1; 0 1]"), "[6.28319 1; 0 1]");
+    assert_eq!(
+        exact("inv([√2 0; 0 1])").as_deref(),
+        Some("[sqrt(2)/2 0; 0 1]")
+    );
+    assert_eq!(show("[1 -2]"), "[1 -2]");
+}

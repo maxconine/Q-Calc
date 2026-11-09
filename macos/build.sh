@@ -87,7 +87,7 @@ fetch_sparkle() {
   fi
   local archive="$VENDOR/Sparkle-${SPARKLE_VERSION}.tar.xz"
   echo "Downloading Sparkle ${SPARKLE_VERSION}…"
-  curl -L --fail -o "$archive" \
+  curl -L --fail --retry 5 --retry-all-errors --retry-delay 5 -o "$archive" \
     "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz"
   local got
   got="$(shasum -a 256 "$archive" | awk '{print $1}')"

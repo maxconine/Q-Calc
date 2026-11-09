@@ -11,13 +11,10 @@
 
 name: Windows
 
-# mac-only releases (from 3.0.2): a v* tag no longer runs this, so a tag can't move windows users to the native
-# app before it has been tried on a windows pc. windows ships by a hand run on the release's tag (publish ticked).
-# to go back to every tag releasing windows too, put the push trigger back:
-#   push:
-#     tags:
-#       - "v*"
 on:
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
     inputs:
       publish:
@@ -404,11 +401,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: v${{ steps.files.outputs.version }}
         run: |
-          for _ in $(seq 1 120); do
+          # up to three hours: the mac release waits for a macos runner, and 3.0.0 and 3.0.1 took over an hour
+          for _ in $(seq 1 360); do
             if gh release view "$TAG" >/dev/null 2>&1; then exit 0; fi
             sleep 30
           done
-          echo "::error::Release ${TAG} didn't appear within an hour. Once the mac Release workflow has made it, re-run this job."
+          echo "::error::Release ${TAG} didn't appear within three hours. Once the mac Release workflow has made it, re-run this job."
           exit 1
 
       # the release's notes, when the repo has them for this version (release.yml generates them otherwise)

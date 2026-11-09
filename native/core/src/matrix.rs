@@ -627,10 +627,11 @@ fn uses_new(node: &Node, functions: &[String]) -> bool {
 }
 
 static TWO_D: Lazy = Lazy::new(|| js(r"\[\s*\[|\[[^\][]*;[^\][]*\]", ""));
-/// `[1 2 3]`, a row the way answers write it; a list takes commas.
+/// `[1 2 3]`, a row the way answers write it; a list takes commas. An entry may be a root or hold π (`[√3 √2]`,
+/// `[π 1]`).
 static SPACED_ROW: Lazy = Lazy::new(|| {
     js(
-        r"\[[^\][,;]*[\d.)A-Za-z]\s+[-+]?[\d.(A-Za-z][^\][,;]*\]",
+        r"\[[^\][,;]*[\d.)A-Za-zπ]\s+[-+]?[\d.(A-Za-z√∛π][^\][,;]*\]",
         "",
     )
 });
@@ -1285,10 +1286,42 @@ fn eval_node(node: &Node, opts: &MatrixOptions<'_>) -> R<M> {
     }
 }
 
-/// `[1 2; 3 4]` is `[1, 2; 3, 4]`: spaces separate entries inside a bracket with no commas.
+/// `√3`, `√x` and `√(3)` are `sqrt(3)`, `sqrt(x)` and `sqrt(3)` (`∛` the same with `cbrt`): the bar writes `√` for a
+/// typed `sqrt`, and an entry's root must stay one entry (`[√3 1; 0 2]`, `[√3 √2]`). Native only.
+fn roots(expr: &str) -> String {
+    static ROOT: Lazy = Lazy::new(|| {
+        js(
+            r"([√∛])\s*(?:(\d+(?:\.\d+)?|[A-Za-z](?![A-Za-z0-9_(]))|(?=\())",
+            "",
+        )
+    });
+    if !expr.contains(['√', '∛']) {
+        return expr.to_string();
+    }
+    jsre::replace_all(&ROOT, expr, |c| {
+        let name = if jsre::group(c, 1) == "√" {
+            "sqrt"
+        } else {
+            "cbrt"
+        };
+        match jsre::group(c, 2) {
+            "" => name.to_string(),
+            arg => format!("{name}({arg})"),
+        }
+    })
+    .into_owned()
+}
+
+/// `[1 2; 3 4]` is `[1, 2; 3, 4]`: spaces separate entries inside a bracket with no commas. An entry may start
+/// or end with π (`[2π 1]`, `[π 1]`), and a signed root is an entry as a signed number is (`[1 -√2]`).
 fn spaced(expr: &str) -> String {
     static BRACKET: Lazy = Lazy::new(|| js(r"\[([^\][]*)\]", ""));
-    static GAP: Lazy = Lazy::new(|| js(r"(?<=[\d.)A-Za-z])\s+(?=[\d.(A-Za-z]|[-+][\d.(])", ""));
+    static GAP: Lazy = Lazy::new(|| {
+        js(
+            r"(?<=[\d.)A-Za-zπ])\s+(?=[\d.(A-Za-zπ]|[-+](?:[\d.(π]|sqrt\(|cbrt\())",
+            "",
+        )
+    });
     jsre::replace_all(&BRACKET, expr, |c| {
         let body = jsre::group(c, 1);
         if body.contains(',') {
@@ -1493,7 +1526,7 @@ fn prep(expr: &str) -> String {
         &expr,
     ))))));
     // `3[[1, 2]]` and `k [1 2]` scale; mathjs would read a bracket after a value as an index
-    let s = word_forms(&backslash(&spaced(&expr)));
+    let s = word_forms(&backslash(&spaced(&roots(&expr))));
     // `null` is the parser's constant, so the call goes by its long name
     static NULL_CALL: Lazy = Lazy::new(|| js(r"(?<![A-Za-z_])null(?=\s*\()", "i"));
     let s = jsre::replace_all(&NULL_CALL, &s, |_| "nullspace".into()).into_owned();

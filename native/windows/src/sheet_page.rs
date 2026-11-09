@@ -255,6 +255,42 @@ fn compact(text: &str) -> String {
     text.chars().filter(|c| c.is_alphanumeric()).collect()
 }
 
+/// Lowercase greek in latin letters, as the mac's ICU Greek-Latin transform then folded: τ is t, θ is th, ω is o.
+fn latin(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    for c in text.chars() {
+        out.push_str(match c {
+            'α' => "a",
+            'β' => "b",
+            'γ' => "g",
+            'δ' => "d",
+            'ε' | 'ϵ' | 'η' => "e",
+            'ζ' => "z",
+            'θ' | 'ϑ' => "th",
+            'ι' => "i",
+            'κ' => "k",
+            'λ' => "l",
+            'μ' => "m",
+            'ν' => "n",
+            'ξ' => "x",
+            'ο' | 'ω' => "o",
+            'π' => "p",
+            'ρ' => "r",
+            'σ' | 'ς' => "s",
+            'τ' => "t",
+            'υ' => "y",
+            'φ' | 'ϕ' => "ph",
+            'χ' => "ch",
+            'ψ' => "ps",
+            _ => {
+                out.push(c);
+                continue;
+            }
+        });
+    }
+    out
+}
+
 /// The filter's words.
 pub fn words(filter: &str) -> Vec<String> {
     fold(filter)
@@ -266,8 +302,15 @@ pub fn words(filter: &str) -> Vec<String> {
 /// Every word is somewhere in the texts, or in one of their words squeezed to its letters and digits.
 pub fn matches(words: &[String], texts: &[&str]) -> bool {
     let hay = fold(&texts.join(" "));
-    // squeezed a word at a time, so `sin` doesn't run across `s in`
-    let tight: Vec<String> = hay.split_whitespace().map(compact).collect();
+    // squeezed a word at a time, so `sin` doesn't run across `s in`; and again with greek spelled in latin
+    // (τ is t, σ is s, θ is th), so `tmax` finds τ_max while a typed `τ` still finds only τ (as the mac)
+    let mut tight: Vec<String> = hay.split_whitespace().map(compact).collect();
+    let spelled: Vec<String> = tight
+        .iter()
+        .map(|t| latin(t))
+        .filter(|l| !tight.contains(l))
+        .collect();
+    tight.extend(spelled);
     words.iter().all(|word| {
         hay.contains(word.as_str()) || {
             let w = compact(word);
@@ -769,6 +812,12 @@ mod tests {
         let w = words("tmax");
         assert!(matches(&w, &["τ_max = T r / J", "t_max"]));
         assert!(!matches(&w, &["t", "max"]));
+        // greek spelled in latin: `tmax` finds τ_max alone, and a typed τ still finds only τ
+        assert!(matches(&w, &["τ_max = (σ_1 - σ_3)/2"]));
+        assert!(matches(&words("sx"), &["σ_x"]));
+        assert!(!matches(&words("theta"), &["θ"]));
+        assert!(matches(&words("th"), &["θ"]));
+        assert!(!matches(&words("τ"), &["t_max"]));
         // sin doesn't run across `s in`
         assert!(!matches(&words("sin"), &["s in"]));
         assert!(matches(&words("sin cos"), &["sin^2 + cos^2 = 1"]));

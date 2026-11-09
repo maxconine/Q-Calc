@@ -26,11 +26,13 @@ On Windows (branch `win-port-302`) all three pass, with the golden floors as set
 
 ## 1. Comes from the core: just test it
 
-Nothing left. (`dx` touching the integrand, halves powers as roots and the faster intersections were checked in the app on 8 Nov 2026, with the linear algebra tables.)
+- **A root or π in a matrix entry** (core `matrix.rs`: `roots`, `spaced`, `SPACED_ROW`): `det([√3 1; 0 2])` is 3.46410161514 (exact `2sqrt(3)`), `[√3 √2]` is two entries, `[1 -√2]` is `[1 -1.41421]`, `[π 1]` and `[2π 1; 0 1]` work. Your report; fixed on the Mac. Test: `roots_and_pi_in_entries` in `tests/linear_algebra_typed.rs`, then type `det([sqrt(3) 1; 0 2])` in the bar.
+
+The rest is done. (`dx` touching the integrand, halves powers as roots and the faster intersections were checked in the app on 8 Nov 2026, with the linear algebra tables.)
 
 ## 2. Edited on Windows but never run: test it
 
-Nothing left.
+- **Sheet filter: greek spelled in latin** (`sheet_page.rs`: `latin`, used in `matches`; the Mac's `IdentityWindow.swift` does the same with ICU's Greek-Latin). `tmax` finds `τ_max`, `sx` finds `σ_x`, and a typed `τ` still finds only τ. Edited from the Mac, where `qcalc-win` doesn't build (`stacked.rs` calls the Windows-only `crate::input`); the logic was tested on its own. Test: `cargo test -p qcalc-win a_filter_word`, then type `tmax` in the continuum mechanics sheet's filter.
 
 ## 3. Not on Windows yet: implement it
 
@@ -44,10 +46,8 @@ Nothing left. The stacked fractions round (TeX sizes, Desmos keys, grown bracket
 
 Open questions for the Mac side:
 
-- **A root inside a matrix entry (core):** the bar turns `sqrt` into `√` as it's typed, on both apps, and the core's matrix rows don't take `√`: `det([√3 1; 0 2])` (typed `det([sqrt(3) 1; 0 2])`) says `rows differ in length`, and `[√(3) 1]` reads as one entry. `det([sqrt(3) 1; 0 2])` sent to the engine as plain text answers 3.46410161514, so the fix is in the matrix literal's row splitting.
 - **Matrix grid gaps left on Windows:** Ctrl+G and Ctrl+R are fixed chords (the core's keybinds have no matrix actions; a user binding on the same chord wins); a click in a cell puts the caret at the end (double-click selects it) rather than under the pointer; the grid doesn't scroll sideways (8 columns need about 590 px); no UI Automation for the cells yet.
 
-- **Sheet filter:** the spec says `tmax` finds `τ_max`, but `τ` doesn't fold to `t` in the Mac's own matching, and Windows follows the Mac's code, so `tmax` finds nothing on either.
 
 ### Sheet data, for reference
 

@@ -68,7 +68,7 @@ fetch_sparkle() {
   mkdir -p "$(dirname "$SPARKLE")"
   local archive="$SPARKLE.tar.xz"
   echo "Downloading Sparkle ${SPARKLE_VERSION}…"
-  curl -L --fail -o "$archive" \
+  curl -L --fail --retry 5 --retry-all-errors --retry-delay 5 -o "$archive" \
     "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz"
   [[ "$(shasum -a 256 "$archive" | awk '{print $1}')" == "$SPARKLE_SHA256" ]] || { echo "Sparkle checksum mismatch" >&2; exit 1; }
   mkdir -p "$SPARKLE"

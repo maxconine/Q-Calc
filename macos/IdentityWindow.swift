@@ -691,11 +691,18 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
     // every word of the filter is somewhere in the row, its group's or its section's title
     private static func matches(_ words: [String], _ texts: [String]) -> Bool {
         let hay = fold(texts.joined(separator: " "))
-        // squeezed a word at a time, so `sin` doesn't run across `s in`
-        let tight = hay.split(whereSeparator: \.isWhitespace).map { compact(String($0)) }
+        // squeezed a word at a time, so `sin` doesn't run across `s in`; and again with greek spelled in latin
+        // (τ is t, σ is s, θ is th), so `tmax` finds τ_max while a typed `τ` still finds only τ
+        let squeezed = hay.split(whereSeparator: \.isWhitespace).map { compact(String($0)) }
+        let tight = squeezed + squeezed.map(latin).filter { !squeezed.contains($0) }
         return words.allSatisfy { word in
             hay.contains(word) || { let w = compact(word); return !w.isEmpty && tight.contains { $0.contains(w) } }()
         }
+    }
+
+    // greek in latin letters (ICU's Greek-Latin), folded again: τ_max is t_max, ω is o, Δ is d
+    private static func latin(_ text: String) -> String {
+        fold(text.applyingTransform(.toLatin, reverse: false) ?? text)
     }
 
     /// the filter as if typed (the dev build's `sheetfilter:` command, which works while q calc isn't in front)
