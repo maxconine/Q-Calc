@@ -152,7 +152,9 @@ fn pretty(m: &BarModel, s: &str) -> String {
         return p;
     }
     match &m.live {
-        Some(a) if s == a.display && !a.pretty.is_empty() => radicals_if_math(&a.pretty),
+        Some(a) if s == a.display && !a.pretty.is_empty() => {
+            roots_beside_words(radicals_if_math(&a.pretty))
+        }
         _ => pretty_text(s),
     }
 }
@@ -170,7 +172,12 @@ pub fn pretty_text(s: &str) -> String {
     {
         return format!("{sign}{}", pretty_text(&s[sign.len_utf8()..]));
     }
-    radicals_if_math(&pretty_answer(s))
+    roots_beside_words(radicals_if_math(&pretty_answer(s)))
+}
+
+/// A root with a unit or words beside it (`sqrt(2) m`) is still drawn as a root, the words left as they are.
+fn roots_beside_words(s: String) -> String {
+    if s.contains("sqrt(") { roots(&s) } else { s }
 }
 
 pub fn radicals_if_math(s: &str) -> String {
@@ -179,7 +186,8 @@ pub fn radicals_if_math(s: &str) -> String {
     {
         return format!("{sign}{}", radicals_if_math(&s[sign.len_utf8()..]));
     }
-    const MATH: &str = "0123456789 \t+-−*/^().,πe√i·×sqrt";
+    // ± and ∓ count as maths: a solve's `(5 ± sqrt(33))/2` draws its root
+    const MATH: &str = "0123456789 \t+-−*/^().,πe√i·×±∓sqrt";
     if s.is_empty()
         || !s.chars().all(|c| MATH.contains(c))
         || (!s.contains("sqrt(") && !s.contains("pi"))
@@ -191,6 +199,11 @@ pub fn radicals_if_math(s: &str) -> String {
 
 /// `Pretty.radicals`: sqrt(2) → √2, sqrt(x+1) → √(x+1), pi → π.
 pub fn radicals(s: &str) -> String {
+    roots(s).replace("pi", "π")
+}
+
+/// sqrt(2) → √2, sqrt(x+1) → √(x+1).
+fn roots(s: &str) -> String {
     let mut out = String::new();
     let mut rest = s;
     while let Some(i) = rest.find("sqrt(") {
@@ -217,7 +230,7 @@ pub fn radicals(s: &str) -> String {
         }
     }
     out.push_str(rest);
-    out.replace("pi", "π")
+    out
 }
 
 // ---- what shows ----
@@ -693,10 +706,20 @@ pub fn measure(gfx: &Gfx, m: &BarModel, max_w: f32) -> AnswerLayout {
         return AnswerLayout::default();
     };
     let natural = total(&items);
-    if natural > room {
-        // useFitFont / minimumScaleFactor(0.5): shrink before cutting
-        let scale = (room / natural).clamp(0.5, 1.0) * 0.995;
-        if let Some(shrunk) = lay(gfx, &specs, scale, 0.0) {
+    // useFitFont: shrink before cutting, the whole answer as one (ViewThatFits): 85%, 70%, then half and cut. A
+    // scale for each piece let a root's radicand come out smaller than the rest
+    let fitted = natural <= room
+        || [0.85, 0.7].into_iter().any(|scale| {
+            match lay(gfx, &specs, scale, 0.0).filter(|shrunk| total(shrunk) <= room) {
+                Some(shrunk) => {
+                    items = shrunk;
+                    true
+                }
+                None => false,
+            }
+        });
+    if !fitted {
+        if let Some(shrunk) = lay(gfx, &specs, 0.5, 0.0) {
             items = shrunk;
         }
         // a number and its unit that still don't fit are cut as one
@@ -1132,6 +1155,10 @@ mod tests {
         assert_eq!(pretty_text("±2sqrt(2)"), "±2√2");
         assert_eq!(radicals_if_math("∓sqrt(3)"), "∓√3");
         assert_eq!(pretty_text("±"), "±");
+        // a solve's root inside a fraction, and a root beside a unit, are drawn as roots
+        assert_eq!(pretty_text("(5 ± sqrt(33))/2"), "(5 ± √33)/2");
+        assert_eq!(pretty_text("sqrt(2) m"), "√2 m");
+        assert_eq!(pretty_text("sqrt(x+1) kg"), "√(x+1) kg");
     }
 
     #[test]

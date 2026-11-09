@@ -194,6 +194,11 @@ impl Field {
         &self.stacks
     }
 
+    /// Whether "stacked fractions and powers" is on (the line's signs get room even with no stack).
+    pub fn stacked_on(&self) -> bool {
+        self.stacked
+    }
+
     /// Turns "stacked fractions and powers" on or off (settings.stackedMath).
     pub fn set_stacked(&mut self, on: bool) {
         if self.stacked != on {
@@ -525,7 +530,7 @@ impl Field {
         let i = if self.has_selection() && !extend {
             self.selection().0
         } else if word {
-            self.word_left(self.caret)
+            self.slot_bound(self.word_left(self.caret), false)
         } else {
             self.prev(self.caret)
         };
@@ -540,7 +545,7 @@ impl Field {
         let i = if self.has_selection() && !extend {
             self.selection().1
         } else if word {
-            self.word_right(self.caret)
+            self.slot_bound(self.word_right(self.caret), true)
         } else {
             self.next(self.caret)
         };
@@ -548,11 +553,13 @@ impl Field {
     }
 
     pub fn home(&mut self, extend: bool) {
-        self.move_to(0, extend);
+        let to = self.edge(false, extend);
+        self.move_to(to, extend);
     }
 
     pub fn end(&mut self, extend: bool) {
-        self.move_to(self.text.len(), extend);
+        let to = self.edge(true, extend);
+        self.move_to(to, extend);
     }
 
     pub fn select_all(&mut self) {
@@ -773,13 +780,24 @@ impl Field {
         let u = self.units();
         let edit = match c {
             '/' | '÷' => Some(stacked::slash_key(&u, a16, b16)),
-            '^' if a == b => {
+            '^' => {
                 // a ∫ Σ Π's `^` moves between its limits first
-                if self.bound_key("^") {
+                if a == b && self.bound_key("^") {
                     return true;
                 }
-                stacked::power_key(&u, a16)
+                match stacked::power_key(&u, a16, b16) {
+                    // nothing to raise: the key does nothing (MathQuill's supSubsRequireOperand)
+                    None => return true,
+                    // right after a power: back into it
+                    Some(e) if e.text == u => {
+                        self.caret_to16(e.caret);
+                        return true;
+                    }
+                    e => e,
+                }
             }
+            // a root over a selection takes it, the caret at its end inside
+            '√' | '∛' if a != b => stacked::root_key(&u, a16, b16, c as u32 as u16),
             ')' if a == b => {
                 if let Some(to) = stacked::close_key(&self.stacks, a16) {
                     self.caret_to16(stacked::snap(&self.stacks, to, a16, u.len()));
@@ -788,7 +806,10 @@ impl Field {
                 None
             }
             _ if a == b && c.len_utf16() == 1 => {
-                stacked::term_after_stack(&u, &self.stacks, a16, c as u32 as u16)
+                let typed = c as u32 as u16;
+                // a sign at a power's end leaves it first (charsThatBreakOutOfSupSub)
+                stacked::break_out(&u, &self.stacks, a16, typed)
+                    .or_else(|| stacked::term_after_stack(&u, &self.stacks, a16, typed))
             }
             _ => None,
         };
@@ -871,18 +892,67 @@ impl Field {
         self.break_run();
     }
 
-    /// ↑ from a denominator to its numerator, ↓ back, to the place nearest across (`x(i)`: the caret place
-    /// before UTF-16 `i` as drawn). False outside a fraction: the key goes on to the history.
+    /// ↑ ↓ as MathQuill moves (StackedMath.vertical): into a stack beside the caret, between a fraction's
+    /// numerator and denominator (the place across nearest the caret's x, `x(i)`: the caret place before UTF-16 `i`
+    /// as drawn), and down out of a power. False elsewhere: the key goes on to the history.
     pub fn stack_vertical(&mut self, up: bool, x: impl Fn(usize) -> f32) -> bool {
+        use crate::stacked::Vertical;
         if !self.on_stacks() || self.has_selection() {
             return false;
         }
-        match crate::stacked::vertical(&self.stacks, self.at16(self.caret), up, x) {
-            Some(to) => {
-                self.caret_to16(to);
-                true
+        let c = self.at16(self.caret);
+        let to = match crate::stacked::vertical(&self.stacks, c, up) {
+            Some(Vertical::To(i)) => i,
+            Some(Vertical::Nearest(slot)) => {
+                let here = x(c);
+                let Some(i) = (slot.lo..=slot.hi)
+                    .filter(|i| !self.stacks.dead.contains(i))
+                    .min_by(|&a, &b| (x(a) - here).abs().total_cmp(&(x(b) - here).abs()))
+                else {
+                    return false;
+                };
+                i
             }
-            None => false,
+            None => return false,
+        };
+        self.caret_to16(to);
+        true
+    }
+
+    /// Home / End: to the edge of the slot the caret (the selection's moving end) is in first, then the line's
+    /// (StackedMath.lineEdge). Bytes.
+    fn edge(&self, forward: bool, extend: bool) -> usize {
+        if !self.on_stacks() {
+            return if forward { self.text.len() } else { 0 };
+        }
+        let from = if extend || !self.has_selection() {
+            self.caret
+        } else if forward {
+            self.selection().1
+        } else {
+            self.selection().0
+        };
+        let n = self.at16(self.text.len());
+        let to = crate::stacked::line_edge(&self.stacks, self.at16(from), forward, n);
+        self.index_of_utf16(to as u32)
+    }
+
+    /// A word move to byte `to` stops at the edge of the slot the caret is in first (Ctrl+← Ctrl+→).
+    fn slot_bound(&self, to: usize, forward: bool) -> usize {
+        if !self.on_stacks() {
+            return to;
+        }
+        let c = self.at16(self.caret);
+        let Some(slot) = self.stacks.slot(c) else {
+            return to;
+        };
+        let t = self.at16(to);
+        let edge = if forward { slot.hi } else { slot.lo };
+        let past = if forward { t > edge } else { t < edge };
+        if c != edge && past {
+            self.index_of_utf16(edge as u32)
+        } else {
+            to
         }
     }
 
@@ -905,6 +975,11 @@ impl Field {
         }
         let c = self.at16(self.caret);
         let n = self.at16(self.text.len());
+        // before an empty stack it takes it whole; at a slot's end, the stack's hidden end next, it takes it apart
+        if let Some(e) = crate::stacked::forward_delete(&self.units(), &self.stacks, c) {
+            self.take_edit(e, Some(EditKind::Delete));
+            return true;
+        }
         if self.stacks.hidden.contains(&c) {
             let mut to = c;
             while to < n && self.stacks.hidden.contains(&to) {
@@ -1103,7 +1178,8 @@ mod view {
                 offer: deco.and_then(|d| d.offer.clone()),
                 bounds_on: !field.limits().is_empty(),
                 marks,
-                stacked: !field.stacks().is_empty(),
+                stacked: field.stacked_on()
+                    && (!field.stacks().is_empty() || stacked::spaced(field.text())),
             };
             if let Some((k, l)) = &self.cached
                 && *k == key
@@ -1114,7 +1190,8 @@ mod view {
             let l1: Option<IDWriteTextLayout1> = l.cast().ok();
             // a stacked line's slots small, its hidden `/ ^ ( )` slivers (stacked_layout.rs)
             let stacks = field.stacks();
-            let looks = (!stacks.is_empty())
+            let looks = key
+                .stacked
                 .then(|| stacked::apply_sizes(&l, stacks, key.text.encode_utf16().count()));
             // SAFETY: setters on a live layout, ranges inside the text
             unsafe {
@@ -1187,8 +1264,12 @@ mod view {
         pub fn paint(&mut self, c: &Canvas, field: &Field, r: Rect, focused: bool, x: &Extras) {
             self.rect = r;
             let t = c.theme;
-            // a stacked line reaches past its row, a fraction in a denominator lower still
-            let room = if field.stacks().is_empty() { 6.0 } else { 14.0 };
+            // a stacked line reaches past its row, into the composer's room above and below it
+            let room = if field.stacked_on() {
+                stacked::ROOM
+            } else {
+                6.0
+            };
             c.push_clip(Rect::new(
                 r.x - 2.0,
                 r.y - room,
@@ -1197,6 +1278,18 @@ mod view {
             ));
             let len16 = field.to_utf16(field.text().len());
             let deco = x.deco.filter(|d| d.fits(len16));
+            let caret16 = field.to_utf16(field.caret());
+            let marks = deco.map_or_else(Vec::new, |d| d.angle_marks(caret16));
+            let inside: Vec<u32> = marks
+                .iter()
+                .copied()
+                .filter(|&at| at > 0 && at < len16)
+                .collect();
+            let mark_text = if marks.is_empty() { "" } else { x.angle_mark };
+            let laid = self.layout(c, field, deco, (inside.clone(), mark_text.to_string()), r.h);
+            let geom = self.geom.take();
+            // faint text beside a stacked line sits on its baseline, moved with it (fullTextTop)
+            let dy = geom.as_ref().map_or(0.0, |g| g.dy);
             // the faint lead: the inferred `(`s, then the chained `ans`
             let mut lead_w = 0.0;
             let leading = deco.map_or(0, |d| d.leading);
@@ -1205,7 +1298,7 @@ mod view {
                 if !parens.is_empty()
                     && let Some(l) = self.ghost(c, &parens, r.h)
                 {
-                    c.text_plain(&l, r.x, r.y, t.muted);
+                    c.text_plain(&l, r.x, r.y + dy, t.muted);
                     lead_w += measure(&l).0;
                 }
                 // drawn as Tab types it (line.rs `ans_ghost`), with no gap after it, so typing it in moves nothing
@@ -1217,7 +1310,7 @@ mod view {
                 if !ghost.is_empty()
                     && let Some(l) = self.ghost(c, &ghost, r.h)
                 {
-                    c.text_plain(&l, r.x + lead_w, r.y, with_alpha(t.muted, 0.75));
+                    c.text_plain(&l, r.x + lead_w, r.y + dy, with_alpha(t.muted, 0.75));
                     let w = measure(&l).0;
                     self.ans_rect = Some(Rect::new(r.x + lead_w, r.y, w, r.h));
                     lead_w += w;
@@ -1252,28 +1345,21 @@ mod view {
                     }
                 }
             }
-            let caret16 = field.to_utf16(field.caret());
-            let marks = deco.map_or_else(Vec::new, |d| d.angle_marks(caret16));
-            let inside: Vec<u32> = marks
-                .iter()
-                .copied()
-                .filter(|&at| at > 0 && at < len16)
-                .collect();
-            let mark_text = if marks.is_empty() { "" } else { x.angle_mark };
-            let Some(layout) =
-                self.layout(c, field, deco, (inside.clone(), mark_text.to_string()), r.h)
-            else {
+            let Some(layout) = laid else {
+                self.geom = geom;
                 c.pop_clip();
                 return;
             };
-            let geom = self.geom.take();
             let xat = |p: u32| x_at(&geom, &layout, p);
             let comp_w = self.composition.as_ref().map_or(0.0, |comp| {
                 c.gfx
                     .layout(&comp.text, &c.gfx.fonts.display, 0.0, r.h)
                     .map_or(0.0, |l| measure(&l).0)
             });
-            let caret = xat(caret16);
+            // beside a spaced sign the caret stands in the middle of its room
+            let caret = geom
+                .as_ref()
+                .map_or_else(|| xat(caret16), |g| g.caret_x(caret16));
             let w = geom
                 .as_ref()
                 .map_or_else(|| measure(&layout).0, |g| g.width);
@@ -1301,7 +1387,7 @@ mod view {
                 let ((xa, xb), (top, h)) = match &geom {
                     Some(g) => (
                         g.span(a, b),
-                        g.band(a, b).unwrap_or((r.h * 0.5 - 18.0, 36.0)),
+                        g.band(a, b).unwrap_or((r.h * 0.5 - 18.0 + dy, 36.0)),
                     ),
                     None => ((xat(a), xat(b)), (r.h * 0.5 - 15.0, 30.0)),
                 };
@@ -1356,7 +1442,9 @@ mod view {
                 if !field.stacks().is_empty()
                     && let Some(clear) = c.own_brush(with_alpha(t.ink, 0.0))
                 {
-                    for &k in &field.stacks().hidden {
+                    // and grown brackets' glyphs: they're drawn as tall as what they hold
+                    let tall = field.stacks().tall.iter().flat_map(|b| [b.open, b.close]);
+                    for k in field.stacks().hidden.iter().copied().chain(tall) {
                         // SAFETY: a setter on a live layout, the range inside the text
                         let _ = unsafe {
                             layout.SetDrawingEffect(&clear, range(k as u32, k as u32 + 1))
@@ -1399,7 +1487,8 @@ mod view {
             let in_limit = (focused && !field.has_selection())
                 .then(|| crate::stacked::limit_slot(field.limits(), caret16 as usize))
                 .flatten();
-            let limit_caret = self.limits(c, field, &xat, x0, r, (in_limit, caret16));
+            let moved = Rect::new(r.x, r.y + dy, r.w, r.h);
+            let limit_caret = self.limits(c, field, &xat, x0, moved, (in_limit, caret16));
             if let Some(d) = deco {
                 // .quick-squiggle: a wavy line, muted at 70%, under where a blank answer stops reading
                 if let Some((a, b)) = d.squiggle {
@@ -1408,8 +1497,10 @@ mod view {
                         c,
                         x0 + xa,
                         x0 + xb,
-                        // under a stacked line's denominators
-                        r.y + r.h * 0.5 + if geom.is_some() { 19.0 } else { 13.0 },
+                        // on a stacked line, under the lowest character it marks
+                        geom.as_ref()
+                            .filter(|g| !g.xs.is_empty() && !field.stacks().is_empty())
+                            .map_or(r.y + r.h * 0.5 + 13.0, |g| r.y + g.squiggle_y(a, b, r.h)),
                         with_alpha(t.muted, 0.7),
                     );
                 }
@@ -1421,7 +1512,7 @@ mod view {
                 {
                     let ow = measure(&l).0;
                     let end = xat(*at);
-                    c.text_plain(&l, x0 + end - ow, r.y, t.muted);
+                    c.text_plain(&l, x0 + end - ow, r.y + dy, t.muted);
                     offer_at = Some((*at, ow));
                 }
                 // the angle marks inside the line, in the gaps opened after their arguments (before an offer's)
@@ -1432,7 +1523,7 @@ mod view {
                     for &at in &inside {
                         let ow = offer_at.filter(|o| o.0 == at).map_or(0.0, |o| o.1);
                         let end = xat(at) + shift(at);
-                        c.text_plain(&l, x0 + end - ow - mw, r.y, t.muted);
+                        c.text_plain(&l, x0 + end - ow - mw, r.y + dy, t.muted);
                     }
                 }
             }
@@ -1441,7 +1532,7 @@ mod view {
             if let Some(g) = ghost
                 && let Some(l) = self.ghost(c, g, r.h)
             {
-                c.text_plain(&l, tail, r.y, with_alpha(t.muted, 0.8));
+                c.text_plain(&l, tail, r.y + dy, with_alpha(t.muted, 0.8));
                 tail += measure(&l).0;
             }
             // an angle mark for an argument still open at the end of the line
@@ -1449,7 +1540,7 @@ mod view {
                 && len16 > 0
                 && let Some(l) = self.ghost(c, mark_text, r.h)
             {
-                c.text_plain(&l, tail, r.y, t.muted);
+                c.text_plain(&l, tail, r.y + dy, t.muted);
                 tail += measure(&l).0;
             }
             let trailing = deco.map_or(0, |d| d.trailing);
@@ -1457,15 +1548,15 @@ mod view {
                 && !field.text().is_empty()
                 && let Some(l) = self.ghost(c, &")".repeat(trailing), r.h)
             {
-                c.text_plain(&l, tail, r.y, t.muted);
+                c.text_plain(&l, tail, r.y + dy, t.muted);
             }
             // the IME's composition, underlined, at the caret
             if let Some(comp) = &self.composition
                 && let Some(l) = c.gfx.layout(&comp.text, &c.gfx.fonts.display, 0.0, r.h)
             {
                 let cx = x0 + caret;
-                c.text(&l, cx, r.y, t.ink);
-                let base = r.y + r.h * 0.5 + 12.0;
+                c.text(&l, cx, r.y + dy, t.ink);
+                let base = r.y + dy + r.h * 0.5 + 12.0;
                 c.line(cx, base, cx + comp_w, base, 1.0, t.ink);
                 self.caret_at = cx + caret_x(&l, comp.cursor);
             } else {
@@ -1486,7 +1577,7 @@ mod view {
                 if let Some((cx, top, h)) = own {
                     c.fill(Rect::new(cx - 0.75, top, 1.5, h), t.muted);
                 } else {
-                    let mid = r.y + r.h * 0.5;
+                    let mid = r.y + dy + r.h * 0.5;
                     let half = size::DISPLAY * 0.62;
                     c.line(
                         self.caret_at + 0.5,
@@ -1661,6 +1752,22 @@ mod view {
             .as_ref()
             .map_or((size::DISPLAY, 0.0), |g| g.look_of(a as usize - 1));
         let cube = text.encode_utf16().nth(a as usize - 1) == Some(0x221B);
+        // over a stacked fraction or power: a sign as tall as what it takes, its bar clear above the numerator
+        // and its foot below the denominator
+        if let Some(g) = geom
+            && let Some((top, foot, line)) = g.root_over(a as usize, b as usize, size)
+        {
+            let y = base - g.base;
+            let pts = stacked::root_points_between(
+                x0 + left,
+                sign_end - left,
+                x0 + end,
+                y + top,
+                y + foot,
+            );
+            stacked::stroke_root(c, &pts, (x0 + left, y + line), size, cube, color);
+            return;
+        }
         stacked::draw_root(
             c,
             (x0 + left, sign_end - left),
@@ -2076,6 +2183,8 @@ mod tests {
         assert_eq!((g.text(), g.caret()), ("1/(2)", 5));
         put(&mut g, "^");
         assert_eq!(g.text(), "(1/(2))^()");
+        // ½x/ puts ½x on top
+        assert_eq!(stacked("1/2)x/").text(), "(1/(2)·x)/()");
         // off, `/` and `^` are plain characters
         let h = typed("5x/32+x^3");
         assert_eq!(h.text(), "5x/32+x^3");
@@ -2094,10 +2203,63 @@ mod tests {
         assert!(f.stack_vertical(false, |i| [0.0, 6.0, 12.0, 12.0, 3.0, 9.0, 9.0][i]));
         put(&mut f, "5");
         assert_eq!(f.text(), "10/(25)");
-        // outside a fraction the key goes on to the history
+        // End at the slot's end goes to the line's; ↑ after the fraction goes to the numerator's end
         f.end(false);
-        assert!(!f.stack_vertical(true, |i| i as f32));
+        assert_eq!(f.caret(), 7);
+        assert!(f.stack_vertical(true, |i| i as f32));
+        assert_eq!(f.caret(), 2);
+        // Home in the denominator: its start, then the line's
+        f.end(false);
+        f.left(false, false);
+        f.home(false);
+        assert_eq!(f.caret(), 4);
+        f.home(false);
+        assert_eq!(f.caret(), 0);
+        // with no stack near, and with the setting off, the key goes on to the history
+        assert!(!stacked("1+2").stack_vertical(true, |i| i as f32));
         assert!(!typed("1/2").stack_vertical(true, |i| i as f32));
+    }
+
+    #[test]
+    fn keys_as_mathquill_has_them() {
+        // a sign at a power's end leaves it; one in an empty power stays
+        assert_eq!(stacked("x^2n+y").text(), "x^(2n)+y");
+        assert_eq!(stacked("x^-2").text(), "x^(-2)");
+        // ^ with nothing to raise does nothing, ^^ raises once, ^ after a power goes back into it
+        assert_eq!(stacked("^2").text(), "2");
+        assert_eq!(stacked("x^^2").text(), "x^(2)");
+        assert_eq!(stacked("x^2)^3").text(), "x^(23)");
+        // a selection: ^ raises it, √ takes it under the root
+        let mut f = stacked("x2");
+        f.left(false, true);
+        put(&mut f, "^");
+        assert_eq!((f.text(), f.caret()), ("x^(2)", 4));
+        let mut g = stacked("1/2");
+        g.select_all();
+        put(&mut g, "√");
+        assert_eq!(g.text(), "√(1/(2))");
+        // Delete before an empty stack takes it whole, at a numerator's end takes the fraction apart
+        let mut h = stacked("1+/");
+        assert_eq!(h.text(), "1+()/()");
+        h.left(false, false);
+        assert!(h.delete(false));
+        assert_eq!(h.text(), "1+");
+        let mut k = stacked("/1");
+        assert_eq!(k.text(), "(1)/()");
+        assert!(k.delete(false));
+        assert_eq!((k.text(), k.caret()), ("1", 1));
+        // Backspace after an empty power takes it whole
+        let mut m = stacked("x^");
+        m.right(false, false);
+        assert!(m.backspace(false));
+        assert_eq!(m.text(), "x");
+        // Ctrl+← in a slot stops at its start first
+        let mut n = stacked("1/23");
+        n.left(true, false);
+        assert_eq!(n.caret(), 3);
+        // then on as a word move goes, to the numerator's end
+        n.left(true, false);
+        assert_eq!(n.caret(), 1);
     }
 
     #[test]
@@ -2153,10 +2315,16 @@ mod tests {
         g.backspace(false);
         assert!(g.text().starts_with("()/(12)"));
         assert_eq!(g.caret(), 1);
-        // Delete before a hidden `)` steps over it
+        // Delete at a denominator's end takes the fraction apart; before a hidden `^(` it steps over it
         let mut g = stacked("1/2");
         g.delete(false);
-        assert_eq!((g.text(), g.caret()), ("1/(2)", 5));
+        assert_eq!((g.text(), g.caret()), ("12", 2));
+        let mut g = stacked("x^2");
+        g.home(false);
+        g.home(false);
+        g.right(false, false);
+        g.delete(false);
+        assert_eq!((g.text(), g.caret()), ("x^(2)", 3));
         // Ctrl+Backspace in 23*12 takes only what's before the caret in that denominator, and on the last 12 leaves
         // no stray `·`
         let mut g = f.clone();
@@ -2182,6 +2350,8 @@ mod tests {
         assert_eq!((g.text(), g.caret()), ("1", 1));
         // a selection inside one slot stays; cut of a bare slot leaves its box
         let mut g = stacked("42/12");
+        // Home: the denominator's start, then the line's
+        g.home(false);
         g.home(false);
         g.right(false, true);
         g.right(false, true);

@@ -499,6 +499,8 @@ struct RowView {
     key: (String, String, String, Option<String>, bool, u32, u32),
     /// (cell, its layout, x from the row's left, width)
     cells: Vec<(Cell, IDWriteTextLayout, f32, f32)>,
+    /// the expression drawn stacked, while "stacked fractions and powers" is on (stacked_text.rs)
+    stacked: Option<std::rc::Rc<crate::stacked_text::Picture>>,
 }
 
 thread_local! {
@@ -577,7 +579,13 @@ fn build(gfx: &Gfx, m: &BarModel, row: &HistoryRow, w: f32) -> Option<RowView> {
         size::TAPE_ROW,
         windows::Win32::Graphics::DirectWrite::DWRITE_TEXT_ALIGNMENT_LEADING,
     )?;
-    let ew = measure(&el).0.min(expr_w);
+    // stacked as the bar draws it while the setting is on
+    let stacked = (m.settings.stacked_math && crate::stacked_text::stacks(&row.expr))
+        .then(|| std::rc::Rc::new(crate::stacked_text::picture(gfx, &e.text, size::BODY)));
+    let ew = stacked
+        .as_ref()
+        .map_or_else(|| measure(&el).0, |p| p.w)
+        .min(expr_w);
     out.push((e.clone(), el, 8.0, ew));
     let mut x = 8.0 + inner;
     let mut placed: Vec<(Cell, IDWriteTextLayout, f32, f32)> = Vec::new();
@@ -591,6 +599,7 @@ fn build(gfx: &Gfx, m: &BarModel, row: &HistoryRow, w: f32) -> Option<RowView> {
     Some(RowView {
         key: key_of(m, row, w),
         cells: out,
+        stacked,
     })
 }
 
@@ -605,7 +614,9 @@ fn key_of(
         row.display.clone(),
         row.exact.clone(),
         m.settings.answer_form == "approx",
-        (figs(m) as u32) << 1 | u32::from(m.settings.history_insert == "answer"),
+        (figs(m) as u32) << 2
+            | u32::from(m.settings.history_insert == "answer")
+            | u32::from(m.settings.stacked_math) << 1,
         w.to_bits(),
     )
 }
@@ -906,7 +917,16 @@ pub fn paint(c: &Canvas, model: &BarModel, t: &TapeLayout) {
                 Look::Answer if hot => th.answer_hover,
                 Look::Answer => th.answer,
             };
-            c.text(layout, r.x + x, r.y, ink);
+            match (&v.stacked, k) {
+                // a stacked expression on the row's baseline, moved only as far as all of it needs to show
+                (Some(pic), 0) => {
+                    let plain = crate::stacked_layout::baseline(layout);
+                    c.push_clip(Rect::new(r.x + x, r.y, *w + 1.0, r.h));
+                    pic.draw(c, r.x + x, r.y + pic.baseline_in(plain, r.h), ink);
+                    c.pop_clip();
+                }
+                _ => c.text(layout, r.x + x, r.y, ink),
+            }
         }
     }
     c.pop_clip();
