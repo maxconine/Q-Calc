@@ -94,8 +94,17 @@ enum RootSign {
     static func points(left: CGFloat, width: CGFloat, end: CGFloat, baseline: CGFloat, size: CGFloat) -> [CGPoint] {
         let font = NSFont.systemFont(ofSize: size)
         // clear of what's under it, as Desmos leaves it
-        let top = baseline - font.capHeight - size * 0.2
-        let foot = baseline + size * 0.02
+        return points(left: left, width: width, end: end, top: baseline - font.capHeight - size * 0.2, foot: baseline + size * 0.02)
+    }
+
+    /// How far a root's bar (its stroke's top edge) is over the baseline of a plain radicand
+    static func top(_ size: CGFloat) -> CGFloat {
+        NSFont.systemFont(ofSize: size).capHeight + size * 0.2 + lineWidth(size) / 2
+    }
+
+    /// The same line between a given top and foot: a root over a stacked fraction reaches from above its numerator to
+    /// below its denominator
+    static func points(left: CGFloat, width: CGFloat, end: CGFloat, top: CGFloat, foot: CGFloat) -> [CGPoint] {
         let height = foot - top
         return [
             CGPoint(x: left + width * 0.1, y: foot - height * 0.36),

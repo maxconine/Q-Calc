@@ -3,7 +3,45 @@ import AppKit
 /// Stacked fractions and powers in the line (StackedMath.swift): each slot's characters drawn small and raised or
 /// lowered, the pen pulled back so a denominator sits under its numerator, and the bar, the empty slots' boxes and a
 /// caret the height of its slot drawn over the text.
-struct StackBar { var anchor: Int; var shift: CGFloat; var width: CGFloat; var axis: CGFloat }
+struct StackBar { var anchor: Int; var shift: CGFloat; var width: CGFloat; var axis: CGFloat; var thickness: CGFloat }
+/// shown brackets drawn as tall as the stack they hold: `(`/`)` or `[`/`]` at `open` and `close`, centred on `axis`
+struct TallBracket { var open: Int; var close: Int; var square: Bool; var axis: CGFloat; var half: CGFloat; var size: CGFloat; var width: CGFloat; var room: CGFloat }
+
+/// TeX's maths constants (TeXbook Appendix G, under their OpenType MATH names; Latin Modern Math's values), in ems
+/// of the size of the style they're used in. The bar is TeX's text style with display style's gaps: a line of its
+/// own, set tight as a graphing calculator sets it.
+enum TeX {
+    static let axisHeight: CGFloat = 0.25              // AxisHeight (σ22): a fraction's bar, a bracket's middle
+    static let ruleThickness: CGFloat = 0.04           // FractionRuleThickness (ξ8, θ)
+    static let numeratorShiftUp: CGFloat = 0.394       // FractionNumeratorShiftUp (σ9, num2)
+    static let denominatorShiftDown: CGFloat = 0.345   // FractionDenominatorShiftDown (σ12, denom2)
+    static let fractionGapMin: CGFloat = 0.12          // Fraction{Numerator,Denominator}DisplayStyleGapMin (3θ)
+    static let fractionGapTextMin: CGFloat = 0.04      // Fraction{Numerator,Denominator}GapMin (θ): text style
+    /// the gap a fraction's slot keeps off its bar: display style's at Desmos's 90%, text style's on a squeezed line
+    static func gap(_ top: CGFloat) -> CGFloat { top < BarTextView.fractionScale ? fractionGapTextMin : fractionGapMin }
+    static let superscriptShiftUp: CGFloat = 0.363     // SuperscriptShiftUp (σ14, sup2)
+    static let superscriptBottomMin: CGFloat = 0.108   // SuperscriptBottomMin (¼ σ5)
+    static let superscriptDrop: CGFloat = 0.25         // SuperscriptBaselineDropMax (σ18), for a base that isn't a glyph
+    static let scriptScale: CGFloat = 0.7              // ScriptPercentScaleDown
+    static let scriptScriptScale: CGFloat = 0.5        // ScriptScriptPercentScaleDown: nothing smaller
+    static let delimiterFactor: CGFloat = 0.901        // \delimiterfactor 901
+    static let delimiterShortfall: CGFloat = 0.5       // \delimitershortfall 5pt at 10pt
+    /// RadicalDisplayStyleVerticalGap (rule 11): θ + ¼ x-height between what's under a root and its bar
+    static func radicalGap(_ size: CGFloat) -> CGFloat { ruleThickness * size + NSFont.systemFont(ofSize: size).xHeight / 4 }
+    /// a box's height and depth in the line's font: a digit's (with room for a capital's), and a tail's
+    static let height: CGFloat = 0.74
+    static let depth: CGFloat = 0.21
+    /// what reaches below the baseline
+    static let tails: Set<UInt16> = Set("gjpqy,;()[]|".utf16)
+
+    /// how tall shown brackets are drawn around something `height` over and `depth` under the baseline, at `size`
+    /// (TeX's \left \right: as far each way from the axis as the larger, less the shortfall, and never under the
+    /// factor of it)
+    static func bracketHalf(height: CGFloat, depth: CGFloat, size: CGFloat) -> CGFloat {
+        let a = axisHeight * size, d = 2 * max(height - a, depth + a)
+        return max(d * delimiterFactor, d - delimiterShortfall * size, size) / 2
+    }
+}
 struct StackHole { var anchor: Int; var dx: CGFloat; var offset: CGFloat; var size: CGFloat }
 struct SlotLook { var content: NSRange; var size: CGFloat; var offset: CGFloat }
 
@@ -85,6 +123,7 @@ extension BarTextView {
     func styleStacks() {
         stackBars = []
         stackHoles = []
+        tallBrackets = []
         slotLooks = []
         caretShift = [:]
         // TextKit grows the line for a raised numerator and pushes its baseline down: the inset takes it back up
@@ -107,10 +146,14 @@ extension BarTextView {
         let p = StackedMath.parse(string, exclude: exclude)
         stacked = p
         guard !p.stacks.isEmpty else { return refreshStackCaret() }
+        // Desmos's 90% fractions, or TeX's text style (70%) when the line wouldn't fit the bar's room at 90%
+        fractionTop = Self.fractionScale
+        if !fits(p) { fractionTop = TeX.scriptScale }
+        let top = fractionTop
         let n = storage.length, full = Self.fontSize
         var size = [CGFloat](repeating: full, count: n), offset = [CGFloat](repeating: 0, count: n)
-        // a graphing calculator's proportions: a fraction's slots nearly the line's size, a power's well under it
-        func small(_ s: StackedMath.Stack) -> CGFloat { Self.slotSize(parent: size[s.op], fraction: s.isFraction) }
+        // a fraction's slots nearly the line's size (as Desmos sets them), TeX's script sizes inside them and for powers
+        func small(_ s: StackedMath.Stack) -> CGFloat { Self.slotSize(parent: size[s.op], fraction: s.isFraction, top: top) }
         // sizes and heights, outer stacks first: a slot's are its stack's, made smaller and moved
         for s in p.stacks {
             let parent = size[s.op], base = offset[s.op], f = small(s)
@@ -119,12 +162,12 @@ extension BarTextView {
                 for k in slot.lo..<slot.hi { size[k] = f; offset[k] = o }
             }
             if s.isFraction, let num = s.num {
-                let axis = base + parent * 0.25
-                // a slot with a stack of its own in it stands as far off the bar as that stack is tall
-                put(num, Self.numOffset(axis: axis, f, depth: Self.extent(p, num.content, size: f).depth))
-                put(s.slot, Self.denOffset(axis: axis, f, height: Self.extent(p, s.slot.content, size: f).height))
+                let axis = base + parent * TeX.axisHeight
+                // TeX's rule 15: a slot stands its gap off the bar, as far as its tails or the stacks in it reach
+                put(num, Self.numOffset(axis: axis, parent: parent, depth: Self.extent(p, num.content, size: f, top: top).depth, top: top))
+                put(s.slot, Self.denOffset(axis: axis, parent: parent, height: Self.extent(p, s.slot.content, size: f, top: top).height, top: top))
             } else {
-                put(s.slot, base + parent * Self.powerRaise)
+                put(s.slot, base + Self.supShift(p, s, parent: parent, top: top))
             }
         }
         for k in 0..<n {
@@ -154,7 +197,7 @@ extension BarTextView {
                 if let o = num.open {
                     addKern(o, lead + (num.isEmpty ? hole : 0))
                     used = lead
-                    if num.isEmpty { stackHoles.append(StackHole(anchor: o, dx: lead, offset: Self.numOffset(axis: offset[s.op] + size[s.op] * 0.25, f), size: f)) }
+                    if num.isEmpty { stackHoles.append(StackHole(anchor: o, dx: lead, offset: Self.numOffset(axis: offset[s.op] + size[s.op] * TeX.axisHeight, parent: size[s.op], top: top), size: f)) }
                 } else if num.lo > 0 {
                     addKern(num.lo - 1, lead)
                     used = lead
@@ -169,56 +212,106 @@ extension BarTextView {
                 storage.addAttribute(StackTypesetter.pull, value: (w - dw) / 2 - used - nw, range: NSRange(location: s.op, length: 1))
                 if let o = den.open, den.isEmpty {
                     addKern(o, hole)
-                    stackHoles.append(StackHole(anchor: o, dx: 0, offset: Self.denOffset(axis: offset[s.op] + size[s.op] * 0.25, f), size: f))
+                    stackHoles.append(StackHole(anchor: o, dx: 0, offset: Self.denOffset(axis: offset[s.op] + size[s.op] * TeX.axisHeight, parent: size[s.op], height: f * TeX.height, top: top), size: f))
                 }
                 // and the denominator's end takes it on past the wider of the two
                 addKern(den.close ?? (den.hi - 1), (w - dw) / 2)
                 stackBars.append(StackBar(anchor: num.open ?? num.lo, shift: num.open == nil ? used : 0, width: w,
-                                          axis: offset[s.op] + size[s.op] * 0.25))
+                                          axis: offset[s.op] + size[s.op] * TeX.axisHeight,
+                                          thickness: max(1, size[s.op] * TeX.ruleThickness)))
             } else {
                 if let o = s.slot.open, s.slot.isEmpty {
                     addKern(o, hole)
-                    stackHoles.append(StackHole(anchor: o, dx: 0, offset: offset[s.op] + size[s.op] * Self.powerRaise, size: f))
+                    stackHoles.append(StackHole(anchor: o, dx: 0, offset: offset[s.op] + Self.supShift(p, s, parent: size[s.op], top: top), size: f))
                 }
                 if let c = s.slot.close { addKern(c, f * 0.1) }
             }
         }
         for d in p.dots { addKern(d, size[d] * 0.14) }
+        // shown brackets around a stack: their glyphs hidden, drawn as tall as what they hold (drawStacks), with a
+        // little more room as they grow
+        for b in p.tall {
+            let s = size[b.open], inner = NSRange(location: b.open + 1, length: b.close - b.open - 1)
+            let e = Self.extent(p, inner, size: s, top: top)
+            let half = TeX.bracketHalf(height: e.height, depth: e.depth, size: s)
+            // the glyph's own advance (its kern has the stack's lead in it by now)
+            let w = (String(utf16CodeUnits: [p.text[b.open]], count: 1) as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: s)]).width, room = min(s * 0.25, max(0, half * 2 - s) * 0.08)
+            tallBrackets.append(TallBracket(open: b.open, close: b.close, square: p.text[b.open] == 0x5B,
+                                            axis: offset[b.open] + s * TeX.axisHeight, half: half, size: s, width: w, room: room))
+            for k in [b.open, b.close] { storage.addAttribute(.foregroundColor, value: NSColor.clear, range: NSRange(location: k, length: 1)) }
+            addKern(b.open, room)
+            addKern(b.close - 1, room)
+        }
         refreshStackCaret()
     }
 
-    // a graphing calculator's measures, also used by the history's rows (StackedText)
-    static let fractionScale: CGFloat = 0.82
-    static let powerScale: CGFloat = 0.64
-    static let powerRaise: CGFloat = 0.42
-    /// a slot's size: a fraction's nearly the line's, one inside a slot smaller again (TeX's script style), a power's
-    /// well under it
-    static func slotSize(parent: CGFloat, fraction: Bool) -> CGFloat {
-        let scale = fraction ? (parent < fontSize - 0.01 ? 0.7 : fractionScale) : powerScale
-        return max(8, parent * scale)
+    // the measures, also used by the history's rows (StackedText)
+    /// a fraction's slots in the line: MathQuill's (Desmos's) 90%, between TeX's display (100%) and text (70%) styles
+    static let fractionScale: CGFloat = 0.9
+    /// a slot's size: a fraction's in the line nearly the line's, TeX's script size (70%) for one inside a slot and
+    /// for a power, and never under scriptscript (50% of the line)
+    /// `top` is a fraction's in the line: 90%, or TeX's text style (70%) on a line too tall for the bar at 90%
+    static func slotSize(parent: CGFloat, fraction: Bool, line: CGFloat = fontSize, top: CGFloat = fractionScale) -> CGFloat {
+        let scale = fraction && parent >= line - 0.01 ? top : TeX.scriptScale
+        return max(line * TeX.scriptScriptScale, parent * scale)
     }
     static let barOverhang: CGFloat = 0.2
-    /// a numerator's baseline over the bar's axis: a clear gap, plus room for a letter's tail
-    static func numOffset(axis: CGFloat, _ f: CGFloat, depth: CGFloat = 0) -> CGFloat { axis + 2.5 + max(f * 0.24, depth) }
-    /// a denominator's baseline under it: the gap and a digit's height (or the height of a stack in it)
-    static func denOffset(axis: CGFloat, _ f: CGFloat, height: CGFloat = 0) -> CGFloat { axis - 3 - max(f * 0.74, height) }
+    /// a numerator's baseline over the bar's axis (rule 15): TeX's shift, or the gap over the bar's top and the
+    /// numerator's depth (its tails, or a stack in it), whichever is more
+    static func numOffset(axis: CGFloat, parent s: CGFloat, depth: CGFloat = 0, top: CGFloat = fractionScale) -> CGFloat {
+        axis + max((TeX.numeratorShiftUp - TeX.axisHeight) * s, (TeX.ruleThickness / 2 + TeX.gap(top)) * s + depth)
+    }
+    /// a denominator's baseline under it: TeX's shift, or the gap under the bar and the denominator's height
+    static func denOffset(axis: CGFloat, parent s: CGFloat, height: CGFloat, top: CGFloat = fractionScale) -> CGFloat {
+        axis - max((TeX.denominatorShiftDown + TeX.axisHeight) * s, (TeX.ruleThickness / 2 + TeX.gap(top)) * s + height)
+    }
+    /// how far a power's baseline is over its base's (rule 18): TeX's shift, its bottom (a stack in it) clear of
+    /// the base's baseline, and over a base that isn't a glyph (brackets grown around a stack) no lower than the
+    /// base's top less the drop
+    static func supShift(_ p: StackedMath.Parsed, _ s: StackedMath.Stack, parent: CGFloat, line: CGFloat = fontSize, top: CGFloat = fractionScale) -> CGFloat {
+        let f = slotSize(parent: parent, fraction: false, line: line, top: top)
+        var u = max(TeX.superscriptShiftUp * parent, extent(p, s.slot.content, size: f, line: line, top: top).depth + TeX.superscriptBottomMin * parent)
+        if let b = p.tall.first(where: { $0.close == s.op - 1 }) {
+            let h = extent(p, NSRange(location: b.open, length: b.close + 1 - b.open), size: parent, line: line, top: top).height
+            u = max(u, h - TeX.superscriptDrop * parent)
+        }
+        return u
+    }
 
-    /// how far what's in `r` reaches above its baseline and below it, at `size`, the stacks in it taken in
-    static func extent(_ p: StackedMath.Parsed, _ r: NSRange, size: CGFloat) -> (height: CGFloat, depth: CGFloat) {
-        var height = size * 0.74, depth: CGFloat = 0
+    /// how far what's in `r` reaches above its baseline and below it, at `size`, the stacks and grown brackets in it
+    /// taken in
+    static func extent(_ p: StackedMath.Parsed, _ r: NSRange, size: CGFloat, line: CGFloat = fontSize, top: CGFloat = fractionScale) -> (height: CGFloat, depth: CGFloat) {
+        var height = size * TeX.height, depth: CGFloat = 0
         let inside = p.stacks.filter { $0.start >= r.location && $0.end <= NSMaxRange(r) && $0.end - $0.start < r.length + 2 }
         // only the stacks directly in r: one inside another's slot is taken in by that one
         let direct = inside.filter { s in !inside.contains { o in o != s && o.slots.contains { $0.lo <= s.start && s.end <= $0.hi } } }
+        let inSlot = { (k: Int) in direct.contains { s in s.slots.contains { NSLocationInRange(k, $0.content) } } }
+        // a tail (g, y, a bracket) in r's own text, not a slot's
+        if r.length > 0, NSMaxRange(r) <= p.text.count,
+           (r.location..<NSMaxRange(r)).contains(where: { TeX.tails.contains(p.text[$0]) && !p.hidden.contains($0) && !inSlot($0) }) {
+            depth = size * TeX.depth
+        }
+        // a root's bar over a plain radicand (RootSign.points) reaches higher than the glyphs
+        if r.length > 0, NSMaxRange(r) <= p.text.count,
+           (r.location..<NSMaxRange(r)).contains(where: { (p.text[$0] == 0x221A || p.text[$0] == 0x221B) && !inSlot($0) }) {
+            height = max(height, RootSign.top(size))
+        }
         for s in direct {
             if s.isFraction, let num = s.num {
-                let f = slotSize(parent: size, fraction: true), axis = size * 0.25
-                let n = extent(p, num.content, size: f), d = extent(p, s.slot.content, size: f)
-                height = max(height, numOffset(axis: axis, f, depth: n.depth) + n.height)
-                depth = max(depth, -denOffset(axis: axis, f, height: d.height) + d.depth)
+                let f = slotSize(parent: size, fraction: true, line: line, top: top), axis = size * TeX.axisHeight
+                let n = extent(p, num.content, size: f, line: line, top: top), d = extent(p, s.slot.content, size: f, line: line, top: top)
+                height = max(height, numOffset(axis: axis, parent: size, depth: n.depth, top: top) + n.height)
+                depth = max(depth, -denOffset(axis: axis, parent: size, height: d.height, top: top) + d.depth)
             } else {
-                let f = slotSize(parent: size, fraction: false)
-                height = max(height, size * powerRaise + extent(p, s.slot.content, size: f).height)
+                let f = slotSize(parent: size, fraction: false, line: line, top: top)
+                height = max(height, supShift(p, s, parent: size, line: line, top: top) + extent(p, s.slot.content, size: f, line: line, top: top).height)
             }
+        }
+        for b in p.tall where b.open >= r.location && b.close < NSMaxRange(r) && !inSlot(b.open) {
+            let e = extent(p, NSRange(location: b.open + 1, length: b.close - b.open - 1), size: size, line: line, top: top)
+            let half = TeX.bracketHalf(height: e.height, depth: e.depth, size: size), a = size * TeX.axisHeight
+            height = max(height, a + half)
+            depth = max(depth, half - a)
         }
         return (height, depth)
     }
@@ -331,12 +424,21 @@ extension BarTextView {
     }
 
     func drawStacks() {
-        guard !stackBars.isEmpty || !stackHoles.isEmpty || stackCaret != nil else { return }
+        guard !stackBars.isEmpty || !stackHoles.isEmpty || !tallBrackets.isEmpty || stackCaret != nil else { return }
         let base = stackBaseline()
         Theme.ink.setFill()
         for b in stackBars {
             guard let x = stackCaretX(b.anchor) else { continue }
-            NSRect(x: x - b.shift, y: base - b.axis - 0.6, width: b.width, height: 1.2).fill()
+            NSRect(x: x - b.shift, y: base - b.axis - b.thickness / 2, width: b.width, height: b.thickness).fill()
+        }
+        for b in tallBrackets {
+            guard let l = stackCaretX(b.open), let r = stackCaretX(b.close) else { continue }
+            let top = base - b.axis - b.half, bottom = base - b.axis + b.half
+            guard let cg = NSGraphicsContext.current?.cgContext else { continue }
+            cg.setFillColor(Theme.ink.cgColor)
+            cg.addPath(TallBracketShape.path(left: l, width: b.width + b.room, top: top, bottom: bottom, size: b.size, square: b.square, closing: false))
+            cg.addPath(TallBracketShape.path(left: r - b.room, width: b.width + b.room, top: top, bottom: bottom, size: b.size, square: b.square, closing: true))
+            cg.fillPath()
         }
         for h in stackHoles {
             guard let x = stackCaretX(h.anchor) else { continue }
@@ -350,13 +452,17 @@ extension BarTextView {
         }
     }
 
-    /// ↑ from a denominator to its numerator, ↓ back: the place nearest across from the caret
+    /// ↑ ↓ as MathQuill moves (StackedMath.vertical): into a stack beside the caret, between a fraction's numerator
+    /// and denominator (the place nearest across from the caret), and down out of a power
     func stackVertical(up: Bool) -> Int? {
         let c = selectedRange().location
-        let fractions = stacked.stacks.filter { $0.isFraction && (up ? $0.slot.holds(c) : $0.num?.holds(c) == true) }
-        guard let s = fractions.min(by: { $0.end - $0.start < $1.end - $1.start }), let to = up ? s.num : s.slot,
-              let x = stackCaretX(c) else { return nil }
-        return (to.lo...to.hi).filter { !stacked.dead.contains($0) }.min { abs((stackCaretX($0) ?? 0) - x) < abs((stackCaretX($1) ?? 0) - x) }
+        switch StackedMath.vertical(stacked, caret: c, up: up) {
+        case .to(let i)?: return i
+        case .nearest(let to)?:
+            guard let x = stackCaretX(c) else { return nil }
+            return (to.lo...to.hi).filter { !stacked.dead.contains($0) }.min { abs((stackCaretX($0) ?? 0) - x) < abs((stackCaretX($1) ?? 0) - x) }
+        case nil: return nil
+        }
     }
 
     /// the caret place nearest a click, by its slot's height too
@@ -372,5 +478,34 @@ extension BarTextView {
             if best == nil || d < best!.1 { best = (i, d) }
         }
         return best?.0
+    }
+}
+
+/// A bracket drawn as tall as what it holds: a round one a crescent thickest at its middle, a square one a
+/// bar with feet. In a box `width` wide from `left` (the opening one's glyph and the room after it, the closing
+/// one's room before it and its glyph), y growing down. The bar's line and the history's rows draw it from this.
+enum TallBracketShape {
+    static func path(left: CGFloat, width: CGFloat, top: CGFloat, bottom: CGFloat, size: CGFloat, square: Bool, closing: Bool) -> CGPath {
+        let t = max(1, size * 0.07), path = CGMutablePath()
+        // mirrored for the closing one: x measured from the box's right edge
+        func x(_ v: CGFloat) -> CGFloat { closing ? left + width - v : left + v }
+        func span(_ a: CGFloat, _ b: CGFloat) -> (CGFloat, CGFloat) { (min(x(a), x(b)), abs(x(b) - x(a))) }
+        if square {
+            let foot = min(width * 0.6, size * 0.3), stem = width * 0.3
+            let (sx, sw) = span(stem, stem + t), (fx, fw) = span(stem, stem + foot)
+            path.addRect(CGRect(x: sx, y: top, width: sw, height: bottom - top))
+            path.addRect(CGRect(x: fx, y: top, width: fw, height: t * 0.8))
+            path.addRect(CGRect(x: fx, y: bottom - t * 0.8, width: fw, height: t * 0.8))
+            return path
+        }
+        let tip = width * 0.78, bulge = width * 0.12, h = bottom - top
+        path.move(to: CGPoint(x: x(tip), y: top))
+        path.addCurve(to: CGPoint(x: x(tip), y: bottom), control1: CGPoint(x: x(bulge), y: top + h * 0.2),
+                      control2: CGPoint(x: x(bulge), y: bottom - h * 0.2))
+        path.addLine(to: CGPoint(x: x(tip + t * 0.25), y: bottom))
+        path.addCurve(to: CGPoint(x: x(tip + t * 0.25), y: top), control1: CGPoint(x: x(bulge + t * 1.6), y: bottom - h * 0.22),
+                      control2: CGPoint(x: x(bulge + t * 1.6), y: top + h * 0.22))
+        path.closeSubpath()
+        return path
     }
 }

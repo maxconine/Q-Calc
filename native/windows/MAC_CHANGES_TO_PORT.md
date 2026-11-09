@@ -43,6 +43,38 @@ Nothing left.
   - Type `5x/32+x^3`, →, →, `;x=3`. It should look like Desmos: the slots nearly full size, a clear gap above and below the bar, and spaces around `+` and `=`. There should be no preview row, and the caret after `=` should sit in the gap.
   - Type `2^10+1/(x/3)+(1/2)/4;x=2` and `1/(x/3)`: nothing should be cut off at the top or the bottom.
   - Press Enter: the row in history shows the fraction stacked, in light and dark.
+- **Roots over stacks:** a root whose bracket holds a fraction or power draws its sign as tall as what it takes. The bar sits 3 pt above the numerator, the foot is under the denominator, and the line is measured at the stack's hidden op. The line moves to leave room for the bar above (`hideRootSigns`'s drawing, `updateInset`). History rows draw it too (`StackedText`'s `.root`, with `sqrt(` shown as `√(`).
+- **`^` after a fraction** brackets the whole fraction (`1/2`, →, `^3` is `(½)³`, not `1/2³`). `termStart` now steps over a plain numerator before a stacked `/`, not only a bracketed one.
+- **Tests:** `native/mac/scripts/test-stacked.sh` runs headless checks of `StackedMath` (what stacks, with roots, and what `/ ^ ) ⌫` do). Port them as unit tests on Windows' copy of the same rules.
+  - Type `sqrt(12/12^2`: the root covers the whole fraction, nothing is cut off, and the answer's `√3` is full size.
+  - Press Enter: the row shows the root around the stacked fraction.
+- **Sizes and gaps from TeX** (TeXbook Appendix G, under the OpenType MATH constant names; `TeX` in `StackedLayout.swift`). These replace the Sizes, Gaps and Roots-over-stacks numbers above. All in ems of the parent size S (the size the stack sits at):
+  - **Slot sizes** (`slotSize`): a fraction's slots in the line are 0.9 S (MathQuill's/Desmos's 90%). A fraction inside a slot, and every power, is 0.7 S (TeX script). Nothing goes under 0.5 of the line's size (TeX scriptscript).
+  - **Fraction (rule 15)** (`numOffset`, `denOffset`): the axis is 0.25 S above the baseline, and the bar is 0.04 S thick (at least 1 pt). The numerator's baseline is max(0.394 S, 0.25 S + 0.02 S + 0.12 S + its depth) above the line's baseline. The denominator's baseline is max(0.345 S, its height − 0.25 S + 0.02 S + 0.12 S) below it. Height is 0.74 of the slot size, or the stacks inside. Depth is 0.21 of the slot size when the slot's own text has a tail (`g j p q y , ; ( ) [ ] |`), else 0, or the stacks inside.
+  - **Power (rule 18)** (`supShift`): the exponent's baseline is max(0.363 S, its depth + 0.108 S) above the base's. When the base is grown brackets, it is also at least the base's height − 0.25 S.
+  - **Roots (rule 11):** the bar sits θ + ¼ x-height (0.04 S + xHeight/4) over what's under it; the foot is θ under its depth. `updateInset` leaves that room plus the line width above.
+  - **History rows** (`StackedText`) use the same sizes and raise (`slotSize`/`supShift` with `line:` = the row's size), the TeX gap less a line's own padding, the same rule thickness and the same root gap.
+- **Brackets that grow (new):** shown `( )` and `[ ]` around a stack (including a root's own, and a function's call) are drawn as tall as they hold, like TeX's `\left \right`. Their glyphs are hidden. The half-height from the axis is max(0.901 δ, δ − 0.5 S, S)/2, where δ = 2·max(height − axis, depth + axis). Round ones are a crescent, square ones a bar with feet (`TallBracketShape`). Each gets up to 0.25 S more room on its inner side (`addKern`). The line's extent, a power over them, and the root around them all take them in. They are parsed into `StackedMath.Parsed.tall`, and the history draws them too (`.group`).
+- **Keys as MathQuill (Desmos) has them** (`StackedMath.swift`, `InputField.swift`):
+  - **`/`** takes everything back to an operator, comma or space, as before. It now also takes `|x|`, `%`, `°`, and a stack with the term typed after it (`½x/` puts ½x on top). A function's call `sin(x)` goes over as it is, unbracketed.
+  - **`^`** with nothing to raise does nothing (supSubsRequireOperand), including `^^`. Right after a power it goes back into that power, at its end (`x²`, `^3` is `x^(23)`). With a selection, the selection becomes the power.
+  - **`+ − = < > ≤ ≥ ≠ ±`** typed at the end of a non-empty power leave it first (`x^2n+y` is x^(2n)+y). A hidden `·` after the power goes. A sign in an empty power stays (`x^-2`).
+  - **`√` / `∛` over a selection** puts it under the root, with the caret at its end inside.
+  - **⌫** right after a stack with nothing in it takes it whole (`x^()`, `()/()`).
+  - **⌦** before an empty stack takes it whole. At a slot's end, with the stack's hidden end next, it takes the stack apart (`(1|)/(2)` ⌦ is `1|2`).
+  - **↑ ↓:** with a stack right after the caret, ↑ goes to the numerator's or power's start and ↓ to the denominator's start. With one right before it, they go to the numerator's, power's or denominator's end. In a power, ↓ leaves it: to after it from its end, else to before it. Numerator ↔ denominator goes to the nearest place across, as before. Otherwise ↑ ↓ are the bar's (`StackedMath.vertical`).
+  - **⌘← ⌘→ / Home / End** (and with ⇧, selecting) go to the slot's start or end first, then to the line's (`lineEdge`).
+- **Fixes before release:**
+  - **A line too tall for the bar** (a fraction in a denominator under a root, `√(1/(1+1/x))`) uses TeX's text style: fractions in the line at 70% instead of 90%, and slots θ (0.04 em) off the bar instead of 3θ. `fits(p)` measures the line at 90% first (`BarTextView.fractionTop`, the `top:` argument of `slotSize`, `extent`, `supShift`, `numOffset`, `denOffset`; `TeX.gap(top)`).
+  - **Nothing past the text container is cut off:** after the text view draws, the clip is reset to the view's bounds. It had been left at the text container, which starts about 12 pt down, so a root's bar over a tall line was cut. A line with stacks or a root is also always redrawn whole (`setNeedsDisplay` override): a part redrawn alone left roots cut and caret marks behind.
+  - **A root inside a slot** (`(√2)/(3)`) is drawn at its slot's size and where the slot's glyphs are drawn, from the sign's start to the end of its last glyph (`stackCaretX` + the glyph's own width). Before, it was drawn at the line's size and its bar stopped halfway over the 2. `extent` makes room for a root's bar (`RootSign.top`).
+  - **History rows:** a root over a plain radicand (`√2`) gets its bar (it was the bare glyph), and a root's group keeps its size (it showed `√…`).
+  - **The blank-answer squiggle** on a stacked line goes under the lowest character it marks, not under the line's whole box (near the bottom edge).
+- **Not ported, on purpose:** `)` in a slot still steps out of it (MathQuill would bracket the slot's text), because the plain line has a hidden `)` there. `√2/3` stays (√2)/3, because the plain line's root takes only `2`. `(a+b)/` hides the brackets. MathQuill's Ctrl-Home has no key of its own: a second ⌘← does it.
+- **Tests:** `test-stacked.sh` has 120 checks now, with MathQuill's typing, SupSub, backspace, delete, updown, select and charsThatBreakOutOfSupSub cases.
+  - Type `x^2+1/2`, ↑, `3`, ↓, `5`: the line is x²+13/25.
+  - Type `2(1/(2)+1)^(3)` and `sqrt(1/2`: the brackets and the root grow around the fraction, and the 3 sits above the bracket's top. Check in light and dark. The caret before the `)` stays outside the bracket.
+  - Type `√2/3`: the root's bar covers the whole 2 at the numerator's size. Type `sqrt(1/(1+1/x`: the fractions get smaller, and the root's bar and foot both show.
 
 ### Graph panel, newer Mac round (`Bar/GraphModel.swift`, `Bar/GraphPanel.swift`, `Bar/GraphSettings.swift`, core `graph.rs`)
 

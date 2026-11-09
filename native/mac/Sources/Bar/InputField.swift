@@ -78,6 +78,10 @@ final class BarTextView: NSTextView {
     // ---- stacked fractions and powers (StackedMath.swift, StackedLayout.swift)
     var stacked = StackedMath.Parsed()
     var stackBars: [StackBar] = []
+    var tallBrackets: [TallBracket] = []
+    /// a fraction's size in the line (styleStacks): Desmos's 90%, or TeX's text style (70%) on a line too tall for
+    /// the bar's room at 90% (a fraction in a fraction's denominator under a root)
+    var fractionTop: CGFloat = BarTextView.fractionScale
     var stackHoles: [StackHole] = []
     var slotLooks: [SlotLook] = []
     var stackCaret: NSRect?
@@ -146,6 +150,34 @@ final class BarTextView: NSTextView {
         let sel = selectedRange(), n = (string as NSString).length
         let to = sel.length > 0 ? (by < 0 ? sel.location : NSMaxRange(sel)) : min(n, max(0, sel.location + by))
         setSelectedRange(NSRange(location: StackedMath.snap(stacked, to, from: sel.location, length: n), length: 0))
+        return true
+    }
+
+    // ⌘← ⌘→ and Home / End to the slot's start or end first, then the line's (MathQuill's Home and End); with ⇧,
+    // selecting there
+    override func moveToBeginningOfLine(_ sender: Any?) { if !stackEdge(false, select: false) { super.moveToBeginningOfLine(sender) } }
+    override func moveToLeftEndOfLine(_ sender: Any?) { if !stackEdge(false, select: false) { super.moveToLeftEndOfLine(sender) } }
+    override func moveToEndOfLine(_ sender: Any?) { if !stackEdge(true, select: false) { super.moveToEndOfLine(sender) } }
+    override func moveToRightEndOfLine(_ sender: Any?) { if !stackEdge(true, select: false) { super.moveToRightEndOfLine(sender) } }
+    override func scrollToBeginningOfDocument(_ sender: Any?) { if !stackEdge(false, select: false) { super.scrollToBeginningOfDocument(sender) } }
+    override func scrollToEndOfDocument(_ sender: Any?) { if !stackEdge(true, select: false) { super.scrollToEndOfDocument(sender) } }
+    override func moveToBeginningOfLineAndModifySelection(_ sender: Any?) { if !stackEdge(false, select: true) { super.moveToBeginningOfLineAndModifySelection(sender) } }
+    override func moveToLeftEndOfLineAndModifySelection(_ sender: Any?) { if !stackEdge(false, select: true) { super.moveToLeftEndOfLineAndModifySelection(sender) } }
+    override func moveToEndOfLineAndModifySelection(_ sender: Any?) { if !stackEdge(true, select: true) { super.moveToEndOfLineAndModifySelection(sender) } }
+    override func moveToRightEndOfLineAndModifySelection(_ sender: Any?) { if !stackEdge(true, select: true) { super.moveToRightEndOfLineAndModifySelection(sender) } }
+
+    private func stackEdge(_ forward: Bool, select: Bool) -> Bool {
+        guard Self.stackedOn, !stacked.stacks.isEmpty else { return false }
+        let sel = selectedRange(), n = (string as NSString).length
+        let anchor = sel.length == 0 ? sel.location : (stackAnchor == NSMaxRange(sel) ? NSMaxRange(sel) : sel.location)
+        let moving = sel.length == 0 ? sel.location : (anchor == sel.location ? NSMaxRange(sel) : sel.location)
+        let to = StackedMath.lineEdge(stacked, caret: select ? moving : (forward ? NSMaxRange(sel) : sel.location), forward: forward, length: n)
+        if select {
+            stackAnchor = anchor
+            setSelectedRange(NSRange(location: min(anchor, to), length: abs(to - anchor)))
+        } else {
+            setSelectedRange(NSRange(location: to, length: 0))
+        }
         return true
     }
 
@@ -320,7 +352,7 @@ final class BarTextView: NSTextView {
 
     /// The whole line in the field's look, after any programmatic change.
     func restyle() {
-        guard let storage = textStorage, storage.length > 0 else { stacked = StackedMath.Parsed(); stackBars = []; stackHoles = []; return refreshStackCaret() }
+        guard let storage = textStorage, storage.length > 0 else { stacked = StackedMath.Parsed(); stackBars = []; stackHoles = []; tallBrackets = []; return refreshStackCaret() }
         storage.setAttributes(Self.attributes, range: NSRange(location: 0, length: storage.length))
         styleBounds()
         styleStacks()
@@ -485,14 +517,22 @@ final class BarTextView: NSTextView {
         var edit: StackedMath.Edit?
         switch typed {
         case "/", "÷": edit = StackedMath.slashKey(string, start: sel.location, end: NSMaxRange(sel))
-        case "^" where sel.length == 0: edit = StackedMath.powerKey(string, caret: sel.location)
+        case "^":
+            // nothing to raise: the key does nothing
+            guard let e = StackedMath.powerKey(string, start: sel.location, end: NSMaxRange(sel)) else { return true }
+            if e.text == string { setSelectedRange(NSRange(location: e.caret, length: 0)); return true }
+            edit = e
+        case "√" where sel.length > 0, "∛" where sel.length > 0: edit = StackedMath.rootKey(string, start: sel.location, end: NSMaxRange(sel), sign: typed)
         case ")" where sel.length == 0:
             if let to = StackedMath.closeKey(string, caret: sel.location) {
                 setSelectedRange(NSRange(location: StackedMath.snap(stacked, to, from: sel.location, length: (string as NSString).length), length: 0))
                 return true
             }
         default:
-            if sel.length == 0, (typed as NSString).length == 1 { edit = StackedMath.termAfterStack(string, caret: sel.location, typed: typed) }
+            if sel.length == 0, (typed as NSString).length == 1 {
+                edit = StackedMath.breakOut(string, caret: sel.location, typed: typed)
+                    ?? StackedMath.termAfterStack(string, caret: sel.location, typed: typed)
+            }
         }
         guard let edit else { return false }
         editKind = "insertText"
@@ -505,6 +545,10 @@ final class BarTextView: NSTextView {
         editKind = "deleteContentForward"
         // ⌦ before a stack's hidden `/ ^ ( ) ·` steps over it, never takes it (the stack would come apart)
         let sel = selectedRange()
+        if Self.stackedOn, sel.length == 0, !stacked.stacks.isEmpty, let e = StackedMath.forwardDelete(string, caret: sel.location) {
+            replace(with: e.text, selection: NSRange(location: e.caret, length: 0))
+            return
+        }
         if Self.stackedOn, sel.length == 0, stacked.hidden.contains(sel.location) {
             let n = (string as NSString).length
             var to = sel.location
@@ -656,9 +700,9 @@ final class BarTextView: NSTextView {
             top -= max(0, actual - plain)
             // a line taller than its room (a fraction in a denominator) moves up or down so all of it shows: its
             // baseline stays a plain line's until the stacks would run off the bottom or the top
-            let e = Self.extent(stacked, NSRange(location: 0, length: (string as NSString).length), size: Self.fontSize)
+            let e = Self.extent(stacked, NSRange(location: 0, length: (string as NSString).length), size: Self.fontSize, top: fractionTop)
             let baseline = top + actual
-            let lowest = e.height + 2, highest = bounds.height - e.depth - 2
+            let (lowest, highest) = baselineRange(e, rooted: rooted(stacked))
             let to = lowest > highest ? (lowest + highest) / 2 : min(max(baseline, lowest), highest)
             top += to - baseline
         }
@@ -673,6 +717,32 @@ final class BarTextView: NSTextView {
         needsDisplay = true
         // the caret moves with the text when the room for grey ( opens or closes (it had stayed a character off)
         if window != nil { updateInsertionPointStateAndRestartTimer(true) }
+    }
+
+    /// whether a root in the line takes a stack (its bar goes above the numerator, its foot under the denominator)
+    func rooted(_ p: StackedMath.Parsed) -> Bool {
+        Self.radicandRanges(string).contains { r in p.stacks.contains { $0.start >= r.location && $0.end <= NSMaxRange(r) } }
+    }
+
+    /// where the line's baseline may go in the view for all of a line this tall and deep to show (lowest > highest:
+    /// it doesn't fit)
+    func baselineRange(_ e: (height: CGFloat, depth: CGFloat), rooted: Bool) -> (CGFloat, CGFloat) {
+        let rootRoom = TeX.radicalGap(Self.fontSize) + RootSign.lineWidth(Self.fontSize) + 1
+        return (e.height + (rooted ? rootRoom : 2), bounds.height - e.depth - (rooted ? 3 : 2))
+    }
+
+    /// whether the line's stacks fit the view at Desmos's 90% fractions
+    func fits(_ p: StackedMath.Parsed) -> Bool {
+        let e = Self.extent(p, NSRange(location: 0, length: p.text.count), size: Self.fontSize)
+        let (lowest, highest) = baselineRange(e, rooted: rooted(p))
+        return lowest <= highest
+    }
+
+    // a stacked or rooted line draws past its glyphs' rects (bars, roots, grown brackets, the caret's slot): it is
+    // drawn whole, as a part redrawn alone cut a root's bar off and left a caret's end behind
+    override func setNeedsDisplay(_ invalidRect: NSRect) {
+        let whole = !stacked.stacks.isEmpty || string.contains("√") || string.contains("∛")
+        super.setNeedsDisplay(whole ? bounds : invalidRect)
     }
 
     override func setFrameSize(_ newSize: NSSize) {
@@ -783,15 +853,29 @@ final class BarTextView: NSTextView {
 
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
+        // the text view leaves the clip at its text container (the inset off the top): the stacks, roots and grown
+        // brackets reach into the room above it, and were cut off there
+        NSBezierPath(rect: bounds.intersection(dirtyRect)).setClip()
         let attrs: [NSAttributedString.Key: Any] = [.font: Self.lineFont, .foregroundColor: Theme.muted.withAlphaComponent(0.8), .kern: Theme.displayTracking(Self.fontSize)]
         // .quick-inferred: the grey parens the engine would add, ahead of the text and after it
         let inferred: [NSAttributedString.Key: Any] = [.font: Self.lineFont, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)]
         // .quick-squiggle: a wavy line, muted at 70%, under where a blank answer stops reading
         if let squiggle, let lm = layoutManager, let tc = textContainer, NSMaxRange(squiggle) <= (string as NSString).length {
             let glyphs = lm.glyphRange(forCharacterRange: squiggle, actualCharacterRange: nil)
-            let rect = lm.boundingRect(forGlyphRange: glyphs, in: tc).offsetBy(dx: textContainerInset.width, dy: textContainerInset.height)
+            var rect = lm.boundingRect(forGlyphRange: glyphs, in: tc).offsetBy(dx: textContainerInset.width, dy: textContainerInset.height)
+            // a stacked line's box reaches down to its lowest slot: the line goes under the text's own baseline
+            // instead, where the stacks are drawn
+            if !stacked.stacks.isEmpty, let a = stackCaretX(squiggle.location), let b = stackCaretX(NSMaxRange(squiggle)) {
+                // under the lowest of the characters it marks (a slot's sit lower, smaller)
+                let base = stackBaseline()
+                let low = (squiggle.location..<NSMaxRange(squiggle)).filter { !stacked.hidden.contains($0) }.map { k -> CGFloat in
+                    let look = slotLooks.filter { NSLocationInRange(k, $0.content) }.min { $0.content.length < $1.content.length }
+                    return base - (look?.offset ?? 0) + (look?.size ?? Self.fontSize) * TeX.depth
+                }.max() ?? base + Self.fontSize * TeX.depth
+                rect = NSRect(x: a, y: low - 1, width: max(0, b - a), height: 0)
+            }
             let path = NSBezierPath()
-            let y = rect.maxY + 1, step: CGFloat = 2
+            let y = min(rect.maxY + 1, bounds.height - 1), step: CGFloat = 2
             var x = rect.minX
             path.move(to: NSPoint(x: x, y: y))
             var up = true
@@ -811,23 +895,52 @@ final class BarTextView: NSTextView {
             Theme.ink.setStroke()
             for range in Self.radicandRanges(string) {
                 let inset = NSPoint(x: textContainerInset.width, y: textContainerInset.height)
-                let sign = lm.boundingRect(forGlyphRange: lm.glyphRange(forCharacterRange: NSRange(location: range.location - 1, length: 1), actualCharacterRange: nil), in: tc)
+                var sign = lm.boundingRect(forGlyphRange: lm.glyphRange(forCharacterRange: NSRange(location: range.location - 1, length: 1), actualCharacterRange: nil), in: tc)
                     .offsetBy(dx: inset.x, dy: inset.y)
                 let under = lm.boundingRect(forGlyphRange: lm.glyphRange(forCharacterRange: range, actualCharacterRange: nil), in: tc)
                     .offsetBy(dx: inset.x, dy: inset.y)
                 let glyph = lm.glyphIndexForCharacter(at: range.location)
-                let baseline = lm.lineFragmentRect(forGlyphAt: glyph, effectiveRange: nil).minY + lm.location(forGlyphAt: glyph).y + inset.y
-                let points = RootSign.points(left: sign.minX, width: sign.width, end: under.maxX, baseline: baseline, size: Self.fontSize)
+                var baseline = lm.lineFragmentRect(forGlyphAt: glyph, effectiveRange: nil).minY + lm.location(forGlyphAt: glyph).y + inset.y
+                // the root's own size: smaller in a fraction's slot or a power, as what it takes is
+                let size = (textStorage?.attribute(.font, at: range.location - 1, effectiveRange: nil) as? NSFont)?.pointSize ?? Self.fontSize
+                var end = under.maxX
+                // on a stacked line a slot's glyphs are moved back by their kerns (centred over the bar): the sign and
+                // what it takes from where they're drawn, as wide as their own glyphs
+                if !stacked.stacks.isEmpty, let x = stackCaretX(range.location - 1) {
+                    let own = { (k: Int) -> CGFloat in
+                        guard let storage = self.textStorage else { return 0 }
+                        let font = storage.attribute(.font, at: k, effectiveRange: nil) as? NSFont ?? Self.lineFont
+                        return (storage.string as NSString).substring(with: NSRange(location: k, length: 1)).size(withAttributes: [.font: font]).width
+                    }
+                    sign = NSRect(x: x, y: sign.minY, width: own(range.location - 1), height: sign.height)
+                    end = (range.location..<NSMaxRange(range)).reduce(sign.maxX) { e, k in
+                        stacked.hidden.contains(k) ? e : max(e, (stackCaretX(k) ?? e) + own(k))
+                    }
+                }
+                var points = RootSign.points(left: sign.minX, width: sign.width, end: end, baseline: baseline, size: size)
+                // over a stacked fraction or power: the line's own baseline (a raised glyph's isn't), and a sign as tall
+                // as what it takes, its bar clear above the numerator and its foot below the denominator
+                if let s = stacked.stacks.first(where: { $0.start >= range.location && $0.end <= NSMaxRange(range) }) {
+                    let g = lm.glyphIndexForCharacter(at: s.op)
+                    baseline = lm.lineFragmentRect(forGlyphAt: g, effectiveRange: nil).minY + lm.location(forGlyphAt: g).y + inset.y
+                    let e = Self.extent(stacked, range, size: size, top: fractionTop)
+                    let plain = RootSign.points(left: 0, width: 1, end: 1, baseline: baseline, size: size)
+                    let end = stackCaretX(NSMaxRange(range)) ?? under.maxX
+                    points = RootSign.points(left: sign.minX, width: sign.width, end: end,
+                                             // TeX's rule 11: the bar its gap over what's under it, the foot under it
+                                             top: min(plain[3].y, baseline - e.height - TeX.radicalGap(size) - RootSign.lineWidth(size) / 2),
+                                             foot: max(plain[2].y, baseline + e.depth + TeX.ruleThickness * size))
+                }
                 let path = NSBezierPath()
                 path.move(to: points[0])
                 points.dropFirst().forEach { path.line(to: $0) }
-                path.lineWidth = RootSign.lineWidth(Self.fontSize)
+                path.lineWidth = RootSign.lineWidth(size)
                 path.lineJoinStyle = .round
                 path.lineCapStyle = .round
                 path.stroke()
                 if (string as NSString).character(at: range.location - 1) == 0x221B {
-                    let small: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: Self.fontSize * RootSign.indexScale), .foregroundColor: Theme.ink]
-                    ("3" as NSString).draw(at: RootSign.indexOrigin(left: sign.minX, baseline: baseline, size: Self.fontSize), withAttributes: small)
+                    let small: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: size * RootSign.indexScale), .foregroundColor: Theme.ink]
+                    ("3" as NSString).draw(at: RootSign.indexOrigin(left: sign.minX, baseline: baseline, size: size), withAttributes: small)
                 }
             }
         }

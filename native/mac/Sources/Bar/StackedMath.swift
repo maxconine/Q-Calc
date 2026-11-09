@@ -31,6 +31,8 @@ enum StackedMath {
         var slots: [Slot] { (num.map { [$0] } ?? []) + [slot] }
     }
 
+    struct Pair: Equatable { var open: Int; var close: Int }
+
     struct Parsed: Equatable {
         var stacks: [Stack] = []
         /// characters drawn as nothing: the `/` and `^`, the slots' brackets, and the `·` put after a stack
@@ -41,6 +43,10 @@ enum StackedMath {
         var dead: Set<Int> = []
         /// the hidden `)` that ends a stack's last slot: → or `)` there steps out, backspace after it steps in
         var closers: Set<Int> = []
+        /// shown brackets, `( )` or `[ ]`, around a stack: drawn as tall as what they hold (TeX's \left \right)
+        var tall: [Pair] = []
+        /// the line's characters, for what depends on them (a numerator's tails)
+        var text: [UInt16] = []
 
         /// the innermost slot the caret is in
         func slot(at caret: Int) -> Slot? {
@@ -162,6 +168,17 @@ enum StackedMath {
             }
         }
         p.stacks.sort { $0.start != $1.start ? $0.start < $1.start : $0.end > $1.end }
+        p.text = u
+        // shown brackets with a stack inside grow around it
+        if !p.stacks.isEmpty {
+            var squares: [Int] = []
+            var pairsShown: [Pair] = closeOf.filter { !p.hidden.contains($0.key) }.map { Pair(open: $0.key, close: $0.value) }
+            for (i, c) in u.enumerated() {
+                if c == 0x5B { squares.append(i) }
+                if c == 0x5D, let o = squares.popLast() { pairsShown.append(Pair(open: o, close: i)) }
+            }
+            p.tall = pairsShown.filter { b in p.stacks.contains { $0.start > b.open && $0.end <= b.close } }.sorted { $0.open < $1.open }
+        }
         return p
     }
 
@@ -176,16 +193,26 @@ enum StackedMath {
     private static func str(_ u: [UInt16], _ r: Range<Int>) -> String { String(utf16CodeUnits: Array(u[r]), count: r.count) }
 
     /// Where the term that ends at `c` starts, as a graphing calculator takes it for `/` or `^`: a number, a name,
-    /// a function's call, a bracketed group, a root, and the powers and fractions already made of them.
+    /// a function's call, a bracketed group, an absolute value, a root, `!` `%` `°`, and the powers and fractions
+    /// already made of them. MathQuill's `/` takes everything back to an operator, a comma or a space; so does this.
     static func termStart(_ u: [UInt16], _ c: Int) -> Int {
         let (_, openOf) = pairs(u)
+        var dots: Set<Int>?
         var j = c
         while j > 0 {
             let ch = u[j - 1]
             if ch == close, let o = openOf[j - 1] { j = o; continue }
-            if isWord(ch) || ch == 0x221A || ch == 0x221B || ch == 0x21 { j -= 1; continue }
+            if isWord(ch) || ch == 0x221A || ch == 0x221B || ch == 0x21 || ch == 0x25 || ch == 0xB0 { j -= 1; continue }
             if j < c, ch == caret, j >= 2 { j -= 1; continue }
-            if j < c, ch == slash, j >= 2, u[j - 2] == close, u[j] == open { j -= 1; continue }
+            // a fraction already made, its numerator bracketed or a plain number or name (`1/(2)` then ^ is (½)²)
+            if j < c, ch == slash, j >= 2, u[j - 2] == close || isWord(u[j - 2]), u[j] == open { j -= 1; continue }
+            // |x| is one term
+            if ch == 0x7C, j >= 2, let o = (0..<(j - 1)).last(where: { u[$0] == 0x7C }), o < j - 2 { j = o; continue }
+            // the hidden `·` between a stack and the term typed after it: ½x is one term, as MathQuill takes it
+            if j < c, ch == dot {
+                if dots == nil { dots = parse(String(utf16CodeUnits: u, count: u.count)).dots }
+                if dots!.contains(j - 1) { j -= 1; continue }
+            }
             break
         }
         return j
@@ -201,28 +228,64 @@ enum StackedMath {
         }
         let c = start, j = termStart(u, c)
         if j == c { return Edit(text: splice(u, c..<c, "()/()"), caret: c + 1) }
-        let (closeOf, _) = pairs(u)
+        let (closeOf, openOf) = pairs(u)
         let group = u[j] == open && closeOf[j] == c - 1
         let plain = all(u, j..<c, isDigit) || all(u, j..<c, isLetter)
-        if group || (plain && (j == 0 || boundary.contains(u[j - 1]))) {
+        // a function's call, `sin(x)`, is a numerator as it stands
+        let call = u[c - 1] == close && openOf[c - 1].map { all(u, j..<$0, isLetter) } == true
+        if group || ((plain || call) && (j == 0 || boundary.contains(u[j - 1]))) {
             return Edit(text: splice(u, c..<c, "/()"), caret: c + 2)
         }
         return Edit(text: splice(u, j..<c, "(" + str(u, j..<c) + ")/()"), caret: c + 4)
     }
 
-    /// `^` typed: the caret goes up into an empty power. A fraction or a power before it is bracketed first
-    /// (½ then ^ is (½)³, not 1/2³). Nil with nothing before the caret to raise.
+    /// `^` typed: the caret goes up into an empty power. A fraction before it is bracketed first (½ then ^ is
+    /// (½)³, not 1/2³); right after a power it goes back into that power, at its end (MathQuill's weld: x², ^ is
+    /// x^(2|), never (x²)^). With a selection, the selection is the power. Nil with nothing to raise: the key
+    /// does nothing (MathQuill's supSubsRequireOperand, as Desmos sets it).
+    static func powerKey(_ text: String, start: Int, end: Int) -> Edit? {
+        guard end > start else { return powerKey(text, caret: start) }
+        let u = Array(text.utf16), sel = str(u, start..<end)
+        let rest = splice(u, start..<end, "")
+        guard let e = powerKey(rest, caret: start) else { return nil }
+        let r = Array(e.text.utf16)
+        return Edit(text: splice(r, e.caret..<e.caret, sel), caret: e.caret + (sel as NSString).length)
+    }
+
     static func powerKey(_ text: String, caret c: Int) -> Edit? {
         let u = Array(text.utf16)
         guard c > 0 else { return nil }
+        let p = parse(text)
+        if let s = p.stacks.first(where: { !$0.isFraction && $0.end == c }) {
+            if let close = s.slot.close { return Edit(text: text, caret: close) }
+            return Edit(text: splice(u, s.slot.lo..<s.slot.hi, "(" + str(u, s.slot.lo..<s.slot.hi) + ")"), caret: s.slot.hi + 1)
+        }
         let j = termStart(u, c)
         guard j < c else { return nil }
-        let p = parse(text)
         // the term ends with a stack (it isn't a bracketed group on its own): bracket it
         if p.stacks.contains(where: { $0.end == c && $0.start >= j }) {
             return Edit(text: splice(u, j..<c, "(" + str(u, j..<c) + ")^()"), caret: c + 4)
         }
         return Edit(text: splice(u, c..<c, "^()"), caret: c + 2)
+    }
+
+    /// `√` or `∛` typed over a selection: the selection goes under the root, the caret at its end, inside
+    static func rootKey(_ text: String, start: Int, end: Int, sign: String) -> Edit? {
+        guard end > start else { return nil }
+        let u = Array(text.utf16)
+        return Edit(text: splice(u, start..<end, sign + "(" + str(u, start..<end) + ")"), caret: end + 2)
+    }
+
+    /// what typed at the end of a power leaves it first (MathQuill's charsThatBreakOutOfSupSub, as Desmos sets it):
+    /// x², + is x²+, not x^(2+). Never from an empty power (x^-2) or from the middle of one.
+    static let breaksOut: Set<UInt16> = Set("+-−=<>≤≥≠±".utf16)
+    static func breakOut(_ text: String, caret c: Int, typed: String) -> Edit? {
+        guard (typed as NSString).length == 1, let ch = typed.utf16.first, breaksOut.contains(ch) else { return nil }
+        let p = parse(text), u = Array(text.utf16)
+        guard p.stacks.contains(where: { !$0.isFraction && $0.slot.close == c && !$0.slot.isEmpty }) else { return nil }
+        // a `·` after the power was keeping a term apart from it: the sign does that now
+        let after = p.dots.contains(c + 1) ? c + 2 : c + 1
+        return Edit(text: splice(u, (c + 1)..<after, typed), caret: c + 2)
     }
 
     /// `)` typed right before a slot's hidden `)`: the caret steps out instead
@@ -240,27 +303,103 @@ enum StackedMath {
         return Edit(text: splice(u, c..<c, "·" + typed), caret: c + 1 + (typed as NSString).length)
     }
 
-    /// Backspace: after a stack it steps in (the last slot's end); at the start of a slot it takes the stack
-    /// apart, its slots' text left in the line. Nil leaves the key to the line.
+    /// a stack taken apart (MathQuill's unwrapGramp): its slots' text left in the line, the caret where it was in
+    /// `slot`, at its start or its end
+    private static func unwrap(_ u: [UInt16], _ p: Parsed, _ s: Stack, _ slot: Slot, atEnd: Bool) -> Edit {
+        let end = p.dots.contains(s.end) ? s.end + 1 : s.end
+        if s.isFraction, let num = s.num {
+            let a = str(u, num.lo..<num.hi), b = str(u, s.slot.lo..<s.slot.hi)
+            let la = (a as NSString).length, lb = (b as NSString).length
+            let at = slot == num ? (atEnd ? la : 0) : (atEnd ? la + lb : la)
+            return Edit(text: splice(u, s.start..<end, a + b), caret: s.start + at)
+        }
+        let e = str(u, s.slot.lo..<s.slot.hi)
+        return Edit(text: splice(u, s.op..<end, e), caret: s.op + (atEnd ? (e as NSString).length : 0))
+    }
+
+    /// a stack with nothing in it goes whole (MathQuill deletes an empty command in one key)
+    private static func remove(_ u: [UInt16], _ p: Parsed, _ s: Stack) -> Edit {
+        let from = s.isFraction ? s.start : s.op, to = p.dots.contains(s.end) ? s.end + 1 : s.end
+        return Edit(text: splice(u, from..<to, ""), caret: from)
+    }
+
+    /// Backspace: after a stack it steps in (the last slot's end), or takes it whole if it's empty; at the start
+    /// of a slot it takes the stack apart, its slots' text left in the line. Nil leaves the key to the line.
     static func backspace(_ text: String, caret c: Int) -> Edit? {
         let u = Array(text.utf16), p = parse(text)
         guard c > 0 else { return nil }
-        if p.closers.contains(c - 1) { return Edit(text: text, caret: c - 1) }
+        if p.closers.contains(c - 1) {
+            if let s = p.stacks.first(where: { $0.slot.close == c - 1 }), s.slots.allSatisfy(\.isEmpty) { return remove(u, p, s) }
+            return Edit(text: text, caret: c - 1)
+        }
         // the one term typed after a stack: its `·` goes with it
         if c >= 3, u[c - 2] == dot, p.closers.contains(c - 3), startsTerm(u[c - 1]), c == u.count || !startsTerm(u[c]) {
             return Edit(text: splice(u, (c - 2)..<c, ""), caret: c - 2)
         }
         for s in p.stacks.reversed() {
-            let groups = s.slots.filter { $0.open != nil }
-            guard let hit = groups.first(where: { $0.lo == c }) else { continue }
-            let end = p.dots.contains(s.end) ? s.end + 1 : s.end
-            if s.isFraction, let num = s.num {
-                let a = str(u, num.lo..<num.hi), b = str(u, s.slot.lo..<s.slot.hi)
-                return Edit(text: splice(u, s.start..<end, a + b), caret: s.start + (hit == num ? 0 : (a as NSString).length))
-            }
-            return Edit(text: splice(u, s.op..<end, str(u, s.slot.lo..<s.slot.hi)), caret: s.op)
+            guard let hit = s.slots.first(where: { $0.open != nil && $0.lo == c }) else { continue }
+            return unwrap(u, p, s, hit, atEnd: false)
         }
         return nil
+    }
+
+    /// ⌦: before a stack with nothing in it, it takes it whole; at the end of a slot, the stack's hidden end next,
+    /// it takes the stack apart (as backspace does at a slot's start). Nil leaves the key to the line, which steps
+    /// over a stack's hidden characters into it.
+    static func forwardDelete(_ text: String, caret c: Int) -> Edit? {
+        let u = Array(text.utf16), p = parse(text)
+        if let s = p.stacks.first(where: { ($0.isFraction ? $0.start : $0.op) == c && $0.slots.allSatisfy(\.isEmpty) }) {
+            return remove(u, p, s)
+        }
+        var best: (Stack, Slot)?
+        for s in p.stacks {
+            for slot in s.slots where slot.hi == c {
+                let hiddenEnd = slot.close == c || (s.isFraction && slot == s.num && s.op == c)
+                if hiddenEnd, best == nil || slot.content.length < best!.1.content.length { best = (s, slot) }
+            }
+        }
+        guard let (s, slot) = best else { return nil }
+        return unwrap(u, p, s, slot, atEnd: true)
+    }
+
+    /// where ↑ or ↓ takes the caret: a place, or the nearest place across in a slot. As MathQuill moves: a stack
+    /// right after the caret first (↑ into a fraction's numerator or a power's start, ↓ into the denominator),
+    /// then one right before it (to the numerator's end, the power's end, the denominator's end), then out of the
+    /// slots the caret is in, innermost first (numerator ↔ denominator; ↓ out of a power, to after it from its
+    /// end and to before it from anywhere else). Nil leaves the key to the bar (the history).
+    enum Vertical: Equatable { case to(Int), nearest(Slot) }
+    static func vertical(_ p: Parsed, caret c: Int, up: Bool) -> Vertical? {
+        for s in p.stacks where (s.isFraction ? s.start : s.op) == c {
+            let to = s.isFraction ? (up ? s.num!.lo : s.slot.lo) : (up ? s.slot.lo : nil)
+            if let to, to != c { return .to(to) }
+        }
+        for s in p.stacks.filter({ $0.end == c }).sorted(by: { $0.end - $0.start > $1.end - $1.start }) {
+            let to = s.isFraction ? (up ? s.num!.hi : s.slot.hi) : (up ? s.slot.hi : nil)
+            if let to, to != c { return .to(to) }
+        }
+        var around: [(Stack, Slot)] = []
+        for s in p.stacks { for slot in s.slots where slot.holds(c) { around.append((s, slot)) } }
+        around.sort { $0.1.content.length < $1.1.content.length }
+        for (s, slot) in around {
+            if s.isFraction, let num = s.num {
+                if slot == num, !up { return .nearest(s.slot) }
+                if slot == s.slot, up { return .nearest(num) }
+            } else if !up {
+                let to = c == slot.hi ? s.end : s.op
+                if to != c { return .to(to) }
+            }
+        }
+        return nil
+    }
+
+    /// ⌘← ⌘→ (and Home / End): to the start or end of the slot the caret is in (MathQuill's Home and End), and
+    /// from there to the line's
+    static func lineEdge(_ p: Parsed, caret c: Int, forward: Bool, length: Int) -> Int {
+        if let slot = p.slot(at: c) {
+            let e = forward ? slot.hi : slot.lo
+            if e != c { return e }
+        }
+        return forward ? length : 0
     }
 
     /// The caret moved onto a place it never stops: on, the way it was going
