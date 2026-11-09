@@ -1,6 +1,6 @@
 # Linear algebra: Mac changes to port and test on Windows
 
-To be folded into `native/windows/MAC_CHANGES_TO_PORT.md` when branch `linear-algebra` is merged. The plan is
+Merged into `native` and `main` (3.0.2). Work through it as part of `native/windows/MAC_CHANGES_TO_PORT.md`, which points here. The plan is
 `native/MATRIX_PLAN.md`.
 
 ## Checks to run first

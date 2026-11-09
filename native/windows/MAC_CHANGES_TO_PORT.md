@@ -12,6 +12,8 @@ A running list, kept by whoever changes the Mac app. How to work through it: `PO
 
 **Releases (3.0.2):** a `v*` tag now releases the Mac only, and Windows ships by a hand run of the Windows workflow. See the top of `RELEASE.md`.
 
+**Linear algebra has its own list:** `PORT_linear_algebra.md` (matrices: the grid, `mat`, steps, words like `find eigenvalues of A`, cofactors, rotations, `A^(1/2)`). Branch `linear-algebra` is merged into `native` and `main`, so work through it as part of this list: run its checks, then its sections in order. When it's done, delete it.
+
 ## Checks to run first
 
 ```
@@ -63,6 +65,7 @@ Nothing left.
   - **Power (rule 18)** (`supShift`): the exponent's baseline is max(0.363 S, its depth + 0.108 S) above the base's. When the base is grown brackets, it is also at least the base's height − 0.25 S.
   - **Roots (rule 11):** the bar sits θ + ¼ x-height (0.04 S + xHeight/4) over what's under it; the foot is θ under its depth. `updateInset` leaves that room plus the line width above.
   - **History rows** (`StackedText`) use the same sizes and raise (`slotSize`/`supShift` with `line:` = the row's size), the TeX gap less a line's own padding, the same rule thickness and the same root gap.
+  - **A stacked history row is never cut off** (`51f90fa`, `BarView.swift`, `StackedText.swift`): a power is raised without taking height, a fraction inside a fraction is smaller, and a stacked row uses the row's full height. Before, `4/(233*212^3)` made the fraction taller than its row. Test: Enter on that line, then check the history row shows the whole fraction, in light and dark.
 - **Brackets that grow (new):** shown `( )` and `[ ]` around a stack (including a root's own, and a function's call) are drawn as tall as they hold, like TeX's `\left \right`. Their glyphs are hidden. The half-height from the axis is max(0.901 δ, δ − 0.5 S, S)/2, where δ = 2·max(height − axis, depth + axis). Round ones are a crescent, square ones a bar with feet (`TallBracketShape`). Each gets up to 0.25 S more room on its inner side (`addKern`). The line's extent, a power over them, and the root around them all take them in. They are parsed into `StackedMath.Parsed.tall`, and the history draws them too (`.group`).
 - **Keys as MathQuill (Desmos) has them** (`StackedMath.swift`, `InputField.swift`):
   - **`/`** takes everything back to an operator, comma or space, as before. It now also takes `|x|`, `%`, `°`, and a stack with the term typed after it (`½x/` puts ½x on top). A function's call `sin(x)` goes over as it is, unbracketed.

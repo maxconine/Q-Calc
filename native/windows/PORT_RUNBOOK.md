@@ -4,7 +4,7 @@ Steps for the Windows agent. `MAC_CHANGES_TO_PORT.md` is the list of changes, an
 
 ## Prompt to paste into the Windows agent
 
-> Read `native/windows/AGENTS.md`, then follow `native/windows/PORT_RUNBOOK.md` step by step. Work through `native/windows/MAC_CHANGES_TO_PORT.md` in its order. Don't skip the checks. Report back in the runbook's report format.
+> Read `native/windows/AGENTS.md`, then follow `native/windows/PORT_RUNBOOK.md` step by step. Work through `native/windows/MAC_CHANGES_TO_PORT.md` in its order, and `native/windows/PORT_linear_algebra.md` with it. Don't skip the checks. Report back in the runbook's report format.
 
 ## Step 0: get the Mac work
 
