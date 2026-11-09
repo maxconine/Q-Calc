@@ -172,7 +172,9 @@ pub fn finish_number(v: &Val) -> Option<f64> {
     let n = match v {
         Val::Num(n) => snap_int(*n),
         Val::Bool(b) => f64::from(u8::from(*b)),
-        Val::Complex { re, im } if re.is_finite() && im.is_finite() && im.abs() <= 1e-12 => chop(*re),
+        Val::Complex { re, im } if re.is_finite() && im.is_finite() && im.abs() <= 1e-12 => {
+            chop(*re)
+        }
         _ => return None,
     };
     n.is_finite().then_some(n)

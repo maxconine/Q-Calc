@@ -52,7 +52,10 @@ fn main() {
         if !pick() {
             continue;
         }
-        let runs = std::env::var("QC_RUNS").ok().and_then(|r| r.parse().ok()).unwrap_or(15);
+        let runs = std::env::var("QC_RUNS")
+            .ok()
+            .and_then(|r| r.parse().ok())
+            .unwrap_or(15);
         measure(&format!("intersections: {name}"), runs, || {
             std::hint::black_box(native_intersections(&inputs, &o, lo, hi));
         });
@@ -73,10 +76,12 @@ fn main() {
         if !pick() {
             continue;
         }
-        let runs = std::env::var("QC_RUNS").ok().and_then(|r| r.parse().ok()).unwrap_or(31);
+        let runs = std::env::var("QC_RUNS")
+            .ok()
+            .and_then(|r| r.parse().ok())
+            .unwrap_or(31);
         measure(line, runs, || {
             std::hint::black_box(evaluate_line(line, &e));
         });
     }
 }
-

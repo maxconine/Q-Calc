@@ -1036,7 +1036,11 @@ mod tests {
             ("2^(1/3)", "1.25992", None),
         ] {
             let a = live(&req(line));
-            assert_eq!((a.slot.as_str(), a.exact.as_deref()), (want, exact), "{line}");
+            assert_eq!(
+                (a.slot.as_str(), a.exact.as_deref()),
+                (want, exact),
+                "{line}"
+            );
         }
     }
 
