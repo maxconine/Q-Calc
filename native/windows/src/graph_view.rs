@@ -1,7 +1,7 @@
 //! The graph panel drawn, and the pointer over it (graph.rs has the state; GraphPanel.swift is the spec).
 //!
 //! - The panel: a head (the label, `x ∈ [lo, hi]`, the angle unit; a surface's `3D | contour`, zoom out and in,
-//!   + for another equation, the camera for the export card, the wrench for the settings card, reset), those cards,
+//!   `+` for another equation, the camera for the export card, the wrench for the settings card, reset), those cards,
 //!   the equations when there are several (a colour bar, the equation, an added one's field and ×), the plot, then
 //!   the key points as chips (a colour square each when there are several equations; past a dozen, the dozen
 //!   nearest the middle and "+N more", which opens them all in a box that scrolls) and the roots no chip lists.

@@ -291,9 +291,9 @@ pub fn matrix_word(text: &str) -> Option<(u32, u32)> {
 /// grid.
 pub fn stores_mat<'a>(typed: &str, exprs: impl IntoIterator<Item = &'a str>) -> bool {
     let t = typed.trim_end();
-    let ends_mat = t.len() >= 3
-        && t[t.len() - 3..].eq_ignore_ascii_case("mat")
-        && t[..t.len() - 3]
+    let cut = t.len().saturating_sub(3);
+    let ends_mat = t.get(cut..).is_some_and(|w| w.eq_ignore_ascii_case("mat"))
+        && t[..cut]
             .chars()
             .next_back()
             .is_none_or(|c| !(c.is_ascii_alphanumeric() || c == '_'));
@@ -337,6 +337,11 @@ mod tests {
         assert!(!stores_mat("mat 2x2", ["mat = [1 2; 3 4]"]));
         assert!(!stores_mat("format", ["mat = 1"]));
         assert!(!stores_mat("mat", Vec::<&str>::new()));
+        // short lines ending in a wide character are no `mat` (and no panic)
+        for t in ["√(", "√", "x√", "π", "2π", "ma"] {
+            assert!(!stores_mat(t, ["mat = 1"]));
+        }
+        assert!(stores_mat("√mat", ["mat = 1"]));
     }
 
     #[test]
