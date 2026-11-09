@@ -8,6 +8,9 @@
 # contrast:on|off (the bar as with Increase Contrast on), drop:<path>|<path>… (files dropped on the bar),
 # point:<x>,<y> (the pointer resting there in the bar), point:off (the pointer leaving the line), note[:<from>] and
 # noteask[:<from>] (a message's and a request's note in the corner, as while the bar is away).
+# Sheets: sheetclick:<title>:<x>,<y>[:<file>] and sheethover:… (points from the sheet's top left), sheetback,
+# sheetforward, sheetfilter:<text> (the front sheet's search, as if typed), sheetswipe:back|forward (a swipe that went through), sheetnew:<x>,<y> (Open in New Window on that row of
+# the front sheet), sheetpages:<file> (each sheet window's pages, the one up in [brackets]).
 # QCALC_DEV_ID=<bundle id> drives a copy of the dev build re-signed under another id instead.
 for cmd in "$@"; do
   if [[ "$cmd" == sleep:* ]]; then

@@ -328,12 +328,12 @@ pub enum ThreadCommand {
     },
 }
 
-/// The bar's conversation commands; anything after the name means it's not one.
+/// The bar's conversation commands, `chat` the same word as `messages`; anything after the name means it's not one.
 pub fn parse_messages_command(text: &str) -> Option<ThreadCommand> {
-    static LIST: Lazy = Lazy::new(|| js(r"^\s*(?:open\s+)?messages\s*$", "i"));
+    static LIST: Lazy = Lazy::new(|| js(r"^\s*(?:open\s+)?(?:messages|chat)\s*$", "i"));
     static OPEN: Lazy = Lazy::new(|| {
         js(
-            r"^\s*(?:open\s+)?messages\s+(?:with(?:\s+|$))?(\S*)\s*$",
+            r"^\s*(?:open\s+)?(?:messages|chat)\s+(?:with(?:\s+|$))?(\S*)\s*$",
             "i",
         )
     });
@@ -376,10 +376,15 @@ pub fn thread_contacts(history: &[String], m: &Messaging) -> Vec<String> {
     out
 }
 
-/// Tab after `messages`, `messages with` or `open messages with`: the rest of a name from `contacts`, else the
-/// rest of `with` after a bare `messages`.
+/// Tab after `messages`, `messages with` or `open messages with` (or `chat` for `messages`): the rest of a name from
+/// `contacts`, else the rest of `with` after a bare `messages`.
 pub fn messages_completion(text: &str, contacts: &[String]) -> String {
-    static TO: Lazy = Lazy::new(|| js(r"^\s*(open\s+)?messages\s+(with\s+)?([a-z0-9_-]+)$", "i"));
+    static TO: Lazy = Lazy::new(|| {
+        js(
+            r"^\s*(open\s+)?(?:messages|chat)\s+(with\s+)?([a-z0-9_-]+)$",
+            "i",
+        )
+    });
     let Some(c) = TO.captures(text).ok().flatten() else {
         return String::new();
     };
@@ -1328,6 +1333,28 @@ mod tests {
         assert_eq!(parse_messages_command("messages x"), open("x", ""));
         assert_eq!(parse_messages_command("messages max hi"), None);
         assert_eq!(parse_messages_command("message max hi"), None);
+        // `chat` is the same word
+        for (chat, messages) in [
+            ("chat", "messages"),
+            ("open chat", "open messages"),
+            ("chat oliver", "messages oliver"),
+            ("Chat with oliver", "messages with oliver"),
+            ("open chat with oliver", "open messages with oliver"),
+            ("chat oliver hi", "messages oliver hi"),
+        ] {
+            assert_eq!(
+                parse_messages_command(chat),
+                parse_messages_command(messages),
+                "{chat}"
+            );
+        }
+        assert_eq!(
+            messages_hint(&parse_messages_command("chat oliver").unwrap()),
+            "↵ opens messages with oliver"
+        );
+        let oliver = ["oliver".to_string()];
+        assert_eq!(messages_completion("chat ol", &oliver), "iver");
+        assert_eq!(messages_completion("open chat with ol", &oliver), "iver");
         assert_eq!(parse_messages_command("messagesmax"), None);
         assert_eq!(parse_messages_command("open max"), None);
         // `message with max` is still a message to someone called `with`

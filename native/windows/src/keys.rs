@@ -186,7 +186,10 @@ impl Keybinds {
                 .map(|(k, l)| (host_keys(&k), l))
                 .collect::<Vec<_>>()
         };
-        [host(keys), host(typed)]
+        let mut keys = host(keys);
+        // native only: the matrix grid and steps (matrices.rs; fixed chords, as the Mac's ⌃G ⌃R)
+        keys.push(("Ctrl+G Ctrl+R".into(), "matrix grid / steps".into()));
+        [keys, host(typed)]
     }
 }
 

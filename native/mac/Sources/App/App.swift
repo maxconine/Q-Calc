@@ -135,8 +135,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "key": DevSnapshot.key(arg)
         // text typed into whatever field has the keys (a reply line, the bar), and a click at x,y in the bar
         // (points from its top-left)
-        case "keys": (NSApp.keyWindow?.firstResponder as? NSTextView)?.insertText(arg, replacementRange: NSRange(location: NSNotFound, length: 0))
+        case "keys": (NSApp.keyWindow?.firstResponder as? NSTextView
+                      ?? NSApp.windows.first(where: { $0 is OverlayPanel && $0.isVisible })?.firstResponder as? NSTextView)?
+                .insertText(arg, replacementRange: NSRange(location: NSNotFound, length: 0))
+        // do:<selector>: an editing action straight on the bar's line (do:moveLeft:, do:selectAll:,
+        // do:deleteWordBackward:), which works while q calc isn't the frontmost app, as key: doesn't
+        case "do": (NSApp.windows.first(where: { $0 is OverlayPanel && $0.isVisible })?.firstResponder as? NSTextView)?
+                .doCommand(by: NSSelectorFromString(arg))
         case "click": DevSnapshot.click(arg)
+        // sheetclick:<title>:<x>,<y>: a click in that sheet, points from its content's top left
+        case "sheetclick": DevSnapshot.sheetClick(arg)
+        case "sheethover": DevSnapshot.sheetClick(arg, hover: true)
+        // the front sheet window's pages: back, forward, a finished swipe (sheetswipe:back|forward), Open in New Window on
+        // the row at x,y of the front sheet's content (sheetnew:<x>,<y>), and its pages written to a file (sheetpages:<file>)
+        case "sheetfilter": IdentityWindowController.front()?.setFilter(arg)
+        case "sheetback": IdentityWindowController.front()?.go(-1)
+        case "sheetforward": IdentityWindowController.front()?.go(1)
+        case "sheetswipe": IdentityWindowController.front()?.finishSwipe(arg == "forward" ? -1 : 1)
+        case "sheetnew":
+            let xy = arg.split(separator: ",").compactMap { Double($0) }
+            if xy.count == 2 { _ = IdentityWindowController.front()?.openNew(at: NSPoint(x: xy[0], y: xy[1])) }
+        case "sheetpages":
+            let windows = NSApp.windows.compactMap { $0.isVisible ? $0.delegate as? IdentityWindowController : nil }
+            let lines = windows.map { w in w.pageTitles.enumerated().map { $0.offset == w.pageIndex ? "[\($0.element)]" : $0.element }.joined(separator: " > ") }
+            try? lines.joined(separator: "\n").write(toFile: arg, atomically: true, encoding: .utf8)
         // point:<x>,<y> rests the pointer there in the bar (the hover label), point:off leaves the line
         case "point": DevSnapshot.point(arg)
         // what settings' Remove / Unblock does for a name

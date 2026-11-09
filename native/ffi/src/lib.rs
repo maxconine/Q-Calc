@@ -23,6 +23,7 @@ mod games_ember; // ember & frost, trails and the 420/67/69 effects
 mod games_play; // WP-GAMES
 pub mod history;
 mod jsstr;
+mod matrix_grid; // native only: the matrix grid's text rules
 mod name_check;
 mod rates;
 pub mod records;
@@ -34,6 +35,7 @@ pub use cancel::CancelToken;
 pub use engine::Engine;
 pub use games::*;
 pub use games_ember::*;
+pub use matrix_grid::*;
 pub use name_check::NameCheck;
 pub use records::*;
 pub use worker::run_engine_calls_here;

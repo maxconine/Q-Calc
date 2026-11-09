@@ -134,7 +134,11 @@ pub fn finish(v: &Val, expr: &str) -> Option<Value> {
                 // a complex answer shows only when an i was typed; `sqrt(-1)` in plain real maths stays undefined
                 if typed_i(expr) {
                     Value {
-                        complex: Some(Complex { re: *re, im: *im }),
+                        complex: Some(Complex {
+                            re: *re,
+                            im: *im,
+                            ..Complex::default()
+                        }),
                         ..Value::text(format_complex(*re, *im))
                     }
                 } else {
@@ -160,6 +164,20 @@ pub fn finish(v: &Val, expr: &str) -> Option<Value> {
         }));
     }
     Some(out)
+}
+
+/// `finish(v, expr)` as a finite number, None for anything `finish` gives as text (or not at all), without
+/// building the `Value`: what a graph's samples need, thousands of times.
+pub fn finish_number(v: &Val) -> Option<f64> {
+    let n = match v {
+        Val::Num(n) => snap_int(*n),
+        Val::Bool(b) => f64::from(u8::from(*b)),
+        Val::Complex { re, im } if re.is_finite() && im.is_finite() && im.abs() <= 1e-12 => {
+            chop(*re)
+        }
+        _ => return None,
+    };
+    n.is_finite().then_some(n)
 }
 
 /// The scope an expression evaluates in.

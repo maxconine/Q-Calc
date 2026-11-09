@@ -31,7 +31,8 @@ final class ECBRates {
         // what the page reads as __QCALC_RATES, or nil when there's nothing fresh enough
         func pageValue(_ now: TimeInterval) -> [String: Any]? {
             guard let rates, now >= fetched, now - fetched < ECBRates.stale else { return nil }
-            return ["base": "EUR", "rates": rates.rates]
+            // date: the native app shows which day a rate is from (the web page ignores it)
+            return ["base": "EUR", "rates": rates.rates, "date": rates.date]
         }
 
         func json() -> Data? {
@@ -93,7 +94,11 @@ final class ECBRates {
             guard let n = rates[code], n.isFinite, isCode(code) else { return nil }
             return "\"\(code)\":\(n)"
         }
-        return "{\"base\":\"\(base)\",\"rates\":{\(rows.joined(separator: ","))}}"
+        var dated = ""
+        if let date = value["date"] as? String, date.count == 10, date.allSatisfy({ $0.isNumber || $0 == "-" }) {
+            dated = ",\"date\":\"\(date)\""
+        }
+        return "{\"base\":\"\(base)\",\"rates\":{\(rows.joined(separator: ","))}\(dated)}"
     }
 
     /// Checks now and then every hour; fetches only when a day has passed since the last try.

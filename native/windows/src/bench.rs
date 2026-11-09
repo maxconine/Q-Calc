@@ -14,7 +14,8 @@
 //!   text. `enter` presses ↵ after each input (and waits for the commit to land). The reply (and `out`) is
 //!   `{"ms": [...], "idx": [...], "timeouts": n, "wallMs": t, "n": n, "median": m, "p90": a, "p99": b}`.
 //! - commands: `{"cmd": "show"}`, `"hide"`, `"state"` (the line, the answer, the rows, visibility),
-//!   `{"cmd": "type", "text": "..."}` (posts WM_CHARs), `{"cmd": "key", "vk": 13}`, `"mem"` (working set and
+//!   `{"cmd": "type", "text": "..."}` (posts WM_CHARs), `{"cmd": "key", "vk": 13}` (with `"text": "ctrl+shift"`
+//!   those modifiers count as down for that key, `force_mods`), `"mem"` (working set and
 //!   private bytes), `"release"` (what 30 s hidden gives back, now), `"trim"` (that and the working-set trim), `"quit"`.
 //!
 //! The app also logs `ready` with ms since process creation (log.rs), for warm-launch timing.
@@ -397,6 +398,8 @@ pub fn extra(app: &crate::app::App, cmd: &str) -> Option<serde_json::Value> {
             Some(serde_json::json!({ "ok": true }))
         }
         "wordTip" => Some(crate::word_tip::debug(app)),
+        // a key with modifiers held, through the bar's handler (stacked_layout.rs)
+        _ if cmd.starts_with("mkey ") => Some(crate::stacked_layout::debug_key(cmd)),
         // update-e2e.ps1: the update loop's state and the Updates page's line; "update check" / "update install"
         // press its button
         "update" => Some(crate::update::debug(app)),
@@ -413,10 +416,58 @@ pub fn extra(app: &crate::app::App, cmd: &str) -> Option<serde_json::Value> {
             "model": app.model.settings.exponent_mode, "saved": app.store.settings.exponent_mode,
             "hint": app.model.hint, "shown": crate::answer::shown_answer(&app.model),
         })),
+        // the working (working.rs): its state; `working press` is Ctrl+W, `working copy <n>` clicks step n
+        "working" => Some(crate::working::debug(app)),
+        "working press" => {
+            crate::bg::post(crate::working::press);
+            Some(serde_json::json!({ "ok": true }))
+        }
+        c if c.starts_with("working copy ") => {
+            let i = c[13..].trim().parse::<usize>().unwrap_or(0);
+            crate::bg::post(move |app| {
+                crate::working::copy_step(&mut app.model, i);
+            });
+            Some(serde_json::json!({ "ok": true }))
+        }
         // share-e2e.ps1: messaging and sharing by name (share_debug.rs)
         c if c.starts_with("share ") => Some(crate::share_debug::cmd(app, &c[6..])),
+        // the formula sheets' windows (sheets.rs `debug`): sheetpages, sheetfilter:, sheetback, sheetclick:...
+        c if c.starts_with("sheet") => crate::sheets::debug(c),
+        c if c.starts_with("graph ") => Some(crate::graph::bench(app, &c[6..])),
         _ => crate::perf::cmd(cmd),
     }
+}
+
+thread_local! {
+    /// the modifiers the pipe's next `key` is pressed with, until that key-down is handled
+    static FORCED: std::cell::Cell<Option<(crate::keys::Mods, u8)>> = const { std::cell::Cell::new(None) };
+}
+
+/// The pipe's `key` with `text` naming modifiers (`ctrl+shift`, `alt`): they count as down for that key-down.
+#[cfg(windows)]
+pub fn force_mods(names: Option<&str>) {
+    let Some(names) = names.filter(|n| !n.is_empty()) else {
+        return;
+    };
+    let has = |m: &str| names.to_lowercase().split('+').any(|n| n.trim() == m);
+    let mods = crate::keys::Mods {
+        ctrl: has("ctrl"),
+        alt: has("alt"),
+        shift: has("shift"),
+        win: has("win"),
+    };
+    // asked for twice in one key-down (commands.rs, then the model)
+    FORCED.with(|f| f.set(Some((mods, 2))));
+}
+
+/// The forced modifiers for the key-down being handled, if the pipe pressed it.
+#[cfg(windows)]
+pub fn forced_mods() -> Option<crate::keys::Mods> {
+    FORCED.with(|f| {
+        let (mods, left) = f.get()?;
+        f.set((left > 1).then_some((mods, left - 1)));
+        Some(mods)
+    })
 }
 
 /// Process memory: (working set, private bytes), bytes.

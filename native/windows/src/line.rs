@@ -112,6 +112,14 @@ pub fn decorate(
         words,
         squiggle: None,
         offer: None,
+        angles: if message {
+            Vec::new()
+        } else {
+            qcalc_core::app::angle_marks::angle_spans(typed)
+                .into_iter()
+                .map(|(a, b)| (a as u32, b as u32))
+                .collect()
+        },
     };
     let mut completion = answer.completion.clone().filter(|c| !c.is_empty());
     if completion.is_none() {
@@ -393,7 +401,35 @@ fn step_prefix(m: &mut BarModel, dir: i32, engine: &EngineThread) {
     let Some(base) = base else { return };
     let typed = m.field.text().to_string();
     let sig = m.settings.sig_figs.clamp(2, 16);
+    // the answer as it shows now, for feet and inches
+    let shown = m
+        .line
+        .prefix_shown
+        .clone()
+        .or_else(|| m.live.as_ref().map(|a| a.display.clone()))
+        .unwrap_or_default();
     engine.submit(Lane::Input, move |cx| {
+        // native only: a length in feet or inches steps inches ↔ feet and inches ↔ feet
+        let shown_json = serde_json::to_string(&shown).ok()?;
+        if let Some((next, shown)) = cx
+            .engine
+            .call_json(
+                "engine/units".into(),
+                "stepFeetInches".into(),
+                format!("[{base},{shown_json},{dir},{sig}]"),
+            )
+            .ok()
+            .and_then(|s| feet_inches_step(&s))
+        {
+            return done(move |app| {
+                let m = &mut app.model;
+                if m.field.text() == typed {
+                    m.line.prefix_value = Some(next);
+                    m.line.prefix_shown = Some(shown);
+                    m.touch();
+                }
+            });
+        }
         let next = cx
             .engine
             .call_json(
@@ -422,6 +458,15 @@ fn step_prefix(m: &mut BarModel, dir: i32, engine: &EngineThread) {
             }
         })
     });
+}
+
+/// `stepFeetInches`'s reply: the next value (as JSON, for the next step) and how it shows; null when the answer
+/// isn't feet or inches.
+fn feet_inches_step(reply: &str) -> Option<(String, String)> {
+    let v: serde_json::Value = serde_json::from_str(reply).ok()?;
+    let display = v.get("display")?.as_str()?.to_string();
+    let value = v.get("value").filter(|v| v.is_object())?.to_string();
+    Some((value, display))
 }
 
 // ---- the d/dt chips ----
@@ -680,6 +725,7 @@ pub fn after(app: &mut crate::app::App) {
     let focused = app.bar.focused;
     let m = &mut app.model;
     m.field.keep_words = m.settings.keep_words;
+    m.field.set_stacked(m.settings.stacked_math);
     let t = m.field.text();
     let hash = t.bytes().fold(0xcbf2_9ce4_8422_2325u64, |h, b| {
         (h ^ u64::from(b)).wrapping_mul(0x100_0000_01b3)
@@ -813,6 +859,11 @@ mod paint {
             completion: m.line.completion.as_deref(),
             placeholder: &placeholder,
             caret_on: m.line.caret_on || !focused,
+            angle_mark: if m.settings.angle_mode == "rad" {
+                " rad"
+            } else {
+                "°"
+            },
         };
         view.paint(c, &m.field, field, focused, &x);
         // .live-example: the example's answer, muted at 70%
@@ -911,6 +962,15 @@ mod tests {
         assert!(!caret_tired(4999, 5000));
         assert!(caret_tired(5000, 5000));
         assert!(!caret_tired(60_000, 0));
+    }
+
+    #[test]
+    fn feet_and_inches_step_from_the_core() {
+        assert_eq!(feet_inches_step("null"), None);
+        let (value, shown) =
+            feet_inches_step(r#"{"value":{"magnitude":74},"display":"74 in"}"#).unwrap();
+        assert_eq!(shown, "74 in");
+        assert_eq!(value, r#"{"magnitude":74}"#);
     }
 
     #[test]

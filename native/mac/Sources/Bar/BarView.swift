@@ -126,6 +126,16 @@ struct BarView: View {
                 .padding(.horizontal, Theme.gutter)
                 .padding(.bottom, 8)
         }
+        if model.grid != nil {
+            MatrixGridPanel(model: model)
+        } else if let steps = model.live.matrix?.steps, !steps.isEmpty {
+            StepsChip(model: model, count: steps.count)
+            if model.stepsShown { StepsPanel(model: model) }
+        }
+        // native only: the working, ⌃W (Working.swift)
+        if model.workingShown, let steps = model.working, model.sysLines == nil, model.graph == nil {
+            WorkingPanel(model: model, steps: steps)
+        }
         if model.sysLines != nil {
             SystemPanel(model: model)
         }
@@ -187,6 +197,14 @@ private struct Composer: View {
             // Pi Day (native only): a small slice of pie in the gutter beside the line, all March 14
             if BarModel.piDay { PieSlice().padding(.leading, 3).offset(y: -1) }
         }
+        .overlay(alignment: .bottomTrailing) {
+            // native only: the line has working to show (Working.swift), clear of the clear tool's corner
+            if model.working != nil, model.hint == nil, model.tourLine == nil {
+                WorkingHint(model: model)
+                    .padding(.trailing, Theme.gutter + 44)
+                    .padding(.bottom, 3)
+            }
+        }
         .overlay {
             EdgeTools(model: model, angleRad: model.angleRad, fractions: model.fractions, sigFigMode: model.sigFigMode,
                       exponentMode: model.exponentMode, shown: hover || model.edgeFocus)
@@ -228,6 +246,8 @@ private struct Composer: View {
                         .accessibilityHidden(true)
                 }
                 InputField(model: model, placeholder: "")
+                    // the view reaches past the row so stacked fractions aren't cut off (the line stays in the middle)
+                    .padding(.vertical, -BarTextView.stackRoom)
             }
         }
     }
@@ -316,6 +336,14 @@ struct LiveAnswerView: View {
         } else if let solve = model.live.solve, solve.roots.count > 1 || (solve.roots.count == 1 && !solve.variable.isEmpty), !model.hasDual {
             // native only: one root too reads `D = 26` (its number alone is what's copied and what ans takes)
             SolveRoots(model: model, solve: solve)
+        } else if model.live.matrix?.message == true {
+            // native only: why a matrix has no answer (`determinant needs a square matrix`), as a message
+            Text(model.live.display)
+                .font(.system(size: Theme.body))
+                .foregroundStyle(Color.qMuted)
+                .truncationMode(.tail)
+                .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
+                .hoverTip(model.live.display)
         } else if model.live.improper {
             Text(model.live.display)
                 .font(.system(size: Theme.body))
@@ -328,15 +356,15 @@ struct LiveAnswerView: View {
                     Text("\(v) =").font(.system(size: Theme.answerPart)).foregroundStyle(Color.qMuted)
                         .padding(.trailing, 0.2 * Theme.answerPart)
                 }
-                AnswerButton(model: model, shown: Pretty.answer(exact), copy: exact, size: Theme.answerPart, help: "Copy exact value", trailingPad: 8)
+                AnswerButton(model: model, shown: model.live.matrix == nil ? Pretty.answer(exact) : model.pretty(exact), copy: exact, size: Theme.answerPart, help: "Copy exact value", trailingPad: 8)
                 Text("≈").font(.system(size: Theme.row)).foregroundStyle(Color.qMuted).accessibilityHidden(true)
-                AnswerButton(model: model, shown: model.pretty(model.exponentShown(model.live.display)), copy: model.live.display, size: Theme.answerPart, help: "Copy approximation", trailingPad: -8)
+                AnswerButton(model: model, shown: model.dualApprox, copy: model.live.display, size: Theme.answerPart, help: "Copy approximation", trailingPad: -8)
             }
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Answer")
         } else if !model.live.isBlank {
             AnswerButton(model: model, shown: model.pretty(model.shownAnswer), copy: model.shownAnswer, size: Theme.display,
-                         help: "Copy to clipboard · ⌘C also copies", trailingPad: -8)
+                         help: model.rateNote.map { "\($0) · click to copy" } ?? "Copy to clipboard · ⌘C also copies", trailingPad: -8)
                 .id(model.formIndex)
         }
     }
@@ -386,16 +414,27 @@ private struct RootButton: View {
     let copy: String
     @State private var hover = false
     var body: some View {
-        Button { model.copyAnswer(copy) } label: {
-            AnswerText(text: shown, size: Theme.display)
-                .foregroundStyle(hover ? Color.qAnswerHover : Color.qAnswer)
-                .padding(.vertical, 2).padding(.horizontal, 3)
-                .background(RoundedRectangle(cornerRadius: 4).fill(hover ? Color.qAnswer.opacity(0.12) : .clear))
+        let split = model.numberAndUnit(shown)
+        HStack(spacing: 0) {
+            Button { model.copyAnswer(copy) } label: {
+                AnswerText(text: split?.number ?? shown, size: Theme.display)
+                    .foregroundStyle(hover ? Color.qAnswerHover : Color.qAnswer)
+                    .padding(.vertical, 2).padding(.horizontal, 3)
+                    .background(RoundedRectangle(cornerRadius: 4).fill(hover ? Color.qAnswer.opacity(0.12) : .clear))
+            }
+            .buttonStyle(.plain)
+            .onHover { hover = $0 }
+            .hoverTip("Copy this solution")
+            .accessibilityLabel("Solution \(shown)")
+            if let unit = split?.unit {
+                AnswerText(text: unit, size: Theme.display)
+                    .fixedSize()
+                    .foregroundStyle(Color.qAnswer)
+                    .padding(.trailing, 3)
+                    .contentShape(Rectangle())
+                    .hoverTip(model.unitName(forAnswer: shown) ?? "")
+            }
         }
-        .buttonStyle(.plain)
-        .onHover { hover = $0 }
-        .hoverTip("Copy this solution")
-        .accessibilityLabel("Solution \(shown)")
     }
 }
 
@@ -476,14 +515,31 @@ private struct AnswerText: View {
     let text: String
     let size: CGFloat
     var body: some View {
-        RadicalText(text: text, size: size, tracking: Theme.displayTracking(size), monospaced: true)
-            .truncationMode(.tail)
-            // useFitFont: a long answer shrinks to fit before it is cut
-            .minimumScaleFactor(0.5)
+        // useFitFont: a long answer shrinks to fit before it is cut. The whole answer shrinks as one: a scale factor
+        // on the line let each piece shrink on its own, so a root's `3` in `√3/6` came out smaller than the rest
+        if #available(macOS 13, *) {
+            ViewThatFits(in: .horizontal) {
+                fitted(1)
+                fitted(0.85)
+                fitted(0.7)
+                RadicalText(text: text, size: size * 0.5, tracking: Theme.displayTracking(size * 0.5), monospaced: true)
+                    .truncationMode(.tail)
+            }
+        } else {
+            RadicalText(text: text, size: size, tracking: Theme.displayTracking(size), monospaced: true)
+                .truncationMode(.tail)
+                .minimumScaleFactor(0.5)
+        }
+    }
+
+    private func fitted(_ scale: CGFloat) -> some View {
+        RadicalText(text: text, size: size * scale, tracking: Theme.displayTracking(size * scale), monospaced: true)
+            .fixedSize()
     }
 }
 
-/// .live: the answer as a button — answer colour, hover lightens it and fills behind, 6 pt corners
+/// .live: the answer as a button — answer colour, hover lightens it and fills behind, 6 pt corners. A unit sits beside
+/// the block, not in it (native only)
 private struct AnswerButton: View {
     @ObservedObject var model: BarModel
     let shown: String
@@ -494,20 +550,37 @@ private struct AnswerButton: View {
     @State private var hover = false
 
     var body: some View {
+        let split = model.numberAndUnit(shown)
+        HStack(spacing: 0) {
+            button(split?.number ?? shown, unitFollows: split != nil)
+            if let unit = split?.unit {
+                AnswerText(text: unit, size: size)
+                    .fixedSize()
+                    .foregroundStyle(Color.qAnswer)
+                    .padding(.leading, 3)
+                    .padding(.trailing, 8)
+                    .contentShape(Rectangle())
+                    .hoverTip(model.unitName(forAnswer: shown) ?? "")
+            }
+        }
+        .padding(.trailing, trailingPad < 0 ? trailingPad : 0)
+    }
+
+    private func button(_ text: String, unitFollows: Bool) -> some View {
         Button {
             model.copyAnswer(copy)
             model.focusField?()
         } label: {
-            AnswerText(text: shown, size: size)
+            AnswerText(text: text, size: size)
                 .foregroundStyle(model.copied || hover ? Color.qAnswerHover : Color.qAnswer)
                 .padding(.vertical, 2)
-                .padding(.horizontal, 8)
+                .padding(.leading, 8)
+                .padding(.trailing, unitFollows ? 3 : 8)
                 .frame(minWidth: size == Theme.display ? 88 : 0, minHeight: 32, alignment: .trailing)
                 .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(hover ? Color.qAnswer.opacity(0.09) : .clear))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .padding(.trailing, trailingPad < 0 ? trailingPad : 0)
         .onHover { hover = $0 }
         .hoverTip(help)
         .accessibilityLabel("Answer \(shown)")
@@ -620,14 +693,9 @@ private struct EdgeTool<Label: View>: View {
             if tipShown { HoverTip.onScreen() }
             tipShown = false
             guard on else { return }
-            let wait = HoverTip.wait
-            if wait == 0 {
-                tipShown = true
-                HoverTip.onScreen()
-            } else {
-                DispatchQueue.main.asyncAfter(deadline: .now() + wait) {
-                    if hover { tipShown = true; HoverTip.onScreen() }
-                }
+            // 1.5 s every time, not the other labels' short wait
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                if hover { tipShown = true; HoverTip.onScreen() }
             }
         }
         .overlay(alignment: tipAbove ? .topTrailing : (alignLeft ? .bottomLeading : .bottomTrailing)) {
@@ -696,16 +764,26 @@ private struct HistoryRowView: View, Equatable {
         a.index == b.index && a.row == b.row && a.selected == b.selected && a.picked == b.picked
     }
 
+    /// the expression as typed; stacked as the bar draws it while "Stacked fractions and powers" is on
+    @ViewBuilder private var exprText: some View {
+        if StackedText.stacks(row.expr) {
+            StackedText(text: row.expr.replacingOccurrences(of: "sqrt(", with: "√("), size: Theme.body).frame(maxHeight: Theme.tapeRow).clipped()
+        } else {
+            RadicalText(text: row.expr.replacingOccurrences(of: "sqrt(", with: "√("), size: Theme.body)
+        }
+    }
+
     var body: some View {
         // grid: 1fr | minmax(120px, 46%), gap 12, padding 0 8, 36 pt rows with 6 pt corners
         GeometryReader { geo in
             HStack(spacing: 12) {
                 Button { model.insertFromRow(index, answer: false) } label: {
-                    RadicalText(text: row.expr.replacingOccurrences(of: "sqrt(", with: "√("), size: Theme.body)
+                    exprText
                         .foregroundStyle(exprHover || picked == 0 ? Color.qInk : Color.qMuted)
                         .lineLimit(1)
                         .truncationMode(.tail)
-                        .padding(.vertical, 4)
+                        // a stacked expression takes the whole row's height
+                        .padding(.vertical, StackedText.stacks(row.expr) ? 0 : 4)
                         .padding(.horizontal, picked == 0 ? 4 : 0)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(PickedMark(on: picked == 0))
@@ -777,7 +855,7 @@ private struct HistoryRowView: View, Equatable {
 
     private func answer(_ text: String, insert: Bool, picked: Bool, fill: Bool = false,
                         tip: String = "Insert the answer at the cursor") -> some View {
-        AnswerCell(text: text, picked: picked, fill: fill, tip: tip) { model.insertFromRow(index, answer: true) }
+        AnswerCell(text: text, split: model.numberAndUnit(text), unitName: model.unitName(forAnswer: text), picked: picked, fill: fill, tip: tip) { model.insertFromRow(index, answer: true) }
             .onDrag { NSItemProvider(object: row.display as NSString) }
     }
 }
@@ -785,6 +863,9 @@ private struct HistoryRowView: View, Equatable {
 /// .tape-a: 17 pt answer colour, -0.015 em, lighter on hover
 private struct AnswerCell: View {
     let text: String
+    /// the unit is its own part, with its name as its label (native only); a click on either inserts
+    let split: (number: String, unit: String)?
+    let unitName: String?
     let picked: Bool
     /// a lone answer is the whole column (display: block), so its pick ring is too
     var fill = false
@@ -792,21 +873,38 @@ private struct AnswerCell: View {
     let action: () -> Void
     @State private var hover = false
     var body: some View {
-        Button(action: action) {
-            RadicalText(text: text, size: Theme.row, tracking: -0.015 * Theme.row, monospaced: true)
-                .foregroundStyle(hover ? Color.qAnswerHover : Color.qAnswer)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .padding(.vertical, 4)
-                .padding(.horizontal, picked ? 4 : 0)
-                .frame(maxWidth: fill ? .infinity : nil, alignment: .trailing)
-                .background(PickedMark(on: picked))
-                .contentShape(Rectangle())
+        HStack(spacing: 0) {
+            Button(action: action) {
+                part(split?.number ?? text)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: fill ? .infinity : nil, alignment: .trailing)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .hoverTip(tip)
+            .accessibilityLabel("Answer \(text)")
+            if let unit = split?.unit {
+                Button(action: action) {
+                    part(unit)
+                        .fixedSize()
+                        .padding(.leading, 4)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .hoverTip(unitName ?? "")
+                .accessibilityHidden(true)
+            }
         }
-        .buttonStyle(.plain)
+        .padding(.vertical, 4)
+        .padding(.horizontal, picked ? 4 : 0)
+        .background(PickedMark(on: picked))
         .onHover { hover = $0 }
-        .hoverTip(tip)
-        .accessibilityLabel("Answer \(text)")
+    }
+
+    private func part(_ s: String) -> some View {
+        RadicalText(text: s, size: Theme.row, tracking: -0.015 * Theme.row, monospaced: true)
+            .foregroundStyle(hover ? Color.qAnswerHover : Color.qAnswer)
     }
 }
 
@@ -869,7 +967,11 @@ private struct HelpSheet: View {
             ([key("copyAnswer"), key("copyLine")].filter { !$0.isEmpty }.joined(separator: " "), "copy answer / line"),
             ("⌥↑ ⌥↓", "unit prefix"),
             (key("angle"), "degrees / radians"), (key("fraction"), "fractions"), (key("sigFigs"), "sig figs from input"),
-            (key("clear"), "clear history"), (key("settings"), "settings"), ("esc", "hide"),
+            (key("exponent"), "exponent form"), (key("forms"), "answer forms"), (key("working"), "show working"), ("⇥", "complete"),
+            (key("clear"), "clear history"), (key("settings"), "settings"),
+            // native only: the matrix grid and a matrix answer's row operations
+            ([key("matrixGrid"), key("matrixSteps")].filter { !$0.isEmpty }.joined(separator: " "), "matrix grid / steps"),
+            ("esc", "hide"),
         ]
     }
 
@@ -892,17 +994,30 @@ private struct HelpSheet: View {
                 // native only: a bar too narrow for both columns' labels (they'd end in "…" at 340 pt) lists them
                 // in one column, the keys first, scrolling past 12 rows
                 ViewThatFits(in: .horizontal) {
-                    twoColumns
+                    threeColumns
                     ScrollView(.vertical) { column(left + right, keyWidth: 96).padding(.vertical, 8) }
                         // past 12 rows, half of the 12th shows, so it reads as more below
                         .frame(height: left.count + right.count > 12 ? 11.5 * 28 + 8 : CGFloat(left.count + right.count) * 28 + 16)
                 }
             } else {
-                twoColumns
+                // the list is too long to stand at full height
+                ScrollView(.vertical) { twoColumns }.frame(height: 11.5 * 28 + 8)
             }
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Shortcuts")
+    }
+
+    // native only: what to type in two columns, so a longer list needn't make a taller sheet
+    private var threeColumns: some View {
+        let half = (right.count + 1) / 2
+        // the hotkey's long chord would widen the keys' column, so it heads the next
+        return HStack(alignment: .top, spacing: 0) {
+            column(Array(left.dropFirst()), keyWidth: 64)
+            column(Array(left.prefix(1)) + right.prefix(half), keyWidth: 96)
+            column(Array(right.dropFirst(half)), keyWidth: 96)
+        }
+        .padding(.vertical, 8)
     }
 
     private var twoColumns: some View {

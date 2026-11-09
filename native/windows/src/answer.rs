@@ -4,7 +4,9 @@
 //! - **What shows** (`specs`, pure): the steady answer (the last real one, dimmed, while an edit is half typed:
 //!   `isEditOf`, `STEADY_MS`), a solve's message, a solve's roots (`x =` copies them all, each root copies itself at
 //!   full precision, `, …` past `MAX_SHOWN_ROOTS`), an improper conversion as a message, the dual `exact ≈ decimal`
-//!   (each half its own copy), or the one answer in the form Tab picked / the exact-or-approx setting.
+//!   (each half its own copy), or the one answer in the form Tab picked / the exact-or-approx setting. Native
+//!   only: an answer that is one number and a unit (`14.9 ms`) is two pieces, the number the copy block and the
+//!   unit beside it, whose hover names it (`number_and_unit`, `unit_name`).
 //! - **Fit** (`measure`): the pieces at their sizes; a long answer shrinks to half before it is cut (`useFitFont`).
 //!   Layouts are cached by text and size, so a keystroke that doesn't change the answer makes none.
 //! - **Copy**: a click on a piece (`hit`) or Ctrl+C copies, unitless when "copy unitless" is on; the "✓ copied"
@@ -145,6 +147,10 @@ pub fn shown_answer(m: &BarModel) -> String {
 
 /// The engine's own pretty text for the live display; `pretty_text` for anything else.
 fn pretty(m: &BarModel, s: &str) -> String {
+    // native only: a matrix answer's own minus signs, roots and powers (matrices.rs)
+    if let Some(p) = crate::matrices::pretty(m, s) {
+        return p;
+    }
     match &m.live {
         Some(a) if s == a.display && !a.pretty.is_empty() => radicals_if_math(&a.pretty),
         _ => pretty_text(s),
@@ -154,6 +160,10 @@ fn pretty(m: &BarModel, s: &str) -> String {
 /// `Pretty.answer` (TextRules.swift): `prettyAnswer` (a real minus, grouped digits), and in plain maths the web's
 /// radicals as text: `2sqrt(2)` reads `2√2`, a long argument keeps its brackets, `pi` is π.
 pub fn pretty_text(s: &str) -> String {
+    // native only: a matrix answer (the tape's too) as the live one is written
+    if s.starts_with('[') || s.starts_with('λ') || s.starts_with("span{") {
+        return crate::matrix_text::pretty(&radicals(s));
+    }
     // a solve's `±2sqrt(2)`: the sign kept the rest from reading as maths, so the root stayed plain text
     if let Some(sign) = s.chars().next().filter(|c| matches!(c, '±' | '∓'))
         && s.len() > sign.len_utf8()
@@ -240,6 +250,8 @@ pub struct Spec {
     pub ink: Ink,
     pub copy: Option<String>,
     pub pad: (f32, f32),
+    /// a unit beside its number: its hover names it, and a click copies nothing
+    pub unit: Option<String>,
 }
 
 fn spec(
@@ -255,7 +267,75 @@ fn spec(
         ink,
         copy,
         pad,
+        unit: None,
     }
+}
+
+/// An answer piece that copies `copy`: one number and a unit is the number's block with the unit beside it
+/// (BarView.swift `AnswerButton`, `RootButton`), anything else one piece.
+fn answer_specs(out: &mut Vec<Spec>, text: String, font: Font, copy: String, pad: (f32, f32)) {
+    match number_and_unit(&text) {
+        Some((number, unit)) => {
+            out.push(spec(number, font, Ink::Answer, Some(copy), (pad.0, 3.0)));
+            out.push(Spec {
+                unit: Some(unit.clone()),
+                ..spec(unit, font, Ink::Answer, None, (3.0, pad.1))
+            });
+        }
+        None => out.push(spec(text, font, Ink::Answer, Some(copy), pad)),
+    }
+}
+
+/// an answer and its number and unit, when it splits
+type Split = (String, Option<(String, String)>);
+
+thread_local! {
+    /// the last answers split into a number and a unit (or not), so a paint makes no new split
+    static SPLITS: RefCell<Vec<Split>> = const { RefCell::new(Vec::new()) };
+}
+
+/// `14.9 ms` as its number and its unit (native only); None when the answer isn't one number and a unit.
+pub fn number_and_unit(shown: &str) -> Option<(String, String)> {
+    if let Some(hit) = SPLITS.with(|s| {
+        s.borrow()
+            .iter()
+            .find(|(t, _)| t == shown)
+            .map(|(_, split)| split.clone())
+    }) {
+        return hit;
+    }
+    let number = core_answer::unitless_answer(shown);
+    let split = (number != shown && !number.is_empty())
+        .then(|| shown.strip_prefix(number.as_str()))
+        .flatten()
+        .map(|unit| (number.clone(), unit.trim().to_string()))
+        .filter(|(_, unit)| !unit.is_empty());
+    SPLITS.with(|s| {
+        let mut s = s.borrow_mut();
+        if s.len() >= 16 {
+            s.remove(0);
+        }
+        s.push((shown.to_string(), split.clone()));
+    });
+    split
+}
+
+/// What a unit is called, for its hover label (native only): `ms` is millisecond, `m/s^2` meter/second^2.
+pub fn unit_name(unit: &str) -> Option<String> {
+    let lead = "1 ";
+    let line = format!("{lead}{unit}");
+    let spans = qcalc_core::app::word_names::word_names(&line, &[], &[], false);
+    if spans.is_empty() {
+        return None;
+    }
+    let mut u: Vec<u16> = line.encode_utf16().collect();
+    for s in spans.iter().rev() {
+        if s.end > s.start && s.end <= u.len() {
+            u.splice(s.start..s.end, s.name.encode_utf16());
+        }
+    }
+    let named = String::from_utf16_lossy(&u);
+    named.strip_prefix(lead).map(str::to_string)
 }
 
 /// The line is turning into `graph …` / `plot …` (a space after the word): the slot stays empty for its panel.
@@ -285,6 +365,10 @@ pub fn specs(m: &BarModel) -> Vec<Spec> {
                 (PAD_X, 0.0),
             )]
         };
+    }
+    // `matrix 3x3`: what ↵ opens, until the grid is open (matrices.rs, native only)
+    if let Some(h) = crate::matrices::slot_hint(m) {
+        return vec![spec(h, Font::Body, Ink::Muted, None, (PAD_X, 0.0))];
     }
     // Alt+↑/↓ stepped the answer's SI prefix (line.rs): that reading, copyable, until the line changes
     if let Some(p) = &m.line.prefix_shown {
@@ -347,13 +431,13 @@ pub fn specs(m: &BarModel) -> Vec<Spec> {
                 if k > 0 {
                     out.push(spec(",", Font::Display, Ink::Answer, None, (0.0, 4.0)));
                 }
-                out.push(spec(
+                answer_specs(
+                    &mut out,
                     radicals_if_math(&core_answer::pretty_roots(&labels[k])),
                     Font::Display,
-                    Ink::Answer,
-                    Some(format!("{root}")),
+                    format!("{root}"),
                     (3.0, 3.0),
-                ));
+                );
             }
             if solve.more || parts.len() < a.display.split(", ").count() {
                 out.push(spec(", …", Font::Display, Ink::Answer, None, (0.0, 0.0)));
@@ -361,7 +445,8 @@ pub fn specs(m: &BarModel) -> Vec<Spec> {
             return out;
         }
     }
-    if a.improper {
+    // why a matrix has no answer (`determinant needs a square matrix`), as a message (native only)
+    if a.improper || a.matrix.as_ref().is_some_and(|v| v.message) {
         return vec![spec(&a.display, Font::Body, Ink::Muted, None, (PAD_X, 0.0))];
     }
     // `x =` before a single root (the web's varLabel)
@@ -383,31 +468,38 @@ pub fn specs(m: &BarModel) -> Vec<Spec> {
         && let Some(e) = exact(m)
     {
         // .live-dual: two 20 pt halves around a 17 pt ≈, each its own copy
-        out.push(spec(
+        answer_specs(
+            &mut out,
             pretty_text(e),
             Font::Part,
-            Ink::Answer,
-            Some(e.to_string()),
+            e.to_string(),
             (PAD_X, PAD_X),
-        ));
+        );
         out.push(spec("≈", Font::Row, Ink::Muted, None, (0.0, 0.0)));
-        out.push(spec(
-            pretty(m, &crate::exponent::shown(m, &a.display)),
+        let d = crate::exponent::shown(m, &a.display);
+        // a matrix answer's shared `λ = ` is written once, before the exact half (native only)
+        let tail = crate::matrices::without_dual_label(m, Some(e), d.clone());
+        answer_specs(
+            &mut out,
+            if tail.len() < d.len() {
+                crate::matrix_text::pretty(&radicals(&tail))
+            } else {
+                pretty(m, &d)
+            },
             Font::Part,
-            Ink::Answer,
-            Some(a.display.clone()),
+            a.display.clone(),
             (PAD_X, 0.0),
-        ));
+        );
         return out;
     }
     let shown = shown_answer(m);
-    out.push(spec(
+    answer_specs(
+        &mut out,
         pretty(m, &shown),
         Font::Display,
-        Ink::Answer,
-        Some(shown),
+        shown,
         (PAD_X, 0.0),
-    ));
+    );
     out
 }
 
@@ -421,6 +513,8 @@ pub struct Item {
     pub ink: Ink,
     pub copy: Option<String>,
     pub pad: (f32, f32),
+    /// a unit beside its number (its hover names it)
+    pub unit: Option<String>,
     /// the piece's box (padding included), once placed
     pub rect: Rect,
 }
@@ -563,6 +657,7 @@ fn lay(gfx: &Gfx, specs: &[Spec], scale: f32, cut: f32) -> Option<Vec<Item>> {
                 ink: s.ink,
                 copy: s.copy.clone(),
                 pad: s.pad,
+                unit: s.unit.clone(),
                 rect: Rect::default(),
             })
         })
@@ -575,7 +670,7 @@ fn total(items: &[Item]) -> f32 {
 
 /// The answer's pieces fitted to `max_w`: at their sizes, else shrunk (to half at most), else the one piece cut.
 pub fn measure(gfx: &Gfx, m: &BarModel, max_w: f32) -> AnswerLayout {
-    let specs = specs(m);
+    let mut specs = specs(m);
     if specs.is_empty() || max_w <= 0.0 {
         return AnswerLayout::default();
     }
@@ -586,6 +681,7 @@ pub fn measure(gfx: &Gfx, m: &BarModel, max_w: f32) -> AnswerLayout {
             ink: Ink::Muted,
             copy: None,
             pad: (7.0, 7.0 + 6.0),
+            unit: None,
             rect: Rect::default(),
         })
     } else {
@@ -602,6 +698,12 @@ pub fn measure(gfx: &Gfx, m: &BarModel, max_w: f32) -> AnswerLayout {
         let scale = (room / natural).clamp(0.5, 1.0) * 0.995;
         if let Some(shrunk) = lay(gfx, &specs, scale, 0.0) {
             items = shrunk;
+        }
+        // a number and its unit that still don't fit are cut as one
+        if total(&items) > room && specs.len() == 2 && specs[1].unit.is_some() {
+            let unit = specs.pop().map(|s| s.text).unwrap_or_default();
+            specs[0].text = format!("{} {unit}", specs[0].text);
+            specs[0].pad.1 = 0.0;
         }
         if total(&items) > room && specs.len() == 1 {
             let pads = specs[0].pad.0 + specs[0].pad.1;
@@ -641,11 +743,11 @@ pub fn hit(l: &AnswerLayout, x: f32, y: f32) -> Option<String> {
         .and_then(|i| i.copy.clone())
 }
 
-/// The piece of the answer a copy-click at (x, y) would take: its index.
+/// The piece of the answer a copy-click at (x, y) would take, or the unit it names: its index.
 pub fn item_at(l: &AnswerLayout, x: f32, y: f32) -> Option<usize> {
     l.items
         .iter()
-        .position(|i| i.copy.is_some() && i.rect.contains(x, y))
+        .position(|i| (i.copy.is_some() || i.unit.is_some()) && i.rect.contains(x, y))
 }
 
 /// A piece's tooltip, from what the pieces are (copies, muted, text), as LiveAnswer.tsx / BarView.swift title them.
@@ -671,8 +773,15 @@ pub fn piece_tip(pieces: &[(bool, bool, &str)], i: usize) -> Option<&'static str
     Some("Copy to clipboard · Ctrl+C also copies")
 }
 
-/// The tooltip for piece `i` of the answer as laid out.
-pub fn tip(l: &AnswerLayout, i: usize) -> Option<&'static str> {
+/// The tooltip for piece `i` of the answer as laid out: a unit's name, else what a click does.
+pub fn tip(l: &AnswerLayout, i: usize) -> Option<String> {
+    if let Some(unit) = &l.items.get(i)?.unit {
+        return unit_name(unit);
+    }
+    copy_tip(l, i).map(str::to_string)
+}
+
+fn copy_tip(l: &AnswerLayout, i: usize) -> Option<&'static str> {
     // among several pieces, the one muted piece that copies nothing is the dual's ≈ (specs)
     let pieces: Vec<(bool, bool, &str)> = l
         .items
@@ -773,6 +882,7 @@ pub fn landed(
     m.answer.closed = closed.map(|job| Closed { text: typed, job });
     poll(app);
     crate::typst_row::refresh(&mut app.model, &app.engine);
+    crate::matrices::refresh_steps(&mut app.model, &app.engine);
 }
 
 /// The closed form's waker: a WM_ENGINE to the host, whose handler polls again.
@@ -918,7 +1028,7 @@ pub fn copy_selection(m: &mut BarModel) {
     ));
 }
 
-fn flash(m: &mut BarModel) {
+pub fn flash(m: &mut BarModel) {
     m.answer.copied = true;
     m.touch();
     timer::start(timer::COPIED, COPIED_MS);
@@ -1056,6 +1166,7 @@ mod tests {
             expr: String::new(),
             phrase: false,
             improper: false,
+            matrix: None,
             json: "{}".into(),
         }
     }

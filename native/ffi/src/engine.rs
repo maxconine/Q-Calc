@@ -52,10 +52,6 @@ pub(crate) struct State {
 
 // ---- small conversions ----
 
-fn opt_string(v: Option<Json>) -> Option<String> {
-    v.and_then(|v| v.as_str().map(str::to_string))
-}
-
 fn u32_of(v: &Json, key: &str) -> Option<u32> {
     v.get(key)?.as_f64().filter(|x| *x >= 0.0).map(|x| x as u32)
 }
@@ -80,6 +76,15 @@ fn graph_options_json(o: &GraphOptions, settings: &EvalOptions) -> Json {
     if let Some(a) = o.aspect {
         out["aspect"] = json!(a);
     }
+    if let Some(y) = o.y_center {
+        out["yCenter"] = json!(y);
+    }
+    if o.x_log {
+        out["xLog"] = json!(true);
+    }
+    if o.surface {
+        out["surface"] = json!(true);
+    }
     out
 }
 
@@ -96,6 +101,37 @@ fn function_def_of(v: Option<&Json>) -> Option<FunctionDef> {
             .collect(),
         body: v.get("body")?.as_str()?.to_string(),
     })
+}
+
+/// A list of critical points as the engine writes them (`criticalPoints`).
+fn critical_points(v: Option<&Json>) -> Vec<CriticalPoint> {
+    let num = |x: Option<&Json>| x.and_then(Json::as_f64);
+    v.and_then(|v| v.as_array())
+        .map(|a| {
+            a.iter()
+                .filter_map(|p| {
+                    Some(CriticalPoint {
+                        x: num(p.get("x"))?,
+                        y: num(p.get("y"))?,
+                        kind: match p.get("kind")?.as_str()? {
+                            "min" => CriticalKind::Min,
+                            "max" => CriticalKind::Max,
+                            "x-intercept" => CriticalKind::XIntercept,
+                            "y-intercept" => CriticalKind::YIntercept,
+                            "saddle" => CriticalKind::Saddle,
+                            "vertical tangent" => CriticalKind::VerticalTangent,
+                            "point" => CriticalKind::Point,
+                            "endpoint" => CriticalKind::Endpoint,
+                            "open endpoint" => CriticalKind::OpenEndpoint,
+                            "intersection" => CriticalKind::Intersection,
+                            _ => CriticalKind::Critical,
+                        },
+                        z: num(p.get("z")),
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 fn graph_result(v: &Json) -> Option<GraphResult> {
@@ -116,25 +152,7 @@ fn graph_result(v: &Json) -> Option<GraphResult> {
                 .collect()
         })
         .unwrap_or_default();
-    let critical_points = v
-        .get("criticalPoints")
-        .and_then(Json::as_array)
-        .map(|a| {
-            a.iter()
-                .filter_map(|p| {
-                    Some(CriticalPoint {
-                        x: num(p.get("x"))?,
-                        y: num(p.get("y"))?,
-                        kind: match p.get("kind")?.as_str()? {
-                            "min" => CriticalKind::Min,
-                            "max" => CriticalKind::Max,
-                            _ => CriticalKind::Critical,
-                        },
-                    })
-                })
-                .collect()
-        })
-        .unwrap_or_default();
+    let critical_points = critical_points(v.get("criticalPoints"));
     let contours: Vec<ContourLevel> = v
         .get("contours")
         .and_then(Json::as_array)
@@ -158,11 +176,30 @@ fn graph_result(v: &Json) -> Option<GraphResult> {
                 .collect()
         })
         .unwrap_or_default();
-    // the readout functions (`y`, `z`) don't cross; graph_y and graph_z stand for them
+    let surface = v.get("surface").filter(|g| g.is_object()).and_then(|g| {
+        Some(SurfaceGrid {
+            nx: u32_of(g, "nx")?,
+            ny: u32_of(g, "ny")?,
+            x_lo: num(g.get("xLo"))?,
+            x_hi: num(g.get("xHi"))?,
+            y_lo: num(g.get("yLo"))?,
+            y_hi: num(g.get("yHi"))?,
+            z: g
+                .get("z")?
+                .as_array()?
+                .iter()
+                .map(|v| v.as_f64().unwrap_or(f64::NAN))
+                .collect(),
+            z_lo: num(g.get("zLo"))?,
+            z_hi: num(g.get("zHi"))?,
+        })
+    });
+    // the readout functions (`y`, `z`) don't cross; graph_y and graph_z stand for them, and the grid is its own
     let mut json = v.clone();
     if let Some(o) = json.as_object_mut() {
         o.remove("y");
         o.remove("z");
+        o.remove("surface");
     }
     Some(GraphResult {
         label: intent
@@ -198,6 +235,7 @@ fn graph_result(v: &Json) -> Option<GraphResult> {
         contours,
         error: v.get("error").and_then(Json::as_str).map(str::to_string),
         json: json.to_string(),
+        surface,
     })
 }
 
@@ -241,6 +279,8 @@ impl State {
             time_zone: self.config.time_zone.clone(),
             // the apps ask `blank_span` once typing pauses; a keystroke's answer doesn't wait for it
             no_squiggle: true,
+            // the native apps save `graph …` lines, so ↑ or a click on the row brings the graph back
+            keep_graphs: true,
             ..live::LiveRequest::default()
         }
     }
@@ -376,6 +416,9 @@ impl State {
             expr: a.expr.clone(),
             phrase: a.phrase,
             improper: a.improper,
+            matrix: from_line(from_js)
+                .and_then(|l| l.matrix.as_ref())
+                .and_then(MatrixView::shown),
             json: line.map_or_else(
                 || serde_json::to_string(&LineResult::blank(&a.expr)).unwrap_or_default(),
                 |l| serde_json::to_string(l).unwrap_or_default(),
@@ -591,7 +634,7 @@ impl State {
     ) -> Option<GraphResult> {
         call(
             "engine/graph",
-            "buildGraph",
+            "buildNativeGraph",
             &[json!(input), graph_options_json(options, settings)],
         )
         .as_ref()
@@ -835,17 +878,20 @@ impl Engine {
         let fallback = GraphWindow {
             lo: -10.0,
             hi: 10.0,
+            y_center: None,
         };
         self.on(fallback, move |_| {
+            // native: an implicit curve framed whole, lines through points, equations solved for y
             call(
                 "engine/graph",
-                "graphHome",
+                "graphNativeHome",
                 &[json!(input), graph_options_json(&options, &settings)],
             )
             .and_then(|v| {
                 Some(GraphWindow {
-                    lo: v.get(0)?.as_f64()?,
-                    hi: v.get(1)?.as_f64()?,
+                    lo: v.get("lo")?.as_f64()?,
+                    hi: v.get("hi")?.as_f64()?,
+                    y_center: v.get("yCenter").and_then(Json::as_f64),
                 })
             })
             .unwrap_or(fallback)
@@ -935,14 +981,52 @@ impl Engine {
         })
     }
 
+    /// Native only: where the graph's curves cross one another over [lo, hi] (each input a `graph …` line),
+    /// as `intersection` points.
+    pub fn graph_intersections(
+        &self,
+        inputs: Vec<String>,
+        lo: f64,
+        hi: f64,
+        settings: EvalOptions,
+    ) -> Vec<CriticalPoint> {
+        self.on(Vec::new(), move |_| {
+            let options = graph_options_json(
+                &GraphOptions {
+                    domain_lo: None,
+                    domain_hi: None,
+                    sample_count: None,
+                    find_roots: false,
+                    aspect: None,
+                    y_center: None,
+                    surface: false,
+                    x_log: false,
+                },
+                &settings,
+            );
+            critical_points(
+                call(
+                    "engine/graph",
+                    "graphNativeIntersections",
+                    &[json!(inputs), options, json!(lo), json!(hi)],
+                )
+                .as_ref(),
+            )
+        })
+    }
+
     /// The Typst document for the preview (`typstDocument`).
     pub fn typst_source(&self, expr: String, answer: String, solved_for: String) -> Option<String> {
         self.on(None, move |_| {
-            opt_string(call(
-                "lib/typstMath",
-                "typstDocument",
-                &[json!(expr), json!(answer), json!(solved_for)],
-            ))
+            qcalc_core::app::typst_math::native_typst_document(&expr, &answer, &solved_for)
+        })
+    }
+
+    /// The preview document for a line whose answer is already Typst math (`MatrixView::typst`): after ⇒ when
+    /// `arrow`, else after `=`. Native only.
+    pub fn typst_source_math(&self, expr: String, answer_typst: String, arrow: bool) -> Option<String> {
+        self.on(None, move |_| {
+            qcalc_core::app::typst_math::typst_document_math(&expr, &answer_typst, arrow)
         })
     }
 

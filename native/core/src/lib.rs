@@ -6,6 +6,7 @@
 //! The entry point is [`evaluate_sheet`]: lines plus settings and context in, one [`LineResult`] per line out,
 //! the same JSON the TS engine's `evaluateSheet` returns.
 
+pub mod complex_line;
 pub mod eval;
 pub mod evaluate;
 pub mod format;
@@ -44,6 +45,9 @@ pub mod measure;
 // ---- WP-SOLVE ----
 pub mod isolate;
 pub mod solve;
+// native only: the working for a line
+pub(crate) mod exact;
+pub mod steps;
 pub mod system;
 pub mod system_numeric;
 pub mod unit_solve;
@@ -57,7 +61,9 @@ pub mod jsstr;
 pub mod sums;
 
 // ---- WP-GRAPH ----
+pub mod feet_inches;
 pub mod graph;
+pub mod graph_native;
 
 pub use evaluate::{evaluate_line, evaluate_sheet};
 pub use types::{EvaluateOptions, LineResult, Value};

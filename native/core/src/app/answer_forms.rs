@@ -82,6 +82,17 @@ pub fn answer_forms(src: &FormSource) -> Vec<AnswerView> {
     static NOT_SHOWN: Lazy = Lazy::new(|| js(r"undefined|∞", ""));
     let value = &src.value;
     let sig_figs = src.sig_figs;
+    // native only: a complex answer's rectangular and polar forms
+    if value.complex.is_some() {
+        return crate::complex_line::forms(value, sig_figs)
+            .into_iter()
+            .filter(|(display, _)| *display != src.display)
+            .map(|(display, v)| AnswerView {
+                display,
+                value: Some(v),
+            })
+            .collect();
+    }
     if value.kind != ValueKind::Number || !value.n.is_finite() {
         return Vec::new();
     }

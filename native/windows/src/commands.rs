@@ -80,7 +80,7 @@ pub fn parse(raw: &str) -> Option<Command> {
         if core_games::is_periodic_command(&t) {
             return Some(Command::Periodic);
         }
-        if let Some(target) = identities::identity_target_for(&t) {
+        if let Some(target) = identities::native_target_for(&t) {
             return Some(Command::Identities {
                 id: target.sheet.id,
                 section: target.section,
@@ -175,8 +175,100 @@ const STEMS: [&str; 41] = [
     "cycles",
 ];
 
-const MORE_STEMS: [&str; 10] = [
+const MORE_STEMS: [&str; 11] = [
     "message", "tutorial", "tour", "skip", "hello", "hiya", "send", "paste", "share", "open",
+    // `chat` is the same word as `messages` (MessageThreads.swift's guard)
+    "chat",
+];
+
+/// The first words of the core's `NATIVE_COMMANDS` sheets.
+const SHEET_STEMS: [&str; 86] = [
+    "ee",
+    "phasor",
+    "ac",
+    "power",
+    "three",
+    "transformer",
+    "rlc",
+    "filter",
+    "bode",
+    "resonance",
+    "damping",
+    "op",
+    "operational",
+    "transistor",
+    "diode",
+    "bjt",
+    "mosfet",
+    "semiconductor",
+    "digital",
+    "logic",
+    "boolean",
+    "de",
+    "adc",
+    "dac",
+    "chem",
+    "bio",
+    "thermo",
+    "e",
+    "electromagnetism",
+    "maxwell",
+    "optics",
+    "lenses",
+    "sound",
+    "relativity",
+    "quantum",
+    "nuclear",
+    "moles",
+    "ph",
+    "hardy",
+    "michaelis",
+    "continuum",
+    "strength",
+    "solid",
+    "fluid",
+    "stress",
+    "strain",
+    "beam",
+    "torsion",
+    "bernoulli",
+    "control",
+    "fourier",
+    "ctfs",
+    "dtfs",
+    "euler",
+    "special",
+    "complex",
+    "polar",
+    "ct",
+    "continuous",
+    "dt",
+    "discrete",
+    "dft",
+    "laplace",
+    "z",
+    "exact",
+    "geometry",
+    "area",
+    "volume",
+    "statistics",
+    "stats",
+    "probability",
+    "linear",
+    "linalg",
+    "matrix",
+    "mechanics",
+    "kinematics",
+    "circuit",
+    "electronics",
+    "taylor",
+    "maclaurin",
+    "vector",
+    "cheat",
+    "formula",
+    "sheets",
+    "physics",
+    "unit",
 ];
 
 fn could_be(trimmed: &str) -> bool {
@@ -189,8 +281,10 @@ fn could_be(trimmed: &str) -> bool {
         && (STEMS
             .iter()
             .chain(&MORE_STEMS)
+            .chain(&SHEET_STEMS)
             .any(|s| first.starts_with(s))
-            || first == "howdy")
+            || first == "howdy"
+            || identities::part_could_start(&first))
 }
 
 /// The words in the answer slot while `command` is typed (`BarCommand.hint`). `message` is the message line's
@@ -284,6 +378,17 @@ mod ui {
             Command::Message { .. } | Command::Share { .. } | Command::Thread(_)
         ) {
             m.line.completion = messaging::completion(&typed);
+        }
+        // native only: a sheet's short word still finishes to its full name (`formula` to `formulas`)
+        if matches!(command, Command::Identities { .. }) {
+            let names = qcalc_core::app::completion::CompletionNames {
+                variables: Vec::new(),
+                functions: Vec::new(),
+                ans: false,
+                contacts: Vec::new(),
+            };
+            let rest = qcalc_core::app::completion::completion_for(&typed, &names);
+            m.line.completion = (!rest.is_empty()).then_some(rest);
         }
         m.command = Some(Shown { command, message });
         engine.cancel(Lane::Live);
@@ -666,14 +771,15 @@ mod tests {
         assert_eq!(parse("  Periodic   Table "), Some(Command::Periodic));
         match parse("idt summation") {
             Some(Command::Identities { id, section, hint }) => {
-                assert_eq!(id, "identities");
-                assert!(section > 0);
+                // a part opens alone (native_target_for)
+                assert_eq!(id, "identities: Summation");
+                assert_eq!(section, 0);
                 assert!(hint.contains("summation"), "{hint}");
             }
             other => panic!("{other:?}"),
         }
         assert!(
-            matches!(parse("trig"), Some(Command::Identities { id, .. }) if id == "identities")
+            matches!(parse("trig"), Some(Command::Identities { id, .. }) if id == "identities: Trig")
         );
         assert!(
             matches!(parse("constants"), Some(Command::Identities { id, .. }) if id == "constants")
@@ -682,10 +788,10 @@ mod tests {
             matches!(parse("conversion"), Some(Command::Identities { id, .. }) if id == "conversions")
         );
         assert!(
-            matches!(parse("metric prefixes"), Some(Command::Identities { id, .. }) if id == "conversions")
+            matches!(parse("metric prefixes"), Some(Command::Identities { id, .. }) if id == "conversions: Metric prefixes")
         );
         assert!(
-            matches!(parse("derivatives"), Some(Command::Identities { id, .. }) if id == "calculus")
+            matches!(parse("derivatives"), Some(Command::Identities { id, .. }) if id == "calculus: Derivatives")
         );
         assert_eq!(parse("games"), Some(Command::Games));
         assert_eq!(parse("Connect 4"), Some(Command::Game(GameKind::Connect4)));
@@ -825,6 +931,7 @@ mod timing {
                 name: "max".into()
             }))
         );
+        assert_eq!(parse("chat max"), parse("messages max"));
         // `message max hi` is still a message, and `messages max hi` nothing
         assert!(matches!(
             parse("message max hi"),

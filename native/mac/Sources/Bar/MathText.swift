@@ -18,6 +18,8 @@ struct Typeset {
 struct TypesetRequest: Equatable {
     /// the line, chained through `ans` as it evaluates (`chainedExpr`)
     let expr: String
+    /// the number `ans` stands for, written out in place of the word
+    let ans: String?
     /// the exact form beside the shown answer, when the answer slot shows the plain one
     let exact: String?
     let display: String
@@ -25,13 +27,21 @@ struct TypesetRequest: Equatable {
     let solvedFor: String
     /// the slot says something that isn't an answer (no real solution, a command), so nothing follows `=`
     let message: Bool
+    /// a matrix answer already written as Typst math (native only)
+    var matrix: MatrixAsk? = nil
+}
+
+/// A matrix answer's Typst math, and whether it follows ⇒ (it names its parts) or `=`.
+struct MatrixAsk: Equatable {
+    let typst: String
+    let arrow: Bool
 }
 
 /// Compiles on its own serial queue, so neither the main thread nor the engine thread waits on Typst.
 final class MathTypesetter {
-    private let queue = DispatchQueue(label: "qcalc.typst", qos: .userInitiated)
+    fileprivate let queue = DispatchQueue(label: "qcalc.typst", qos: .userInitiated)
     private let engine: Engine
-    private var renderer: TypstRenderer?
+    fileprivate var renderer: TypstRenderer?
     /// only touched on `queue`
     private lazy var logic = AppLogic(engine: engine)
 
@@ -43,6 +53,13 @@ final class MathTypesetter {
             self?.renderer = r
             _ = r.warmUp()
         }
+    }
+
+    /// native only: a line through `ans` with a unit in its answer (`ans sec`) shows what the number and unit are,
+    /// unless that's all it says (`ans` alone)
+    private func showsAnsUnit(_ r: TypesetRequest, written: String) -> Bool {
+        guard written != r.expr, !r.message, written.replacingOccurrences(of: ",", with: "") != r.display.replacingOccurrences(of: ",", with: "") else { return false }
+        return logic.string("lib/answer", "unitlessAnswer", [r.display]) != r.display
     }
 
     enum Outcome {
@@ -62,11 +79,23 @@ final class MathTypesetter {
         queue.async { [weak self] in
             guard let self, let renderer = self.renderer, self.lock.withLock({ self.latest == r }) else { return }
             let outcome: Outcome
-            if !self.logic.bool("lib/typstMath", "typstPreviewUseful", [r.expr]) {
+            let expr = r.ans.flatMap { self.logic.string("lib/chain", "ansWrittenOut", [r.expr, $0]) } ?? r.expr
+            if let m = r.matrix {
+                // a matrix answer always earns the row: it says what one line of text can't
+                if let doc = self.engine.typstSourceMath(expr: expr, answerTypst: m.typst, arrow: m.arrow) {
+                    do {
+                        outcome = .drawn(try renderer.paths(source: doc), doc: doc)
+                    } catch {
+                        outcome = .failed(doc: doc)
+                    }
+                } else {
+                    outcome = .hidden
+                }
+            } else if !self.logic.bool("lib/typstMath", "typstPreviewUseful", [expr]), !self.showsAnsUnit(r, written: expr) {
                 outcome = .hidden
             } else {
                 let answer = r.message ? "" : self.logic.string("lib/typstMath", "typstAnswer", [r.exact ?? NSNull(), r.display]) ?? ""
-                if let doc = self.engine.typstSource(expr: r.expr, answer: answer, solvedFor: r.solvedFor) {
+                if let doc = self.engine.typstSource(expr: expr, answer: answer, solvedFor: r.solvedFor) {
                     do {
                         outcome = .drawn(try renderer.paths(source: doc), doc: doc)
                     } catch {
@@ -79,12 +108,38 @@ final class MathTypesetter {
             DispatchQueue.main.async { done(outcome) }
         }
     }
+
+    /// native only: the working panel's steps (Working.swift), each its own document, on the same queue and
+    /// renderer as the preview; nil for a step Typst can't compile
+    func paths(_ docs: [String], done: @escaping ([TypstPaths?]) -> Void) {
+        queue.async { [weak self] in
+            guard let renderer = self?.renderer else { return }
+            let out = docs.map { try? renderer.paths(source: $0) }
+            DispatchQueue.main.async { done(out) }
+        }
+    }
+}
+
+extension MathTypesetter {
+    /// Several documents at once, in order (the steps' matrices); nil for one that doesn't compile or is empty.
+    func render(_ docs: [String], done: @escaping ([TypstPaths?]) -> Void) {
+        queue.async { [weak self] in
+            let renderer = self?.renderer
+            let out = docs.map { doc -> TypstPaths? in
+                guard !doc.isEmpty, let renderer else { return nil }
+                return try? renderer.paths(source: doc)
+            }
+            DispatchQueue.main.async { done(out) }
+        }
+    }
 }
 
 /// The preview row under the bar: the paths shrunk to fit (`max-width: 100%`, `max-height: 72px`), centred, in
 /// `--ink`, at 40% while stale.
 struct MathPreview: View {
     let typeset: Typeset
+    /// set against the left edge rather than centred (a step's matrix, beside its operation)
+    var leading = false
 
     var body: some View {
         let paths = typeset.paths
@@ -93,9 +148,9 @@ struct MathPreview: View {
             // an AppKit view, not a Canvas: a Canvas renders into GPU surfaces that SwiftUI keeps per size, about
             // 100 MB of them after a session of typing
             if #available(macOS 13, *) {
-                FitLayout(width: w, height: h) { PathsView(paths: paths, width: w) }
+                FitLayout(width: w, height: h, leading: leading) { PathsView(paths: paths, width: w) }
             } else {
-                FitFrame(width: w, height: h) { PathsView(paths: paths, width: w) }
+                FitFrame(width: w, height: h, leading: leading) { PathsView(paths: paths, width: w) }
             }
         }
         .opacity(typeset.stale ? 0.4 : 1)
@@ -109,6 +164,7 @@ struct MathPreview: View {
     private struct FitLayout: Layout {
         let width: CGFloat
         let height: CGFloat
+        var leading = false
 
         private func scale(_ available: CGFloat?) -> CGFloat {
             min(1, (available ?? width) / max(width, 1), 72 / max(height, 1))
@@ -121,7 +177,8 @@ struct MathPreview: View {
 
         func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
             let s = scale(bounds.width)
-            subviews.first?.place(at: CGPoint(x: bounds.midX, y: bounds.minY), anchor: .top,
+            subviews.first?.place(at: CGPoint(x: leading ? bounds.minX : bounds.midX, y: bounds.minY),
+                                  anchor: leading ? .topLeading : .top,
                                   proposal: ProposedViewSize(width: width * s, height: height * s))
         }
     }
@@ -131,6 +188,7 @@ struct MathPreview: View {
     private struct FitFrame<Content: View>: View {
         let width: CGFloat
         let height: CGFloat
+        var leading = false
         @ViewBuilder let content: () -> Content
         @State private var available: CGFloat?
 
@@ -138,7 +196,7 @@ struct MathPreview: View {
             let s = min(1, (available ?? width) / max(width, 1), 72 / max(height, 1))
             content()
                 .frame(width: width * s, height: height * s)
-                .frame(maxWidth: .infinity, alignment: .top)
+                .frame(maxWidth: .infinity, alignment: leading ? .topLeading : .top)
                 .background(GeometryReader { g in
                     Color.clear.preference(key: AvailableWidth.self, value: g.size.width)
                 })
@@ -271,6 +329,21 @@ struct MathPreview: View {
                                                                 miterLimit: CGFloat(miterLimit), dash: dash.map { CGFloat($0) },
                                                                 dashPhase: CGFloat(dashPhase)))
             }
+        }
+    }
+}
+
+extension MathTypesetter {
+    /// native only: the graph export's equations, each typeset as the preview writes it (no answer); nil for one
+    /// Typst can't write or compile, which the export then prints as text
+    func equations(_ exprs: [String], done: @escaping ([TypstPaths?]) -> Void) {
+        queue.async { [weak self] in
+            guard let self else { return }
+            let out = exprs.map { expr -> TypstPaths? in
+                guard let renderer = self.renderer, let doc = self.engine.typstSource(expr: expr, answer: "", solvedFor: "") else { return nil }
+                return try? renderer.paths(source: doc)
+            }
+            DispatchQueue.main.async { done(out) }
         }
     }
 }

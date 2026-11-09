@@ -24,7 +24,7 @@ pub use crate::chem::{GasConstant, MolarMass, chem_answer, gas_constant, molar_m
 // ported: `crate::solve`, `crate::isolate`, `crate::system` (the guess is a name → text list, as the TS record)
 pub use crate::isolate::{NamedSolve, isolate_variable, parse_named_solve};
 pub use crate::solve::{SolveContext, Solved, format_solve, is_equation, solve_equation};
-pub use crate::system::{SystemCall, parse_system_call, solve_system_call};
+pub use crate::system::{SystemCall, parse_equation_list, parse_system_call, solve_system_call};
 // `solveWithUnitsOne` takes the TS ctx (solve context, stored names, default units, sig figs)
 pub use crate::unit_solve::{
     UnitCtx, UnitSolved, clearly_units_blank, isolate_with_units, solve_with_units_one,

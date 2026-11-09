@@ -923,6 +923,19 @@ fn prec_add(a: &Qty, b: &Qty, si: f64) -> Option<Prec> {
     }
     let unc = a.si.abs() * a.prec.as_ref().map_or(0.0, |p| p.rel)
         + b.si.abs() * b.prec.as_ref().map_or(0.0, |p| p.rel);
+    // native only: with no ± anywhere, a sum keeps the coarsest last place it was given (`12.0 kg + 3.15 kg` is
+    // 15.2 kg), as sig-fig mode does for plain numbers
+    if unc == 0.0
+        && si != 0.0
+        && SUM_PLACES.with(std::cell::Cell::get)
+        && let Some(sig) = sum_sig(a, b, si)
+    {
+        return Some(Prec {
+            sig,
+            rel: 0.0,
+            digits: None,
+        });
+    }
     if unc.is_nan() || unc <= 0.0 || si == 0.0 {
         return Some(lost());
     }
@@ -931,6 +944,50 @@ fn prec_add(a: &Qty, b: &Qty, si: f64) -> Option<Prec> {
         rel: unc / si.abs(),
         digits: None,
     })
+}
+
+thread_local! {
+    static SUM_PLACES: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Native only: unit sums keep their last place (`12.0 kg + 3.15 kg` is 15.2 kg) while `f` runs, for sig-fig mode.
+pub fn with_sum_places<T>(on: bool, f: impl FnOnce() -> T) -> T {
+    struct Restore(bool);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            SUM_PLACES.with(|s| s.set(self.0));
+        }
+    }
+    let _restore = Restore(SUM_PLACES.with(|s| s.replace(on)));
+    f()
+}
+
+/// The place of a measured part's last digit, in SI (0 for an exact part). A unit that isn't a power of ten from
+/// SI (feet) is placed to the nearest power of ten.
+fn last_place(q: &Qty) -> Option<f64> {
+    let Some(p) = q.prec.as_ref() else {
+        return Some(0.0);
+    };
+    if p.sig.is_nan() || p.rel.is_nan() || p.rel != 0.0 {
+        return None;
+    }
+    if p.sig.is_infinite() || q.si == 0.0 {
+        return Some(0.0);
+    }
+    Some(jsmath::pow(
+        10.0,
+        jsmath::log10(q.si.abs()).floor() - p.sig + 1.0,
+    ))
+}
+
+/// The sig figs a sum's coarsest last place leaves it; None when it has none (both exact) or less than one.
+fn sum_sig(a: &Qty, b: &Qty, si: f64) -> Option<f64> {
+    let place = last_place(a)?.max(last_place(b)?);
+    if place <= 0.0 || !place.is_finite() {
+        return None;
+    }
+    let sig = jsmath::log10(si.abs()).floor() - jsmath::log10(place).round() + 1.0;
+    (sig >= 1.0).then_some(sig)
 }
 
 /// Exponents are exact; an uncertain one is not modelled.

@@ -93,6 +93,11 @@ impl MathUnit {
         })
     }
 
+    /// native only (`crate::complex_line`): what one of this unit is in SI.
+    pub fn si_factor(&self) -> f64 {
+        self.normalize(1.0)
+    }
+
     fn equal_base(&self, other: &[f64; 9]) -> bool {
         self.dims
             .iter()

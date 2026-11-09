@@ -15,6 +15,8 @@ use crate::jsre::{self, Lazy};
 pub struct CurrencyRates {
     pub base: String,
     pub rates: BTreeMap<String, Json>,
+    /// Native only: the day the rates are from (`2026-11-05`), when the table says.
+    pub date: Option<String>,
 }
 
 impl CurrencyRates {
@@ -29,6 +31,7 @@ impl CurrencyRates {
                 .as_object()
                 .map(|o| o.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
                 .unwrap_or_default(),
+            date: v.get("date").and_then(Json::as_str).map(str::to_string),
         })
     }
 
@@ -40,6 +43,7 @@ impl CurrencyRates {
                 .iter()
                 .map(|(k, v)| (k.clone(), serde_json::json!(v)))
                 .collect(),
+            date: None,
         }
     }
 }

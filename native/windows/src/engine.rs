@@ -70,6 +70,8 @@ pub enum Lane {
     Input,
     /// a selected part of the line answered on its own (selection.rs)
     Selection,
+    /// the working for the line, once it rests (working.rs)
+    Working,
     /// history load / save, warm-up and anything that must not be dropped: never replaced, never stale
     Misc,
 }

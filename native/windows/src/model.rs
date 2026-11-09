@@ -80,12 +80,16 @@ pub struct BarModel {
     pub graph: Option<crate::graph::GraphState>,
     /// the `sys N` rows (systems.rs), once ↵ opened them
     pub systems: Option<crate::systems::SysState>,
+    /// the matrix grid and the row-operation steps (matrices.rs, native only)
+    pub matrix: crate::matrices::MatrixState,
     /// the live answer's own state: steady, Tab's forms, the closed form, the copied flash (answer.rs)
     pub answer: crate::answer::AnswerState,
     /// the tape's picks, scroll, deleted row, cheat sheet (history.rs)
     pub tape: crate::history::TapeState,
     /// the typeset row (typst_row.rs)
     pub typeset: crate::typst_row::TypesetState,
+    /// the number `ans` stands for, as it inserts
+    pub ans_value: Option<String>,
     /// the easter eggs' gates, settle and CRT look (effects.rs)
     pub eggs: crate::effects::Eggs,
     /// the input line's decorations, completion, draft, examples, chips (line.rs)
@@ -101,6 +105,8 @@ pub struct BarModel {
     pub tour: crate::tour::Tour,
     /// the edge tools' hover and tips (edge.rs)
     pub edge: crate::edge::EdgeState,
+    /// the working for the line and its panel, Ctrl+W (working.rs)
+    pub working: crate::working::WorkingState,
 }
 
 impl BarModel {
@@ -122,9 +128,11 @@ impl BarModel {
             to_clipboard: None,
             graph: None,
             systems: None,
+            matrix: Default::default(),
             answer: Default::default(),
             tape: Default::default(),
             typeset: Default::default(),
+            ans_value: None,
             eggs: crate::effects::Eggs::default(),
             line: crate::line::LineState::default(),
             command: None,
@@ -133,6 +141,7 @@ impl BarModel {
             cards: crate::messaging::Cards::default(),
             tour: crate::tour::Tour::default(),
             edge: crate::edge::EdgeState::default(),
+            working: Default::default(),
         }
     }
 
@@ -211,6 +220,9 @@ impl BarModel {
     pub fn evaluate_live(&mut self, engine: &EngineThread) {
         crate::systems::follow(self, engine);
         crate::graph::follow(self, engine);
+        if crate::matrices::follow(self, engine) {
+            return;
+        }
         if crate::commands::live(self, engine) {
             return;
         }
@@ -227,6 +239,7 @@ impl BarModel {
         let now = now_ms();
         let view = self.view(now);
         let options = self.options();
+        let figs = f64::from(options.sig_figs);
         engine.submit(Lane::Live, move |cx| {
             use crate::perf::{Stage, mark};
             mark(Stage::JobStart);
@@ -245,12 +258,15 @@ impl BarModel {
             mark(Stage::Live);
             let closed = crate::answer::closed_form(&cx.engine, &answer);
             let (deco, completion) = crate::line::decorate(&typed, &context, &answer);
+            let ans_value = crate::word_tip::ans_value(&context, figs);
             mark(Stage::Decorated);
             done(move |app| {
+                app.model.ans_value = ans_value;
                 crate::answer::landed(app, typed.clone(), answer, chained, closed);
                 if app.model.field.text() == typed {
                     crate::line::landed(&mut app.model, &typed, deco, completion);
                 }
+                crate::working::landed(app, &typed, context);
             })
         });
     }
@@ -480,6 +496,13 @@ impl BarModel {
         const RIGHT: u32 = 0x27;
         const DOWN: u32 = 0x28;
         const DELETE: u32 = 0x2E;
+        let clipboard = match crate::matrices::key_down(self, vk, mods, engine, clipboard) {
+            Ok(outcome) => return outcome,
+            Err(clipboard) => clipboard,
+        };
+        if let Some(outcome) = crate::graph::key_down(self, vk, mods, engine) {
+            return outcome;
+        }
         let clipboard = match crate::systems::key_down(self, vk, mods, engine, clipboard) {
             Ok(outcome) => return outcome,
             Err(clipboard) => clipboard,
@@ -498,12 +521,19 @@ impl BarModel {
         if crate::exponent::key_down(self, vk, mods, engine) {
             return Outcome::Handled;
         }
+        // ↑ ↓ between a stacked fraction's top and bottom, before the limits' and the history's
+        if crate::stacked_layout::key_down(self, vk, mods) {
+            return Outcome::Handled;
+        }
         if let Some(outcome) = crate::line::key_down(self, vk, mods, engine) {
             return outcome;
         }
         let shift = mods.shift;
         match vk {
             ESC => {
+                if crate::working::escape(self) {
+                    return Outcome::Handled;
+                }
                 if std::mem::take(&mut self.tape.help) {
                     self.changed = true;
                     return Outcome::Handled;
@@ -599,6 +629,9 @@ impl BarModel {
 
     /// WM_CHAR.
     pub fn char16(&mut self, unit: u16, engine: &EngineThread) {
+        if crate::matrices::char16(self, unit, engine) || crate::graph::char16(self, unit, engine) {
+            return;
+        }
         if crate::systems::char16(self, unit, engine) {
             return;
         }
@@ -609,7 +642,9 @@ impl BarModel {
 
     /// Text from the IME or a paste.
     pub fn insert_text(&mut self, text: &str, engine: &EngineThread) {
-        if crate::systems::insert_text(self, text, engine) {
+        if crate::matrices::insert_text(self, text, engine)
+            || crate::systems::insert_text(self, text, engine)
+        {
             return;
         }
         self.field.compose(text);

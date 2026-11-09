@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 
 use qcalc_core::types::{
-    AngleMode, EvaluateOptions, LineKind, LineResult, Meas, SolveOutcome as CoreOutcome,
+    AngleMode, EvaluateOptions, LineKind, LineResult, MatrixParts, Meas, SolveOutcome as CoreOutcome,
     TimeLetters as CoreTimeLetters, UserFunction, ValueKind,
 };
 use serde::{Deserialize, Serialize};
@@ -442,8 +442,135 @@ pub struct LiveAnswer {
     /// `improper unit conversion`.
     #[uniffi(default)]
     pub improper: bool,
+    /// A matrix answer in labeled parts, with its row-operation steps. Native only.
+    #[uniffi(default)]
+    pub matrix: Option<MatrixView>,
     /// The whole TS `LineResult` as JSON.
     pub json: String,
+}
+
+/// One labeled part of a matrix answer: `P = [1 -1; 1 2]`.
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct MatrixPart {
+    /// `P`, `λ = 5`, `x`, or empty.
+    pub label: String,
+    /// The value to a few digits, without its label.
+    pub display: String,
+    /// The exact value, when it says more (`(5 ± sqrt(33))/2`).
+    pub exact: Option<String>,
+    /// What storing the part keeps; None when it can't be stored.
+    pub literal: Option<String>,
+    /// Words after the value: `(any t, s)`.
+    pub note: Option<String>,
+    /// Typst math for the part, label included.
+    pub typst: String,
+    pub exact_typst: Option<String>,
+}
+
+/// One row operation and the matrix after it; a closing remark (`det = …`) has an empty `display`.
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct MatrixStep {
+    /// `R₂ → R₂ − 3R₁`, `Start`, or a remark.
+    pub op: String,
+    /// The operation as Typst math.
+    pub op_typst: String,
+    /// The matrix after it, exact where it can be, `|` before an augmented column: `[1 2 | 5; 0 -2 | -9]`.
+    pub display: String,
+    /// The matrix as Typst math (`mat(delim: "[", augment: #2, …)`); empty for a remark.
+    pub typst: String,
+    /// A whole preview document: the operation, then the matrix.
+    pub document: String,
+    /// The matrix alone as a preview document, for a view that writes the operation itself; empty for a remark.
+    #[uniffi(default)]
+    pub matrix_document: String,
+}
+
+/// A matrix answer laid out for typesetting.
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct MatrixView {
+    pub parts: Vec<MatrixPart>,
+    pub steps: Vec<MatrixStep>,
+    /// The whole answer, parts a quad apart, as a preview document (`TypstRenderer.render(source:)`).
+    pub document: String,
+    /// The same with each part's exact form; None when no part has one.
+    pub exact_document: Option<String>,
+    /// The answer alone as Typst math (no document around it), for `Engine::typst_source_math`.
+    #[uniffi(default)]
+    pub typst: String,
+    #[uniffi(default)]
+    pub exact_typst: Option<String>,
+    /// Some part has a label (`P = …`), so the preview sets the answer after ⇒ rather than `=`.
+    #[uniffi(default)]
+    pub labeled: bool,
+    /// Worth a typeset row of its own: a matrix in it, or several parts (a lone number reads fine as text).
+    #[uniffi(default)]
+    pub typeset: bool,
+    /// The answer is why there is none (`determinant needs a square matrix`): words, shown as a message.
+    #[uniffi(default)]
+    pub message: bool,
+}
+
+impl MatrixView {
+    /// None when there is nothing to typeset (a bare `[k 2; 3 k]` shows blank).
+    pub(crate) fn shown(m: &MatrixParts) -> Option<Self> {
+        (!m.parts.is_empty() || !m.steps.is_empty() || m.message).then(|| m.into())
+    }
+}
+
+impl From<&MatrixParts> for MatrixView {
+    fn from(m: &MatrixParts) -> Self {
+        use qcalc_core::app::typst_math::math_document;
+        MatrixView {
+            parts: m
+                .parts
+                .iter()
+                .map(|p| MatrixPart {
+                    label: p.label.clone(),
+                    display: p.display.clone(),
+                    exact: p.exact.clone(),
+                    literal: p.literal.clone(),
+                    note: p.note.clone(),
+                    typst: p.typst.clone(),
+                    exact_typst: p.exact_typst.clone(),
+                })
+                .collect(),
+            steps: m
+                .steps
+                .iter()
+                .map(|s| MatrixStep {
+                    op: s.op.clone(),
+                    op_typst: s.op_typst.clone(),
+                    display: s.display.clone(),
+                    typst: s.typst.clone(),
+                    document: math_document(&if s.typst.is_empty() {
+                        s.op_typst.clone()
+                    } else {
+                        format!("{} quad {}", s.op_typst, s.typst)
+                    }),
+                    matrix_document: if s.typst.is_empty() {
+                        String::new()
+                    } else {
+                        math_document(&s.typst)
+                    },
+                })
+                .collect(),
+            document: math_document(&m.typst(false)),
+            exact_document: m
+                .parts
+                .iter()
+                .any(|p| p.exact_typst.is_some())
+                .then(|| math_document(&m.typst(true))),
+            typst: m.typst(false),
+            exact_typst: m
+                .parts
+                .iter()
+                .any(|p| p.exact_typst.is_some())
+                .then(|| m.typst(true)),
+            labeled: m.parts.iter().any(|p| !p.label.is_empty()),
+            typeset: m.parts.len() > 1 || m.parts.iter().any(|p| p.typst.contains("mat(")),
+            message: m.message,
+        }
+    }
 }
 
 impl LiveAnswer {
@@ -468,6 +595,7 @@ impl LiveAnswer {
             expr: expr.to_string(),
             phrase: false,
             improper: false,
+            matrix: None,
             json: serde_json::to_string(&LineResult::blank(expr)).unwrap_or_default(),
         }
     }
@@ -489,6 +617,9 @@ pub struct LineAnswer {
     pub variable: Option<String>,
     /// A unit answer as text the reader reads back, for chaining `ans`.
     pub quantity: Option<String>,
+    /// A matrix answer in labeled parts, with its row-operation steps. Native only.
+    #[uniffi(default)]
+    pub matrix: Option<MatrixView>,
     /// The whole `LineResult` as the TS engine's JSON, for fields not typed here yet.
     pub json: String,
 }
@@ -503,6 +634,7 @@ pub(crate) fn line_answer(r: &LineResult) -> LineAnswer {
         unit: r.value.as_ref().and_then(|v| v.unit.clone()),
         variable: r.variable.clone(),
         quantity: r.quantity.clone(),
+        matrix: r.matrix.as_ref().and_then(MatrixView::shown),
         json: serde_json::to_string(r).unwrap_or_default(),
     }
 }
@@ -673,6 +805,15 @@ pub struct GraphOptions {
     /// The plot's height over its width, so a contour plot's x and y share a scale.
     #[uniffi(default)]
     pub aspect: Option<f64>,
+    /// The y a plot of x and y (implicit curve, contour) centres on; none is 0, or the bounds' middle.
+    #[uniffi(default)]
+    pub y_center: Option<f64>,
+    /// Also sample a surface's grid of z for the 3D view (`GraphResult::surface`).
+    #[uniffi(default = false)]
+    pub surface: bool,
+    /// Sample a curve evenly in log x, for a logarithmic x axis (a domain above 0).
+    #[uniffi(default = false)]
+    pub x_log: bool,
 }
 
 /// `graph f(x) = …`'s function, for the caller to register.
@@ -695,6 +836,20 @@ pub enum CriticalKind {
     Min,
     Max,
     Critical,
+    XIntercept,
+    YIntercept,
+    /// A surface's saddle.
+    Saddle,
+    /// Where an implicit curve turns vertical.
+    VerticalTangent,
+    /// A point a line was drawn through.
+    Point,
+    /// Where a curve cut off by `{a ≤ x ≤ b}` stops, the end kept.
+    Endpoint,
+    /// Where a curve cut off by `{a < x < b}` stops, the end left out.
+    OpenEndpoint,
+    /// Where two of the graph's curves cross.
+    Intersection,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, uniffi::Record)]
@@ -702,6 +857,23 @@ pub struct CriticalPoint {
     pub x: f64,
     pub y: f64,
     pub kind: CriticalKind,
+    /// A surface's height there.
+    pub z: Option<f64>,
+}
+
+/// A surface on a grid for the 3D view: `z[j * (nx + 1) + i]` at x = x_lo + i·(x_hi − x_lo)/nx (y likewise),
+/// NaN where undefined; `z_lo`…`z_hi` is the height the view frames.
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct SurfaceGrid {
+    pub nx: u32,
+    pub ny: u32,
+    pub x_lo: f64,
+    pub x_hi: f64,
+    pub y_lo: f64,
+    pub y_hi: f64,
+    pub z: Vec<f64>,
+    pub z_lo: f64,
+    pub z_hi: f64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
@@ -742,6 +914,8 @@ pub struct GraphResult {
     pub contour_levels: bool,
     pub error: Option<String>,
     pub json: String,
+    /// When asked for (`GraphOptions::surface`) and the graph is a surface.
+    pub surface: Option<SurfaceGrid>,
 }
 
 /// Whether the currency rates are usable.
@@ -868,4 +1042,6 @@ pub struct GraphTick {
 pub struct GraphWindow {
     pub lo: f64,
     pub hi: f64,
+    /// Where an implicit curve's y centres, when not 0 (pass it back as `GraphOptions::y_center`).
+    pub y_center: Option<f64>,
 }

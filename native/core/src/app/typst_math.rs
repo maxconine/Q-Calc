@@ -249,9 +249,53 @@ pub fn typst_document(expr: &str, answer: &str, solved_for: &str) -> Option<Stri
     } else {
         math
     };
-    Some(format!(
+    Some(math_document(&body))
+}
+
+/// The preview with its answer already written as Typst math (a matrix answer's parts, native only): after `=`,
+/// or after ⇒ when the answer names its own parts (`P = …  D = …`).
+pub fn typst_document_math(expr: &str, answer: &str, arrow: bool) -> Option<String> {
+    let math = preview_math(expr);
+    if math.is_empty() {
+        return None;
+    }
+    let body = if answer.is_empty() {
+        math
+    } else if arrow {
+        format!("{math} quad arrow.r.double quad {answer}")
+    } else {
+        format!("{math} = {answer}")
+    };
+    Some(math_document(&body))
+}
+
+/// A preview document holding one line of Typst math, as `typst_document` writes them.
+pub fn math_document(body: &str) -> String {
+    format!(
         "#import \"/macros.typ\": *\n#set page(width: auto, height: auto, margin: 2pt, fill: none)\n#set text(size: 18pt, fill: black)\n$ {body} $\n"
-    ))
+    )
+}
+
+/// native only: the document the apps render, `typst_document` (the web's) with two looks of their own: tan⁻¹(x),
+/// not (tan⁻¹)(x), whose brackets are only there so the copied form calls nothing, and a root's bar clear of what's
+/// under it, as Desmos leaves it, held up by an empty box.
+pub fn native_typst_document(expr: &str, answer: &str, solved_for: &str) -> Option<String> {
+    // `x^2 + y; x=5; y=2` reads x² + y = 27 (x = 5, y = 2): the answer belongs to the expression
+    if let Some((head, definitions)) = crate::evaluate::split_line_definitions(expr) {
+        let doc = native_typst_document(head, answer, solved_for)?;
+        let written: Vec<String> = definitions
+            .iter()
+            .map(|(name, value)| format!("{} = {}", to_typst_math(name), to_typst_math(value)))
+            .collect();
+        return Some(doc.replacen(" $\n", &format!(" quad ({}) $\n", written.join(", ")), 1));
+    }
+    let doc = typst_document(expr, answer, solved_for)?.replace("(#tan1)", "#tan1 ");
+    Some(
+        jsre::replace_all(lazy!(r"(?<![A-Za-z0-9_\x22])sqrt\("), &doc, |_| {
+            "sqrt(#box(height: 0.95em);".into()
+        })
+        .into_owned(),
+    )
 }
 
 // names that typeset differently from how they're typed: a function set upright with its own spacing, a big
@@ -285,6 +329,15 @@ pub fn typst_preview_useful(expr: &str) -> bool {
     let math = preview_math(&typed);
     if math.is_empty() {
         return false;
+    }
+    // native only: polar and `j` lines say something the bar doesn't
+    if jsre::test(
+        lazy!(r"∠|(?<![A-Za-z0-9_.])polar\(|\b(?:in|to)\s+(?:polar|rect)\b"),
+        &typed,
+    ) || (jsre::test(lazy!(r"(?<![A-Za-z_])\d*\.?\d*j(?![A-Za-z_])"), &typed)
+        && jsre::test(lazy!(r"[/^(]"), &typed))
+    {
+        return true;
     }
     // `50 mph in km/h`, `3 ft + 2 in to cm`: a conversion reads fine as typed
     if is_conversion(&typed) {
@@ -683,6 +736,8 @@ pub fn to_typst_math(expr: &str) -> String {
     if s.is_empty() {
         return s;
     }
+    // native only: `j1060` is j times 1060, not j with a subscript
+    s = jsre::replace_all(lazy!(r"(?<![A-Za-z0-9_])j(?=\.?\d)"), &s, |_| "j ".into()).into_owned();
     if jsre::test(lazy!(r"\\[a-zA-Z]+"), &s) {
         s = crate::latex::latex_to_ascii(&s);
     }

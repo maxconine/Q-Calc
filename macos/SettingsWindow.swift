@@ -113,6 +113,7 @@ struct GeneralSettingsView: View {
                 toggle("Copy Typst compatible", "Equations copied from the bar paste as Typst math", \.typstCopy, AppSettings.setTypstCopy(_:notifyWeb:))
                 toggle("Copy answers without units", "A copied answer is just the number: 15 m² copies as 15", \.copyUnitless, AppSettings.setCopyUnitless(_:notifyWeb:))
                 #if QCALC_NATIVE
+                toggle("Stacked fractions and powers", "Type maths as in a graphing calculator: / puts what you typed over a fraction bar, ^ raises the power, ↑ ↓ move between top and bottom", \.stackedMath, AppSettings.setStackedMath(_:notifyWeb:))
                 toggle("Bring in highlighted text", "Text highlighted in another app goes into the bar when it opens. Turning this on asks for Accessibility", \.bringSelection, AppSettings.setBringSelection(_:notifyWeb:))
                 toggle("Copy pasted text as plain text", "Pasting a sentence or paragraph puts it back on the clipboard as one plain line, no breaks or indents", \.plainPasteCopy, AppSettings.setPlainPasteCopy(_:notifyWeb:))
                 #endif

@@ -96,7 +96,7 @@ fn constant_name(word: &str) -> Option<&'static str> {
         "pi" | "π" => "pi",
         "tau" | "τ" => "tau (2π)",
         "e" => "Euler's number",
-        "i" => "imaginary unit",
+        "i" | "j" => "imaginary unit",
         "phi" | "φ" | "ϕ" => "golden ratio",
         "inf" | "infinity" | "infty" | "∞" => "infinity",
         _ => return None,

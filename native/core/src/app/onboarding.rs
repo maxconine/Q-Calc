@@ -334,9 +334,26 @@ const CHEAT_TYPE: [(&str, &str); 11] = [
 
 /// The Mac app's own things to type (native only; the web app has no messages, sharing or CRT look), listed in
 /// `?` before its last row.
-pub const NATIVE_CHEATS: [(&str, &str); 4] = [
-    ("messages", "your conversations"),
-    ("paste to max", "share what’s copied"),
+pub const NATIVE_CHEATS: [(&str, &str); 20] = [
+    ("ans*2", "the last answer"),
+    ("d/dx x^2", "derivative"),
+    // the line has working to show (`crate::steps`), and ⌃W shows it
+    ("∫ x e^x dx", "⌃W shows the working"),
+    ("nCr(5,2)", "combinations"),
+    ("sin(90 deg)", "any angle unit"),
+    ("(3+j4)/(1-j)", "complex, i or j"),
+    ("3+j4 in polar", "polar form"),
+    ("(3+j4) kΩ", "with units"),
+    ("matrix 3x3", "fill in a matrix"),
+    ("Ax = b", "solve with matrices"),
+    ("H2O", "molar mass"),
+    ("periodic", "periodic table"),
+    ("identities", "formula sheets"),
+    ("formulas", "all the tables"),
+    ("games", "play something"),
+    ("messages", "conversations"),
+    ("chat max", "talk to someone"),
+    ("paste to max", "share clipboard"),
     ("send file to max", "share a file"),
     ("konami", "an old look"),
 ];
@@ -440,6 +457,27 @@ mod native_cheat_tests {
     fn native_rows_are_commands_the_app_reads() {
         use crate::app::messaging::{parse_messages_command, parse_share_command};
         assert!(parse_messages_command("messages").is_some());
+        assert!(parse_messages_command("chat max").is_some());
+        let options: crate::types::EvaluateOptions =
+            serde_json::from_value(serde_json::json!({ "ans": 2 })).unwrap();
+        for line in [
+            "ans*2",
+            "d/dx x^2",
+            "∫ x e^x dx",
+            "nCr(5,2)",
+            "sin(90 deg)",
+            "(3+j4)/(1-j)",
+            "3+j4 in polar",
+            "(3+j4) kΩ",
+            "H2O",
+        ] {
+            assert!(
+                !crate::evaluate::evaluate_line(line, &options)
+                    .display
+                    .is_empty(),
+                "{line}"
+            );
+        }
         assert!(parse_share_command("paste to max").is_some());
         assert!(parse_share_command("send file to max").is_some());
         assert!(crate::games::eggs::is_konami_line("konami"));

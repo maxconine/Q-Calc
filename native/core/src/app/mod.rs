@@ -25,6 +25,7 @@ pub mod js;
 pub mod keybinds;
 pub mod known_words;
 pub mod live;
+pub mod matrix_grid;
 pub mod message_banner;
 pub mod messaging;
 pub mod name_check;

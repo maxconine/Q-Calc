@@ -179,6 +179,10 @@ pub fn evaluate(node: &Node, scope: &Scope) -> EvalResult {
             let Node::Symbol(name) = callee.as_ref() else {
                 return Err(EvalError::Unsupported("call of a non-name".into()));
             };
+            // one argument (`sin x`, `sqrt x`): no Vec for it, as a graph makes this call at every sample
+            if let [a] = args.as_slice() {
+                return call(name, &[evaluate(a, scope)?], scope);
+            }
             let values = args
                 .iter()
                 .map(|a| evaluate(a, scope))

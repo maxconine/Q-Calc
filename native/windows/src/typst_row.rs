@@ -56,6 +56,9 @@ pub struct Request {
     pub solved_for: String,
     /// the slot says something that isn't an answer (no real solution), so nothing follows `=`
     pub message: bool,
+    /// a matrix answer already written as Typst math, and whether it follows ⇒ (it names its parts) or `=`
+    /// (native only, matrices.rs)
+    pub matrix: Option<(String, bool)>,
 }
 
 /// One typeset line: the paths, the document they came from, and whether they belong to an earlier text.
@@ -99,30 +102,61 @@ pub fn request(m: &BarModel) -> Option<Request> {
         .unwrap_or_default();
     let st = &m.answer;
     let tabbed = st.form_index > 0 && st.forms.get(st.form_index).is_some();
+    let exact = if tabbed {
+        None
+    } else {
+        crate::answer::exact(m).map(str::to_string)
+    };
+    // native only: a matrix answer typeset from its parts (`P = [..]  D = [..]`), exact where it has it
+    let view = live.and_then(|a| a.matrix.as_ref());
+    let matrix = view
+        .filter(|v| v.typeset && m.line.prefix_shown.is_none() && !tabbed && solve.is_none())
+        .map(|v| {
+            (
+                v.exact_typst.clone().unwrap_or_else(|| v.typst.clone()),
+                v.labeled,
+            )
+        });
+    let line = if m.chained {
+        qcalc_core::app::chain::chained_expr(text)
+    } else {
+        text.to_string()
+    };
     Some(Request {
-        expr: if m.chained {
-            qcalc_core::app::chain::chained_expr(text)
-        } else {
-            text.to_string()
-        },
-        exact: if tabbed {
-            None
-        } else {
-            crate::answer::exact(m).map(str::to_string)
+        // with the number `ans` stands for in place of the word
+        expr: match &m.ans_value {
+            Some(plain) => qcalc_core::app::chain::ans_written_out(&line, plain),
+            None => line,
         },
         display: if tabbed {
             st.forms[st.form_index].clone()
         } else {
-            // Ctrl+E's mode: in exponent form, as the slot (exponent.rs)
-            live.map(|a| crate::exponent::shown(m, &a.display))
-                .unwrap_or_default()
+            // Ctrl+E's mode: in exponent form, as the slot (exponent.rs); a matrix dual's shared `λ = ` once
+            live.map(|a| {
+                let d = crate::exponent::shown(m, &a.display);
+                crate::matrices::without_dual_label(m, exact.as_deref(), d)
+            })
+            .unwrap_or_default()
         },
-        message: solve.is_some() && solved_for.is_empty(),
+        exact,
+        // a matrix answer that says why there is none is words, as a solve's is (native only)
+        message: (solve.is_some() && solved_for.is_empty()) || view.is_some_and(|v| v.message),
         solved_for,
+        matrix,
     })
 }
 
 fn typeset(r: &TypstRenderer, req: &Request) -> Outcome {
+    // a matrix answer always earns the row: it says what one line of text can't
+    if let Some((math, arrow)) = &req.matrix {
+        let Some(doc) = typst_math::typst_document_math(&req.expr, math, *arrow) else {
+            return Outcome::Hidden;
+        };
+        return match r.paths(doc.clone()) {
+            Ok(p) => Outcome::Drawn(p, doc),
+            Err(_) => Outcome::Failed(doc),
+        };
+    }
     if !typst_math::typst_preview_useful(&req.expr) {
         return Outcome::Hidden;
     }
@@ -131,7 +165,7 @@ fn typeset(r: &TypstRenderer, req: &Request) -> Outcome {
     } else {
         typst_math::typst_answer(req.exact.as_deref(), &req.display)
     };
-    let Some(doc) = typst_math::typst_document(&req.expr, &answer, &req.solved_for) else {
+    let Some(doc) = typst_math::native_typst_document(&req.expr, &answer, &req.solved_for) else {
         return Outcome::Hidden;
     };
     match r.paths(doc.clone()) {
@@ -235,7 +269,7 @@ struct Drawn {
     clips: Vec<usize>,
 }
 
-struct Built {
+pub(crate) struct Built {
     items: Vec<Drawn>,
     clips: Vec<ID2D1PathGeometry>,
 }
@@ -243,6 +277,7 @@ struct Built {
 /// The hidden trim: the picture goes, and Typst's thread with all its caches (it starts again when needed).
 pub fn trim(engine: &EngineThread) {
     PICTURE.with(|p| p.borrow_mut().take());
+    crate::matrices::trim();
     engine.stop_typst();
 }
 
@@ -366,8 +401,7 @@ fn stroke_style(
     }
 }
 
-fn build(gfx: &Gfx, t: &Typeset) -> Built {
-    let p = &t.paths;
+pub(crate) fn build(gfx: &Gfx, p: &TypstPaths) -> Built {
     let clips = p
         .clips
         .iter()
@@ -433,7 +467,7 @@ fn color(paint: TypstPaint, ink: Color, alpha: f32) -> Color {
 
 /// The picture on screen, drawn once into a bitmap of the bar's render target: each frame after that only copies
 /// it. Made again when the document, the ink, the scale or the render target change.
-struct Picture {
+pub struct Picture {
     key: (String, [u32; 4], usize, u32),
     bitmap: ID2D1Bitmap,
     size: (f32, f32),
@@ -443,7 +477,12 @@ thread_local! {
     static PICTURE: RefCell<Option<Picture>> = const { RefCell::new(None) };
 }
 
-fn draw_items(rt: &ID2D1RenderTarget, brush: &ID2D1SolidColorBrush, built: &Built, ink: Color) {
+pub(crate) fn draw_items(
+    rt: &ID2D1RenderTarget,
+    brush: &ID2D1SolidColorBrush,
+    built: &Built,
+    ink: Color,
+) {
     // SAFETY: inside the target's BeginDraw/EndDraw; layers are pushed and popped here
     unsafe {
         for item in &built.items {
@@ -487,7 +526,7 @@ fn draw_items(rt: &ID2D1RenderTarget, brush: &ID2D1SolidColorBrush, built: &Buil
 
 /// The page drawn at `s` into a bitmap the bar's target can copy.
 fn picture(c: &Canvas, t: &Typeset, s: f32) -> Option<(ID2D1Bitmap, (f32, f32))> {
-    let built = build(c.gfx, t);
+    let built = build(c.gfx, &t.paths);
     let size = D2D_SIZE_F {
         width: (t.paths.width_pt * s).ceil().max(1.0),
         height: (t.paths.height_pt * s).ceil().max(1.0),
@@ -520,6 +559,16 @@ fn picture(c: &Canvas, t: &Typeset, s: f32) -> Option<(ID2D1Bitmap, (f32, f32))>
     }
 }
 
+/// Any page of paths drawn at `s` into a bitmap the bar's target can copy (working.rs's steps).
+pub fn bitmap(c: &Canvas, paths: &Arc<TypstPaths>, s: f32) -> Option<(ID2D1Bitmap, (f32, f32))> {
+    let t = Typeset {
+        paths: paths.clone(),
+        doc: String::new(),
+        stale: false,
+    };
+    picture(c, &t, s)
+}
+
 /// The row in `r`: the page centred at the top, shrunk to fit, in `--ink` (40% while stale).
 pub fn paint(c: &Canvas, m: &BarModel, r: Rect) {
     let Some(t) = &m.typeset.shown else { return };
@@ -527,6 +576,28 @@ pub fn paint(c: &Canvas, m: &BarModel, r: Rect) {
         return;
     }
     let (s, _) = fit(&t.paths, c.width);
+    PICTURE.with(|p| {
+        draw(
+            c,
+            &mut p.borrow_mut(),
+            t,
+            s,
+            |w| (r.x + (r.w - w) / 2.0).round(),
+            r.y,
+        );
+    });
+}
+
+/// A typeset page drawn at scale `s` with its top at `y` and its left at `x(width)`, from the bitmap in `cache`
+/// (made again when the page, the ink, the scale or the target change). Also the steps' matrices (matrices.rs).
+pub fn draw(
+    c: &Canvas,
+    cache: &mut Option<Picture>,
+    t: &Typeset,
+    s: f32,
+    x: impl FnOnce(f32) -> f32,
+    y: f32,
+) {
     let ink = c.theme.ink;
     let key = (
         t.doc.clone(),
@@ -539,28 +610,25 @@ pub fn paint(c: &Canvas, m: &BarModel, r: Rect) {
         c.rt().as_raw() as usize,
         s.to_bits(),
     );
-    PICTURE.with(|p| {
-        let mut p = p.borrow_mut();
-        if p.as_ref().is_none_or(|p| p.key != key) {
-            *p = picture(c, t, s).map(|(bitmap, size)| Picture { key, bitmap, size });
-        }
-        let Some(pic) = p.as_ref() else { return };
-        let x = (r.x + (r.w - pic.size.0) / 2.0).round();
-        let dest = D2D_RECT_F {
-            left: x,
-            top: r.y,
-            right: x + pic.size.0,
-            bottom: r.y + pic.size.1,
-        };
-        // SAFETY: inside the frame's BeginDraw/EndDraw
-        unsafe {
-            c.rt().DrawBitmap(
-                &pic.bitmap,
-                Some(&dest),
-                if t.stale { 0.4 } else { 1.0 },
-                D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
-                None,
-            );
-        }
-    });
+    if cache.as_ref().is_none_or(|p| p.key != key) {
+        *cache = picture(c, t, s).map(|(bitmap, size)| Picture { key, bitmap, size });
+    }
+    let Some(pic) = cache.as_ref() else { return };
+    let x = x(pic.size.0);
+    let dest = D2D_RECT_F {
+        left: x,
+        top: y,
+        right: x + pic.size.0,
+        bottom: y + pic.size.1,
+    };
+    // SAFETY: inside the frame's BeginDraw/EndDraw
+    unsafe {
+        c.rt().DrawBitmap(
+            &pic.bitmap,
+            Some(&dest),
+            if t.stale { 0.4 } else { 1.0 },
+            D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
+            None,
+        );
+    }
 }

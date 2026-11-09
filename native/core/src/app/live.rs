@@ -110,6 +110,9 @@ pub struct LiveRequest {
     /// asks whether it answers, and for the native bars, which ask for it (`blank_reason`) only once typing has
     /// paused, so a keystroke needn't pay for it. Nothing else in the answer changes.
     pub no_squiggle: bool,
+    /// Native only: ↵ on a plain `graph …` line saves it to the tape (the web saves only `graph f(x) = …`), so
+    /// the graph can be brought back.
+    pub keep_graphs: bool,
 }
 
 /// A line that answers with a message or opens something, rather than calculating.
@@ -338,7 +341,13 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
     let sys_parsed = if sys_cmd { sys_command(q) } else { None };
     let sys_answer = match (&req.sys_lines, &sys_parsed) {
         (Some(lines), Some(SysCommand::Count(n))) if *n == lines.len() => {
-            solve_live(lines, &o.default_units, o.angle())
+            solve_live(lines, &o.default_units, o.angle()).map(|mut a| {
+                // native only: fractions only with fraction form on
+                if o.fraction_mode != Some(true) && !a.message {
+                    a.display = crate::app::answer::system_decimals(&a.display, sig_figs);
+                }
+                a
+            })
         }
         _ => None,
     };
@@ -836,8 +845,8 @@ pub fn commit(req: &LiveRequest, rows: &[Json], row_id: &str) -> Commit {
         solve: live.solve.is_some(),
         graph: is_graph,
     });
-    // inline `graph f(x)=…` registers the function; plain `graph expr` is not saved
-    if is_graph && fn_def.is_none() {
+    // inline `graph f(x)=…` registers the function; plain `graph expr` is not saved (the native apps keep it)
+    if is_graph && fn_def.is_none() && !req.keep_graphs {
         return Commit {
             saved: true,
             row: None,
@@ -966,6 +975,73 @@ mod tests {
         assert_eq!(live(&req("hello")).slot, GREETING_REPLY);
         let s = live(&req("2+*3"));
         assert_eq!(s.squiggle, Some(Span { start: 2, end: 3 }));
+    }
+
+    /// native only: the `dx` may touch the integrand (`x^2dx`), as Desmos takes it
+    #[test]
+    fn integrals_with_a_touching_dx() {
+        for (line, want) in [
+            ("∫_12^3 x^2dx", "-567"),
+            ("∫_12^3 x^2 dx", "-567"),
+            ("∫_0^1 xdx", "0.5"),
+            ("∫_0^1 2xdx", "1"),
+            ("∫_0^1 x^3dx", "0.25"),
+            ("∫_0^1 e^xdx", "1.71828"),
+            ("∫_0^1 3dx", "3"),
+            ("∫_0^1 tdt", "0.5"),
+            ("∫_0^2 x^2dx+1", "3.66667"),
+            ("2+∫_0^1 x^2dx", "2.33333"),
+            ("∫ x^2dx", "x^3/3 + C"),
+        ] {
+            assert_eq!(live(&req(line)).slot, want, "{line}");
+        }
+    }
+
+    /// the bar's stacked typing writes `12/(12^(2))` and `√(…)`: roots over fractions and powers, fractions of roots,
+    /// their values and exact forms
+    #[test]
+    fn roots_and_fractions_as_the_stacked_bar_types_them() {
+        for (line, want, exact) in [
+            ("sqrt(12/(12^(2)))", "0.288675", Some("sqrt(3)/6")),
+            ("√(12/(12^(2)))", "0.288675", Some("sqrt(3)/6")),
+            ("sqrt(12/12^2)", "0.288675", Some("sqrt(3)/6")),
+            ("√(1/4)", "0.5", Some("1/2")),
+            ("√((1/2)/4)", "0.353553", Some("sqrt(2)/4")),
+            ("√(x/2);x=8", "2", Some("2")),
+            ("√(1/(x/3));x=12", "0.5", Some("1/2")),
+            ("sqrt(2)/2", "0.707107", Some("sqrt(2)/2")),
+            ("(√2)/3", "0.471405", Some("sqrt(2)/3")),
+            ("√2/3", "0.471405", Some("sqrt(2)/3")),
+            ("1/(√(2))", "0.707107", Some("sqrt(2)/2")),
+            ("√(12)", "3.4641", Some("2sqrt(3)")),
+            ("√(8)/(2)", "1.41421", Some("sqrt(2)")),
+            ("2√(3)/(6)", "0.57735", Some("sqrt(3)/3")),
+            ("√(9)/(3)", "1", Some("1")),
+            ("2^(√(4))", "4", Some("4")),
+            ("√(2^(10))", "32", Some("32")),
+            ("∛(1/8)", "0.5", None),
+            ("(1)/(2)+(1)/(3)", "0.833333", None),
+            ("(1/(2))^(2)", "0.25", None),
+            ("1/(x/3);x=2", "1.5", None),
+            ("1/(2)·x;x=4", "2", None),
+            ("√(-4)", "undefined", None),
+            // a halves power is a root: the same closed form as √ (native only)
+            ("2^(1/2)", "1.41421", Some("sqrt(2)")),
+            ("2^(1/(2))", "1.41421", Some("sqrt(2)")),
+            ("2^0.5", "1.41421", Some("sqrt(2)")),
+            ("8^(3/2)", "22.6274", Some("16sqrt(2)")),
+            ("2^(-1/2)", "0.707107", Some("sqrt(2)/2")),
+            ("12^(1/2)", "3.4641", Some("2sqrt(3)")),
+            ("4^(1/2)", "2", Some("2")),
+            ("2^(1/3)", "1.25992", None),
+        ] {
+            let a = live(&req(line));
+            assert_eq!(
+                (a.slot.as_str(), a.exact.as_deref()),
+                (want, exact),
+                "{line}"
+            );
+        }
     }
 
     #[test]

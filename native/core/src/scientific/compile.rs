@@ -4,7 +4,7 @@
 //! The TS evaluates the compiled code outside `evalScientific`, so its module-level `complexTyped` flag is off:
 //! `sqrt(-1)` is NaN in a compiled term even when an `i` was typed. The scope here keeps that.
 
-use super::{ScientificContext, finish, preprocess_checked, scope_for};
+use super::{ScientificContext, finish, finish_number, preprocess_checked, scope_for};
 use crate::eval::{self, Scope};
 use crate::syntax::{Node, parse};
 use crate::types::Value;
@@ -58,12 +58,32 @@ impl Compiled {
     }
 
     fn run(&mut self, values: &[f64]) -> Option<Value> {
+        let v = self.run_val(values)?;
+        finish(&v, &self.p.expr)
+    }
+
+    fn run_val(&mut self, values: &[f64]) -> Option<eval::Val> {
         for (name, v) in self.vars.iter().zip(values) {
-            self.p.scope.variables.insert(name.clone(), *v);
+            // a graph runs this thousands of times: set the variable in place rather than cloning its name
+            match self.p.scope.variables.get_mut(name) {
+                Some(slot) => *slot = *v,
+                None => {
+                    self.p.scope.variables.insert(name.clone(), *v);
+                }
+            }
         }
         crate::work::spend(self.cost);
-        let v = eval::evaluate(&self.p.node, &self.p.scope).ok()?;
-        finish(&v, &self.p.expr)
+        eval::evaluate(&self.p.node, &self.p.scope).ok()
+    }
+
+    /// `at(x)` when it's a finite number, else None (a graph's sample).
+    pub fn number_at(&mut self, x: f64) -> Option<f64> {
+        finish_number(&self.run_val(&[x])?)
+    }
+
+    /// `at2(u, v)` when it's a finite number, else None.
+    pub fn number_at2(&mut self, u: f64, v: f64) -> Option<f64> {
+        finish_number(&self.run_val(&[u, v])?)
     }
 
     /// The value at `x` (one variable).

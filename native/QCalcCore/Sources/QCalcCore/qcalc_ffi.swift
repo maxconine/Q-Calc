@@ -1595,6 +1595,12 @@ public protocol EngineProtocol: AnyObject, Sendable {
     func graphHome(input: String, options: GraphOptions, settings: EvalOptions)  -> GraphWindow
     
     /**
+     * Native only: where the graph's curves cross one another over [lo, hi] (each input a `graph …` line),
+     * as `intersection` points.
+     */
+    func graphIntersections(inputs: [String], lo: Double, hi: Double, settings: EvalOptions)  -> [CriticalPoint]
+    
+    /**
      * The readout under the pointer, exactly `buildGraph(input, …).y(x)`: the curve cut to its bounds, None for
      * a contour plot. Cheap: it compiles without sampling.
      */
@@ -1697,6 +1703,12 @@ public protocol EngineProtocol: AnyObject, Sendable {
      * The Typst document for the preview (`typstDocument`).
      */
     func typstSource(expr: String, answer: String, solvedFor: String)  -> String?
+    
+    /**
+     * The preview document for a line whose answer is already Typst math (`MatrixView::typst`): after ⇒ when
+     * `arrow`, else after `=`. Native only.
+     */
+    func typstSourceMath(expr: String, answerTypst: String, arrow: Bool)  -> String?
     
 }
 /**
@@ -2007,6 +2019,23 @@ open func graphHome(input: String, options: GraphOptions, settings: EvalOptions)
 }
     
     /**
+     * Native only: where the graph's curves cross one another over [lo, hi] (each input a `graph …` line),
+     * as `intersection` points.
+     */
+open func graphIntersections(inputs: [String], lo: Double, hi: Double, settings: EvalOptions) -> [CriticalPoint]  {
+    return try!  FfiConverterSequenceTypeCriticalPoint.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_engine_graph_intersections(
+            self.uniffiCloneHandle(),
+        FfiConverterSequenceString.lower(inputs),
+        FfiConverterDouble.lower(lo),
+        FfiConverterDouble.lower(hi),
+        FfiConverterTypeEvalOptions_lower(settings),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * The readout under the pointer, exactly `buildGraph(input, …).y(x)`: the curve cut to its bounds, None for
      * a contour plot. Cheap: it compiles without sampling.
      */
@@ -2297,6 +2326,22 @@ open func typstSource(expr: String, answer: String, solvedFor: String) -> String
         FfiConverterString.lower(expr),
         FfiConverterString.lower(answer),
         FfiConverterString.lower(solvedFor),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The preview document for a line whose answer is already Typst math (`MatrixView::typst`): after ⇒ when
+     * `arrow`, else after `=`. Native only.
+     */
+open func typstSourceMath(expr: String, answerTypst: String, arrow: Bool) -> String?  {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_engine_typst_source_math(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(expr),
+        FfiConverterString.lower(answerTypst),
+        FfiConverterBool.lower(arrow),uniffiCallStatus
     )
 })
 }
@@ -4826,13 +4871,21 @@ public struct CriticalPoint: Equatable, Hashable {
     public var x: Double
     public var y: Double
     public var kind: CriticalKind
+    /**
+     * A surface's height there.
+     */
+    public var z: Double?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(x: Double, y: Double, kind: CriticalKind) {
+    public init(x: Double, y: Double, kind: CriticalKind, 
+        /**
+         * A surface's height there.
+         */z: Double?) {
         self.x = x
         self.y = y
         self.kind = kind
+        self.z = z
     }
 
     
@@ -4853,7 +4906,8 @@ public struct FfiConverterTypeCriticalPoint: FfiConverterRustBuffer {
             try CriticalPoint(
                 x: FfiConverterDouble.read(from: &buf), 
                 y: FfiConverterDouble.read(from: &buf), 
-                kind: FfiConverterTypeCriticalKind.read(from: &buf)
+                kind: FfiConverterTypeCriticalKind.read(from: &buf), 
+                z: FfiConverterOptionDouble.read(from: &buf)
         )
     }
 
@@ -4861,6 +4915,7 @@ public struct FfiConverterTypeCriticalPoint: FfiConverterRustBuffer {
         FfiConverterDouble.write(value.x, into: &buf)
         FfiConverterDouble.write(value.y, into: &buf)
         FfiConverterTypeCriticalKind.write(value.kind, into: &buf)
+        FfiConverterOptionDouble.write(value.z, into: &buf)
     }
 }
 
@@ -6470,18 +6525,42 @@ public struct GraphOptions: Equatable, Hashable {
      * The plot's height over its width, so a contour plot's x and y share a scale.
      */
     public var aspect: Double?
+    /**
+     * The y a plot of x and y (implicit curve, contour) centres on; none is 0, or the bounds' middle.
+     */
+    public var yCenter: Double?
+    /**
+     * Also sample a surface's grid of z for the 3D view (`GraphResult::surface`).
+     */
+    public var surface: Bool
+    /**
+     * Sample a curve evenly in log x, for a logarithmic x axis (a domain above 0).
+     */
+    public var xLog: Bool
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
     public init(domainLo: Double? = nil, domainHi: Double? = nil, sampleCount: UInt32? = nil, findRoots: Bool = true, 
         /**
          * The plot's height over its width, so a contour plot's x and y share a scale.
-         */aspect: Double? = nil) {
+         */aspect: Double? = nil, 
+        /**
+         * The y a plot of x and y (implicit curve, contour) centres on; none is 0, or the bounds' middle.
+         */yCenter: Double? = nil, 
+        /**
+         * Also sample a surface's grid of z for the 3D view (`GraphResult::surface`).
+         */surface: Bool = false, 
+        /**
+         * Sample a curve evenly in log x, for a logarithmic x axis (a domain above 0).
+         */xLog: Bool = false) {
         self.domainLo = domainLo
         self.domainHi = domainHi
         self.sampleCount = sampleCount
         self.findRoots = findRoots
         self.aspect = aspect
+        self.yCenter = yCenter
+        self.surface = surface
+        self.xLog = xLog
     }
 
     
@@ -6504,7 +6583,10 @@ public struct FfiConverterTypeGraphOptions: FfiConverterRustBuffer {
                 domainHi: FfiConverterOptionDouble.read(from: &buf), 
                 sampleCount: FfiConverterOptionUInt32.read(from: &buf), 
                 findRoots: FfiConverterBool.read(from: &buf), 
-                aspect: FfiConverterOptionDouble.read(from: &buf)
+                aspect: FfiConverterOptionDouble.read(from: &buf), 
+                yCenter: FfiConverterOptionDouble.read(from: &buf), 
+                surface: FfiConverterBool.read(from: &buf), 
+                xLog: FfiConverterBool.read(from: &buf)
         )
     }
 
@@ -6514,6 +6596,9 @@ public struct FfiConverterTypeGraphOptions: FfiConverterRustBuffer {
         FfiConverterOptionUInt32.write(value.sampleCount, into: &buf)
         FfiConverterBool.write(value.findRoots, into: &buf)
         FfiConverterOptionDouble.write(value.aspect, into: &buf)
+        FfiConverterOptionDouble.write(value.yCenter, into: &buf)
+        FfiConverterBool.write(value.surface, into: &buf)
+        FfiConverterBool.write(value.xLog, into: &buf)
     }
 }
 
@@ -6619,6 +6704,10 @@ public struct GraphResult: Equatable, Hashable {
     public var contourLevels: Bool
     public var error: String?
     public var json: String
+    /**
+     * When asked for (`GraphOptions::surface`) and the graph is a surface.
+     */
+    public var surface: SurfaceGrid?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -6628,7 +6717,10 @@ public struct GraphResult: Equatable, Hashable {
          */contour: Bool, 
         /**
          * WP-GRAPH: level curves with labels and a z readout (`contour: 'levels'`); false for an `f = g` curve.
-         */contourLevels: Bool, error: String?, json: String) {
+         */contourLevels: Bool, error: String?, json: String, 
+        /**
+         * When asked for (`GraphOptions::surface`) and the graph is a surface.
+         */surface: SurfaceGrid?) {
         self.label = label
         self.expression = expression
         self.functionDef = functionDef
@@ -6645,6 +6737,7 @@ public struct GraphResult: Equatable, Hashable {
         self.contourLevels = contourLevels
         self.error = error
         self.json = json
+        self.surface = surface
     }
 
     
@@ -6678,7 +6771,8 @@ public struct FfiConverterTypeGraphResult: FfiConverterRustBuffer {
                 contour: FfiConverterBool.read(from: &buf), 
                 contourLevels: FfiConverterBool.read(from: &buf), 
                 error: FfiConverterOptionString.read(from: &buf), 
-                json: FfiConverterString.read(from: &buf)
+                json: FfiConverterString.read(from: &buf), 
+                surface: FfiConverterOptionTypeSurfaceGrid.read(from: &buf)
         )
     }
 
@@ -6699,6 +6793,7 @@ public struct FfiConverterTypeGraphResult: FfiConverterRustBuffer {
         FfiConverterBool.write(value.contourLevels, into: &buf)
         FfiConverterOptionString.write(value.error, into: &buf)
         FfiConverterString.write(value.json, into: &buf)
+        FfiConverterOptionTypeSurfaceGrid.write(value.surface, into: &buf)
     }
 }
 
@@ -6781,12 +6876,20 @@ public func FfiConverterTypeGraphTick_lower(_ value: GraphTick) -> RustBuffer {
 public struct GraphWindow: Equatable, Hashable {
     public var lo: Double
     public var hi: Double
+    /**
+     * Where an implicit curve's y centres, when not 0 (pass it back as `GraphOptions::y_center`).
+     */
+    public var yCenter: Double?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(lo: Double, hi: Double) {
+    public init(lo: Double, hi: Double, 
+        /**
+         * Where an implicit curve's y centres, when not 0 (pass it back as `GraphOptions::y_center`).
+         */yCenter: Double?) {
         self.lo = lo
         self.hi = hi
+        self.yCenter = yCenter
     }
 
     
@@ -6806,13 +6909,15 @@ public struct FfiConverterTypeGraphWindow: FfiConverterRustBuffer {
         return
             try GraphWindow(
                 lo: FfiConverterDouble.read(from: &buf), 
-                hi: FfiConverterDouble.read(from: &buf)
+                hi: FfiConverterDouble.read(from: &buf), 
+                yCenter: FfiConverterOptionDouble.read(from: &buf)
         )
     }
 
     public static func write(_ value: GraphWindow, into buf: inout [UInt8]) {
         FfiConverterDouble.write(value.lo, into: &buf)
         FfiConverterDouble.write(value.hi, into: &buf)
+        FfiConverterOptionDouble.write(value.yCenter, into: &buf)
     }
 }
 
@@ -6829,6 +6934,67 @@ public func FfiConverterTypeGraphWindow_lift(_ buf: RustBuffer) throws -> GraphW
 #endif
 public func FfiConverterTypeGraphWindow_lower(_ value: GraphWindow) -> RustBuffer {
     return FfiConverterTypeGraphWindow.lower(value)
+}
+
+
+/**
+ * Where the grid writes in the line (UTF-16 offsets), and the cells it opens with.
+ */
+public struct GridSpot: Equatable, Hashable {
+    public var start: UInt32
+    public var end: UInt32
+    public var cells: [[String]]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(start: UInt32, end: UInt32, cells: [[String]]) {
+        self.start = start
+        self.end = end
+        self.cells = cells
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GridSpot: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGridSpot: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GridSpot {
+        return
+            try GridSpot(
+                start: FfiConverterUInt32.read(from: &buf), 
+                end: FfiConverterUInt32.read(from: &buf), 
+                cells: FfiConverterSequenceSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GridSpot, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.start, into: &buf)
+        FfiConverterUInt32.write(value.end, into: &buf)
+        FfiConverterSequenceSequenceString.write(value.cells, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGridSpot_lift(_ buf: RustBuffer) throws -> GridSpot {
+    return try FfiConverterTypeGridSpot.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGridSpot_lower(_ value: GridSpot) -> RustBuffer {
+    return FfiConverterTypeGridSpot.lower(value)
 }
 
 
@@ -7422,6 +7588,10 @@ public struct LineAnswer: Equatable, Hashable {
      */
     public var quantity: String?
     /**
+     * A matrix answer in labeled parts, with its row-operation steps. Native only.
+     */
+    public var matrix: MatrixView?
+    /**
      * The whole `LineResult` as the TS engine's JSON, for fields not typed here yet.
      */
     public var json: String
@@ -7445,6 +7615,9 @@ public struct LineAnswer: Equatable, Hashable {
          * A unit answer as text the reader reads back, for chaining `ans`.
          */quantity: String?, 
         /**
+         * A matrix answer in labeled parts, with its row-operation steps. Native only.
+         */matrix: MatrixView? = nil, 
+        /**
          * The whole `LineResult` as the TS engine's JSON, for fields not typed here yet.
          */json: String) {
         self.raw = raw
@@ -7455,6 +7628,7 @@ public struct LineAnswer: Equatable, Hashable {
         self.unit = unit
         self.variable = variable
         self.quantity = quantity
+        self.matrix = matrix
         self.json = json
     }
 
@@ -7482,6 +7656,7 @@ public struct FfiConverterTypeLineAnswer: FfiConverterRustBuffer {
                 unit: FfiConverterOptionString.read(from: &buf), 
                 variable: FfiConverterOptionString.read(from: &buf), 
                 quantity: FfiConverterOptionString.read(from: &buf), 
+                matrix: FfiConverterOptionTypeMatrixView.read(from: &buf), 
                 json: FfiConverterString.read(from: &buf)
         )
     }
@@ -7495,6 +7670,7 @@ public struct FfiConverterTypeLineAnswer: FfiConverterRustBuffer {
         FfiConverterOptionString.write(value.unit, into: &buf)
         FfiConverterOptionString.write(value.variable, into: &buf)
         FfiConverterOptionString.write(value.quantity, into: &buf)
+        FfiConverterOptionTypeMatrixView.write(value.matrix, into: &buf)
         FfiConverterString.write(value.json, into: &buf)
     }
 }
@@ -7570,6 +7746,10 @@ public struct LiveAnswer: Equatable, Hashable {
      */
     public var improper: Bool
     /**
+     * A matrix answer in labeled parts, with its row-operation steps. Native only.
+     */
+    public var matrix: MatrixView?
+    /**
      * The whole TS `LineResult` as JSON.
      */
     public var json: String
@@ -7609,6 +7789,9 @@ public struct LiveAnswer: Equatable, Hashable {
          * `improper unit conversion`.
          */improper: Bool = false, 
         /**
+         * A matrix answer in labeled parts, with its row-operation steps. Native only.
+         */matrix: MatrixView? = nil, 
+        /**
          * The whole TS `LineResult` as JSON.
          */json: String) {
         self.display = display
@@ -7630,6 +7813,7 @@ public struct LiveAnswer: Equatable, Hashable {
         self.expr = expr
         self.phrase = phrase
         self.improper = improper
+        self.matrix = matrix
         self.json = json
     }
 
@@ -7668,6 +7852,7 @@ public struct FfiConverterTypeLiveAnswer: FfiConverterRustBuffer {
                 expr: FfiConverterString.read(from: &buf), 
                 phrase: FfiConverterBool.read(from: &buf), 
                 improper: FfiConverterBool.read(from: &buf), 
+                matrix: FfiConverterOptionTypeMatrixView.read(from: &buf), 
                 json: FfiConverterString.read(from: &buf)
         )
     }
@@ -7692,6 +7877,7 @@ public struct FfiConverterTypeLiveAnswer: FfiConverterRustBuffer {
         FfiConverterString.write(value.expr, into: &buf)
         FfiConverterBool.write(value.phrase, into: &buf)
         FfiConverterBool.write(value.improper, into: &buf)
+        FfiConverterOptionTypeMatrixView.write(value.matrix, into: &buf)
         FfiConverterString.write(value.json, into: &buf)
     }
 }
@@ -7931,6 +8117,349 @@ public func FfiConverterTypeLobbyStep_lift(_ buf: RustBuffer) throws -> LobbySte
 #endif
 public func FfiConverterTypeLobbyStep_lower(_ value: LobbyStep) -> RustBuffer {
     return FfiConverterTypeLobbyStep.lower(value)
+}
+
+
+/**
+ * One labeled part of a matrix answer: `P = [1 -1; 1 2]`.
+ */
+public struct MatrixPart: Equatable, Hashable {
+    /**
+     * `P`, `λ = 5`, `x`, or empty.
+     */
+    public var label: String
+    /**
+     * The value to a few digits, without its label.
+     */
+    public var display: String
+    /**
+     * The exact value, when it says more (`(5 ± sqrt(33))/2`).
+     */
+    public var exact: String?
+    /**
+     * What storing the part keeps; None when it can't be stored.
+     */
+    public var literal: String?
+    /**
+     * Words after the value: `(any t, s)`.
+     */
+    public var note: String?
+    /**
+     * Typst math for the part, label included.
+     */
+    public var typst: String
+    public var exactTypst: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * `P`, `λ = 5`, `x`, or empty.
+         */label: String, 
+        /**
+         * The value to a few digits, without its label.
+         */display: String, 
+        /**
+         * The exact value, when it says more (`(5 ± sqrt(33))/2`).
+         */exact: String?, 
+        /**
+         * What storing the part keeps; None when it can't be stored.
+         */literal: String?, 
+        /**
+         * Words after the value: `(any t, s)`.
+         */note: String?, 
+        /**
+         * Typst math for the part, label included.
+         */typst: String, exactTypst: String?) {
+        self.label = label
+        self.display = display
+        self.exact = exact
+        self.literal = literal
+        self.note = note
+        self.typst = typst
+        self.exactTypst = exactTypst
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension MatrixPart: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMatrixPart: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MatrixPart {
+        return
+            try MatrixPart(
+                label: FfiConverterString.read(from: &buf), 
+                display: FfiConverterString.read(from: &buf), 
+                exact: FfiConverterOptionString.read(from: &buf), 
+                literal: FfiConverterOptionString.read(from: &buf), 
+                note: FfiConverterOptionString.read(from: &buf), 
+                typst: FfiConverterString.read(from: &buf), 
+                exactTypst: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: MatrixPart, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.label, into: &buf)
+        FfiConverterString.write(value.display, into: &buf)
+        FfiConverterOptionString.write(value.exact, into: &buf)
+        FfiConverterOptionString.write(value.literal, into: &buf)
+        FfiConverterOptionString.write(value.note, into: &buf)
+        FfiConverterString.write(value.typst, into: &buf)
+        FfiConverterOptionString.write(value.exactTypst, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMatrixPart_lift(_ buf: RustBuffer) throws -> MatrixPart {
+    return try FfiConverterTypeMatrixPart.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMatrixPart_lower(_ value: MatrixPart) -> RustBuffer {
+    return FfiConverterTypeMatrixPart.lower(value)
+}
+
+
+/**
+ * One row operation and the matrix after it; a closing remark (`det = …`) has an empty `display`.
+ */
+public struct MatrixStep: Equatable, Hashable {
+    /**
+     * `R₂ → R₂ − 3R₁`, `Start`, or a remark.
+     */
+    public var op: String
+    /**
+     * The operation as Typst math.
+     */
+    public var opTypst: String
+    /**
+     * The matrix after it, exact where it can be, `|` before an augmented column: `[1 2 | 5; 0 -2 | -9]`.
+     */
+    public var display: String
+    /**
+     * The matrix as Typst math (`mat(delim: "[", augment: #2, …)`); empty for a remark.
+     */
+    public var typst: String
+    /**
+     * A whole preview document: the operation, then the matrix.
+     */
+    public var document: String
+    /**
+     * The matrix alone as a preview document, for a view that writes the operation itself; empty for a remark.
+     */
+    public var matrixDocument: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * `R₂ → R₂ − 3R₁`, `Start`, or a remark.
+         */op: String, 
+        /**
+         * The operation as Typst math.
+         */opTypst: String, 
+        /**
+         * The matrix after it, exact where it can be, `|` before an augmented column: `[1 2 | 5; 0 -2 | -9]`.
+         */display: String, 
+        /**
+         * The matrix as Typst math (`mat(delim: "[", augment: #2, …)`); empty for a remark.
+         */typst: String, 
+        /**
+         * A whole preview document: the operation, then the matrix.
+         */document: String, 
+        /**
+         * The matrix alone as a preview document, for a view that writes the operation itself; empty for a remark.
+         */matrixDocument: String = "") {
+        self.op = op
+        self.opTypst = opTypst
+        self.display = display
+        self.typst = typst
+        self.document = document
+        self.matrixDocument = matrixDocument
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension MatrixStep: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMatrixStep: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MatrixStep {
+        return
+            try MatrixStep(
+                op: FfiConverterString.read(from: &buf), 
+                opTypst: FfiConverterString.read(from: &buf), 
+                display: FfiConverterString.read(from: &buf), 
+                typst: FfiConverterString.read(from: &buf), 
+                document: FfiConverterString.read(from: &buf), 
+                matrixDocument: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: MatrixStep, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.op, into: &buf)
+        FfiConverterString.write(value.opTypst, into: &buf)
+        FfiConverterString.write(value.display, into: &buf)
+        FfiConverterString.write(value.typst, into: &buf)
+        FfiConverterString.write(value.document, into: &buf)
+        FfiConverterString.write(value.matrixDocument, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMatrixStep_lift(_ buf: RustBuffer) throws -> MatrixStep {
+    return try FfiConverterTypeMatrixStep.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMatrixStep_lower(_ value: MatrixStep) -> RustBuffer {
+    return FfiConverterTypeMatrixStep.lower(value)
+}
+
+
+/**
+ * A matrix answer laid out for typesetting.
+ */
+public struct MatrixView: Equatable, Hashable {
+    public var parts: [MatrixPart]
+    public var steps: [MatrixStep]
+    /**
+     * The whole answer, parts a quad apart, as a preview document (`TypstRenderer.render(source:)`).
+     */
+    public var document: String
+    /**
+     * The same with each part's exact form; None when no part has one.
+     */
+    public var exactDocument: String?
+    /**
+     * The answer alone as Typst math (no document around it), for `Engine::typst_source_math`.
+     */
+    public var typst: String
+    public var exactTypst: String?
+    /**
+     * Some part has a label (`P = …`), so the preview sets the answer after ⇒ rather than `=`.
+     */
+    public var labeled: Bool
+    /**
+     * Worth a typeset row of its own: a matrix in it, or several parts (a lone number reads fine as text).
+     */
+    public var typeset: Bool
+    /**
+     * The answer is why there is none (`determinant needs a square matrix`): words, shown as a message.
+     */
+    public var message: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(parts: [MatrixPart], steps: [MatrixStep], 
+        /**
+         * The whole answer, parts a quad apart, as a preview document (`TypstRenderer.render(source:)`).
+         */document: String, 
+        /**
+         * The same with each part's exact form; None when no part has one.
+         */exactDocument: String?, 
+        /**
+         * The answer alone as Typst math (no document around it), for `Engine::typst_source_math`.
+         */typst: String = "", exactTypst: String? = nil, 
+        /**
+         * Some part has a label (`P = …`), so the preview sets the answer after ⇒ rather than `=`.
+         */labeled: Bool = false, 
+        /**
+         * Worth a typeset row of its own: a matrix in it, or several parts (a lone number reads fine as text).
+         */typeset: Bool = false, 
+        /**
+         * The answer is why there is none (`determinant needs a square matrix`): words, shown as a message.
+         */message: Bool = false) {
+        self.parts = parts
+        self.steps = steps
+        self.document = document
+        self.exactDocument = exactDocument
+        self.typst = typst
+        self.exactTypst = exactTypst
+        self.labeled = labeled
+        self.typeset = typeset
+        self.message = message
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension MatrixView: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMatrixView: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MatrixView {
+        return
+            try MatrixView(
+                parts: FfiConverterSequenceTypeMatrixPart.read(from: &buf), 
+                steps: FfiConverterSequenceTypeMatrixStep.read(from: &buf), 
+                document: FfiConverterString.read(from: &buf), 
+                exactDocument: FfiConverterOptionString.read(from: &buf), 
+                typst: FfiConverterString.read(from: &buf), 
+                exactTypst: FfiConverterOptionString.read(from: &buf), 
+                labeled: FfiConverterBool.read(from: &buf), 
+                typeset: FfiConverterBool.read(from: &buf), 
+                message: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: MatrixView, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeMatrixPart.write(value.parts, into: &buf)
+        FfiConverterSequenceTypeMatrixStep.write(value.steps, into: &buf)
+        FfiConverterString.write(value.document, into: &buf)
+        FfiConverterOptionString.write(value.exactDocument, into: &buf)
+        FfiConverterString.write(value.typst, into: &buf)
+        FfiConverterOptionString.write(value.exactTypst, into: &buf)
+        FfiConverterBool.write(value.labeled, into: &buf)
+        FfiConverterBool.write(value.typeset, into: &buf)
+        FfiConverterBool.write(value.message, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMatrixView_lift(_ buf: RustBuffer) throws -> MatrixView {
+    return try FfiConverterTypeMatrixView.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMatrixView_lower(_ value: MatrixView) -> RustBuffer {
+    return FfiConverterTypeMatrixView.lower(value)
 }
 
 
@@ -8678,6 +9207,92 @@ public func FfiConverterTypeSpan_lift(_ buf: RustBuffer) throws -> Span {
 #endif
 public func FfiConverterTypeSpan_lower(_ value: Span) -> RustBuffer {
     return FfiConverterTypeSpan.lower(value)
+}
+
+
+/**
+ * A surface on a grid for the 3D view: `z[j * (nx + 1) + i]` at x = x_lo + i·(x_hi − x_lo)/nx (y likewise),
+ * NaN where undefined; `z_lo`…`z_hi` is the height the view frames.
+ */
+public struct SurfaceGrid: Equatable, Hashable {
+    public var nx: UInt32
+    public var ny: UInt32
+    public var xLo: Double
+    public var xHi: Double
+    public var yLo: Double
+    public var yHi: Double
+    public var z: [Double]
+    public var zLo: Double
+    public var zHi: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(nx: UInt32, ny: UInt32, xLo: Double, xHi: Double, yLo: Double, yHi: Double, z: [Double], zLo: Double, zHi: Double) {
+        self.nx = nx
+        self.ny = ny
+        self.xLo = xLo
+        self.xHi = xHi
+        self.yLo = yLo
+        self.yHi = yHi
+        self.z = z
+        self.zLo = zLo
+        self.zHi = zHi
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SurfaceGrid: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSurfaceGrid: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SurfaceGrid {
+        return
+            try SurfaceGrid(
+                nx: FfiConverterUInt32.read(from: &buf), 
+                ny: FfiConverterUInt32.read(from: &buf), 
+                xLo: FfiConverterDouble.read(from: &buf), 
+                xHi: FfiConverterDouble.read(from: &buf), 
+                yLo: FfiConverterDouble.read(from: &buf), 
+                yHi: FfiConverterDouble.read(from: &buf), 
+                z: FfiConverterSequenceDouble.read(from: &buf), 
+                zLo: FfiConverterDouble.read(from: &buf), 
+                zHi: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SurfaceGrid, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.nx, into: &buf)
+        FfiConverterUInt32.write(value.ny, into: &buf)
+        FfiConverterDouble.write(value.xLo, into: &buf)
+        FfiConverterDouble.write(value.xHi, into: &buf)
+        FfiConverterDouble.write(value.yLo, into: &buf)
+        FfiConverterDouble.write(value.yHi, into: &buf)
+        FfiConverterSequenceDouble.write(value.z, into: &buf)
+        FfiConverterDouble.write(value.zLo, into: &buf)
+        FfiConverterDouble.write(value.zHi, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSurfaceGrid_lift(_ buf: RustBuffer) throws -> SurfaceGrid {
+    return try FfiConverterTypeSurfaceGrid.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSurfaceGrid_lower(_ value: SurfaceGrid) -> RustBuffer {
+    return FfiConverterTypeSurfaceGrid.lower(value)
 }
 
 
@@ -10604,6 +11219,32 @@ public enum CriticalKind: Equatable, Hashable {
     case min
     case max
     case critical
+    case xIntercept
+    case yIntercept
+    /**
+     * A surface's saddle.
+     */
+    case saddle
+    /**
+     * Where an implicit curve turns vertical.
+     */
+    case verticalTangent
+    /**
+     * A point a line was drawn through.
+     */
+    case point
+    /**
+     * Where a curve cut off by `{a ≤ x ≤ b}` stops, the end kept.
+     */
+    case endpoint
+    /**
+     * Where a curve cut off by `{a < x < b}` stops, the end left out.
+     */
+    case openEndpoint
+    /**
+     * Where two of the graph's curves cross.
+     */
+    case intersection
 
 
 
@@ -10631,6 +11272,22 @@ public struct FfiConverterTypeCriticalKind: FfiConverterRustBuffer {
         
         case 3: return .critical
         
+        case 4: return .xIntercept
+        
+        case 5: return .yIntercept
+        
+        case 6: return .saddle
+        
+        case 7: return .verticalTangent
+        
+        case 8: return .point
+        
+        case 9: return .endpoint
+        
+        case 10: return .openEndpoint
+        
+        case 11: return .intersection
+        
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -10649,6 +11306,38 @@ public struct FfiConverterTypeCriticalKind: FfiConverterRustBuffer {
         
         case .critical:
             writeInt(&buf, Int32(3))
+        
+        
+        case .xIntercept:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .yIntercept:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .saddle:
+            writeInt(&buf, Int32(6))
+        
+        
+        case .verticalTangent:
+            writeInt(&buf, Int32(7))
+        
+        
+        case .point:
+            writeInt(&buf, Int32(8))
+        
+        
+        case .endpoint:
+            writeInt(&buf, Int32(9))
+        
+        
+        case .openEndpoint:
+            writeInt(&buf, Int32(10))
+        
+        
+        case .intersection:
+            writeInt(&buf, Int32(11))
         
         }
     }
@@ -13742,6 +14431,30 @@ fileprivate struct FfiConverterOptionTypeGraphResult: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeGridSpot: FfiConverterRustBuffer {
+    typealias SwiftType = GridSpot?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeGridSpot.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeGridSpot.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeHint: FfiConverterRustBuffer {
     typealias SwiftType = Hint?
 
@@ -13838,6 +14551,30 @@ fileprivate struct FfiConverterOptionTypeLobbyStep: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeMatrixView: FfiConverterRustBuffer {
+    typealias SwiftType = MatrixView?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeMatrixView.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeMatrixView.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeMeasInfo: FfiConverterRustBuffer {
     typealias SwiftType = MeasInfo?
 
@@ -13902,6 +14639,30 @@ fileprivate struct FfiConverterOptionTypeSpan: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeSpan.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeSurfaceGrid: FfiConverterRustBuffer {
+    typealias SwiftType = SurfaceGrid?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeSurfaceGrid.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeSurfaceGrid.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -14819,6 +15580,56 @@ fileprivate struct FfiConverterSequenceTypeLineAnswer: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeMatrixPart: FfiConverterRustBuffer {
+    typealias SwiftType = [MatrixPart]
+
+    public static func write(_ value: [MatrixPart], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeMatrixPart.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [MatrixPart] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [MatrixPart]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeMatrixPart.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeMatrixStep: FfiConverterRustBuffer {
+    typealias SwiftType = [MatrixStep]
+
+    public static func write(_ value: [MatrixStep], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeMatrixStep.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [MatrixStep] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [MatrixStep]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeMatrixStep.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeSmokePuff: FfiConverterRustBuffer {
     typealias SwiftType = [SmokePuff]
 
@@ -15136,6 +15947,31 @@ fileprivate struct FfiConverterSequenceOptionTypeUtMark: FfiConverterRustBuffer 
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterOptionTypeUtMark.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceSequenceString: FfiConverterRustBuffer {
+    typealias SwiftType = [[String]]
+
+    public static func write(_ value: [[String]], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterSequenceString.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [[String]] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [[String]]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterSequenceString.read(from: &buf))
         }
         return seq
     }
@@ -16142,6 +16978,61 @@ public func utChalkMark(kind: String, x: Double, y: Double, size: Double, seed: 
 })
 }
 /**
+ * The typed matrix the caret is in (else the last one), read into cells to edit.
+ */
+public func matrixGridAt(text: String, caret: UInt32) -> GridSpot?  {
+    return try!  FfiConverterOptionTypeGridSpot.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_matrix_grid_at(
+        FfiConverterString.lower(text),
+        FfiConverterUInt32.lower(caret),uniffiCallStatus
+    )
+})
+}
+/**
+ * `matrix 3x3` anywhere in the line: the empty grid ↵ opens, in its place.
+ */
+public func matrixGridCommand(text: String) -> GridSpot?  {
+    return try!  FfiConverterOptionTypeGridSpot.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_matrix_grid_command(
+        FfiConverterString.lower(text),uniffiCallStatus
+    )
+})
+}
+/**
+ * What the answer slot says while the line holds `matrix 3x3` (`↵ opens a 3×3 grid`).
+ */
+public func matrixGridHint(text: String) -> String?  {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_matrix_grid_hint(
+        FfiConverterString.lower(text),uniffiCallStatus
+    )
+})
+}
+/**
+ * The cells written back as a matrix: `[1 2; 3 4]`, an empty cell as 0.
+ */
+public func matrixGridLiteral(cells: [[String]]) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_matrix_grid_literal(
+        FfiConverterSequenceSequenceString.lower(cells),uniffiCallStatus
+    )
+})
+}
+/**
+ * The most rows or columns the grid has.
+ */
+public func matrixGridMax() -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_matrix_grid_max(uniffiCallStatus
+    )
+})
+}
+/**
  * How long typing rests before a name is asked about, in ms.
  */
 public func nameCheckDelayMs() -> UInt32  {
@@ -16411,6 +17302,21 @@ private let initializationResult: InitializationResult = {
     if (uniffi_qcalc_ffi_checksum_func_ut_chalk_mark() != 17612) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_qcalc_ffi_checksum_func_matrix_grid_at() != 52379) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_matrix_grid_command() != 24906) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_matrix_grid_hint() != 49430) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_matrix_grid_literal() != 17521) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_matrix_grid_max() != 32769) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_qcalc_ffi_checksum_func_name_check_delay_ms() != 2694) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -16474,6 +17380,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_qcalc_ffi_checksum_method_engine_graph_home() != 47656) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_qcalc_ffi_checksum_method_engine_graph_intersections() != 64168) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_qcalc_ffi_checksum_method_engine_graph_readout_y() != 6433) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -16535,6 +17444,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_method_engine_typst_source() != 62253) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_engine_typst_source_math() != 33438) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_method_gameclock_date() != 117) {

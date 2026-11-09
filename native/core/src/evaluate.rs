@@ -3,6 +3,7 @@
 //!
 //! Readers other packages port are called through `crate::stubs`, which answer "not mine" until then.
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 use crate::format::{DEFAULT_SIG_FIGS, format_as_fraction, format_value};
@@ -11,10 +12,11 @@ use crate::jsre::{self, Lazy};
 use crate::latex::{latex_to_ascii, looks_like_latex};
 use crate::plain_math::{PlainContext, try_plain_math, with_space_thousands};
 use crate::scientific::{NAMES, ScientificContext, names_pattern, split_glued_functions};
-use crate::simplify::{ExactFormOptions, exact_form, wants_exact_form};
+use crate::simplify::{ExactFormOptions, exact_form, half_power, wants_exact_form};
 use crate::stubs::{self, SolveContext, Solved};
 use crate::types::{
-    AngleMode, EvaluateOptions, LineKind, LineResult, Meas, UserFunction, Value, ValueKind,
+    AngleMode, EvaluateOptions, LineKind, LineResult, MatrixPart, MatrixParts, Meas, UserFunction,
+    Value, ValueKind,
 };
 use crate::typst_input::typst_to_ascii;
 use crate::units::{is_improper_unit_conversion, quantity_text, reads_as_unit, try_convert};
@@ -39,6 +41,25 @@ pub fn parse_assignment(trimmed: &str) -> Option<(String, String)> {
         return None;
     }
     Some((variable.to_string(), jsre::group(&c, 2).trim().to_string()))
+}
+
+/// `L, U = lu(A)`: the names, and what they're given. Native only.
+pub fn parse_multi_assignment(trimmed: &str) -> Option<(Vec<String>, String)> {
+    static RE: Lazy = Lazy::new(|| {
+        js(
+            r"^([A-Za-z][A-Za-z0-9]*(?:\s*,\s*[A-Za-z][A-Za-z0-9]*)+)\s*=\s*([^=]+)$",
+            "",
+        )
+    });
+    let c = RE.captures(trimmed).ok()??;
+    let names: Vec<String> = jsre::group(&c, 1)
+        .split(',')
+        .map(|n| n.trim().to_string())
+        .collect();
+    if names.iter().any(|n| is_reserved(n)) {
+        return None;
+    }
+    Some((names, jsre::group(&c, 2).trim().to_string()))
 }
 
 /// `2+3=` is `2+3`; only one `=` goes, and never the end of `==`, `<=`, `>=` or `!=`.
@@ -171,6 +192,9 @@ fn ans_in_unit(expr: &str, ans_qty: Option<&str>, opts: &EvaluateOptions) -> Str
 }
 
 fn show(value: &Value, fraction_mode: bool, sig_figs: f64) -> String {
+    if value.complex.is_some() {
+        return format_value(value, sig_figs);
+    }
     if value.kind == ValueKind::Text
         && let Some(t) = &value.text
         && !t.is_empty()
@@ -198,6 +222,90 @@ fn uses_uncertain(expr: &str, measures: &BTreeMap<String, Meas>) -> bool {
                 "",
             );
             jsre::test(&re, expr)
+        }
+    })
+}
+
+/// The part each name of `L, U = lu(A)` stores: in order, or by label when fewer names are given (`L, U` of a
+/// `P, L, U`). Every chosen part must be storable.
+fn parts_for<'p>(names: &[String], parts: &'p [MatrixPart]) -> Result<Vec<&'p MatrixPart>, String> {
+    let chosen: Option<Vec<&MatrixPart>> = if parts.len() == names.len() {
+        Some(parts.iter().collect())
+    } else {
+        names
+            .iter()
+            .map(|n| parts.iter().find(|p| p.label.eq_ignore_ascii_case(n)))
+            .collect()
+    };
+    let Some(chosen) = chosen else {
+        let labels: Vec<&str> = parts
+            .iter()
+            .map(|p| p.label.as_str())
+            .filter(|l| !l.is_empty())
+            .collect();
+        let count = match parts.len() {
+            1 => "1 part".to_string(),
+            k => format!("{k} parts"),
+        };
+        let give = match parts.len() {
+            1 => "give 1 name".to_string(),
+            k => format!("give {k} names"),
+        };
+        return Err(if labels.len() == parts.len() {
+            format!("this answer has {count} ({}); {give}", labels.join(", "))
+        } else {
+            format!("this answer has {count}; {give}")
+        });
+    };
+    if let Some(p) = chosen.iter().find(|p| p.literal.is_none()) {
+        return Err(format!(
+            "can't store {}",
+            if p.label.is_empty() {
+                &p.display
+            } else {
+                &p.label
+            }
+        ));
+    }
+    Ok(chosen)
+}
+
+/// What a matrix line stores, name by name, when its saved row can't say so in its one `quantity`: each part of
+/// `L, U = lu(A)`, or a matrix with unknowns (`A = [k 2; 3 k]`). Native only; history reads rows back with it.
+pub fn matrix_stores(line: &str, options: &EvaluateOptions) -> Vec<(String, String)> {
+    let trimmed = line.trim();
+    let multi = parse_multi_assignment(trimmed);
+    let single = parse_assignment(trimmed);
+    if multi.is_none() && single.as_ref().is_none_or(|(_, e)| !e.contains('[')) {
+        return Vec::new();
+    }
+    let r = evaluate_line(line, options);
+    let Some(m) = r.matrix.filter(|_| r.kind == LineKind::Assignment) else {
+        return Vec::new();
+    };
+    match (multi, single) {
+        (Some((names, _)), _) => parts_for(&names, &m.parts)
+            .map(|chosen| {
+                names
+                    .iter()
+                    .zip(chosen)
+                    .filter_map(|(n, p)| Some((n.clone(), p.literal.clone()?)))
+                    .collect()
+            })
+            .unwrap_or_default(),
+        (None, Some((name, _))) => m.stored.map(|l| vec![(name, l)]).unwrap_or_default(),
+        _ => Vec::new(),
+    }
+}
+
+fn matrix_parts(m: &stubs::MatrixAnswer) -> Option<MatrixParts> {
+    let stored = m.to_store().cloned();
+    (!m.parts.is_empty() || !m.steps.is_empty() || stored.is_some() || m.message).then(|| {
+        MatrixParts {
+            parts: m.parts.clone(),
+            steps: m.steps.clone(),
+            stored,
+            message: m.message,
         }
     })
 }
@@ -286,8 +394,17 @@ fn in_base(n: f64, base: Base) -> Option<String> {
 
 /// Every line of a sheet, each seeing what the lines above it defined.
 pub fn evaluate_sheet(lines: &[String], options: &EvaluateOptions) -> Vec<LineResult> {
+    // native only: `x^2; x=5`
+    if let [only] = lines
+        && let Some(result) = line_with_definitions(only, options)
+    {
+        return vec![result];
+    }
     with_space_thousands(options.space_thousands.unwrap_or(false), || {
-        Sheet::new(options).run(lines)
+        // native only: in sig-fig mode a unit sum keeps its last place
+        crate::units::with_sum_places(options.sig_fig_mode.unwrap_or(false), || {
+            Sheet::new(options).run(lines)
+        })
     })
 }
 
@@ -296,6 +413,75 @@ pub fn evaluate_line(text: &str, options: &EvaluateOptions) -> LineResult {
     evaluate_sheet(&[text.to_string()], options)
         .pop()
         .unwrap_or_else(|| LineResult::empty(text))
+}
+
+/// `x^2 + y; x=5; y=2`: the expression and the definitions after it. None unless everything after the first
+/// semicolon defines a letter.
+pub fn split_line_definitions(text: &str) -> Option<(&str, Vec<(String, String)>)> {
+    if !text.contains(';') {
+        return None;
+    }
+    let mut parts = Vec::new();
+    let (mut depth, mut start) = (0_i32, 0);
+    for (i, c) in text.char_indices() {
+        match c {
+            '(' | '[' | '{' => depth += 1,
+            ')' | ']' | '}' => depth -= 1,
+            ';' if depth == 0 => {
+                parts.push(&text[start..i]);
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    parts.push(&text[start..]);
+    let (head, rest) = parts.split_first()?;
+    if rest.is_empty() || head.trim().is_empty() {
+        return None;
+    }
+    let definitions = rest
+        .iter()
+        .map(|d| parse_assignment(d.trim()))
+        .collect::<Option<Vec<_>>>()?;
+    Some((head.trim(), definitions))
+}
+
+/// Native only: definitions after a semicolon apply to this line alone. None when the line isn't that, so it goes on
+/// as it always has.
+fn line_with_definitions(text: &str, options: &EvaluateOptions) -> Option<LineResult> {
+    let (head, definitions) = split_line_definitions(text)?;
+    let mut scoped = options.clone();
+    for (name, value) in definitions {
+        let line = evaluate_sheet(&[value], &scoped).pop()?;
+        match (&line.quantity, &line.value) {
+            (Some(quantity), _) => {
+                scoped.quantities.insert(name, quantity.clone());
+            }
+            (None, Some(v)) if v.kind == ValueKind::Number => {
+                scoped.quantities.remove(&name);
+                scoped.variables.insert(name, v.n);
+            }
+            _ => return None,
+        }
+    }
+    let mut result = evaluate_sheet(&[head.to_string()], &scoped).pop()?;
+    // a derivative answers in letters: `d/dx x^2; x=3` is that at 3
+    if result
+        .value
+        .as_ref()
+        .is_some_and(|v| v.kind == ValueKind::Text)
+    {
+        let at = evaluate_sheet(&[result.display.clone()], &scoped).pop()?;
+        if at
+            .value
+            .as_ref()
+            .is_some_and(|v| v.kind == ValueKind::Number)
+        {
+            result = at;
+        }
+    }
+    result.raw = text.to_string();
+    Some(result)
 }
 
 struct Sheet<'o> {
@@ -397,7 +583,26 @@ impl<'o> Sheet<'o> {
         }
     }
 
+    // native only: `6′2″`, `10''` and `6'2` read as feet and inches, and a line that mixed them answers in both
     fn line(&mut self, raw: &str) -> LineResult {
+        // native only: `y' = 2x`, `y'' + y = 0; y(0)=1; y'(0)=0`, before a mark after a letter could read as feet
+        if let Some(answer) = crate::calculus::ode::ode_answer(raw, &self.sci(), self.sig_figs) {
+            return LineResult {
+                value: (!answer.is_empty()).then(|| Value::text(answer.clone())),
+                display: answer,
+                ..LineResult::blank(raw)
+            };
+        }
+        let marked = crate::feet_inches::foot_marks(raw);
+        let mut result = self.line_as_typed(&marked);
+        if let Cow::Owned(_) = marked {
+            result.raw = raw.to_string();
+        }
+        crate::feet_inches::answer_in_feet_and_inches(&marked, &mut result, self.sig_figs);
+        result
+    }
+
+    fn line_as_typed(&mut self, raw: &str) -> LineResult {
         static DOLLAR_LATEX: Lazy = Lazy::new(|| js(r"\$([^$]*\\[A-Za-z][^$]*)\$", ""));
         static ISOLATE: Lazy = Lazy::new(|| js(r"\bisolate\b", "i"));
         // `\dot\theta`, `dot(theta)` and `θ̇` all read as `thetadot` before anything else rewrites them;
@@ -421,8 +626,11 @@ impl<'o> Sheet<'o> {
             return LineResult::empty(raw);
         }
 
-        // `solve({eq1, eq2}, x = 1, y = 2)`
-        if let Some(call) = stubs::parse_system_call(&line) {
+        // `solve({eq1, eq2}, x = 1, y = 2)`; `solve(A, b)` of two matrices is the matrix reader's (native only)
+        let fn_names: Vec<String> = self.functions.keys().cloned().collect();
+        let of_matrices =
+            stubs::looks_like_matrix(&with_quantities(&line, &self.quantities), &fn_names);
+        if !of_matrices && let Some(call) = stubs::parse_system_call(&line) {
             let answer = stubs::solve_system_call(
                 &call.equations,
                 &call.guess_text,
@@ -433,6 +641,24 @@ impl<'o> Sheet<'o> {
                 raw: raw.into(),
                 value: answer.clone().map(Value::text),
                 display: answer.unwrap_or_default(),
+                ..LineResult::blank(raw)
+            };
+        }
+        // `2x + y = 5, x - y = 1` on one line, `solve …` or not; only when it solves (native only)
+        if !of_matrices
+            && let Some(equations) = stubs::parse_equation_list(&line)
+            && let Some(answer) = stubs::solve_system_call(
+                &equations,
+                &[],
+                self.angle_mode,
+                &self.options.default_units,
+            )
+            .filter(|a| !a.is_empty())
+        {
+            return LineResult {
+                raw: raw.into(),
+                value: Some(Value::text(answer.clone())),
+                display: answer,
                 ..LineResult::blank(raw)
             };
         }
@@ -447,8 +673,8 @@ impl<'o> Sheet<'o> {
                 None => LineResult::blank(raw),
             };
         }
-        // `solve x in …` or `… for x`
-        if let Some(named) = (!stubs::has_plus_minus(&line))
+        // `solve x in …` or `… for x`; not `solve(A, b)` or `Ax = b for x` of matrices (native only)
+        if let Some(named) = (!stubs::has_plus_minus(&line) && !of_matrices)
             .then(|| stubs::parse_named_solve(&line))
             .flatten()
         {
@@ -524,7 +750,6 @@ impl<'o> Sheet<'o> {
         let trimmed = stubs::split_letters(&trimmed_line, &known, &[]);
         let assign = parse_assignment(&trimmed);
         // `V = 12 V` stores 12 volts; as an equation it could only ever say V = 0
-        let fn_names: Vec<String> = self.functions.keys().cloned().collect();
         let unit_self = assign.as_ref().is_some_and(|(variable, expr)| {
             reads_as_unit(variable)
                 && !stubs::looks_like_matrix(&with_quantities(expr, &self.quantities), &fn_names)
@@ -553,19 +778,36 @@ impl<'o> Sheet<'o> {
                 .filter(|v| v.kind == ValueKind::Number && v.unit.is_none())
                 .map(|v| v.n)
         };
+        let matrix_opts = stubs::MatrixOptions {
+            variables: &self.variables,
+            sig_figs: self.sig_figs,
+            fraction_mode: self.fraction_mode,
+            functions: &fn_names,
+            scalar: Some(&scalar),
+        };
+        // `Ax = b`, `A x = b`, `[2 1; 1 3] x = [3; 5]`, `solve Ax = b`: the system, solved (native only)
+        if let Some((m, var, rhs)) = self.matrix_equation(&trimmed_line)
+            && let Some(ans) = stubs::matrix_answer(
+                &with_quantities(&format!("solve({m}, {rhs})"), &self.quantities),
+                &matrix_opts,
+            )
+        {
+            return self.solved_matrix_line(raw, ans, &var);
+        }
+        // `L, U = lu(A)` stores each part
+        if let Some((names, rhs)) = parse_multi_assignment(&trimmed)
+            && let Some(m) =
+                stubs::matrix_answer(&with_quantities(&rhs, &self.quantities), &matrix_opts)
+        {
+            return self.multi_matrix_line(raw, m, &names);
+        }
         if !unit_self
             && let Some(m) = stubs::matrix_answer(
                 &with_quantities(
                     assign.as_ref().map_or(&trimmed, |(_, e)| e),
                     &self.quantities,
                 ),
-                &stubs::MatrixOptions {
-                    variables: &self.variables,
-                    sig_figs: self.sig_figs,
-                    fraction_mode: self.fraction_mode,
-                    functions: &fn_names,
-                    scalar: Some(&scalar),
-                },
+                &matrix_opts,
             )
         {
             return self.matrix_line(raw, m, assign.as_ref().map(|(v, _)| v.as_str()));
@@ -723,13 +965,13 @@ impl<'o> Sheet<'o> {
             // a matrix is stored as its literal, the way a unit answer is
             self.measures.remove(v);
             set_or_delete(&mut self.variables, v, m.n);
-            set_or_delete(&mut self.quantities, v, m.literal.clone());
+            set_or_delete(&mut self.quantities, v, m.to_store().cloned());
         }
         if let Some(n) = m.n {
             self.last_ans = Some(n);
             self.measures.remove("ans");
             self.quantities.remove("ans");
-        } else if let Some(lit) = &m.literal {
+        } else if let Some(lit) = m.to_store() {
             self.measures.remove("ans");
             self.quantities.insert("ans".into(), lit.clone());
         }
@@ -741,10 +983,134 @@ impl<'o> Sheet<'o> {
                 LineKind::Expression
             },
             value: Some(m.n.map_or_else(|| Value::text(m.display.clone()), Value::number)),
+            matrix: matrix_parts(&m),
             display: m.display,
             exact: m.exact,
             quantity: m.literal,
             variable,
+            ..LineResult::default()
+        }
+    }
+
+    /// `Ax = b` read as a matrix equation: the matrix, the unknown's letter and the right side. The matrix is a
+    /// stored one or written out; the right side a matrix too; the unknown one letter nothing holds a matrix in.
+    fn matrix_equation(&self, line: &str) -> Option<(String, String, String)> {
+        static EQ: Lazy = Lazy::new(|| {
+            js(
+                r"^\s*(?:solve\s+)?([^=]+?)\s*[*·]?\s*([a-z])\s*=\s*([^=]+?)\s*(?:\s+for\s+[a-z])?\s*$",
+                "",
+            )
+        });
+        let c = EQ.captures(line).ok()??;
+        let (m, var, rhs) = (
+            jsre::group(&c, 1).trim(),
+            jsre::group(&c, 2),
+            jsre::group(&c, 3).trim(),
+        );
+        let is_matrix = |t: &str| with_quantities(t, &self.quantities).contains('[');
+        let stored_matrix = |t: &str| {
+            self.quantities
+                .get(t)
+                .is_some_and(|q| q.trim_start().starts_with('['))
+        };
+        // `2x = [4 6]` is a scalar times x; the left must be a matrix (`[…]`, a stored one, or a call of them)
+        let m_matrix = m.ends_with(']') && is_matrix(m)
+            || stored_matrix(m)
+            || m.ends_with(')') && is_matrix(m);
+        if !m_matrix || !is_matrix(rhs) || stored_matrix(var) {
+            return None;
+        }
+        Some((m.to_string(), var.to_string(), rhs.to_string()))
+    }
+
+    /// The answer to `Ax = b`, named by its unknown: `x = [0.8; 1.4]`.
+    fn solved_matrix_line(
+        &mut self,
+        raw: &str,
+        mut m: stubs::MatrixAnswer,
+        var: &str,
+    ) -> LineResult {
+        if !m.message {
+            fn named(var: &str, s: &str) -> String {
+                format!("{var} = {}", s.strip_prefix("x = ").unwrap_or(s))
+            }
+            m.display = named(var, &m.display);
+            m.exact = m.exact.as_deref().map(|e| named(var, e));
+            for p in &mut m.parts {
+                if p.label.is_empty() || p.label == "x" {
+                    let body = |t: &str| t.strip_prefix("x = ").unwrap_or(t).to_string();
+                    p.typst = format!("{var} = {}", body(&p.typst));
+                    p.exact_typst = p
+                        .exact_typst
+                        .as_deref()
+                        .map(|t| format!("{var} = {}", body(t)));
+                    p.label = var.to_string();
+                }
+            }
+        }
+        self.matrix_line(raw, m, None)
+    }
+
+    /// `L, U = lu(A)`: each name keeps its part, matched in order, or by label when fewer names are given
+    /// (`L, U` of a `P, L, U`). `ans` keeps the first.
+    fn multi_matrix_line(
+        &mut self,
+        raw: &str,
+        m: stubs::MatrixAnswer,
+        names: &[String],
+    ) -> LineResult {
+        if m.message {
+            return self.matrix_line(raw, m, None);
+        }
+        let say = |msg: String| LineResult {
+            raw: raw.into(),
+            kind: LineKind::Expression,
+            value: Some(Value::text(msg.clone())),
+            display: msg,
+            matrix: Some(MatrixParts {
+                message: true,
+                ..MatrixParts::default()
+            }),
+            ..LineResult::default()
+        };
+        let chosen = match parts_for(names, &m.parts) {
+            Ok(c) => c,
+            Err(msg) => return say(msg),
+        };
+        for (name, p) in names.iter().zip(&chosen) {
+            let lit = p.literal.clone().unwrap_or_default();
+            self.measures.remove(name);
+            match lit.parse::<f64>() {
+                Ok(v) => {
+                    self.variables.insert(name.clone(), v);
+                    self.quantities.remove(name);
+                }
+                Err(_) => {
+                    self.variables.remove(name);
+                    self.quantities.insert(name.clone(), lit);
+                }
+            }
+        }
+        if let Some(first) = chosen.first().and_then(|p| p.literal.clone()) {
+            self.measures.remove("ans");
+            match first.parse::<f64>() {
+                Ok(v) => {
+                    self.last_ans = Some(v);
+                    self.quantities.remove("ans");
+                }
+                Err(_) => {
+                    self.quantities.insert("ans".into(), first);
+                }
+            }
+        }
+        LineResult {
+            raw: raw.into(),
+            kind: LineKind::Assignment,
+            value: Some(Value::text(m.display.clone())),
+            matrix: matrix_parts(&m),
+            display: m.display,
+            exact: m.exact,
+            variable: Some(names.join(", ")),
             ..LineResult::default()
         }
     }
@@ -820,6 +1186,18 @@ impl<'o> Sheet<'o> {
                         calc = stubs::evaluate_calculus(&expr, &calc_ctx);
                     }
                 }
+            }
+            // native only: an integral with no bounds, from a table
+            if !calc.as_ref().is_some_and(|c| c.value.is_some())
+                && let Some(answer) =
+                    crate::calculus::indefinite_integral(&expr, &calc_ctx.sci, self.sig_figs)
+            {
+                calc = Some(stubs::CalculusResult {
+                    value: Some(answer),
+                    exact: None,
+                    job: None,
+                    time: None,
+                });
             }
         }
         if calc.is_none() {
@@ -932,14 +1310,7 @@ impl<'o> Sheet<'o> {
         let quantity = if finite && value.unit.is_some() {
             Some(quantity_text(&value, self.angle_mode).unwrap_or_default())
         } else {
-            value.complex.map(|z| {
-                format!(
-                    "{} {} {}i",
-                    jsnum::to_string(z.re),
-                    if z.im < 0.0 { '-' } else { '+' },
-                    jsnum::to_string(z.im.abs())
-                )
-            })
+            crate::complex_line::chain_text(&value)
         };
         if value.complex.is_some()
             && let Some(q) = &quantity
@@ -998,7 +1369,7 @@ impl<'o> Sheet<'o> {
             && !measured_display
             && finite
             && sum.is_none()
-            && wants_exact_form(&expr))
+            && (wants_exact_form(&expr) || half_power(&expr)))
         .then(|| {
             exact_form(
                 value.n,

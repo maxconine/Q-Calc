@@ -390,13 +390,31 @@ fn graph_bounds_and_two_variable_functions() {
     use qcalc_core::graph::{ContourKind, GraphRange, parse_graph_intent};
     let (f, v) = (BTreeMap::new(), BTreeMap::new());
     let g = parse_graph_intent("graph y = x ^ 2 {2 < y < 5}", &f, &v).unwrap();
-    assert_eq!(g.bounds.unwrap().y, [GraphRange { lo: 2.0, hi: 5.0 }]);
+    assert_eq!(
+        g.bounds.unwrap().y,
+        [GraphRange {
+            lo: 2.0,
+            hi: 5.0,
+            lo_open: true,
+            hi_open: true
+        }]
+    );
     let g = parse_graph_intent("graph x^2 {0 < x < 1} {2 < x < 3}", &f, &v).unwrap();
     assert_eq!(
         g.bounds.unwrap().x,
         [
-            GraphRange { lo: 0.0, hi: 1.0 },
-            GraphRange { lo: 2.0, hi: 3.0 }
+            GraphRange {
+                lo: 0.0,
+                hi: 1.0,
+                lo_open: true,
+                hi_open: true
+            },
+            GraphRange {
+                lo: 2.0,
+                hi: 3.0,
+                lo_open: true,
+                hi_open: true
+            }
         ]
     );
     let g = parse_graph_intent("graph f(x,y) = x^2 + y^2", &f, &v).unwrap();

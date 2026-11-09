@@ -11,10 +11,13 @@
 
 name: Windows
 
+# mac-only releases (from 3.0.2): a v* tag no longer runs this, so a tag can't move windows users to the native
+# app before it has been tried on a windows pc. windows ships by a hand run on the release's tag (publish ticked).
+# to go back to every tag releasing windows too, put the push trigger back:
+#   push:
+#     tags:
+#       - "v*"
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
     inputs:
       publish:

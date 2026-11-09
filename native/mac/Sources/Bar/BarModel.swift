@@ -71,6 +71,18 @@ final class BarModel: ObservableObject {
     @Published var sysLines: [String]?
     @Published var sysAnswer: SysAnswer?
     @Published var sysFocus: Int?
+    // the matrix grid and the row-operation steps (Matrices.swift, native only)
+    @Published var grid: GridState?
+    @Published var gridFocus: GridCell?
+    /// bumped to hand the grid's focused cell the keys again (after the bar gave them to its line)
+    @Published var gridFocusAsk = 0
+    /// the matrix the grid last wrote, so a line committed with it is remembered (GridMemory)
+    var lastGridLiteral: String?
+    /// the grid is writing the line, so the change is its own
+    var writingGrid = false
+    @Published var stepsShown = false
+    @Published var stepRows: [StepRow] = []
+    var stepsAsked: [String]?
     // onboarding and the walkthrough (Tour.swift)
     @Published var example: ExampleShown?
     /// .tour-line role="status": VoiceOver hears each step as it comes
@@ -116,6 +128,13 @@ final class BarModel: ObservableObject {
     @Published private(set) var helpShown = false
     // panels below
     @Published var graph: GraphState?
+    /// Native only: the graph settings panel's display choices, kept between graphs and launches
+    @Published var graphPrefs = GraphPrefs.load() {
+        didSet {
+            graphPrefs.save()
+            if oldValue.degrees != graphPrefs.degrees { sampleGraph() }
+        }
+    }
     @Published var cards: [BannerCard] = []
     @Published var cardsHovered = false
     /// keyboard focus is on an edge tool (Full Keyboard Access), which shows them as hover does
@@ -154,7 +173,12 @@ final class BarModel: ObservableObject {
     let sheets: SheetData = SheetData.shared
     /// the typeset preview row (MathText.swift); nil hides it
     @Published private(set) var typeset: Typeset?
-    private lazy var typesetter = MathTypesetter(engine: core)
+    lazy var typesetter = MathTypesetter(engine: core)
+    /// native only: the working for the line (Working.swift); nil when it has none
+    @Published var working: [WorkingStep]?
+    /// native only: the working panel is up (⌃W)
+    @Published var workingShown = false
+    lazy var workingMaker = WorkingMaker(engine: core)
     private var typesetAsked: TypesetRequest?
 
     // what the bar asks of its window
@@ -295,6 +319,20 @@ final class BarModel: ObservableObject {
 
     func evaluateLive() {
         let typed = text
+        // a line answered anywhere but the live lane has no working
+        var lane = false
+        defer { if !lane { working = nil } }
+        // the grid stays open only while the line is the one it wrote
+        if let g = grid, !writingGrid, typed != g.written { grid = nil; gridFocus = nil }
+        if grid == nil, let h = matrixGridHint(text: typed), !storesMat(typed) {
+            commandMessage = h
+            setLive(.blank, for: typed)
+            engine.cancel(.live)
+            // `mat` / `matrix` lit as a known word whose hover says what it is; no squiggle left from `mat` alone
+            squiggleTimer?.invalidate()
+            decorations = Self.matrixWord(typed)
+            return
+        }
         // `sys`: a hint until there's a count; the panel's own answer once its fields are open
         let sys = SysCommand.of(typed)
         // native only: the fields open the moment the count is typed (the page waits for ↵), the caret in the
@@ -360,6 +398,11 @@ final class BarModel: ObservableObject {
                 nameCheckTimer?.invalidate()
             }
             commandMessage = command.hint(messaging: Messages.shared, found: found)
+            // native only: a sheet's short word still finishes to its full name (`formula` to `formulas`)
+            if case .identities = command {
+                let rest = logic.string("lib/completion", "completionFor", [typed, ["contacts": [String]()]])
+                completion = rest.flatMap { $0.isEmpty ? nil : $0 }
+            }
             if command == .help, !helpShown { track("help") }
             helpShown = command == .help
             if case let .graph(body) = command { showGraph(body) } else { graph = nil }
@@ -382,7 +425,8 @@ final class BarModel: ObservableObject {
         let thread = engine
         let keepWords = settings.keepWords
         let timeVarying = self.timeVarying
-        engine.submit(.live, { engine -> (LiveAnswer, Bool, Decorations, String?) in
+        lane = true
+        engine.submit(.live, { engine -> (LiveAnswer, Bool, Decorations, String?, EvalContext) in
             var request = Self.request(engine, text: typed, rows: rows, view: view, options: options)
             request.options.timeVarying = timeVarying
             let answer = engine.live(request: request)
@@ -394,8 +438,8 @@ final class BarModel: ObservableObject {
                                             "ans": request.context.ans != nil]
                 completion = thread.logic.string("lib/completion", "completionFor", [typed, names])
             }
-            return (answer, request.chained, deco, completion)
-        }) { [weak self] answer, chain, deco, completion in
+            return (answer, request.chained, deco, completion, request.context)
+        }) { [weak self] answer, chain, deco, completion, context in
             guard let self, self.text == typed else { return }
             self.chained = chain
             self.ansHover = deco.ans.map { "last answer = \($0)" } ?? "last answer"
@@ -407,6 +451,7 @@ final class BarModel: ObservableObject {
             self.pauseHintLater()
             self.refreshTour()
             self.upgradeClosedForm(answer, for: typed)
+            self.findWorking(typed, answer: answer, chained: chain, context: context)
         }
     }
 
@@ -573,6 +618,7 @@ final class BarModel: ObservableObject {
         if !answer.isBlank { lastLiveText = typed }
         checkEffects(answer)
         refreshTypeset()
+        refreshSteps()
         onLive?(typed)
     }
 
@@ -581,7 +627,8 @@ final class BarModel: ObservableObject {
     /// the bar doesn't (`typstPreviewUseful`). The answer beside it is the one the slot shows, nothing for a message.
     func refreshTypeset() {
         let command = BarCommand.of(text, sheets: sheets)
-        guard settings.typstPreview, !text.trimmingCharacters(in: .whitespaces).isEmpty, command == nil,
+        // native only: with "Stacked fractions and powers" on the line is already typeset, so no preview under it
+        guard settings.typstPreview, !settings.stackedMath, !text.trimmingCharacters(in: .whitespaces).isEmpty, command == nil,
               SysCommand.of(text) == nil, sysLines == nil, graph == nil, !helpShown, !gamesShown else {
             typesetAsked = nil
             typeset = nil
@@ -590,12 +637,24 @@ final class BarModel: ObservableObject {
         let solve = live.solve
         let rootsOf = solve?.outcome == .roots ? solve?.variable ?? "" : ""
         let tabbed = formIndex > 0 && forms.indices.contains(formIndex)
+        // native only: a matrix answer is typeset from its parts (`P = [..]  D = [..]`), exact where it has it
+        let matrix = live.matrix.flatMap { m -> MatrixAsk? in
+            guard m.typeset, prefixShown == nil, !tabbed, solve == nil else { return nil }
+            return MatrixAsk(typst: m.exactTypst ?? m.typst, arrow: m.labeled)
+        }
+        let shownExact = prefixShown != nil || tabbed ? nil : exact
+        var display = exponentShown(prefixShown ?? (tabbed ? forms[formIndex] : live.display))
+        // `λ = (5 ± √33)/2 ≈ 5.37228, −0.372281`, the label once (native only)
+        if shownExact != nil, !dualLabel.isEmpty, display.hasPrefix(dualLabel) { display = String(display.dropFirst(dualLabel.count)) }
         let request = TypesetRequest(
             expr: chained ? Chain.expr(text) : text,
-            exact: prefixShown != nil || tabbed ? nil : exact,
-            display: exponentShown(prefixShown ?? (tabbed ? forms[formIndex] : live.display)),
+            ans: decorations.ans,
+            exact: shownExact,
+            display: display,
             solvedFor: rootsOf,
-            message: solve != nil && rootsOf.isEmpty)
+            // a matrix answer that says why there is none is words, as a solve's is (native only)
+            message: (solve != nil && rootsOf.isEmpty) || live.matrix?.message == true,
+            matrix: matrix)
         guard request != typesetAsked else { return }
         typesetAsked = request
         typesetter.typeset(request) { [weak self] outcome in
@@ -631,7 +690,39 @@ final class BarModel: ObservableObject {
     }
 
     /// The engine's own pretty text for the live display; Pretty.answer (a port of prettyAnswer) for anything else.
-    func pretty(_ s: String) -> String { s == live.display && !live.pretty.isEmpty ? live.pretty : Pretty.answer(s) }
+    func pretty(_ s: String) -> String {
+        // native only: a matrix answer's own minus signs and roots
+        if let m = live.matrix, !m.message, s == live.display || s == exact { return Pretty.matrix(s) }
+        return s == live.display && !live.pretty.isEmpty ? live.pretty : Pretty.answer(s)
+    }
+
+    /// What both halves of a matrix answer's dual start with, written once, before the exact half (native only):
+    /// the parts that read the same both ways, then a shared `name = ` (`λ^2 − 5λ + 5 = 0,  λ = (5 ± √5)/2 ≈
+    /// 3.61803, 1.38197`); "" otherwise.
+    /// The dual's approximate half as shown: the shared label dropped from the plain text, then styled (styling
+    /// first would change the label's length: `λ^2` is `λ²`).
+    var dualApprox: String {
+        let shown = exponentShown(live.display), label = dualLabel
+        guard !label.isEmpty, shown.hasPrefix(label) else { return pretty(shown) }
+        return Pretty.matrix(String(shown.dropFirst(label.count)))
+    }
+
+    var dualLabel: String {
+        guard let m = live.matrix, !m.message, let exact else { return "" }
+        let sep = ",  "
+        let e = exact.components(separatedBy: sep), d = live.display.components(separatedBy: sep)
+        var same = 0
+        while same < min(e.count, d.count) - 1, e[same] == d[same] { same += 1 }
+        var prefix = e.prefix(same).map { $0 + sep }.joined()
+        if same < e.count, let r = e[same].range(of: " = ") {
+            let name = String(e[same][..<r.lowerBound])
+            let label = name + " = "
+            if !name.isEmpty, name.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "_" }), d[same].hasPrefix(label) {
+                prefix += label
+            }
+        }
+        return live.display.hasPrefix(prefix) ? prefix : ""
+    }
 
     // the 420 / 67 / 69 effects: the answer rests on the number for a moment (so 4200 typed passes through 420
     // without firing), then the core's gate fires it once, and again only after the answer was something else
@@ -753,6 +844,11 @@ final class BarModel: ObservableObject {
             return
         }
         if case let .count(n) = SysCommand.of(text), enterSystem(n) { return }
+        // `matrix 3x3` (native only): the grid, in its place
+        if grid == nil, let spot = matrixGridCommand(text: text) {
+            openGrid(spot)
+            return
+        }
         // `do a barrel roll` saves nothing and says nothing: ↵ rolls now if the line hasn't settled yet, and clears it
         if isBarrelRoll(text: text) {
             effectSettle?.fire()
@@ -816,7 +912,9 @@ final class BarModel: ObservableObject {
             clearLine()
             skipTutorial()
         case .graph:
-            break
+            // native only: ↵ saves the equation to the tape as any line is (the page does nothing), so ↑ or a click
+            // brings the graph back
+            commit()
         case .greeting:
             clearLine()
         }
@@ -841,6 +939,8 @@ final class BarModel: ObservableObject {
     func commit(leaving: Bool = false) {
         let typed = text
         guard !typed.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        // a line holding the grid's matrix opens the grid again when it comes back from history
+        if let lit = lastGridLiteral, typed.contains(lit) { GridMemory.note(typed) }
         // ↵ again on an offered unit takes it (missingUnit's `filled`)
         if !leaving, let offer = unitOffer, offer.typed == typed {
             unitOffer = nil
@@ -1029,6 +1129,8 @@ final class BarModel: ObservableObject {
         selected = nil
         tapeOpen = false
         insert(piece)
+        // a line made in the matrix grid comes back with the grid open on its matrix
+        if GridMemory.made(piece) { DispatchQueue.main.async { [weak self] in self?.reopenGrid() } }
     }
 
     /// Text into the line at the caret (history rows, periodic tiles); the field does the caret part.
@@ -1123,6 +1225,56 @@ final class BarModel: ObservableObject {
     }
 
     /// `display` in exponent form while the mode is on (answers that don't start with a number stay as they are)
+    /// `14.9 ms` as its number and its unit, for the copy block around the number alone (native only); nil when the
+    /// answer isn't one number and a unit
+    func numberAndUnit(_ shown: String) -> (number: String, unit: String)? {
+        if let known = unitSplits[shown] { return known.split }
+        let number = logic.string("lib/answer", "unitlessAnswer", [shown]) ?? shown
+        var split: (number: String, unit: String)?
+        if number != shown, shown.hasPrefix(number) {
+            split = (number, shown.dropFirst(number.count).trimmingCharacters(in: .whitespaces))
+        }
+        if unitSplits.count > 500 { unitSplits.removeAll() }
+        unitSplits[shown] = UnitSplit(split: split, name: split.flatMap { unitName($0.unit) })
+        return split
+    }
+
+    /// native only: the rate behind a currency conversion (`100 usd to eur`), for the answer's hover tip
+    var rateNote: String? {
+        let typed = text
+        if let memo = rateMemo, memo.0 == typed { return memo.1 }
+        let note = live.isBlank ? nil : logic.string("lib/currency", "rateNote",
+                                                     [typed, ECBRates.shared.pageJSON, Date().timeIntervalSince1970 * 1000])
+        rateMemo = (typed, note.flatMap { $0.isEmpty ? nil : $0 })
+        return rateMemo?.1
+    }
+    private var rateMemo: (String, String?)?
+
+    /// what an answer's unit is called, for its hover label (native only): `ms` is millisecond, `m/s^2` meter/second^2
+    func unitName(forAnswer shown: String) -> String? {
+        _ = numberAndUnit(shown)
+        return unitSplits[shown]?.name
+    }
+
+    private func unitName(_ unit: String) -> String? {
+        let lead = "1 "
+        let spans = logic.call("lib/knownWords", "wordNames", [lead + unit, [String](), [String](), false]) as? [[String: Any]] ?? []
+        guard !spans.isEmpty else { return nil }
+        let name = NSMutableString(string: lead + unit)
+        for s in spans.reversed() {
+            guard let a = (s["start"] as? NSNumber)?.intValue, let b = (s["end"] as? NSNumber)?.intValue, b > a, b <= name.length,
+                  let word = s["name"] as? String else { continue }
+            name.replaceCharacters(in: NSRange(location: a, length: b - a), with: word)
+        }
+        return String((name as String).dropFirst(lead.count))
+    }
+
+    private struct UnitSplit {
+        let split: (number: String, unit: String)?
+        let name: String?
+    }
+    private var unitSplits: [String: UnitSplit] = [:]
+
     func exponentShown(_ display: String) -> String {
         guard exponentMode, !display.isEmpty else { return display }
         if let memo = exponentMemo, memo.0 == display { return memo.1 }
@@ -1134,7 +1286,17 @@ final class BarModel: ObservableObject {
 
     func stepPrefix(_ dir: Int) {
         let base: Any? = prefixValue ?? live.valueJson.flatMap { try? JSONSerialization.jsonObject(with: Data($0.utf8)) }
-        guard let base, let next = logic.call("engine/units", "stepPrefix", [base, dir]) as? [String: Any],
+        guard let base else { return }
+        // native only: a length in feet or inches steps inches ↔ feet and inches ↔ feet
+        let shown = prefixShown ?? live.display
+        if let step = logic.call("engine/units", "stepFeetInches", [base, shown, dir, settings.significantFigures]) as? [String: Any],
+           let value = step["value"] as? [String: Any], let display = step["display"] as? String {
+            prefixValue = value
+            prefixShown = display
+            track("prefix.step")
+            return
+        }
+        guard let next = logic.call("engine/units", "stepPrefix", [base, dir]) as? [String: Any],
               next["unitId"] != nil else { return }
         prefixValue = next
         prefixShown = logic.string("engine/format", "formatValue", [next, settings.significantFigures])
@@ -1211,7 +1373,7 @@ final class BarModel: ObservableObject {
                                         .priority: (high ? NSAccessibilityPriorityLevel.high : .medium).rawValue])
     }
 
-    private func flashCopied() {
+    func flashCopied() {
         copied = true
         copiedTimer?.invalidate()
         copiedTimer = Timer.scheduledTimer(withTimeInterval: 1.2, repeats: false) { [weak self] _ in self?.copied = false }
@@ -1229,6 +1391,7 @@ final class BarModel: ObservableObject {
     func toggleFractions() {
         let on = !fractions
         settings.setFractionMode(on, notifyWeb: true)
+        if sysLines != nil { solveSystemLive() }
         announceMode("fraction", on)
     }
     func toggleSigFigMode() {
@@ -1264,6 +1427,11 @@ final class BarModel: ObservableObject {
                 return true
             }
             guard flags.isEmpty else { return false }
+            // native only: ↓ from the line goes back into the open matrix grid, at its first cell
+            if code == kVK_DownArrow, grid != nil, selected == nil {
+                reopenGrid(focus: GridCell(r: 0, c: 0))
+                return true
+            }
             moveSelection(up: code == kVK_UpArrow)
             return true
         case kVK_LeftArrow, kVK_RightArrow:
@@ -1277,6 +1445,11 @@ final class BarModel: ObservableObject {
             return false
         case kVK_Tab:
             guard flags.isSubset(of: [.shift]) else { return false }
+            // native only: from the line, Tab goes down to the first equation of an open system
+            if !flags.contains(.shift), sysLines != nil {
+                sysFocus = 0
+                return true
+            }
             if !flags.contains(.shift) { _ = fillTourStep() || acceptCompletion() || acceptParens() || tabToCard() }
             return true
         case kVK_Delete:
@@ -1314,12 +1487,23 @@ final class BarModel: ObservableObject {
         case "clear": clearHistory()
         case "exponent": toggleExponent()
         case "forms": cycleForms()
+        case "matrixGrid": toggleGrid()
+        case "matrixSteps": toggleSteps()
+        case "working": toggleWorking()
         default: break
         }
     }
 
     /// Esc closes the innermost layer; false means nothing was open, so the bar hides.
     func escape() -> Bool {
+        if grid != nil {
+            closeGrid()
+            return true
+        }
+        if stepsShown {
+            stepsShown = false
+            return true
+        }
         if sysLines != nil {
             closeSystem()
             text = ""
@@ -1337,6 +1521,10 @@ final class BarModel: ObservableObject {
         if closeMessages() { return true }
         if !cards.isEmpty {
             cards = []
+            return true
+        }
+        if workingShown, working != nil {
+            workingShown = false
             return true
         }
         if helpShown || gamesShown {
@@ -1373,6 +1561,7 @@ final class BarModel: ObservableObject {
 
     func willHide() {
         replyFocused = nil
+        workingShown = false
         // a confirmation (sent, copied…) was for that visit: the bar opens without it
         hint = nil
         followed = nil
@@ -1388,7 +1577,10 @@ final class BarModel: ObservableObject {
         if text.trimmingCharacters(in: .whitespaces).isEmpty {
             UserDefaults.standard.removeObject(forKey: Self.draftKey)
         } else if draftSeconds > 0 {
-            UserDefaults.standard.set(["expr": text, "savedAt": Date().timeIntervalSince1970 * 1000], forKey: Self.draftKey)
+            var d: [String: Any] = ["expr": text, "savedAt": Date().timeIntervalSince1970 * 1000]
+            // native only: an open matrix grid comes back with the line
+            if let g = grid { d["grid"] = ["start": g.start, "end": g.end, "r": gridFocus?.r ?? 0, "c": gridFocus?.c ?? 0] }
+            UserDefaults.standard.set(d, forKey: Self.draftKey)
         } else {
             if !live.isBlank { commit(leaving: true) }
             text = ""
@@ -1405,6 +1597,13 @@ final class BarModel: ObservableObject {
         let age = Date().timeIntervalSince1970 * 1000 - savedAt
         if settings.draftSeconds > 0, age < Double(settings.draftSeconds) * 1000 {
             if text != expr { text = expr }
+            if let g = d["grid"] as? [String: Int] {
+                let at = GridCell(r: g["r"] ?? 0, c: g["c"] ?? 0)
+                // after the bar has given its line the keys
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
+                    self?.reopenGrid(at: g["start"], end: g["end"], focus: at)
+                }
+            }
         } else {
             text = ""
             UserDefaults.standard.removeObject(forKey: Self.draftKey)

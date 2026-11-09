@@ -258,10 +258,14 @@ pub fn parse_json(text: &str) -> Result<Option<Rates>, String> {
         })
         .unwrap_or_default();
     if let Some(base) = base {
-        // the page's table: whatever base it names, no date or freshness
+        // the page's table: whatever base it names, no freshness (native only: the day, when it says)
         return Ok((!rates.is_empty()).then(|| Rates {
             base: base.to_string(),
-            date: None,
+            date: o
+                .get("date")
+                .and_then(Json::as_str)
+                .filter(|d| is_date(d))
+                .map(str::to_string),
             rates,
             fetched: None,
         }));
@@ -280,14 +284,17 @@ impl Rates {
 
     /// What the phrase layer takes, or None when stale.
     pub fn currency_rates(&self, now_ms: i64) -> Option<CurrencyRates> {
-        self.fresh(now_ms)
-            .then(|| CurrencyRates::new(&self.base, &self.rates))
+        self.fresh(now_ms).then(|| CurrencyRates {
+            date: self.date.clone(),
+            ..CurrencyRates::new(&self.base, &self.rates)
+        })
     }
 
     /// The same as `CurrencyRates` JSON (`{base, rates}`), or null when stale.
     pub fn table(&self, now_ms: i64) -> Json {
         if self.fresh(now_ms) {
-            json!({ "base": self.base, "rates": self.rates })
+            // `date` is native only: the web's table is `{base, rates}`, and readers ignore the rest
+            json!({ "base": self.base, "rates": self.rates, "date": self.date })
         } else {
             Json::Null
         }

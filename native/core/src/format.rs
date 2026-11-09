@@ -138,6 +138,12 @@ pub fn format_number(n: f64, sig_figs: f64) -> String {
 /// A value as shown, with its unit after a space.
 pub fn format_value(value: &Value, sig_figs: f64) -> String {
     if value.kind == ValueKind::Text {
+        // native only: a complex answer follows the sig figs too (the engine's own stops at 12)
+        if let Some(z) = value.complex
+            && (sig_figs < 12.0 || z.j || z.polar || value.unit.is_some())
+        {
+            return crate::complex_line::shown(value, sig_figs);
+        }
         return value.text.clone().unwrap_or_default();
     }
     let n = format_number(value.n, sig_figs);

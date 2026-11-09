@@ -22,9 +22,9 @@ enum ThreadCmd: Equatable {
 }
 
 extension BarModel {
-    /// `messages…` read by the core, or nil when the line isn't one
+    /// `messages…` or `chat…` read by the core, or nil when the line isn't one
     func threadCommand(_ typed: String) -> ThreadCmd? {
-        guard typed.range(of: #"^\s*(open\s+)?messages"#, options: [.regularExpression, .caseInsensitive]) != nil,
+        guard typed.range(of: #"^\s*(open\s+)?(messages|chat)"#, options: [.regularExpression, .caseInsensitive]) != nil,
               let o = logic.call("lib/messaging", "parseMessagesCommand", [typed]) as? [String: Any] else { return nil }
         switch o["kind"] as? String {
         case "list": return .list
