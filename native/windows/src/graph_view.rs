@@ -1,17 +1,19 @@
 //! The graph panel drawn, and the pointer over it (graph.rs has the state; GraphPanel.swift is the spec).
 //!
-//! - The panel: a head (the label, `x ∈ [lo, hi]`, the angle unit; a surface's `3D | contour`, + for another
-//!   equation, the wrench for the settings, reset), the equations when there are several (a colour bar, the
-//!   equation, an added one's field and ×), the settings block, the plot, then the key points as chips (a colour
-//!   square each when there are several equations) and the roots no chip lists. All in mono type, the plot as a
-//!   technical drawing: a square frame, hairline grids, tick marks out from the frame, square marks.
+//! - The panel: a head (the label, `x ∈ [lo, hi]`, the angle unit; a surface's `3D | contour`, zoom out and in,
+//!   + for another equation, the camera for the export card, the wrench for the settings card, reset), those cards,
+//!   the equations when there are several (a colour bar, the equation, an added one's field and ×), the plot, then
+//!   the key points as chips (a colour square each when there are several equations; past a dozen, the dozen
+//!   nearest the middle and "+N more", which opens them all in a box that scrolls) and the roots no chip lists.
+//!   All in Q Calc's own type with tabular digits, the plot as a technical drawing: a square frame, hairline grids
+//!   with square cells, the numbers riding the axes, square marks (a kept end filled, crossings in the ink).
 //! - Two passes: the plot's base (grid, axes, curves, level curves, surfaces, marks) is drawn into a bitmap once
 //!   per change of graph, view, settings, theme or scale (`GraphState::generation`), and each frame draws that
 //!   bitmap and the pointer's pass over it (crosshair, readout, picked mark), so moving the pointer never draws
 //!   the plot again. The 3D base pass keeps its scene for the pointer pass to hit-test.
 //! - The pointer: a drag pans (in 3D it orbits; shift, alt or the middle button pans; the right button orbits
-//!   too and opens no menu), the wheel zooms (sideways pans in 2D), a double-click resets, a click on a picked mark
-//!   or a chip copies it. Readouts the engine has to work out (a curve's y, a surface's z) go on
+//!   too and opens no menu), the wheel zooms about the pointer (sideways or with shift pans in 2D), a double-click
+//!   resets, a click on a picked mark or a chip copies it, and the pointer snaps to marks and roots. Readouts the engine has to work out (a curve's y, a surface's z) go on
 //!   `Lane::GraphReadout`; the 3D view reads the grid's height at once and the engine's exact z after.
 
 use std::cell::RefCell;
@@ -28,14 +30,15 @@ use windows::Win32::Graphics::Direct2D::Common::{
 use windows::Win32::Graphics::Direct2D::{
     D2D1_ANTIALIAS_MODE_PER_PRIMITIVE, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
     D2D1_CAP_STYLE_ROUND, D2D1_COMPATIBLE_RENDER_TARGET_OPTIONS_NONE, D2D1_DASH_STYLE_SOLID,
-    D2D1_ELLIPSE, D2D1_LINE_JOIN_ROUND, D2D1_STROKE_STYLE_PROPERTIES,
+    D2D1_ELLIPSE, D2D1_LINE_JOIN_ROUND, D2D1_ROUNDED_RECT, D2D1_STROKE_STYLE_PROPERTIES,
     D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE, ID2D1Bitmap, ID2D1PathGeometry, ID2D1RenderTarget,
     ID2D1SolidColorBrush, ID2D1StrokeStyle,
 };
 use windows::Win32::Graphics::DirectWrite::{
-    DWRITE_FONT_WEIGHT, DWRITE_FONT_WEIGHT_MEDIUM, DWRITE_FONT_WEIGHT_REGULAR,
-    DWRITE_FONT_WEIGHT_SEMI_BOLD, DWRITE_TEXT_ALIGNMENT_LEADING, IDWriteTextFormat,
-    IDWriteTextLayout,
+    DWRITE_FONT_FEATURE, DWRITE_FONT_FEATURE_TAG_TABULAR_FIGURES, DWRITE_FONT_WEIGHT,
+    DWRITE_FONT_WEIGHT_MEDIUM, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_WEIGHT_SEMI_BOLD,
+    DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_TEXT_RANGE, DWRITE_WORD_WRAPPING_WRAP, IDWriteTextFormat,
+    IDWriteTextLayout, IDWriteTypography,
 };
 use windows::Win32::Graphics::Gdi::ScreenToClient;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
@@ -45,13 +48,13 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 use windows::Win32::UI::WindowsAndMessaging::{
     IDC_ARROW, IDC_HAND, IDC_IBEAM, IDC_SIZEALL, IDC_SIZEWE,
 };
-use windows::core::{HSTRING, PCWSTR};
+use windows::core::PCWSTR;
 use windows_numerics::{Matrix3x2, Vector2};
 
 use crate::app::App;
 use crate::engine::{Lane, done};
 use crate::graph::*;
-use crate::graph_settings::{self as gs, Check, Ctl, FieldId, GraphPrefs, Seg};
+use crate::graph_settings::{self as gs, Check, FieldId, GraphPrefs, Seg};
 use crate::graph3d::{self, Cube, Frame, Line, P2, P3, Piece, Plane, Scene};
 use crate::model::{BarModel, now_ms};
 use crate::render::{Canvas, Color, Gfx, Rect, Theme, caret_x, measure, size, with_alpha};
@@ -60,52 +63,26 @@ use crate::render::{Canvas, Color, Gfx, Rect, Theme, caret_x, measure, size, wit
 
 thread_local! {
     static FONTS: RefCell<HashMap<(bool, u32, i32), IDWriteTextFormat>> = RefCell::new(HashMap::new());
-    static MONO: RefCell<Option<String>> = const { RefCell::new(None) };
+    static TABULAR: RefCell<Option<IDWriteTypography>> = const { RefCell::new(None) };
     static ROUND: RefCell<Option<ID2D1StrokeStyle>> = const { RefCell::new(None) };
     /// the bench pipe's pointer stays put while the real one is elsewhere (its WM_MOUSELEAVE is ignored)
     static BENCH_POINTER: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
-/// The plot's monospaced family: Cascadia Mono where Windows has it, else Consolas.
-fn mono_family(gfx: &Gfx) -> String {
-    MONO.with(|m| {
-        if let Some(f) = &*m.borrow() {
-            return f.clone();
-        }
-        let mut found = "Consolas".to_string();
-        // SAFETY: out pointers are live locals
-        unsafe {
-            let mut fonts = None;
-            if gfx.dw.GetSystemFontCollection(&mut fonts, false).is_ok()
-                && let Some(fonts) = fonts
-            {
-                let (mut i, mut exists) = (0u32, windows::core::BOOL(0));
-                if fonts
-                    .FindFamilyName(&HSTRING::from("Cascadia Mono"), &mut i, &mut exists)
-                    .is_ok()
-                    && exists.as_bool()
-                {
-                    found = "Cascadia Mono".into();
-                }
-            }
-        }
-        *m.borrow_mut() = Some(found.clone());
-        found
-    })
-}
-
-/// A text format, made once: mono (the plot's) or the UI's.
-fn font(gfx: &Gfx, mono: bool, size: f32, weight: DWRITE_FONT_WEIGHT) -> Option<IDWriteTextFormat> {
-    let key = (mono, size.to_bits(), weight.0);
+/// A text format, made once. The whole graph is in Q Calc's own type, the system font (the Mac's
+/// `monospacedDigitSystemFont`): `lay` gives every layout tabular digits, so numbers line up. `_plot` marks the
+/// plot's numbers, once a monospaced face.
+fn font(
+    gfx: &Gfx,
+    _plot: bool,
+    size: f32,
+    weight: DWRITE_FONT_WEIGHT,
+) -> Option<IDWriteTextFormat> {
+    let key = (true, size.to_bits(), weight.0);
     if let Some(f) = FONTS.with(|f| f.borrow().get(&key).cloned()) {
         return Some(f);
     }
-    let fam = if mono {
-        mono_family(gfx)
-    } else {
-        gfx.fonts.text_family.clone()
-    };
-    let f = crate::render::format(&gfx.dw, &fam, size, weight).ok()?;
+    let f = crate::render::format(&gfx.dw, &gfx.fonts.text_family, size, weight).ok()?;
     FONTS.with(|fs| fs.borrow_mut().insert(key, f.clone()));
     Some(f)
 }
@@ -131,8 +108,36 @@ fn round_stroke(gfx: &Gfx) -> Option<ID2D1StrokeStyle> {
 
 const REGULAR: DWRITE_FONT_WEIGHT = DWRITE_FONT_WEIGHT_REGULAR;
 
+/// Tabular figures on `l` (made once).
+fn tabular(gfx: &Gfx, l: &IDWriteTextLayout, s: &str) {
+    let t = TABULAR.with(|t| {
+        let mut t = t.borrow_mut();
+        if t.is_none() {
+            // SAFETY: a plain factory call and a setter on the new object
+            *t = unsafe {
+                gfx.dw.CreateTypography().ok().inspect(|typo| {
+                    let _ = typo.AddFontFeature(DWRITE_FONT_FEATURE {
+                        nameTag: DWRITE_FONT_FEATURE_TAG_TABULAR_FIGURES,
+                        parameter: 1,
+                    });
+                })
+            };
+        }
+        t.clone()
+    });
+    if let Some(t) = t {
+        let range = DWRITE_TEXT_RANGE {
+            startPosition: 0,
+            length: s.encode_utf16().count() as u32,
+        };
+        // SAFETY: a setter on a live layout
+        let _ = unsafe { l.SetTypography(&t, range) };
+    }
+}
+
 fn lay(gfx: &Gfx, s: &str, f: &IDWriteTextFormat) -> Option<(IDWriteTextLayout, f32, f32)> {
     let l = gfx.layout(s, f, 0.0, 0.0)?;
+    tabular(gfx, &l, s);
     let (w, h) = measure(&l);
     // SAFETY: a live layout
     let _ = unsafe { l.SetMaxHeight(h) };
@@ -148,8 +153,11 @@ fn rgb(c: (f32, f32, f32), k: f32) -> Color {
     }
 }
 
-/// An equation's colour: the accent for the bar's, then the palette.
+/// An equation's colour: the accent for the bar's, then the palette; a crossing of two in the ink.
 fn layer_color(t: &Theme, i: usize) -> Color {
+    if i == CROSSING {
+        return t.ink;
+    }
     layer_rgb(i).map_or(t.accent, |c| rgb(c, 1.0))
 }
 
@@ -452,7 +460,28 @@ fn marks(g: &GraphState) -> Vec<Option<P2>> {
 /// The mark under the pointer.
 fn hovered_mark(g: &GraphState) -> Option<usize> {
     let p = g.pointer?;
+    if !g.sparse() {
+        return None;
+    }
     nearest(&marks(g), p, SNAP)
+}
+
+/// A root the pointer is within reach of (2D, when the marks are drawn): its x and equation's number.
+fn hovered_root(g: &GraphState) -> Option<(f64, usize)> {
+    let h = g.pointer?;
+    if g.shows_3d() || !g.sparse() || hovered_mark(g).is_some() {
+        return None;
+    }
+    let m = Map2D::new(g);
+    if m.log.1 {
+        return None;
+    }
+    let roots = g.all_roots();
+    let at: Vec<Option<P2>> = roots
+        .iter()
+        .map(|(x, _)| Some((m.px(*x), m.py(0.0))).filter(|q| Map2D::inside(*q)))
+        .collect();
+    nearest(&at, h, SNAP).map(|i| roots[i])
 }
 
 // ---- the panel's layout ----
@@ -465,13 +494,21 @@ const CHIP_H: f32 = 22.0;
 const CHIP_GAP: f32 = 4.0;
 const EQ_ROW: f32 = 22.0;
 const SET_ROW: f32 = 22.0;
-const SET_PAD: f32 = 8.0;
+/// a card's padding, the width of its rows' names, and the gap after them
+const CARD_PAD: f32 = 12.0;
+const NAME_W: f32 = 54.0;
+const NAME_GAP: f32 = 8.0;
+/// the expanded chips scroll in a box this tall
+const CHIP_BOX: f32 = 156.0;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Btn {
     View3D,
     Contour,
+    ZoomOut,
+    ZoomIn,
     Add,
+    Export,
     Wrench,
     Reset,
 }
@@ -480,7 +517,7 @@ struct HeadItem {
     rect: Rect,
     btn: Btn,
     text: (IDWriteTextLayout, f32),
-    /// the chosen one of 3D / contour, or the wrench while the settings are open
+    /// the chosen one of 3D / contour, or the wrench or camera while its card is open
     on: bool,
     enabled: bool,
 }
@@ -504,16 +541,27 @@ enum Act {
     Check(Check),
     Seg(Seg, usize),
     Field(FieldId),
-    ZoomSquare,
+    Button(gs::Button),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Look {
+    /// a row's name
+    Name,
+    /// a word between fields
     Text,
-    Check(bool),
+    /// a caption line: what a row does, or a note beside its controls
+    About,
+    /// a setting that's on or off: (on, enabled)
     Cell(bool, bool),
+    /// one of a choice's cells: (chosen, enabled)
+    Choice(bool, bool),
+    /// the rounded box round a choice's cells
+    Group(bool),
+    /// a field: (showing its placeholder)
     Field(bool),
-    Button(bool),
+    /// (enabled, filled in the accent)
+    Button(bool, bool),
 }
 
 struct SetItem {
@@ -523,20 +571,31 @@ struct SetItem {
     text: Option<(IDWriteTextLayout, f32)>,
 }
 
+/// What a chip does when clicked.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum ChipAct {
+    Copy(f64),
+    /// "+N more" / "fewer"
+    More,
+}
+
 struct Chip {
     rect: Rect,
-    /// into `all_critical`; None for a root
+    /// into `all_critical`; None for a root or "+N more"
     index: Option<usize>,
-    kind: (IDWriteTextLayout, f32),
+    kind: Option<(IDWriteTextLayout, f32)>,
     coords: IDWriteTextLayout,
-    color: Option<Color>,
-    copy: f64,
+    /// its equation's colour square, when there are several
+    layer: Option<usize>,
+    act: ChipAct,
+    /// in the box that scrolls (`Geo::chip_box`)
+    scrolls: bool,
 }
 
 /// The 3D base pass's cube, plane and scene, kept for the pointer pass.
 type Scene3 = (Cube, Frame, Scene);
-/// A chip to lay out: its point's index, kind, coordinates, what it copies and its equation's colour.
-type ChipItem = (Option<usize>, &'static str, String, f64, Option<Color>);
+/// A chip to lay out: its point's index, kind, coordinates, what it does and its equation's number.
+type ChipItem = (Option<usize>, &'static str, String, ChipAct, Option<usize>);
 
 /// Where everything goes for a width and a generation, panel-relative.
 pub struct Geo {
@@ -546,12 +605,45 @@ pub struct Geo {
     domain_x: f32,
     head: Vec<HeadItem>,
     eqs: Vec<EqRow>,
-    settings: Option<(Rect, Vec<SetItem>)>,
+    /// the export and settings cards: each one's box and items
+    cards: Vec<(Rect, Vec<SetItem>)>,
     message: Option<(f32, IDWriteTextLayout)>,
     svg: Option<Rect>,
     titles: Vec<(f32, IDWriteTextLayout)>,
     empty: Option<(f32, IDWriteTextLayout)>,
     chips: Vec<Chip>,
+    /// the box the expanded chips scroll in, and their height
+    chip_box: Option<(Rect, f32)>,
+}
+
+impl Geo {
+    fn items(&self) -> impl Iterator<Item = &SetItem> {
+        self.cards.iter().flat_map(|c| c.1.iter())
+    }
+
+    /// The chips' scroll offset, kept within their box.
+    fn scroll(&self, g: &GraphState) -> f32 {
+        self.chip_box
+            .map_or(0.0, |(b, h)| g.chip_scroll.clamp(0.0, (h - b.h).max(0.0)))
+    }
+
+    /// A chip's rect as drawn (scrolled), None when it's scrolled out of its box.
+    fn chip_rect(&self, g: &GraphState, c: &Chip) -> Option<Rect> {
+        if !c.scrolls {
+            return Some(c.rect);
+        }
+        let (b, _) = self.chip_box?;
+        let r = Rect::new(c.rect.x, c.rect.y - self.scroll(g), c.rect.w, c.rect.h);
+        (r.bottom() > b.y && r.y < b.bottom()).then_some(r)
+    }
+
+    /// The chip under (x, y), panel DIPs.
+    fn chip_at(&self, g: &GraphState, x: f32, y: f32) -> Option<&Chip> {
+        self.chips.iter().find(|c| {
+            self.chip_rect(g, c).is_some_and(|r| r.contains(x, y))
+                && (!c.scrolls || self.chip_box.is_some_and(|b| b.0.contains(x, y)))
+        })
+    }
 }
 
 /// What the panel keeps between frames: its layout, each sample's paths, the base pass's bitmap and the 3D scene.
@@ -663,6 +755,167 @@ fn small(gfx: &Gfx) -> Option<IDWriteTextFormat> {
     font(gfx, true, size::SMALL, REGULAR)
 }
 
+/// A layout of `s` wrapped at `w`, and its height.
+fn lay_wrapped(
+    gfx: &Gfx,
+    s: &str,
+    f: &IDWriteTextFormat,
+    w: f32,
+) -> Option<(IDWriteTextLayout, f32)> {
+    let l = gfx.layout(s, f, w.max(1.0), 0.0)?;
+    // SAFETY: setters on a live layout
+    unsafe {
+        let _ = l.SetWordWrapping(DWRITE_WORD_WRAPPING_WRAP);
+    }
+    let (_, h) = measure(&l);
+    // SAFETY: as above
+    let _ = unsafe { l.SetMaxHeight(h) };
+    Some((l, h))
+}
+
+/// A card's rows laid out from `top` (GraphSettingsView / GraphExportView): each row's name, then its controls
+/// wrapping in the column beside it, then the line saying what it does; the card's box and items.
+fn card(
+    gfx: &Gfx,
+    g: &GraphState,
+    rows: Vec<gs::Row>,
+    x0: f32,
+    inner: f32,
+    top: f32,
+) -> Option<(Rect, Vec<SetItem>)> {
+    let ui = font(gfx, false, size::SMALL, REGULAR)?;
+    let name_f = font(gfx, false, size::SMALL, DWRITE_FONT_WEIGHT_SEMI_BOLD)?;
+    let caption = font(gfx, false, size::CAPTION, REGULAR)?;
+    let left = x0 + CARD_PAD + NAME_W + NAME_GAP;
+    let maxx = (x0 + inner - CARD_PAD).max(left + 40.0);
+    let mut items = Vec::new();
+    let mut y = top + CARD_PAD;
+    for (ri, row) in rows.into_iter().enumerate() {
+        if ri > 0 {
+            y += 10.0;
+        }
+        if !row.name.is_empty()
+            && let Some((l, w, _)) = lay(gfx, row.name, &name_f)
+        {
+            items.push(SetItem {
+                rect: Rect::new(x0 + CARD_PAD, y, NAME_W, SET_ROW),
+                act: Act::None,
+                look: Look::Name,
+                text: Some((l, w)),
+            });
+        }
+        let (mut cx, mut cy) = (left, y);
+        let mut place = |w: f32| {
+            if cx > left && cx + w > maxx {
+                cx = left;
+                cy += SET_ROW + 4.0;
+            }
+            let r = Rect::new(cx, cy, w, SET_ROW);
+            cx += w + 6.0;
+            r
+        };
+        for c in row.ctls {
+            let note = matches!(c, gs::Ctl::Note(_));
+            match c {
+                gs::Ctl::Text(s) | gs::Ctl::Note(s) => {
+                    let Some((l, w, _)) = lay(gfx, &s, if note { &caption } else { &ui }) else {
+                        continue;
+                    };
+                    items.push(SetItem {
+                        rect: place(w),
+                        act: Act::None,
+                        look: if note { Look::About } else { Look::Text },
+                        text: Some((l, w)),
+                    });
+                }
+                gs::Ctl::Cell(k, s, on, enabled) => {
+                    let Some((l, w, _)) = lay(gfx, s, &ui) else {
+                        continue;
+                    };
+                    items.push(SetItem {
+                        rect: place(w + 18.0 + if on { 13.0 } else { 0.0 }),
+                        act: if enabled { Act::Check(k) } else { Act::None },
+                        look: Look::Cell(on, enabled),
+                        text: Some((l, w)),
+                    });
+                }
+                gs::Ctl::Seg(k, options, chosen, enabled) => {
+                    let cells: Vec<_> = options.iter().filter_map(|s| lay(gfx, s, &ui)).collect();
+                    let total: f32 = cells.iter().map(|c| c.1 + 18.0).sum::<f32>() + 2.0;
+                    let r = place(total);
+                    items.push(SetItem {
+                        rect: r,
+                        act: Act::None,
+                        look: Look::Group(enabled),
+                        text: None,
+                    });
+                    let mut x = r.x + 1.0;
+                    for (i, (l, w, _)) in cells.into_iter().enumerate() {
+                        let cw = w + 18.0;
+                        items.push(SetItem {
+                            rect: Rect::new(x, r.y + 1.0, cw, r.h - 2.0),
+                            act: if enabled { Act::Seg(k, i) } else { Act::None },
+                            look: Look::Choice(i == chosen, enabled),
+                            text: Some((l, w)),
+                        });
+                        x += cw;
+                    }
+                }
+                gs::Ctl::Field(id, value, placeholder, w) => {
+                    let focused = g.focus == Some(id);
+                    let shown = if focused {
+                        g.edit.text().to_string()
+                    } else {
+                        value
+                    };
+                    let ph = shown.is_empty() && !focused;
+                    let text = if ph { placeholder.to_string() } else { shown };
+                    let text = if text.is_empty() {
+                        None
+                    } else {
+                        lay(gfx, &text, &ui).map(|l| (l.0, l.1))
+                    };
+                    items.push(SetItem {
+                        rect: place(w),
+                        act: Act::Field(id),
+                        look: Look::Field(ph),
+                        text,
+                    });
+                }
+                gs::Ctl::Button(b, s, enabled) => {
+                    let primary = b == gs::Button::Save;
+                    let f = if primary { &name_f } else { &ui };
+                    let Some((l, w, _)) = lay(gfx, s, f) else {
+                        continue;
+                    };
+                    items.push(SetItem {
+                        rect: place(w + 20.0),
+                        act: if enabled { Act::Button(b) } else { Act::None },
+                        look: Look::Button(enabled, primary),
+                        text: Some((l, w)),
+                    });
+                }
+            }
+        }
+        y = cy + SET_ROW;
+        if let Some(about) = row.about
+            && let Some((l, h)) = lay_wrapped(gfx, about, &caption, maxx - left)
+        {
+            y += 3.0;
+            let w = measure(&l).0;
+            items.push(SetItem {
+                rect: Rect::new(left, y, w, h),
+                act: Act::None,
+                look: Look::About,
+                text: Some((l, w)),
+            });
+            y += h;
+        }
+    }
+    let r = Rect::new(x0, top, inner, y + CARD_PAD - top);
+    Some((r, items))
+}
+
 fn geo(gfx: &Gfx, g: &GraphState, width: f32) -> Option<Rc<Geo>> {
     let key = (width.to_bits(), g.generation);
     if let Some((k, geo)) = &g.cache.borrow().geo
@@ -678,7 +931,7 @@ fn geo(gfx: &Gfx, g: &GraphState, width: f32) -> Option<Rc<Geo>> {
     let inner = width - 2.0 * size::GUTTER;
     let x0 = size::GUTTER;
     let prefs = gs::prefs();
-    // the head, right to left: reset, the wrench, +, then a surface's 3D | contour
+    // the head, right to left: reset, the wrench, the camera, +, zoom in and out, then a surface's 3D | contour
     let mut head = Vec::new();
     let mut right = width - size::GUTTER + 8.0;
     let mut push = |btn: Btn, s: &str, f: &IDWriteTextFormat, pad: f32, on: bool, enabled: bool| {
@@ -697,7 +950,10 @@ fn geo(gfx: &Gfx, g: &GraphState, width: f32) -> Option<Rc<Geo>> {
     };
     push(Btn::Reset, "reset", &ui_small, 16.0, false, !g.at_home())?;
     push(Btn::Wrench, "\u{E90F}", &icon, 11.0, g.settings_open, true)?;
+    push(Btn::Export, "\u{E722}", &icon, 11.0, g.export_open, true)?;
     push(Btn::Add, "\u{E710}", &icon, 11.0, false, true)?;
+    push(Btn::ZoomIn, "\u{E8A3}", &icon, 11.0, false, true)?;
+    push(Btn::ZoomOut, "\u{E71F}", &icon, 11.0, false, true)?;
     if g.kind() == Kind::Surface && g.main().is_some_and(|p| p.ok()) {
         push(
             Btn::Contour,
@@ -730,14 +986,33 @@ fn geo(gfx: &Gfx, g: &GraphState, width: f32) -> Option<Rc<Geo>> {
         fmt_g(round_to_pixel(g.x_max, res_x), 6)
     );
     let domain_x = x0 + label_w + 12.0;
-    let domain = gfx.layout_in(
+    let domain_l = gfx.layout_in(
         &domain,
         &t_mono,
         (right - 8.0 - domain_x).max(1.0),
         HEAD_H,
         DWRITE_TEXT_ALIGNMENT_LEADING,
     );
+    if let Some(l) = &domain_l {
+        tabular(gfx, l, &domain);
+    }
     let mut y = TOP + HEAD_H + 8.0;
+    // in the bar itself, not a popup (a window of its own takes the keys, and the bar hides): the export card,
+    // then the settings card
+    let mut cards = Vec::new();
+    let view = g.settings_view();
+    if g.export_open
+        && let Some(c) = card(gfx, g, gs::export(&view), x0, inner, y)
+    {
+        y = c.0.bottom() + 8.0;
+        cards.push(c);
+    }
+    if g.settings_open
+        && let Some(c) = card(gfx, g, gs::settings(&prefs, &view), x0, inner, y)
+    {
+        y = c.0.bottom() + 8.0;
+        cards.push(c);
+    }
     // the equations, when there are several
     let mut eqs = Vec::new();
     if !g.layers.is_empty() {
@@ -809,127 +1084,20 @@ fn geo(gfx: &Gfx, g: &GraphState, width: f32) -> Option<Rc<Geo>> {
         }
         y += 8.0;
     }
-    // the settings
-    let settings = if g.settings_open {
-        let radians = g.radians;
-        let ctls = gs::controls(&prefs, &g.settings_view(radians));
-        let mut items = Vec::new();
-        let (left, maxx) = (x0 + SET_PAD, x0 + inner - SET_PAD);
-        let (mut cx, mut cy) = (left, y + SET_PAD);
-        let place = |w: f32, cx: &mut f32, cy: &mut f32| {
-            if *cx > left && *cx + w > maxx {
-                *cx = left;
-                *cy += SET_ROW + 4.0;
-            }
-            let r = Rect::new(*cx, *cy, w, SET_ROW);
-            *cx += w + 10.0;
-            r
-        };
-        for c in ctls {
-            match c {
-                Ctl::Break => {
-                    cx = left;
-                    cy += SET_ROW + 4.0;
-                }
-                Ctl::Text(s) => {
-                    let Some((l, w, _)) = lay(gfx, &s, &t_mono) else {
-                        continue;
-                    };
-                    let r = place(w, &mut cx, &mut cy);
-                    items.push(SetItem {
-                        rect: r,
-                        act: Act::None,
-                        look: Look::Text,
-                        text: Some((l, w)),
-                    });
-                }
-                Ctl::Check(k, s, on) => {
-                    let Some((l, w, _)) = lay(gfx, s, &t_mono) else {
-                        continue;
-                    };
-                    let r = place(16.0 + w, &mut cx, &mut cy);
-                    items.push(SetItem {
-                        rect: r,
-                        act: Act::Check(k),
-                        look: Look::Check(on),
-                        text: Some((l, w)),
-                    });
-                }
-                Ctl::Seg(k, options, chosen, enabled) => {
-                    let cells: Vec<_> = options
-                        .iter()
-                        .filter_map(|s| lay(gfx, s, &t_mono))
-                        .collect();
-                    let total: f32 = cells.iter().map(|c| c.1 + 14.0).sum();
-                    let r = place(total, &mut cx, &mut cy);
-                    let mut x = r.x;
-                    for (i, (l, w, _)) in cells.into_iter().enumerate() {
-                        let cw = w + 14.0;
-                        items.push(SetItem {
-                            rect: Rect::new(x, r.y, cw, r.h),
-                            act: if enabled { Act::Seg(k, i) } else { Act::None },
-                            look: Look::Cell(i == chosen, enabled),
-                            text: Some((l, w)),
-                        });
-                        x += cw;
-                    }
-                }
-                Ctl::Field(id, value, placeholder, w) => {
-                    let focused = g.focus == Some(id);
-                    let shown = if focused {
-                        g.edit.text().to_string()
-                    } else {
-                        value
-                    };
-                    let ph = shown.is_empty() && !focused;
-                    let text = if ph { placeholder.to_string() } else { shown };
-                    let text = if text.is_empty() {
-                        None
-                    } else {
-                        lay(gfx, &text, &t_mono).map(|l| (l.0, l.1))
-                    };
-                    let r = place(w, &mut cx, &mut cy);
-                    items.push(SetItem {
-                        rect: r,
-                        act: Act::Field(id),
-                        look: Look::Field(ph),
-                        text,
-                    });
-                }
-                Ctl::ZoomSquare(enabled) => {
-                    let Some((l, w, _)) = lay(gfx, "Zoom Square", &t_mono) else {
-                        continue;
-                    };
-                    let r = place(w + 16.0, &mut cx, &mut cy);
-                    items.push(SetItem {
-                        rect: r,
-                        act: if enabled { Act::ZoomSquare } else { Act::None },
-                        look: Look::Button(enabled),
-                        text: Some((l, w)),
-                    });
-                }
-            }
-        }
-        let bottom = items.iter().map(|i| i.rect.bottom()).fold(y, f32::max) + SET_PAD;
-        let r = Rect::new(x0, y, inner, bottom - y);
-        y = bottom + 8.0;
-        Some((r, items))
-    } else {
-        None
-    };
     let mut geo = Geo {
         height: 0.0,
         label,
-        domain,
+        domain: domain_l,
         domain_x,
         head,
         eqs,
-        settings,
+        cards,
         message: None,
         svg: None,
         titles: Vec::new(),
         empty: None,
         chips: Vec::new(),
+        chip_box: None,
     };
     let message = match g.main().and_then(|p| p.error.clone()) {
         Some(e) => Some(e),
@@ -956,8 +1124,11 @@ fn geo(gfx: &Gfx, g: &GraphState, width: f32) -> Option<Rc<Geo>> {
         if g.sample.is_some() {
             y += 8.0;
             let several = !g.layers.is_empty();
-            let t = Theme::new(false);
-            let mut section = |title: &str, items: Vec<ChipItem>, y: &mut f32, empty: bool| {
+            let mut section = |title: &str,
+                               items: Vec<ChipItem>,
+                               y: &mut f32,
+                               empty: bool,
+                               boxed: bool| {
                 *y += 12.0;
                 if let Some((l, _, _)) = lay(gfx, &title.to_uppercase(), &caption) {
                     geo.titles.push((*y, l));
@@ -972,62 +1143,105 @@ fn geo(gfx: &Gfx, g: &GraphState, width: f32) -> Option<Rc<Geo>> {
                 }
                 let built: Vec<_> = items
                     .into_iter()
-                    .filter_map(|(index, kind, coords, copy, color)| {
-                        let (kl, kw, _) = lay(gfx, kind, &caption)?;
+                    .filter_map(|(index, kind, coords, act, layer)| {
+                        let k = if kind.is_empty() {
+                            None
+                        } else {
+                            lay(gfx, kind, &caption).map(|l| (l.0, l.1))
+                        };
+                        let kw = k.as_ref().map_or(-6.0, |k| k.1);
                         let (cl, cw, _) = lay(gfx, &coords, &t_mono)?;
                         let w =
-                            7.0 + if color.is_some() { 12.0 } else { 0.0 } + kw + 6.0 + cw + 7.0;
-                        Some((index, kl, kw, cl, w, copy, color))
+                            7.0 + if layer.is_some() { 12.0 } else { 0.0 } + kw + 6.0 + cw + 7.0;
+                        Some((index, k, cl, w, act, layer))
                     })
                     .collect();
-                let widths: Vec<f32> = built.iter().map(|b| b.4).collect();
+                let widths: Vec<f32> = built.iter().map(|b| b.3).collect();
                 let places = wrap(&widths, inner, CHIP_GAP);
                 let lines = places.last().map_or(0, |p| p.1 + 1);
-                for ((index, kl, kw, cl, w, copy, color), (cx, line)) in
+                for ((index, kind, coords, w, act, layer), (cx, line)) in
                     built.into_iter().zip(places)
                 {
                     geo.chips.push(Chip {
                         rect: Rect::new(x0 + cx, *y + line as f32 * (CHIP_H + CHIP_GAP), w, CHIP_H),
                         index,
-                        kind: (kl, kw),
-                        coords: cl,
-                        color,
-                        copy,
+                        kind,
+                        coords,
+                        layer,
+                        act,
+                        scrolls: boxed,
                     });
                 }
-                *y += lines as f32 * (CHIP_H + CHIP_GAP) - CHIP_GAP;
+                let content = lines as f32 * (CHIP_H + CHIP_GAP) - CHIP_GAP;
+                if boxed {
+                    // expanded, a box that scrolls
+                    let h = content.min(CHIP_BOX);
+                    geo.chip_box = Some((Rect::new(x0, *y, inner, h), content));
+                    *y += h;
+                } else {
+                    *y += content;
+                }
             };
             let deg = g.deg();
-            let crit = g
-                .all_critical()
-                .into_iter()
+            let all = g.all_critical();
+            let roots = g.roots();
+            let mut items: Vec<(ChipItem, (f64, f64))> = all
+                .iter()
                 .enumerate()
-                .map(|(i, (layer, c))| {
+                .map(|(i, &(layer, c))| {
                     let coords = match c.z {
                         Some(z) => {
                             format!("({}{deg}, {}{deg}, {})", coord(c.x), coord(c.y), coord(z))
                         }
                         None => format!("({}{deg}, {})", coord(c.x), coord(c.y)),
                     };
-                    // a surface's chip copies its height; a y-intercept's x is always 0, so its chip copies y
-                    let copy =
-                        c.z.unwrap_or(if c.kind == qcalc_ffi::CriticalKind::YIntercept {
-                            c.y
-                        } else {
-                            c.x
-                        });
-                    let color = several.then(|| layer_rgb(layer).map_or(t.accent, |c| rgb(c, 1.0)));
-                    (Some(i), kind_name(c.kind), coords, copy, color)
+                    let item = (
+                        Some(i),
+                        kind_name(c.kind),
+                        coords,
+                        ChipAct::Copy(copies(&c)),
+                        several.then_some(layer),
+                    );
+                    (item, (c.x, c.y))
                 })
                 .collect();
-            section(g.detail_title(), crit, &mut y, true);
-            let roots = g.roots();
-            if !roots.is_empty() {
-                let items = roots
-                    .into_iter()
-                    .map(|x| (None, "root", format!("x = {}{deg}", coord(x)), x, None))
-                    .collect();
-                section("Roots", items, &mut y, false);
+            let root_items = roots.iter().map(|&x| {
+                let item = (
+                    None,
+                    "root",
+                    format!("x = {}{deg}", coord(x)),
+                    ChipAct::Copy(x),
+                    None,
+                );
+                (item, (x, 0.0))
+            });
+            // a zoomed-out sin(x) has hundreds: then the key points and roots are one list, the dozen nearest the
+            // middle shown and the rest on asking, in a box that scrolls
+            let many = all.len() + roots.len() > CHIP_LIMIT;
+            if many {
+                items.extend(root_items);
+                let at: Vec<(f64, f64)> = items.iter().map(|i| i.1).collect();
+                let shown = shown_points(&at, [g.x_min, g.x_max, g.y_min, g.y_max], g.all_points);
+                let more = if g.all_points {
+                    "fewer".to_string()
+                } else {
+                    format!("+{} more", items.len() - shown.len())
+                };
+                let mut list: Vec<ChipItem> = shown.iter().map(|&i| items[i].0.clone()).collect();
+                list.push((None, "", more, ChipAct::More, None));
+                section(g.detail_title(), list, &mut y, true, g.all_points);
+            } else {
+                section(
+                    g.detail_title(),
+                    items.into_iter().map(|i| i.0).collect(),
+                    &mut y,
+                    true,
+                    false,
+                );
+                let list: Vec<ChipItem> = root_items.map(|i| i.0).collect();
+                if !list.is_empty() {
+                    section("Roots", list, &mut y, false, false);
+                }
             }
         }
     }
@@ -1035,6 +1249,16 @@ fn geo(gfx: &Gfx, g: &GraphState, width: f32) -> Option<Rc<Geo>> {
     let geo = Rc::new(geo);
     g.cache.borrow_mut().geo = Some((key, geo.clone()));
     Some(geo)
+}
+
+/// What a key point's chip (or a click on its mark) copies: a surface's height, a y-intercept's y (its x is
+/// always 0), else x.
+fn copies(c: &qcalc_ffi::CriticalPoint) -> f64 {
+    c.z.unwrap_or(if c.kind == qcalc_ffi::CriticalKind::YIntercept {
+        c.y
+    } else {
+        c.x
+    })
 }
 
 /// The panel's height at this width (window.rs `Bar::layout`).
@@ -1141,10 +1365,10 @@ pub fn paint(c: &Canvas, g: &GraphState, r: Rect) {
             with_alpha(t.ink, 0.1),
         );
     }
-    if let Some((box_r, items)) = &geo.settings {
+    for (box_r, items) in &geo.cards {
         let br = at(box_r);
-        c.fill(br, t.bg);
-        stroke(c, br, 0.75, with_alpha(t.ink, 0.16));
+        c.fill_round(br, size::RADIUS_CARD, with_alpha(t.ink, 0.04));
+        stroke_round(c, br, size::RADIUS_CARD, 0.5, with_alpha(t.ink, 0.1));
         for it in items {
             paint_item(c, g, it, at(&it.rect), over(&it.rect));
         }
@@ -1152,13 +1376,9 @@ pub fn paint(c: &Canvas, g: &GraphState, r: Rect) {
     if let Some((y, m)) = &geo.message {
         c.text(m, r.x + size::GUTTER, r.y + y, t.muted);
     }
+    let hover_chip = hover.and_then(|(x, y)| geo.chip_at(g, x, y));
     if let Some(svg) = geo.svg {
-        let spot = geo
-            .chips
-            .iter()
-            .find(|chip| over(&chip.rect))
-            .and_then(|chip| chip.index);
-        plot(c, g, at(&svg), spot);
+        plot(c, g, at(&svg), hover_chip.and_then(|chip| chip.index));
     }
     for (y, l) in &geo.titles {
         c.text(l, r.x + size::GUTTER, r.y + y, t.muted);
@@ -1167,42 +1387,116 @@ pub fn paint(c: &Canvas, g: &GraphState, r: Rect) {
         c.text(l, r.x + size::GUTTER, r.y + y, t.muted);
     }
     let pointed = hovered_mark(g);
+    let boxed = geo.chip_box.map(|(b, h)| (at(&b), h));
     for chip in &geo.chips {
-        let cr = at(&chip.rect);
-        let lit = over(&chip.rect) || (chip.index.is_some() && chip.index == pointed);
-        if lit {
-            c.fill(cr, with_alpha(t.accent, 0.1));
+        let Some(rect) = geo.chip_rect(g, chip) else {
+            continue;
+        };
+        let clip = boxed.filter(|_| chip.scrolls);
+        if let Some((b, _)) = clip {
+            c.push_clip(b);
         }
-        stroke(
-            c,
-            cr,
-            0.75,
+        let cr = at(&rect);
+        let hot = hover_chip.is_some_and(|h| std::ptr::eq(h, chip));
+        let lit = hot || (chip.index.is_some() && chip.index == pointed);
+        if chip.act == ChipAct::More {
+            if hot {
+                c.fill(cr, t.fill_hover);
+            }
+            dashed_frame(c, cr, with_alpha(t.ink, 0.16));
+        } else {
             if lit {
-                with_alpha(t.accent, 0.6)
-            } else {
-                with_alpha(t.ink, 0.16)
-            },
-        );
+                c.fill(cr, with_alpha(t.accent, 0.1));
+            }
+            stroke(
+                c,
+                cr,
+                0.75,
+                if lit {
+                    with_alpha(t.accent, 0.6)
+                } else {
+                    with_alpha(t.ink, 0.16)
+                },
+            );
+        }
         let mut x = cr.x + 7.0;
-        if let Some(col) = chip.color {
-            c.fill(Rect::new(x, cr.y + (cr.h - 6.0) / 2.0, 6.0, 6.0), col);
+        if let Some(layer) = chip.layer {
+            c.fill(
+                Rect::new(x, cr.y + (cr.h - 6.0) / 2.0, 6.0, 6.0),
+                layer_color(t, layer),
+            );
             x += 12.0;
         }
-        let (kl, kw) = &chip.kind;
-        let kh = measure(kl).1;
-        c.text(
-            kl,
-            x,
-            cr.y + (cr.h - kh) / 2.0,
-            if lit { t.accent } else { t.muted },
-        );
+        if let Some((kl, kw)) = &chip.kind {
+            let kh = measure(kl).1;
+            c.text(
+                kl,
+                x,
+                cr.y + (cr.h - kh) / 2.0,
+                if lit { t.accent } else { t.muted },
+            );
+            x += kw + 6.0;
+        }
         let ch = measure(&chip.coords).1;
-        c.text(
-            &chip.coords,
-            x + kw + 6.0,
-            cr.y + (cr.h - ch) / 2.0,
-            if lit { t.accent } else { t.ink },
-        );
+        let ink = if chip.act == ChipAct::More {
+            t.muted
+        } else if lit {
+            t.accent
+        } else {
+            t.ink
+        };
+        c.text(&chip.coords, x, cr.y + (cr.h - ch) / 2.0, ink);
+        if clip.is_some() {
+            c.pop_clip();
+        }
+    }
+    if let Some((b, content)) = boxed {
+        // where the box has scrolled to: a thin bar at its right edge
+        if content > b.h {
+            let scroll = geo.scroll(g);
+            let h = (b.h * b.h / content).max(16.0);
+            let y = b.y + (b.h - h) * scroll / (content - b.h);
+            c.fill_round(
+                Rect::new(b.right() - 3.0, y, 3.0, h),
+                1.5,
+                with_alpha(t.ink, 0.25),
+            );
+        }
+    }
+}
+
+/// A rounded rect's edge.
+fn stroke_round(c: &Canvas, r: Rect, radius: f32, w: f32, col: Color) {
+    let d = D2D1_ROUNDED_RECT {
+        rect: D2D_RECT_F {
+            left: r.x + w / 2.0,
+            top: r.y + w / 2.0,
+            right: r.x + r.w - w / 2.0,
+            bottom: r.y + r.h - w / 2.0,
+        },
+        radiusX: radius,
+        radiusY: radius,
+    };
+    // SAFETY: inside the frame
+    unsafe { c.target().DrawRoundedRectangle(&d, c.brush(col), w, None) };
+}
+
+/// "+N more"'s dashed edge.
+fn dashed_frame(c: &Canvas, r: Rect, col: Color) {
+    let (x0, y0, x1, y1) = (r.x + 0.4, r.y + 0.4, r.right() - 0.4, r.bottom() - 0.4);
+    let mut x = x0;
+    while x < x1 {
+        let e = (x + 2.0).min(x1);
+        c.line(x, y0, e, y0, 0.75, col);
+        c.line(x, y1, e, y1, 0.75, col);
+        x += 4.0;
+    }
+    let mut y = y0;
+    while y < y1 {
+        let e = (y + 2.0).min(y1);
+        c.line(x0, y, x0, e, 0.75, col);
+        c.line(x1, y, x1, e, 0.75, col);
+        y += 4.0;
     }
 }
 
@@ -1257,51 +1551,90 @@ fn paint_item(c: &Canvas, g: &GraphState, it: &SetItem, r: Rect, hot: bool) {
             c.text(l, x, r.y + (r.h - h) / 2.0, col);
         }
     };
+    let rad = size::RADIUS_S;
     match it.look {
+        Look::Name => text_at(r.x, t.ink),
         Look::Text => text_at(r.x, t.muted),
-        Look::Check(on) => {
-            let b = Rect::new(r.x, r.y + (r.h - 11.0) / 2.0, 11.0, 11.0);
-            if on {
-                c.fill(b, t.accent);
-                c.line(b.x + 2.5, b.y + 5.5, b.x + 4.75, b.y + 8.0, 1.5, t.bg);
-                c.line(b.x + 4.75, b.y + 8.0, b.x + 8.75, b.y + 3.0, 1.5, t.bg);
-            } else {
-                stroke(c, b, 1.0, with_alpha(t.ink, if hot { 0.6 } else { 0.35 }));
+        Look::About => {
+            if let Some((l, _)) = &it.text {
+                c.text(l, r.x, r.y, t.muted);
             }
-            text_at(r.x + 16.0, t.ink);
         }
         Look::Cell(on, enabled) => {
+            let k = if enabled { 1.0 } else { 0.4 };
+            let cell = r.inset(0.0, 1.0);
             if on {
-                c.fill(r, with_alpha(t.ink, 0.1));
+                c.fill_round(cell, rad, with_alpha(t.ink, 0.1 * k));
             } else if hot && enabled {
-                c.fill(r, t.fill_hover);
+                c.fill_round(cell, rad, t.fill_hover);
             }
-            stroke(c, r, 0.75, with_alpha(t.ink, 0.2));
-            let col = if !enabled {
-                with_alpha(t.muted, 0.5)
-            } else if on {
+            stroke_round(
+                c,
+                cell,
+                rad,
+                0.75,
+                with_alpha(t.ink, if on { 0.2 } else { 0.14 } * k),
+            );
+            let mut x = r.x + 9.0;
+            if on {
+                // a tick before the name
+                let (bx, by) = (x, r.y + r.h / 2.0);
+                c.line(bx, by, bx + 2.5, by + 2.5, 1.4, with_alpha(t.ink, k));
+                c.line(
+                    bx + 2.5,
+                    by + 2.5,
+                    bx + 7.5,
+                    by - 3.0,
+                    1.4,
+                    with_alpha(t.ink, k),
+                );
+                x += 13.0;
+            }
+            let col = if on {
                 t.ink
+            } else if hot && enabled {
+                with_alpha(t.ink, 0.8)
             } else {
                 t.muted
             };
-            text_at(r.x + 7.0, col);
+            text_at(x, with_alpha(col, k));
+        }
+        Look::Group(enabled) => {
+            stroke_round(
+                c,
+                r.inset(0.0, 0.0),
+                rad,
+                0.75,
+                with_alpha(t.ink, if enabled { 0.14 } else { 0.06 }),
+            );
+        }
+        Look::Choice(on, enabled) => {
+            let k = if enabled { 1.0 } else { 0.4 };
+            if on {
+                c.fill_round(r, rad - 1.0, with_alpha(t.ink, 0.12 * k));
+            } else if hot && enabled {
+                c.fill_round(r, rad - 1.0, t.fill_hover);
+            }
+            text_at(r.x + 9.0, with_alpha(if on { t.ink } else { t.muted }, k));
         }
         Look::Field(placeholder) => {
             let editing = matches!(it.act, Act::Field(id) if g.focus == Some(id));
-            c.fill(r, t.bg_tape);
-            stroke(
+            let cell = r.inset(0.0, 1.0);
+            c.fill_round(cell, rad, with_alpha(t.bg, 0.6));
+            stroke_round(
                 c,
-                r,
+                cell,
+                rad,
                 0.75,
                 if editing {
                     t.accent
                 } else {
-                    with_alpha(t.ink, if hot { 0.35 } else { 0.2 })
+                    with_alpha(t.ink, if hot { 0.3 } else { 0.18 })
                 },
             );
-            c.push_clip(r.inset(2.0, 0.0));
+            c.push_clip(r.inset(3.0, 0.0));
             let (tx, lh) = (
-                r.x + 5.0,
+                r.x + 7.0,
                 it.text.as_ref().map_or(14.0, |l| measure(&l.0).1),
             );
             let ty = r.y + (r.h - lh) / 2.0;
@@ -1321,19 +1654,22 @@ fn paint_item(c: &Canvas, g: &GraphState, it: &SetItem, r: Rect, hot: bool) {
             }
             c.pop_clip();
         }
-        Look::Button(enabled) => {
-            if hot && enabled {
-                c.fill(r, t.fill_hover);
+        Look::Button(enabled, primary) => {
+            let cell = r.inset(0.0, 1.0);
+            if primary {
+                c.fill_round(cell, rad, if hot { t.accent_hover } else { t.accent });
+                text_at(r.x + 10.0, t.bg);
+            } else {
+                let k = if enabled { 1.0 } else { 0.4 };
+                if hot && enabled {
+                    c.fill_round(cell, rad, t.fill_hover);
+                }
+                stroke_round(c, cell, rad, 0.75, with_alpha(t.ink, 0.14 * k));
+                text_at(
+                    r.x + 10.0,
+                    with_alpha(if hot && enabled { t.ink } else { t.muted }, k),
+                );
             }
-            stroke(c, r, 0.75, with_alpha(t.ink, 0.2));
-            text_at(
-                r.x + 8.0,
-                if enabled {
-                    t.ink
-                } else {
-                    with_alpha(t.muted, 0.5)
-                },
-            );
         }
     }
 }
@@ -1479,8 +1815,7 @@ fn base_2d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs) {
         .sample
         .as_ref()
         .map_or((&empty, &empty), |s| (&s.x_ticks, &s.y_ticks));
-    let gx = axis_grid(g.x_min, g.x_max, m.log.0, g.x_step, xt);
-    let gy = axis_grid(g.y_min, g.y_max, m.log.1, g.y_step, yt);
+    let (gx, gy) = grids_2d(g, &m, xt, yt);
     p.clip(rect);
     if prefs.grid {
         if prefs.polar && !m.log.0 && !m.log.1 {
@@ -1568,30 +1903,6 @@ fn base_2d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs) {
             }
         }
     }
-    if prefs.axis_numbers {
-        if prefs.show_x_axis {
-            for (v, label) in &gx.major {
-                p.text(
-                    label,
-                    &tick_f,
-                    t.muted,
-                    (m.px(*v), SVG_H - 11.0),
-                    (0.5, 0.5),
-                );
-            }
-        }
-        if prefs.show_y_axis {
-            for (v, label) in &gy.major {
-                p.text(
-                    label,
-                    &tick_f,
-                    t.muted,
-                    (PAD_LEFT - 7.0, m.py(*v)),
-                    (1.0, 0.5),
-                );
-            }
-        }
-    }
     // the axes (x = 0 and y = 0, none on a log axis), with arrowheads at their ends when asked
     let x_axis_y = (!m.log.1)
         .then(|| m.py(0.0))
@@ -1627,6 +1938,60 @@ fn base_2d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs) {
         if prefs.arrows {
             arrow((x, PAD_TOP), 0.0, -1.0);
             arrow((x, bottom), 0.0, 1.0);
+        }
+    }
+    // the numbers ride the axes, as Desmos's do: x's under the line y = 0 and y's beside the line x = 0, each on a
+    // patch of the plot's colour. An axis off the view (or that can't be drawn, on a log scale) leaves its numbers
+    // at the edge it went off: the margins below and left, or just inside the top and right
+    if prefs.axis_numbers {
+        let boxed = |label: &str, at: P2, anchor: (f32, f32)| {
+            if let Some((l, w, h)) = lay(p.gfx, label, &tick_f) {
+                let (x, y) = (at.0 - w * anchor.0, at.1 - h * anchor.1);
+                p.fill(Rect::new(x - 2.0, y, w + 4.0, h), with_alpha(bg, 0.85));
+                p.layout(&l, (x, y), t.muted);
+            }
+        };
+        let zero_y = (!m.log.1).then(|| m.py(0.0));
+        let zero_x = (!m.log.0).then(|| m.px(0.0));
+        if prefs.show_x_axis {
+            for (v, label) in &gx.major {
+                let x = m.px(*v);
+                let within = x > PAD_LEFT + 4.0 && x < right - 4.0;
+                if let Some(y) = x_axis_y {
+                    // the origin's 0 is written once, under and left of it
+                    if y_axis_x.is_some_and(|ax| (x - ax).abs() < 0.5) {
+                        boxed(label, (x - 4.0, y + 3.0), (1.0, 0.0));
+                    } else if within {
+                        boxed(label, (x, y + 3.0), (0.5, 0.0));
+                    }
+                } else if zero_y.is_some_and(|z| z < PAD_TOP) {
+                    if within {
+                        boxed(label, (x, PAD_TOP + 3.0), (0.5, 0.0));
+                    }
+                } else {
+                    p.text(label, &tick_f, t.muted, (x, SVG_H - 11.0), (0.5, 0.5));
+                }
+            }
+        }
+        if prefs.show_y_axis {
+            for (v, label) in &gy.major {
+                let y = m.py(*v);
+                let within = y > PAD_TOP + 4.0 && y < bottom - 4.0;
+                if let Some(x) = y_axis_x {
+                    if x_axis_y.is_some() && *v == 0.0 {
+                        continue;
+                    }
+                    if within {
+                        boxed(label, (x - 4.0, y), (1.0, 0.5));
+                    }
+                } else if zero_x.is_some_and(|z| z > right) {
+                    if within {
+                        boxed(label, (right - 4.0, y), (1.0, 0.5));
+                    }
+                } else {
+                    p.text(label, &tick_f, t.muted, (PAD_LEFT - 7.0, y), (1.0, 0.5));
+                }
+            }
         }
     }
     if let Some(name_f) = font(
@@ -1732,34 +2097,65 @@ fn base_2d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs) {
         PLOT_W + 8.0,
         PLOT_H + 8.0,
     ));
-    if !m.log.1 {
-        let mut roots: Vec<(f64, usize)> = g
-            .layers
-            .iter()
-            .enumerate()
-            .filter_map(|(i, l)| {
-                g.layer_plot(l)
-                    .filter(|p| p.kind == Kind::Curve)
-                    .map(|p| (i + 1, p))
-            })
-            .flat_map(|(i, p)| p.roots.iter().map(move |&r| (r, i)))
-            .collect();
-        if let Some(main) = g.main().filter(|p| p.ok()) {
-            roots.extend(main.roots.iter().map(|&r| (r, 0)));
-        }
-        for (x, i) in roots {
+    // past a few dozen (a zoomed-out sin x) the marks would be a solid strip, so none are drawn
+    let sparse = g.sparse();
+    if !m.log.1 && sparse {
+        for (x, i) in g.all_roots() {
             let q = (m.px(x), m.py(0.0));
             if Map2D::inside(q) {
                 ring(p, q, bg, layer_color(t, i));
             }
         }
     }
-    for (q, (layer, _)) in marks(g).into_iter().zip(g.all_critical()) {
-        if let Some(q) = q {
-            ring(p, q, bg, layer_color(t, layer));
+    for (q, (layer, c)) in marks(g).into_iter().zip(g.all_critical()) {
+        if let Some(q) = q.filter(|_| sparse) {
+            // as Desmos: an end the bounds keep (≤) is filled, one they leave out (<) hollow
+            if c.kind == qcalc_ffi::CriticalKind::Endpoint {
+                p.fill(
+                    Rect::new(q.0 - 3.5, q.1 - 3.5, 7.0, 7.0),
+                    layer_color(t, layer),
+                );
+            } else {
+                ring(p, q, bg, layer_color(t, layer));
+            }
         }
     }
     p.unclip();
+}
+
+/// The 2D plot's x and y grids: y's step the square-cell one for a fitted curve (its minor lines split as x's),
+/// and on a short plot whose square rows leave under two numbers besides 0, its minor step, so y is numbered.
+fn grids_2d(
+    g: &GraphState,
+    m: &Map2D,
+    xt: &[qcalc_ffi::GraphTick],
+    yt: &[qcalc_ffi::GraphTick],
+) -> (AxisGrid, AxisGrid) {
+    let gx = axis_grid(g.x_min, g.x_max, m.log.0, g.x_step, xt, None);
+    let square = g.square_y_step();
+    let mut gy = axis_grid(
+        g.y_min,
+        g.y_max,
+        m.log.1,
+        g.y_step.or(square),
+        yt,
+        square.and(gx.sub),
+    );
+    if g.y_step.is_none()
+        && let (Some(sq), Some(sub)) = (square, gx.sub)
+        && sub > 1
+        && gy.major.iter().filter(|v| v.0 != 0.0).count() < 2
+    {
+        gy = axis_grid(
+            g.y_min,
+            g.y_max,
+            m.log.1,
+            Some(sq / f64::from(sub)),
+            yt,
+            Some(1),
+        );
+    }
+    (gx, gy)
 }
 
 /// A mark: a small hollow square in the curve's colour.
@@ -1824,7 +2220,33 @@ fn overlay_2d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs, spot: Opti
     let hair = with_alpha(ink, 0.35);
     let snapped = hovered_mark(g);
     let rect = plot_rect();
-    if snapped.is_none()
+    // a root the pointer is close to is snapped to as a critical point is, labelled with its exact x
+    let root = hovered_root(g).filter(|_| g.drag.is_none_or(|d| !d.moved));
+    if let Some((x, layer)) = root {
+        let q = (m.px(x), m.py(0.0));
+        let color = layer_color(t, layer);
+        p.dashed(
+            (q.0, q.1 + 6.0),
+            (q.0, bottom),
+            0.75,
+            with_alpha(color, 0.6),
+            3.0,
+            2.0,
+        );
+        halo(p, q, color);
+        readout_box(
+            p,
+            &[format!("root ({}{}, 0)", coord(x), g.deg())],
+            q,
+            rect,
+            BoxLook {
+                bg,
+                edge: with_alpha(ink, 0.3),
+                ink,
+            },
+            false,
+        );
+    } else if snapped.is_none()
         && g.drag.is_none_or(|d| !d.moved)
         && let Some(h) = g.pointer.filter(|h| Map2D::inside(*h))
     {
@@ -1922,14 +2344,87 @@ fn point_text(c: &qcalc_ffi::CriticalPoint, deg: &str) -> String {
     }
 }
 
+// ---- the export's picture ----
+
+/// The plot as the export draws it, on `rt` in viewBox units (the caller sets the transform): the base pass, and
+/// with "Label key points" each mark's `kind (x, y)` beside it, as many as fit without crowding (at most 16).
+/// The plot's height in viewBox units is `svg_height`.
+pub(crate) fn draw_picture(rt: &ID2D1RenderTarget, gfx: &Gfx, g: &GraphState, theme: &Theme) {
+    let Some(pen) = Pen::new(rt, gfx) else {
+        return;
+    };
+    let prefs = gs::prefs();
+    let t = plot_theme(theme, &prefs);
+    if g.shows_3d() {
+        base_3d(&pen, g, &t, &prefs);
+    } else {
+        base_2d(&pen, g, &t, &prefs);
+    }
+    if !g.label_points {
+        return;
+    }
+    let frame = plot_rect_for(g);
+    let mut placed: Vec<Rect> = Vec::new();
+    let overlaps = |a: &Rect, b: &Rect| {
+        a.x < b.right() && b.x < a.right() && a.y < b.bottom() && b.y < a.bottom()
+    };
+    let deg = if g.shows_3d() { "" } else { g.deg() };
+    for (q, (_, c)) in marks(g).into_iter().zip(g.all_critical()) {
+        let Some(q) = q.filter(|q| frame.contains(q.0, q.1)) else {
+            continue;
+        };
+        let near = Rect::new(q.0 - 40.0, q.1 - 22.0, 80.0, 30.0);
+        if placed.len() >= 16 || placed.iter().any(|p| overlaps(p, &near)) {
+            continue;
+        }
+        placed.push(near);
+        readout_box(
+            &pen,
+            &[format!("{} {}", kind_name(c.kind), point_text(&c, deg))],
+            q,
+            frame,
+            BoxLook {
+                bg: plot_bg(&t),
+                edge: with_alpha(t.ink, 0.3),
+                ink: t.ink,
+            },
+            false,
+        );
+    }
+}
+
+/// The plot's frame: the 2D plot's, or the 3D view's whole box.
+fn plot_rect_for(g: &GraphState) -> Rect {
+    if g.shows_3d() {
+        Rect::new(0.5, 2.0, SVG_W - 1.0, SVG_H3D - 4.0)
+    } else {
+        plot_rect()
+    }
+}
+
+/// The plot's height in viewBox units (the export's picture is `SVG_W` wide).
+pub(crate) fn svg_height(g: &GraphState) -> f32 {
+    svg_h(g)
+}
+
+/// The plot's colour, under the export's header.
+pub(crate) fn picture_bg(theme: &Theme) -> Color {
+    plot_bg(theme)
+}
+
+/// The export header's equation colour.
+pub(crate) fn equation_color(theme: &Theme, i: usize) -> Color {
+    layer_color(theme, i)
+}
+
 // ---- 3D ----
 
 /// The 3D view's x and y grid values on the z = 0 plane; y takes x's step, the two sharing a scale.
 fn grids_3d(g: &GraphState, c: &Cube) -> (AxisGrid, AxisGrid) {
     let empty = Vec::new();
     let xt = g.sample.as_ref().map_or(&empty, |s| &s.x_ticks);
-    let gx = axis_grid(c.x.0, c.x.1, false, g.x_step, xt);
-    let gy = axis_grid(c.y.0, c.y.1, false, g.y_step.or(gx.step()), &[]);
+    let gx = axis_grid(c.x.0, c.x.1, false, g.x_step, xt, None);
+    let gy = axis_grid(c.y.0, c.y.1, false, g.y_step.or(gx.step()), &[], None);
     (gx, gy)
 }
 
@@ -2287,11 +2782,11 @@ pub fn click(app: &mut App, x: f32, y: f32, double: bool) -> bool {
         .as_ref()
         .and_then(|g| g.focus)
         .is_some_and(|f| {
-            geo.settings.as_ref().is_some_and(|(_, items)| {
-                items.iter().any(|i| i.act == Act::Field(f) && hit(&i.rect))
-            }) || geo.eqs.iter().any(|e| {
-                e.id.is_some_and(|id| FieldId::Layer(id) == f) && e.field.is_some_and(|fr| hit(&fr))
-            })
+            geo.items().any(|i| i.act == Act::Field(f) && hit(&i.rect))
+                || geo.eqs.iter().any(|e| {
+                    e.id.is_some_and(|id| FieldId::Layer(id) == f)
+                        && e.field.is_some_and(|fr| hit(&fr))
+                })
         });
     if !on_focused {
         commit(&mut app.model, &app.engine);
@@ -2305,9 +2800,15 @@ pub fn click(app: &mut App, x: f32, y: f32, double: bool) -> bool {
             Btn::View3D => set_3d(m, e, true),
             Btn::Contour => set_3d(m, e, false),
             Btn::Add => add_layer(m, e),
-            Btn::Wrench => {
+            Btn::ZoomOut => zoom(m, e, 1.25, 0.5),
+            Btn::ZoomIn => zoom(m, e, 0.8, 0.5),
+            Btn::Wrench | Btn::Export => {
                 if let Some(g) = &mut m.graph {
-                    g.settings_open = !g.settings_open;
+                    if h.btn == Btn::Wrench {
+                        g.settings_open = !g.settings_open;
+                    } else {
+                        g.export_open = !g.export_open;
+                    }
                     g.bump();
                 }
                 m.touch();
@@ -2336,26 +2837,47 @@ pub fn click(app: &mut App, x: f32, y: f32, double: bool) -> bool {
             return true;
         }
     }
-    if let Some((_, items)) = &geo.settings
-        && let Some(it) = items.iter().find(|i| hit(&i.rect))
-    {
+    if let Some(it) = geo.items().find(|i| i.act != Act::None && hit(&i.rect)) {
         match it.act {
+            Act::Check(Check::LabelPoints) => {
+                if let Some(g) = &mut app.model.graph {
+                    g.label_points = !g.label_points;
+                    g.bump();
+                }
+                app.model.touch();
+            }
             Act::Check(k) => set_pref(app, |p| gs::toggle(p, k)),
             Act::Seg(k, i) => seg(app, k, i),
             Act::Field(id) => place_caret(
                 app,
                 id,
                 it.text.as_ref().map(|t| &t.0),
-                p.0 - (it.rect.x + 5.0),
+                p.0 - (it.rect.x + 7.0),
                 double,
             ),
-            Act::ZoomSquare => zoom_square(&mut app.model, &app.engine),
+            Act::Button(gs::Button::ZoomSquare) => zoom_square(&mut app.model, &app.engine),
+            Act::Button(gs::Button::Save) => crate::graph_export::start(app),
             Act::None => {}
         }
         return true;
     }
-    if let Some(chip) = geo.chips.iter().find(|c| hit(&c.rect)) {
-        copy(&mut app.model, chip.copy);
+    let chip = app
+        .model
+        .graph
+        .as_ref()
+        .and_then(|g| geo.chip_at(g, p.0, p.1).map(|c| c.act));
+    if let Some(act) = chip {
+        match act {
+            ChipAct::Copy(v) => copy(&mut app.model, v),
+            ChipAct::More => {
+                if let Some(g) = &mut app.model.graph {
+                    g.all_points = !g.all_points;
+                    g.chip_scroll = 0.0;
+                    g.bump();
+                }
+                app.model.touch();
+            }
+        }
         return true;
     }
     if geo.svg.is_some_and(|s| hit(&s)) {
@@ -2399,9 +2921,7 @@ fn place_caret(
 
 fn seg(app: &mut App, k: Seg, i: usize) {
     match k {
-        Seg::TextSize => set_pref(app, |p| p.large_text = i == 1),
         Seg::GridKind => set_pref(app, |p| p.polar = i == 1),
-        Seg::Angles => set_pref(app, |p| p.degrees = Some(i == 1)),
         Seg::XScale => set_log(&mut app.model, &app.engine, Some(i == 1), None),
         Seg::YScale => set_log(&mut app.model, &app.engine, None, Some(i == 1)),
     }
@@ -2491,8 +3011,12 @@ pub fn mouse_move(app: &mut App, x: f32, y: f32) -> bool {
             g.pointer = to_svg_from(g, app.bar.layout.graph, x, y);
         }
         let (fx, fy) = (f64::from(dx / drag.plot.0), f64::from(dy / drag.plot.1));
-        // a pan follows the pointer; an orbit turns against it side to side
-        let fx = if three && !drag.pan { -fx } else { fx };
+        // a pan follows the pointer; an orbit turns against it both ways (an up drag tilts the top away)
+        let (fx, fy) = if three && !drag.pan {
+            (-fx, -fy)
+        } else {
+            (fx, fy)
+        };
         pan(&mut app.model, &app.engine, fx, fy, drag.pan);
         return true;
     }
@@ -2703,13 +3227,7 @@ pub fn mouse_up(app: &mut App, x: f32, y: f32) -> bool {
         && let Some(i) = hovered_mark(g)
         && let Some((_, c)) = g.all_critical().get(i)
     {
-        let v =
-            c.z.unwrap_or(if c.kind == qcalc_ffi::CriticalKind::YIntercept {
-                c.y
-            } else {
-                c.x
-            });
-        copy(&mut app.model, v);
+        copy(&mut app.model, copies(c));
     }
     app.model.touch();
     mouse_move(app, x, y);
@@ -2748,11 +3266,25 @@ pub fn wheel(app: &mut App, horizontal: bool, wp: WPARAM, lp: LPARAM) -> bool {
     let _ = unsafe { ScreenToClient(app.bar.hwnd, &mut pt) };
     let s = app.bar.scale();
     let (x, y) = (pt.x as f32 / s, pt.y as f32 / s);
+    let notches = f64::from(((wp.0 >> 16) & 0xffff) as u16 as i16) / 120.0;
+    // the expanded chips' box scrolls
+    if !horizontal
+        && let (Some(r), Some(geo)) = (panel(app), cached_geo(app))
+        && let Some((b, content)) = geo.chip_box
+        && b.contains(x - r.x, y - r.y)
+    {
+        if let Some(g) = &mut app.model.graph {
+            let max = (content - b.h).max(0.0);
+            g.chip_scroll = (geo.scroll(g) - notches as f32 * 40.0).clamp(0.0, max);
+        }
+        app.model.touch();
+        return true;
+    }
     let Some(v) = to_svg(app, x, y) else {
         return false;
     };
-    let notches = f64::from(((wp.0 >> 16) & 0xffff) as u16 as i16) / 120.0;
     let ctrl = wp.0 & 0x0008 != 0;
+    let shift = wp.0 & 0x0004 != 0;
     let Some(g) = &app.model.graph else {
         return false;
     };
@@ -2769,11 +3301,13 @@ pub fn wheel(app: &mut App, horizontal: bool, wp: WPARAM, lp: LPARAM) -> bool {
     }
     // a notch (120) as a browser's 100 px of deltaY
     let px = -notches * 100.0;
-    if horizontal {
+    // sideways, or shift with the wheel, pans
+    if horizontal || shift {
+        let d = if horizontal { -px } else { px };
         pan(
             &mut app.model,
             &app.engine,
-            -px / f64::from(PLOT_W),
+            d / f64::from(PLOT_W),
             0.0,
             false,
         );
@@ -2796,9 +3330,7 @@ pub fn cursor(app: &App, x: f32, y: f32) -> Option<PCWSTR> {
     let geo = cached_geo(app)?;
     let p = (x - r.x, y - r.y);
     let hit = |rect: &Rect| rect.contains(p.0, p.1);
-    if let Some((_, items)) = &geo.settings
-        && let Some(it) = items.iter().find(|i| hit(&i.rect))
-    {
+    if let Some(it) = geo.items().find(|i| i.act != Act::None && hit(&i.rect)) {
         return Some(match it.act {
             Act::Field(_) => IDC_IBEAM,
             Act::None => IDC_ARROW,
@@ -2809,7 +3341,7 @@ pub fn cursor(app: &App, x: f32, y: f32) -> Option<PCWSTR> {
         return Some(IDC_IBEAM);
     }
     if geo.head.iter().any(|h| h.enabled && hit(&h.rect))
-        || geo.chips.iter().any(|c| hit(&c.rect))
+        || geo.chip_at(g, p.0, p.1).is_some()
         || geo.eqs.iter().any(|e| e.remove.is_some_and(|f| hit(&f)))
     {
         return Some(IDC_HAND);
@@ -2854,8 +3386,9 @@ pub fn bench(app: &App, args: &str) -> serde_json::Value {
             "panel": rect(&r), "svg": geo.svg.map(|s| rect(&s)),
             "head": geo.head.iter().map(|h| serde_json::json!({ "btn": format!("{:?}", h.btn), "rect": rect(&h.rect), "on": h.on, "enabled": h.enabled })).collect::<Vec<_>>(),
             "eqs": geo.eqs.iter().map(|e| serde_json::json!({ "index": e.index, "rect": rect(&e.rect), "field": e.field.map(|f| rect(&f)), "remove": e.remove.map(|f| rect(&f)) })).collect::<Vec<_>>(),
-            "settings": geo.settings.as_ref().map(|(b, items)| serde_json::json!({ "box": rect(b), "items": items.iter().map(|i| serde_json::json!({ "act": format!("{:?}", i.act), "look": format!("{:?}", i.look), "rect": rect(&i.rect) })).collect::<Vec<_>>() })),
-            "chips": geo.chips.iter().map(|c| serde_json::json!({ "index": c.index, "rect": rect(&c.rect), "copy": c.copy })).collect::<Vec<_>>(),
+            "cards": geo.cards.iter().map(|(b, items)| serde_json::json!({ "box": rect(b), "items": items.iter().map(|i| serde_json::json!({ "act": format!("{:?}", i.act), "look": format!("{:?}", i.look), "rect": rect(&i.rect) })).collect::<Vec<_>>() })).collect::<Vec<_>>(),
+            "chips": geo.chips.iter().map(|c| serde_json::json!({ "index": c.index, "rect": rect(&c.rect), "act": format!("{:?}", c.act), "scrolls": c.scrolls })).collect::<Vec<_>>(),
+            "chipBox": geo.chip_box.map(|(b, h)| serde_json::json!({ "box": rect(&b), "content": h })),
         });
     }
     let arg = |i: usize| nums.get(i).copied().unwrap_or(0.5);

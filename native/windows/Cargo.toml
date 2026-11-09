@@ -56,6 +56,7 @@ windows = { version = "0.61", features = [
   "Win32_Graphics_Dxgi_Common",
   "Win32_Graphics_Dwm",
   "Win32_Graphics_Gdi",
+  "Win32_Graphics_Imaging",
   "Win32_Networking_WinHttp",
   "Win32_Media_Audio",
   "Win32_Security",
