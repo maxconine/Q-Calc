@@ -710,7 +710,7 @@ final class BarTextView: NSTextView {
         if leadView.superview == nil { addSubview(leadView) }
         leadView.text = ghostLead
         leadView.attributes = [.font: Self.lineFont, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)]
-        leadView.y = textContainerInset.height
+        leadView.y = fullTextTop()
         leadView.frame = NSRect(x: 0, y: 0, width: lead, height: bounds.height)
         leadView.isHidden = ghostLead.isEmpty
         leadView.needsDisplay = true
@@ -952,7 +952,7 @@ final class BarTextView: NSTextView {
                 let glyph = lm.glyphIndexForCharacter(at: at - 1)
                 let rect = lm.boundingRect(forGlyphRange: NSRange(location: glyph, length: 1), in: tc)
                 let width = (angleMarkText as NSString).size(withAttributes: Self.attributes).width
-                (angleMarkText as NSString).draw(at: NSPoint(x: textContainerInset.width + rect.maxX - width, y: textContainerInset.height),
+                (angleMarkText as NSString).draw(at: NSPoint(x: textContainerInset.width + rect.maxX - width, y: fullTextTop()),
                                                  withAttributes: [.font: Self.lineFont, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)])
             }
         }
@@ -961,23 +961,23 @@ final class BarTextView: NSTextView {
             let rect = lm.boundingRect(forGlyphRange: NSRange(location: glyph, length: 1), in: tc)
             let width = (offer.text as NSString).size(withAttributes: Self.attributes).width
             let muted: [NSAttributedString.Key: Any] = [.font: Self.lineFont, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)]
-            (offer.text as NSString).draw(at: NSPoint(x: textContainerInset.width + rect.maxX - width, y: textContainerInset.height), withAttributes: muted)
+            (offer.text as NSString).draw(at: NSPoint(x: textContainerInset.width + rect.maxX - width, y: fullTextTop()), withAttributes: muted)
         }
         if let lm = layoutManager, let tc = textContainer {
             let used = lm.usedRect(for: tc)
             // a stacked fraction's pull leaves the used rect wider than the line
             var x = stacked.stacks.isEmpty ? textContainerInset.width + used.maxX : stackCaretX((string as NSString).length) ?? textContainerInset.width + used.maxX
             if !ghostTail.isEmpty, selectedRange().location == (string as NSString).length {
-                (ghostTail as NSString).draw(at: NSPoint(x: x, y: textContainerInset.height), withAttributes: attrs)
+                (ghostTail as NSString).draw(at: NSPoint(x: x, y: fullTextTop()), withAttributes: attrs)
                 x += (ghostTail as NSString).size(withAttributes: attrs).width
             }
             // an angle mark for an argument still open at the end of the line
             if angleMarks.contains((string as NSString).length) {
-                (angleMarkText as NSString).draw(at: NSPoint(x: x, y: textContainerInset.height), withAttributes: inferred)
+                (angleMarkText as NSString).draw(at: NSPoint(x: x, y: fullTextTop()), withAttributes: inferred)
                 x += (angleMarkText as NSString).size(withAttributes: inferred).width
             }
             if trailingParens > 0 {
-                (String(repeating: ")", count: trailingParens) as NSString).draw(at: NSPoint(x: x, y: textContainerInset.height), withAttributes: inferred)
+                (String(repeating: ")", count: trailingParens) as NSString).draw(at: NSPoint(x: x, y: fullTextTop()), withAttributes: inferred)
             }
         }
         if string.isEmpty, !placeholder.isEmpty {

@@ -368,6 +368,13 @@ extension BarTextView {
         return x
     }
 
+    /// where full-size text drawn beside the line (the completion's rest, a grey `)`, an angle mark) has its top so it
+    /// sits on the line's baseline: a stacked line's box is taller, and its top would raise the text like a power
+    func fullTextTop() -> CGFloat {
+        guard !stacked.stacks.isEmpty, let lm = layoutManager else { return textContainerInset.height }
+        return stackBaseline() - lm.defaultBaselineOffset(for: Self.lineFont)
+    }
+
     /// the line's baseline, in the view
     func stackBaseline() -> CGFloat {
         guard let lm = layoutManager, let tc = textContainer, (string as NSString).length > 0 else { return textContainerInset.height + Self.fontSize }
