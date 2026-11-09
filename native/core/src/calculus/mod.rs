@@ -235,9 +235,11 @@ fn scan_bound(s: &str) -> Option<(String, String)> {
     Some((bound, cut(&c, i, c.len()).trim().to_string()))
 }
 
-/// `x^2 dx` names its variable; the `dx` isn't part of the body.
+/// `x^2 dx` names its variable; the `dx` isn't part of the body. Native only: the `dx` may touch the body
+/// (`x^2dx`, `2xdx`), as long as it doesn't end a longer word.
 fn strip_differential(body: &str) -> (String, Option<String>) {
-    static DIFF: Lazy = Lazy::new(|| re(r"^(.*?)(?:\s*\*)?\s*\bd([A-Za-z])\s*$", "s"));
+    static DIFF: Lazy =
+        Lazy::new(|| re(r"^(.*?)(?:\s*\*)?\s*(?<![A-Za-z]{2})d([A-Za-z])\s*$", "s"));
     match caps(&DIFF, body) {
         Some(m) if !g(&m, 1).unwrap_or("").trim().is_empty() => (
             g(&m, 1).unwrap_or("").trim().to_string(),
@@ -402,7 +404,12 @@ fn is_differential_at(c: &[char], i: usize) -> bool {
     if c[i] != 'd' && c[i] != 'D' {
         return false;
     }
-    if i > 0 && word_char(c[i - 1]) {
+    // touching the body is fine (`x^2dx`, `2xdx`); the end of a longer word isn't
+    if i > 0 && word_char(c[i - 1]) && !c[i - 1].is_ascii_digit() && !c[i - 1].is_ascii_alphabetic()
+    {
+        return false;
+    }
+    if i > 1 && c[i - 1].is_ascii_alphabetic() && c[i - 2].is_ascii_alphabetic() {
         return false;
     }
     if !c.get(i + 1).is_some_and(char::is_ascii_alphabetic) {

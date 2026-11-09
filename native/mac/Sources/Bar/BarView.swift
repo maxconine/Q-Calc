@@ -515,10 +515,26 @@ private struct AnswerText: View {
     let text: String
     let size: CGFloat
     var body: some View {
-        RadicalText(text: text, size: size, tracking: Theme.displayTracking(size), monospaced: true)
-            .truncationMode(.tail)
-            // useFitFont: a long answer shrinks to fit before it is cut
-            .minimumScaleFactor(0.5)
+        // useFitFont: a long answer shrinks to fit before it is cut. The whole answer shrinks as one: a scale factor
+        // on the line let each piece shrink on its own, so a root's `3` in `√3/6` came out smaller than the rest
+        if #available(macOS 13, *) {
+            ViewThatFits(in: .horizontal) {
+                fitted(1)
+                fitted(0.85)
+                fitted(0.7)
+                RadicalText(text: text, size: size * 0.5, tracking: Theme.displayTracking(size * 0.5), monospaced: true)
+                    .truncationMode(.tail)
+            }
+        } else {
+            RadicalText(text: text, size: size, tracking: Theme.displayTracking(size), monospaced: true)
+                .truncationMode(.tail)
+                .minimumScaleFactor(0.5)
+        }
+    }
+
+    private func fitted(_ scale: CGFloat) -> some View {
+        RadicalText(text: text, size: size * scale, tracking: Theme.displayTracking(size * scale), monospaced: true)
+            .fixedSize()
     }
 }
 
@@ -751,7 +767,7 @@ private struct HistoryRowView: View, Equatable {
     /// the expression as typed; stacked as the bar draws it while "Stacked fractions and powers" is on
     @ViewBuilder private var exprText: some View {
         if StackedText.stacks(row.expr) {
-            StackedText(text: row.expr, size: Theme.body).frame(maxHeight: Theme.tapeRow).clipped()
+            StackedText(text: row.expr.replacingOccurrences(of: "sqrt(", with: "√("), size: Theme.body).frame(maxHeight: Theme.tapeRow).clipped()
         } else {
             RadicalText(text: row.expr.replacingOccurrences(of: "sqrt(", with: "√("), size: Theme.body)
         }

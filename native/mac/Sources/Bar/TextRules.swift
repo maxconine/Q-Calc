@@ -21,7 +21,7 @@ private extension NSRegularExpression {
 enum Pretty {
     static let minus = "−"
     private static let leadNumber = regex(#"^(-?)([$€£¥]?)(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?(e[+-]?\d+)?(?=\s|$)"#)
-    private static let mathOnly = regex(#"^[\d\s+\-*/^().,πe√i·×sqrt]+$"#)
+    private static let mathOnly = regex(#"^[\d\s+\-*/^().,πe√i·×±∓sqrt]+$"#)
     private static let looseMinus = regex(#"(^|[\s(])-(?=[\s\d(π√sei])"#)
 
     /// prettyAnswer (src/engine/format.ts): a real minus sign and grouped digits. Display only; copy and insert
@@ -44,6 +44,11 @@ enum Pretty {
         }
         // native only: a matrix answer (the tape's too) as the live one is written
         if s.hasPrefix("[") || s.hasPrefix("λ") || s.hasPrefix("span{") { return matrix(s) }
+        // a root with a unit or words beside it (`sqrt(2) m`) is still drawn as a root, the words left as they are
+        if s.contains("sqrt(") {
+            let t = shortRoot.stringByReplacingMatches(in: s, range: NSRange(s.startIndex..., in: s), withTemplate: "√$1")
+            return t.replacingOccurrences(of: "sqrt(", with: "√(")
+        }
         return s
     }
 

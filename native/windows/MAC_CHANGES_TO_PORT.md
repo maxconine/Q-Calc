@@ -24,7 +24,7 @@ On Windows (branch `win-mac-port`) all three pass, with the golden floors as set
 
 ## 1. Comes from the core: just test it
 
-Nothing left: every line was typed on Windows and matched. `chat max` needed the `chat` stem in `commands.rs`.
+- **`dx` touching the integrand** (core `calculus/mod.rs`): `∫_12^3 x^2dx` is −567 and `∫_0^1 xdx` is 0.5, as with a space. Before, a `dx` right after a digit or a letter wasn't taken as the variable, so a definite integral got no answer. A `d` that ends a longer word still isn't one. Tests: `integrals_with_a_touching_dx`, and `roots_and_fractions_as_the_stacked_bar_types_them` (in `app/live.rs`).
 
 ## 2. Edited on Windows but never run: test it
 
@@ -45,6 +45,8 @@ Nothing left.
   - Press Enter: the row in history shows the fraction stacked, in light and dark.
 - **Roots over stacks:** a root whose bracket holds a fraction or power draws its sign as tall as what it takes. The bar sits 3 pt above the numerator, the foot is under the denominator, and the line is measured at the stack's hidden op. The line moves to leave room for the bar above (`hideRootSigns`'s drawing, `updateInset`). History rows draw it too (`StackedText`'s `.root`, with `sqrt(` shown as `√(`).
 - **`^` after a fraction** brackets the whole fraction (`1/2`, →, `^3` is `(½)³`, not `1/2³`). `termStart` now steps over a plain numerator before a stacked `/`, not only a bracketed one.
+- **Answers shrink as one:** an answer too wide for its room tries 100%, 85% and 70%, then 50% truncated (`ViewThatFits`; macOS 12 keeps the scale factor). The scale factor on its own let each piece shrink alone, so `√3/6`'s 3 came out small or half cut. A root's run is never squeezed (`RadicalText`).
+  - **Roots in every answer** (`Pretty.answer`, `TextRules.swift`): a solve's `(5 ± sqrt(33))/2` and an answer with a unit (`sqrt(2) m`) draw `√` too; `±`/`∓` count as maths, and any `sqrt(` left beside words becomes a root. Test: `√2/3`, `√3/6`, `2√3`, `solve x^2-5x-2=0`, `sqrt(2) m`: the radicand is the same size as the text beside it and whole, in the bar's answer and the history row, light and dark.
 - **Tests:** `native/mac/scripts/test-stacked.sh` runs headless checks of `StackedMath` (what stacks, with roots, and what `/ ^ ) ⌫` do). Port them as unit tests on Windows' copy of the same rules.
   - Type `sqrt(12/12^2`: the root covers the whole fraction, nothing is cut off, and the answer's `√3` is full size.
   - Press Enter: the row shows the root around the stacked fraction.

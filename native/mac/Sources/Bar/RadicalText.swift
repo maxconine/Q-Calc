@@ -49,7 +49,9 @@ struct RadicalText: View {
                 switch run {
                 case let .plain(s): styled(s)
                 case let .root(s, cube):
+                    // never squeezed: a squeezed run shrank or was cut on its own (`√3/6` showed half a 3)
                     styled(s)
+                        .fixedSize()
                         .padding(.leading, RootSign.width(size))
                         .overlay {
                             RootStroke(size: size)
