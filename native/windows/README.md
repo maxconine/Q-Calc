@@ -87,7 +87,8 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `graph.rs` | the graph panel under the composer (`graph x^2`, `plot …`, `graph a; b`): state, sampling, pan / zoom / orbit, the panel's fields |
 | `graph_view.rs` | the graph panel drawn (the plot's base pass cached as a bitmap, the pointer's pass over it) and the pointer over it |
 | `graph3d.rs` | the graph's 3D view as maths: the cube's projection, clipping, the depth-sorted scene, the patch under the pointer |
-| `graph_settings.rs` | the graph's settings (the head's wrench): `graphPrefs` in settings.json and the per-graph controls |
+| `graph_settings.rs` | the graph's settings and export cards (the head's wrench and camera): `graphPrefs` in settings.json and the per-graph controls |
+| `graph_export.rs` | the graph's picture: equations typeset by Typst over the plot at 3×, saved to the Desktop and copied as PNG |
 | `matrices.rs` | the matrix grid (`matrix 3x3`, Ctrl+G), the steps chip and card (Ctrl+R), matrix answers in the slot |
 | `matrix_text.rs` | pure: a matrix answer's slot text, its dual's shared label, the grid's moves and writing |
 | `systems.rs` | `sys2`…`sys5`: equation rows under the composer, solved live, saved as one row |
