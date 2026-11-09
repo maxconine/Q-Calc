@@ -327,6 +327,7 @@ impl BarModel {
         if typed.trim().is_empty() {
             return;
         }
+        crate::matrices::committing(self, &typed, engine);
         let rows = self.rows.clone();
         let now = now_ms();
         let view = self.view(now);
@@ -473,6 +474,7 @@ impl BarModel {
         self.field.insert(&piece);
         self.field.break_run();
         self.changed = true;
+        crate::matrices::inserted(&piece);
     }
 
     // ---- keys ----

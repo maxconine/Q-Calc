@@ -247,6 +247,8 @@ fn ask(app: &mut App, text: String) {
             context.ans.is_some(),
         );
         done(move |app| {
+            let mut words = words;
+            crate::matrices::name_word(&app.model, &text, &mut words);
             let pointer = ST.with(|s| {
                 let mut s = s.borrow_mut();
                 if s.asked.as_deref() == Some(text.as_str()) {

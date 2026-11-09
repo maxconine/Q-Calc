@@ -165,6 +165,7 @@ pub fn insert_piece(m: &mut BarModel, piece: &str) {
     m.field.insert(piece);
     m.field.break_run();
     m.touch();
+    crate::matrices::inserted(piece);
 }
 
 /// ↵ on the highlighted row inserts what ← → picked (insertHistoryPick); Alt+↵ the other half

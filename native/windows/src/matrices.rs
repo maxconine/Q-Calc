@@ -115,6 +115,8 @@ pub struct MatrixState {
     rows: Vec<StepRow>,
     latest: Arc<AtomicU64>,
     scroll: f32,
+    /// the matrix the grid last wrote, so a line committed with it is remembered (`GridMemory`)
+    last_literal: Option<String>,
 }
 
 impl std::fmt::Debug for MatrixState {
@@ -129,6 +131,25 @@ impl std::fmt::Debug for MatrixState {
 thread_local! {
     /// the steps' typeset matrices, one bitmap each
     static PICTURES: RefCell<Vec<Option<Picture>>> = const { RefCell::new(Vec::new()) };
+    /// the lines committed with a grid's matrix (grid_lines.json), read the first time they're asked about
+    static GRID_LINES: RefCell<Option<Vec<String>>> = const { RefCell::new(None) };
+}
+
+fn grid_lines_path() -> Option<std::path::PathBuf> {
+    crate::store::config_dir().map(|d| d.join("grid_lines.json"))
+}
+
+fn with_grid_lines<R>(f: impl FnOnce(&mut Vec<String>) -> R) -> R {
+    GRID_LINES.with(|g| {
+        let mut g = g.borrow_mut();
+        let lines = g.get_or_insert_with(|| {
+            grid_lines_path()
+                .and_then(|p| std::fs::read_to_string(p).ok())
+                .and_then(|t| serde_json::from_str(&t).ok())
+                .unwrap_or_default()
+        });
+        f(lines)
+    })
 }
 
 /// The hidden trim (typst_row.rs): the steps' bitmaps go.
@@ -189,7 +210,10 @@ pub fn follow(m: &mut BarModel, engine: &EngineThread) -> bool {
         m.matrix.grid = None;
         m.touch();
     }
-    let hint = if m.matrix.grid.is_none() {
+    // a bare `mat` is the name history stores, not the grid (`storesMat`)
+    let hint = if m.matrix.grid.is_none()
+        && !matrix_text::stores_mat(&typed, m.rows.rows.iter().map(|r| r.expr.as_str()))
+    {
         matrix_grid::grid_hint(&typed)
     } else {
         None
@@ -204,9 +228,117 @@ pub fn follow(m: &mut BarModel, engine: &EngineThread) -> bool {
     engine.cancel(Lane::Live);
     m.chained = false;
     m.live = None;
+    // `mat` / `matrix` lit as a known word (its hover names it, `name_word`); no squiggle left from `mat` alone
+    m.line.deco = Some(crate::input::Decorations {
+        words: matrix_text::matrix_word(&typed).into_iter().collect(),
+        ..Default::default()
+    });
+    m.line.deco_for = typed.clone();
     m.live_for = typed;
     m.touch();
     true
+}
+
+/// The hover's names for `text` (word_tip.rs): while the line asks for a grid, its `mat` / `matrix` is `matrix`.
+pub fn name_word(m: &BarModel, text: &str, words: &mut Vec<(u32, u32, String)>) {
+    if m.matrix.hint.is_none() || m.field.text() != text {
+        return;
+    }
+    if let Some((a, b)) = matrix_text::matrix_word(text) {
+        words.retain(|(x, y, _)| *y <= a || *x >= b);
+        words.push((a, b, "matrix".to_string()));
+    }
+}
+
+/// The grid back on the line's matrix: the one starting at `start` (a saved draft's), else the one under the
+/// caret, else the last; the keys in cell `at`. One already open just takes them.
+fn reopen(m: &mut BarModel, engine: &EngineThread, start: Option<usize>, at: (usize, usize)) {
+    if m.matrix.grid.is_none() {
+        // just inside the saved matrix's bracket, so it's the one read
+        let caret = start.map_or_else(|| m.field.to_utf16(m.field.caret()) as usize, |s| s + 1);
+        let Some(spot) = matrix_grid::grid_at(m.field.text(), caret) else {
+            return;
+        };
+        open(m, engine, spot);
+    }
+    let at = m.matrix.grid.as_ref().map(|g| g.grid.clamp(at));
+    // a cell has the keys: the line isn't left drawn selected (the show selects it)
+    if at.is_some() && m.field.has_selection() {
+        m.field.end(false);
+    }
+    focus(m, at);
+}
+
+/// willHide (line.rs): an open grid is kept with the draft.
+pub fn draft_grid(m: &BarModel) -> Option<crate::store::DraftGrid> {
+    let g = m.matrix.grid.as_ref()?;
+    let (r, c) = g.focus.unwrap_or((0, 0));
+    Some(crate::store::DraftGrid {
+        start: g.grid.start,
+        end: g.grid.end,
+        r,
+        c,
+    })
+}
+
+/// willShow (line.rs): a draft that had the grid open opens it again on that cell, after the show has given the
+/// line the keys.
+pub fn restore_draft(grid: Option<crate::store::DraftGrid>) {
+    if let Some(g) = grid {
+        crate::later::after("matrix-grid-reopen", 0, move |app| {
+            reopen(&mut app.model, &app.engine, Some(g.start), (g.r, g.c));
+        });
+    }
+}
+
+/// Enter (model.rs `commit`): a line holding the grid's matrix is remembered, so it comes back with the grid.
+pub fn committing(m: &BarModel, typed: &str, engine: &EngineThread) {
+    let Some(lit) = m.matrix.last_literal.as_deref() else {
+        return;
+    };
+    if !typed.contains(lit) {
+        return;
+    }
+    let lines = with_grid_lines(|l| {
+        matrix_text::remember(l, typed);
+        l.clone()
+    });
+    engine.submit(Lane::Misc, move |_| {
+        if let (Some(p), Ok(text)) = (grid_lines_path(), serde_json::to_string(&lines))
+            && let Err(e) = crate::store::write_atomic(&p, &text)
+        {
+            crate::qlog!("grid lines: couldn't save: {e}");
+        }
+        None
+    });
+}
+
+/// A history row went into the line (model.rs `insert_row`, history.rs `insert_piece`): a line made in the grid
+/// comes back with the grid open on its matrix, once the line has taken it.
+pub fn inserted(piece: &str) {
+    if with_grid_lines(|l| l.iter().any(|x| x == piece)) {
+        crate::later::after("matrix-grid-reopen", 0, |app| {
+            reopen(&mut app.model, &app.engine, None, (0, 0))
+        });
+    }
+}
+
+/// Ctrl+Backspace in a cell: empties it; in an empty one the matrix and the line go, for a fresh bar (as the `sys`
+/// fields).
+fn delete_line(m: &mut BarModel, engine: &EngineThread, at: (usize, usize)) {
+    let Some(f) = m.matrix.grid.as_mut().and_then(|g| g.field(at)) else {
+        return;
+    };
+    if f.text().trim().is_empty() {
+        m.matrix.grid = None;
+        m.matrix.last_literal = None;
+        m.field.reset("");
+        m.text_changed(engine);
+    } else {
+        f.reset("");
+        write(m, engine);
+    }
+    m.touch();
 }
 
 /// A cell (not the line) has the keys: the line's caret hides (window.rs).
@@ -254,6 +386,8 @@ fn write(m: &mut BarModel, engine: &EngineThread) {
         close(m);
         return;
     };
+    let literal = matrix_grid::grid_literal(&g.grid.cells);
+    m.matrix.last_literal = Some(literal);
     m.field.set_text_at(&out, caret);
     m.field.break_run();
     // the grid wrote what the line now says, so `follow` keeps it
@@ -454,6 +588,11 @@ pub fn key_down<F: FnOnce() -> Option<String>>(
                 close(m);
                 Ok(Outcome::Handled)
             }
+            // ↓ on the line goes to the open grid's first cell
+            DOWN if plain && m.matrix.grid.is_some() && m.selected.is_none() => {
+                focus(m, Some((0, 0)));
+                Ok(Outcome::Handled)
+            }
             ESC if m.matrix.steps_shown => {
                 m.matrix.steps_shown = false;
                 refresh_steps(m, engine);
@@ -512,6 +651,10 @@ pub fn key_down<F: FnOnce() -> Option<String>>(
         }
         DOWN if !ctrl => {
             arrow(m, 1, 0);
+            return Ok(Outcome::Handled);
+        }
+        BACK if ctrl && !mods.shift => {
+            delete_line(m, engine, at);
             return Ok(Outcome::Handled);
         }
         LEFT if !ctrl && !mods.shift && arrow(m, 0, -1) => return Ok(Outcome::Handled),

@@ -381,6 +381,18 @@ pub struct Draft {
     pub expr: String,
     /// unix ms
     pub saved_at: i64,
+    /// native only: the matrix grid open with the line, to come back with it (matrices.rs)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub grid: Option<DraftGrid>,
+}
+
+/// Where an open matrix grid was in a draft: its matrix's place in the line (UTF-16) and the cell with the keys.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct DraftGrid {
+    pub start: usize,
+    pub end: usize,
+    pub r: usize,
+    pub c: usize,
 }
 
 impl Draft {
@@ -632,6 +644,7 @@ mod tests {
         let d = Draft {
             expr: "2+".into(),
             saved_at: 1_000_000,
+            grid: None,
         };
         assert!(d.fresh(1_030_000, 60));
         assert!(!d.fresh(1_061_000, 60));
@@ -639,7 +652,8 @@ mod tests {
         assert!(
             !Draft {
                 expr: "  ".into(),
-                saved_at: 1_000_000
+                saved_at: 1_000_000,
+                grid: None,
             }
             .fresh(1_000_001, 60)
         );

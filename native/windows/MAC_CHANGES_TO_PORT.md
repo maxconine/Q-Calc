@@ -8,11 +8,9 @@ A running list, kept by whoever changes the Mac app. How to work through it: `PO
 
 **Spec:** `native/mac/PARITY.md` and the Mac sources named below. The rules are in the shared core, so don't copy them into Windows.
 
-**Status of this list:** written from the Mac, then ported and run on Windows on branch `win-mac-port` (6 Nov 2026). New Mac changes go below as before.
+**Status of this list:** written from the Mac, then ported and run on Windows on branch `win-mac-port` (6 Nov 2026), and again for 3.0.2 on branch `win-port-302` (8 Nov 2026), with the linear algebra list folded in and done. New Mac changes go below as before.
 
 **Releases (3.0.2):** a `v*` tag now releases the Mac only, and Windows ships by a hand run of the Windows workflow. See the top of `RELEASE.md`.
-
-**Linear algebra has its own list:** `PORT_linear_algebra.md` (matrices: the grid, `mat`, steps, words like `find eigenvalues of A`, cofactors, rotations, `A^(1/2)`). Branch `linear-algebra` is merged into `native` and `main`, so work through it as part of this list: run its checks, then its sections in order. When it's done, delete it.
 
 ## Checks to run first
 
@@ -24,15 +22,11 @@ cargo test -p qcalc-win
 
 The `eval.blank` golden floor is now 1311, because two recordings of `∫ x dx` and one of `integral of x^2` expect a blank and they now answer. The `eval.units` floor is now 8988: two recordings want `2 ft + 3 in` as `2.25 ft` (it now answers `2 ft 3 in`), and one wants `1/2 in + 3/8 in` as `0.875 in` (now `7/8 in`). If Windows passes a different count, tell the Mac side rather than raising it.
 
-On Windows (branch `win-mac-port`) all three pass, with the golden floors as set on the Mac. The `commands.rs` test now expects `idt summation` to open `identities: Summation` at section 0.
+On Windows (branch `win-port-302`) all three pass, with the golden floors as set on the Mac (the matrix floor `eval.matrix` 420 too). The `commands.rs` test now expects `idt summation` to open `identities: Summation` at section 0.
 
 ## 1. Comes from the core: just test it
 
-- **`dx` touching the integrand** (core `calculus/mod.rs`): `∫_12^3 x^2dx` is −567 and `∫_0^1 xdx` is 0.5, as with a space. Before, a `dx` right after a digit or a letter wasn't taken as the variable, so a definite integral got no answer. A `d` that ends a longer word still isn't one. Tests: `integrals_with_a_touching_dx`, and `roots_and_fractions_as_the_stacked_bar_types_them` (in `app/live.rs`).
-
-- **A halves power is a root** (core `simplify::half_power`, checked beside `wants_exact_form` in `evaluate.rs`): `2^(1/2)` (also the stacked bar's `2^(1/(2))`, `2^0.5`) answers `√2 ≈ 1.41421`, as `√2` does, and `8^(3/2)` answers `16√2 ≈ 22.6274`. A fraction needs its bracket: `2^3/2` is 2³ over 2. The web gives no exact form here, so the golden floors drop to `eval.arithmetic` 6889 and `eval.sheet` 4488 (the recordings of `2^0.5`, `16^(1/2)`, `∛2^-1.5` and the like want none). Tests: `closed_forms` (simplify.rs), `roots_and_fractions_as_the_stacked_bar_types_them`.
-
-- **Faster graph intersections and graph sampling** (core `graph_native::native_intersections`, `scientific/compile.rs`, `eval/ops.rs`, `eval/mod.rs`). Nothing changes on screen: the results are bit-for-bit the same as before. Each curve is now sampled once instead of once per pair. Bisection stops when it has converged. A graph's sample skips building a `Value`. Two plain numbers skip the complex, matrix and units dispatch. A one-argument call (`sin x`) has no argument `Vec`. Intersections are 48% faster for 2 curves and 82% faster for 6 (`cargo run --release -p qcalc-core --example new_features_bench`). Tests: `curves_cross_at_exact_points`, plus the whole core suite.
+Nothing left. (`dx` touching the integrand, halves powers as roots and the faster intersections were checked in the app on 8 Nov 2026, with the linear algebra tables.)
 
 ## 2. Edited on Windows but never run: test it
 
@@ -120,6 +114,9 @@ Nothing left.
   - **Snapping to roots:** a root within 9 pt of the pointer is snapped to, as critical points are. It is drawn picked out, labelled `root (x, 0)`.
 
 Open questions for the Mac side:
+
+- **A root inside a matrix entry (core):** the bar turns `sqrt` into `√` as it's typed, on both apps, and the core's matrix rows don't take `√`: `det([√3 1; 0 2])` (typed `det([sqrt(3) 1; 0 2])`) says `rows differ in length`, and `[√(3) 1]` reads as one entry. `det([sqrt(3) 1; 0 2])` sent to the engine as plain text answers 3.46410161514, so the fix is in the matrix literal's row splitting.
+- **Matrix grid gaps left on Windows:** Ctrl+G and Ctrl+R are fixed chords (the core's keybinds have no matrix actions; a user binding on the same chord wins); a click in a cell puts the caret at the end (double-click selects it) rather than under the pointer; the grid doesn't scroll sideways (8 columns need about 590 px); no UI Automation for the cells yet.
 
 - **Sheet filter:** the spec says `tmax` finds `τ_max`, but `τ` doesn't fold to `t` in the Mac's own matching, and Windows follows the Mac's code, so `tmax` finds nothing on either.
 
