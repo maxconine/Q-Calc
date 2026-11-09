@@ -72,8 +72,9 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `cheats.rs` | `?` / `help`: the cheat sheet where the tape is |
 | `line.rs` | the input line's side: decorations, squiggle, completion, the draft, the empty bar's rotating examples (and counting opens), the d/dt chips, the caret's blink |
 | `text_rules.rs` | typing rules: words to symbols, bracket pairing and wrapping, flattened pastes |
-| `stacked.rs` | stacked fractions and powers (Settings, off by default), pure: what's stacked, dead caret places, the `/` `^` `)` edits, selections and deletes that keep a stack whole |
-| `stacked_layout.rs` | how the line draws them (places, runs, bars, boxes, the slot caret, clicks), the ↑ ↓ key, and a typed root's one-stroke sign |
+| `stacked.rs` | stacked fractions and powers (Settings, off by default), pure: what's stacked, dead caret places, the keys as MathQuill has them (`/` `^` `)` `√` ⌫ ⌦ ↑ ↓ Home End), selections and deletes that keep a stack whole, room around signs, and TeX's sizes and gaps (`tex`, `extent`, `fits`); the Mac's 120 headless checks in `stacked/tests.rs` |
+| `stacked_layout.rs` | how the line draws them (places, runs, bars, grown brackets, boxes, the slot caret, clicks, the line's move to show a tall stack), the ↑ ↓ key, and a typed root's one-stroke sign, as tall as a stack it takes |
+| `stacked_text.rs` | a history row's expression drawn stacked (fractions, powers, roots, grown brackets) while the setting is on, never cut off by its row |
 | `drag.rs` | moving and widening the bar, remembered per monitor |
 | `keys.rs` | the in-bar keybind router (`settings.keybinds` over the Windows defaults); `close_front_sheet` for Ctrl+W |
 | `hotkey.rs` | the global shortcut: chord parsing, RegisterHotKey with retries, re-registration triggers, the "held by X" guess |

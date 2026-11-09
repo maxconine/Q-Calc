@@ -113,6 +113,8 @@ mod sheets_typst;
 #[cfg(windows)]
 mod stacked_layout;
 #[cfg(windows)]
+mod stacked_text;
+#[cfg(windows)]
 mod systems;
 #[cfg(windows)]
 mod threads;
