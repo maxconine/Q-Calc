@@ -41,5 +41,9 @@ name = "engine_bench"
 path = "../bench/engine_bench.rs"
 
 [[example]]
+name = "new_features_bench"
+path = "../bench/new_features_bench.rs"
+
+[[example]]
 name = "fuzz"
 path = "../bench/fuzz.rs"

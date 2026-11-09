@@ -12,7 +12,7 @@ use crate::jsre::{self, Lazy};
 use crate::latex::{latex_to_ascii, looks_like_latex};
 use crate::plain_math::{PlainContext, try_plain_math, with_space_thousands};
 use crate::scientific::{NAMES, ScientificContext, names_pattern, split_glued_functions};
-use crate::simplify::{ExactFormOptions, exact_form, wants_exact_form};
+use crate::simplify::{ExactFormOptions, exact_form, half_power, wants_exact_form};
 use crate::stubs::{self, SolveContext, Solved};
 use crate::types::{
     AngleMode, EvaluateOptions, LineKind, LineResult, MatrixPart, MatrixParts, Meas, UserFunction,
@@ -1369,7 +1369,7 @@ impl<'o> Sheet<'o> {
             && !measured_display
             && finite
             && sum.is_none()
-            && wants_exact_form(&expr))
+            && (wants_exact_form(&expr) || half_power(&expr)))
         .then(|| {
             exact_form(
                 value.n,

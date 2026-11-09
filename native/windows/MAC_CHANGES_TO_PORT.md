@@ -26,6 +26,10 @@ On Windows (branch `win-mac-port`) all three pass, with the golden floors as set
 
 - **`dx` touching the integrand** (core `calculus/mod.rs`): `∫_12^3 x^2dx` is −567 and `∫_0^1 xdx` is 0.5, as with a space. Before, a `dx` right after a digit or a letter wasn't taken as the variable, so a definite integral got no answer. A `d` that ends a longer word still isn't one. Tests: `integrals_with_a_touching_dx`, and `roots_and_fractions_as_the_stacked_bar_types_them` (in `app/live.rs`).
 
+- **A halves power is a root** (core `simplify::half_power`, checked beside `wants_exact_form` in `evaluate.rs`): `2^(1/2)` (also the stacked bar's `2^(1/(2))`, `2^0.5`) answers `√2 ≈ 1.41421`, as `√2` does, and `8^(3/2)` answers `16√2 ≈ 22.6274`. A fraction needs its bracket: `2^3/2` is 2³ over 2. The web gives no exact form here, so the golden floors drop to `eval.arithmetic` 6889 and `eval.sheet` 4488 (the recordings of `2^0.5`, `16^(1/2)`, `∛2^-1.5` and the like want none). Tests: `closed_forms` (simplify.rs), `roots_and_fractions_as_the_stacked_bar_types_them`.
+
+- **Faster graph intersections and graph sampling** (core `graph_native::native_intersections`, `scientific/compile.rs`, `eval/ops.rs`, `eval/mod.rs`). Nothing changes on screen: the results are bit-for-bit the same as before. Each curve is now sampled once instead of once per pair. Bisection stops when it has converged. A graph's sample skips building a `Value`. Two plain numbers skip the complex, matrix and units dispatch. A one-argument call (`sin x`) has no argument `Vec`. Intersections are 48% faster for 2 curves and 82% faster for 6 (`cargo run --release -p qcalc-core --example new_features_bench`). Tests: `curves_cross_at_exact_points`, plus the whole core suite.
+
 ## 2. Edited on Windows but never run: test it
 
 Nothing left.

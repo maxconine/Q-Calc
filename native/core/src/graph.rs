@@ -839,10 +839,7 @@ impl GraphY {
         if !x.is_finite() {
             return None;
         }
-        f.borrow_mut()
-            .at(x)
-            .filter(|v| v.kind == ValueKind::Number && v.n.is_finite())
-            .map(|v| v.n)
+        f.borrow_mut().number_at(x)
     }
 }
 
@@ -868,12 +865,7 @@ pub struct GraphZ {
 
 impl GraphZ {
     pub fn at(&self, x: f64, y: f64) -> Option<f64> {
-        self.f
-            .as_ref()?
-            .borrow_mut()
-            .at2(x, y)
-            .filter(|v| v.kind == ValueKind::Number && v.n.is_finite())
-            .map(|v| v.n)
+        self.f.as_ref()?.borrow_mut().number_at2(x, y)
     }
 }
 

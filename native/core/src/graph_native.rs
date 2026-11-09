@@ -1075,35 +1075,50 @@ pub fn native_intersections(
         .collect();
     let fns: Vec<_> = curves.iter().filter_map(|r| r.y_fn()).collect();
     let step = (hi - lo) / (SAMPLES - 1) as f64;
-    let xs: Vec<f64> = (0..SAMPLES).map(|i| lo + step * i as f64).collect();
+    let x_at = |i: usize| lo + step * i as f64;
+    // each curve sampled once, not once for every curve it's paired with; NaN where it has no finite value
+    let ys: Vec<Vec<f64>> = fns
+        .iter()
+        .map(|f| {
+            (0..SAMPLES)
+                .map(|i| f(x_at(i)).filter(|v| v.is_finite()).unwrap_or(f64::NAN))
+                .collect()
+        })
+        .collect();
     let mut out: Vec<CriticalPoint> = Vec::new();
+    let mut found: Vec<f64> = Vec::new();
     for a in 0..fns.len() {
         for b in a + 1..fns.len() {
             let d = |x: f64| -> Option<f64> {
                 let (p, q) = (fns[a](x)?, fns[b](x)?);
                 (p.is_finite() && q.is_finite()).then_some(p - q)
             };
-            let ds: Vec<Option<f64>> = xs.iter().map(|&x| d(x)).collect();
+            let (ya, yb) = (&ys[a], &ys[b]);
+            let ds = |i: usize| (!ya[i].is_nan() && !yb[i].is_nan()).then(|| ya[i] - yb[i]);
             // the same curve twice: no point is the crossing
-            let zeros = ds.iter().filter(|v| **v == Some(0.0)).count();
+            let zeros = (0..SAMPLES).filter(|&i| ds(i) == Some(0.0)).count();
             if zeros > SAMPLES / 20 {
                 continue;
             }
-            let mut found: Vec<f64> = Vec::new();
+            found.clear();
             for i in 0..SAMPLES - 1 {
-                let (Some(u), Some(v)) = (ds[i], ds[i + 1]) else {
+                let (Some(u), Some(v)) = (ds(i), ds(i + 1)) else {
                     continue;
                 };
                 if u == 0.0 {
-                    found.push(xs[i]);
+                    found.push(x_at(i));
                     continue;
                 }
                 if v == 0.0 || u.signum() == v.signum() {
                     continue;
                 }
-                let (mut l, mut r, mut dl) = (xs[i], xs[i + 1], u);
+                let (mut l, mut r, mut dl) = (x_at(i), x_at(i + 1), u);
                 for _ in 0..80 {
                     let m = (l + r) / 2.0;
+                    // l and r are neighbouring doubles: halving again changes nothing
+                    if m == l || m == r {
+                        break;
+                    }
                     let Some(dm) = d(m) else { break };
                     if dm == 0.0 {
                         l = m;
@@ -1119,10 +1134,10 @@ pub fn native_intersections(
                 }
                 found.push((l + r) / 2.0);
             }
-            if ds[SAMPLES - 1] == Some(0.0) {
-                found.push(xs[SAMPLES - 1]);
+            if ds(SAMPLES - 1) == Some(0.0) {
+                found.push(x_at(SAMPLES - 1));
             }
-            for x in found {
+            for &x in &found {
                 let x = tidy_x(x, step);
                 let (Some(p), Some(q)) = (fns[a](x), fns[b](x)) else {
                     continue;

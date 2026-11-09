@@ -213,6 +213,19 @@ pub fn wants_exact_form(expr: &str) -> bool {
     jsre::test(&RE, expr)
 }
 
+/// Native only: a power with a halves exponent is a square root too, so it gets the same closed form as `√`
+/// (`2^(1/2)` is `√2 ≈ 1.41421`, as `sqrt(2)` is): `^(1/2)`, `^(-3/2)`, `^0.5`, `^.5`, `^1.5`, and the stacked
+/// bar's `^(1/(2))` and `^((1)/(2))`. A fraction needs its bracket: `2^3/2` is 2³ over 2.
+pub fn half_power(expr: &str) -> bool {
+    static RE: Lazy = Lazy::new(|| {
+        jsre::js(
+            r"\^\s*\(\s*[+\-−]?\s*(?:\(\s*\d+\s*\)|\d+)\s*/\s*(?:\(\s*2\s*\)|2)\s*\)|\^\s*(?:\(\s*)?[+\-−]?\s*\d*\.5(?!\d)",
+            "",
+        )
+    });
+    jsre::test(&RE, expr)
+}
+
 /// Options for `exact_form`.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ExactFormOptions {
@@ -285,5 +298,11 @@ mod tests {
         assert!(wants_exact_form("sin(30)"));
         assert!(!wants_exact_form("2+2"));
         assert_eq!(dual_label(Some("pi/4"), "0.785398"), "pi/4 ≈ 0.785398");
+        for e in ["2^(1/2)", "2^(1/(2))", "2^((1)/(2))", "8^(3/2)", "2^(-1/2)", "2^0.5", "2^.5", "x^(1/2);x=3", "2^ ( 1 / 2 )", "∛(2^-1.5)"] {
+            assert!(half_power(e), "{e}");
+        }
+        for e in ["2^(1/3)", "2^(1/20)", "2^2", "2^0.55", "2^5", "1/2", "2^(12/(3))", "∛2^3/2", "2^1/2", "2^(1/2+1)"] {
+            assert!(!half_power(e), "{e}");
+        }
     }
 }

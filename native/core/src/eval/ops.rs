@@ -109,6 +109,12 @@ pub fn unary(op: Op, a: &Val) -> EvalResult {
 }
 
 pub fn binary(op: Op, a: &Val, b: &Val) -> EvalResult {
+    // two plain numbers, the case a graph's thousands of samples make: none of complex, matrix or units takes them
+    if let (Val::Num(x), Val::Num(y)) = (a, b)
+        && op != Op::Xor
+    {
+        return numbers(op, *x, *y);
+    }
     // PORT(WP-FUNCTIONS): a complex operand goes to `eval::complex::binary` here, one line.
     if let Some(r) = super::complex::binary(op, a, b) {
         return r;
@@ -122,7 +128,10 @@ pub fn binary(op: Op, a: &Val, b: &Val) -> EvalResult {
     if op == Op::Xor {
         return Ok(Val::Bool(a.truthy() != b.truthy()));
     }
-    let (x, y) = (scalar(a, op)?, scalar(b, op)?);
+    numbers(op, scalar(a, op)?, scalar(b, op)?)
+}
+
+fn numbers(op: Op, x: f64, y: f64) -> EvalResult {
     Ok(match op {
         Op::Add => Val::Num(x + y),
         Op::Subtract => Val::Num(x - y),

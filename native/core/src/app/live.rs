@@ -1025,6 +1025,15 @@ mod tests {
             ("1/(x/3);x=2", "1.5", None),
             ("1/(2)·x;x=4", "2", None),
             ("√(-4)", "undefined", None),
+            // a halves power is a root: the same closed form as √ (native only)
+            ("2^(1/2)", "1.41421", Some("sqrt(2)")),
+            ("2^(1/(2))", "1.41421", Some("sqrt(2)")),
+            ("2^0.5", "1.41421", Some("sqrt(2)")),
+            ("8^(3/2)", "22.6274", Some("16sqrt(2)")),
+            ("2^(-1/2)", "0.707107", Some("sqrt(2)/2")),
+            ("12^(1/2)", "3.4641", Some("2sqrt(3)")),
+            ("4^(1/2)", "2", Some("2")),
+            ("2^(1/3)", "1.25992", None),
         ] {
             let a = live(&req(line));
             assert_eq!((a.slot.as_str(), a.exact.as_deref()), (want, exact), "{line}");
