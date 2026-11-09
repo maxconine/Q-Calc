@@ -91,7 +91,12 @@ fn other_panel(m: &BarModel) -> bool {
 /// The request for the bar as it is, or none when the row hides.
 pub fn request(m: &BarModel) -> Option<Request> {
     let text = m.field.text();
-    if !m.settings.typst_preview || text.trim().is_empty() || other_panel(m) {
+    // native only: with "stacked fractions and powers" on the line is already typeset, so no preview under it
+    if !m.settings.typst_preview
+        || m.settings.stacked_math
+        || text.trim().is_empty()
+        || other_panel(m)
+    {
         return None;
     }
     let live = m.live.as_ref().filter(|_| m.live_for == text);
