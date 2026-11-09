@@ -415,8 +415,36 @@ pub fn evaluate_line(text: &str, options: &EvaluateOptions) -> LineResult {
         .unwrap_or_else(|| LineResult::empty(text))
 }
 
-/// `x^2 + y; x=5; y=2`: the expression and the definitions after it. None unless everything after the first
-/// semicolon defines a letter.
+/// One `;` part's definitions: `x=3` or several split at top-level commas, `x=3, y=2`. A comma starts a new one
+/// only before `name =`, so a value keeps its own commas (`x = 1,000`, `x = max(1, 2)`).
+fn part_definitions(part: &str) -> Option<Vec<(String, String)>> {
+    static STARTS: Lazy = Lazy::new(|| js(r"^\s*[A-Za-z][A-Za-z0-9]*\s*=(?!=)", ""));
+    let mut pieces: Vec<String> = Vec::new();
+    let (mut depth, mut start) = (0_i32, 0);
+    let cut = |piece: &str, pieces: &mut Vec<String>| match pieces.last_mut() {
+        Some(last) if !jsre::test(&STARTS, piece) => {
+            last.push(',');
+            last.push_str(piece);
+        }
+        _ => pieces.push(piece.to_string()),
+    };
+    for (i, c) in part.char_indices() {
+        match c {
+            '(' | '[' | '{' => depth += 1,
+            ')' | ']' | '}' => depth -= 1,
+            ',' if depth == 0 => {
+                cut(&part[start..i], &mut pieces);
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    cut(&part[start..], &mut pieces);
+    pieces.iter().map(|p| parse_assignment(p.trim())).collect()
+}
+
+/// `x^2 + y; x=5; y=2` (or `; x=5, y=2`): the expression and the definitions after it. None unless everything
+/// after the first semicolon defines a letter.
 pub fn split_line_definitions(text: &str) -> Option<(&str, Vec<(String, String)>)> {
     if !text.contains(';') {
         return None;
@@ -441,8 +469,11 @@ pub fn split_line_definitions(text: &str) -> Option<(&str, Vec<(String, String)>
     }
     let definitions = rest
         .iter()
-        .map(|d| parse_assignment(d.trim()))
-        .collect::<Option<Vec<_>>>()?;
+        .map(|d| part_definitions(d))
+        .collect::<Option<Vec<_>>>()?
+        .into_iter()
+        .flatten()
+        .collect();
     Some((head.trim(), definitions))
 }
 

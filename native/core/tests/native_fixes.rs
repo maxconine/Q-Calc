@@ -474,6 +474,20 @@ fn a_line_can_define_its_letters() {
     // anything else with a semicolon goes on as before
     assert_eq!(at("1;2"), "");
     assert_eq!(at("x^2; 5"), "");
+    // the definitions may be split by commas too, or both
+    assert_eq!(at("x^2 + y; x=5, y=2"), "27");
+    assert_eq!(at("x + y + z; x=1, y=2; z=3"), "6");
+    assert_eq!(at("(6x)/(32+z^(3));x=3,z=2"), "0.45");
+    let doc =
+        qcalc_core::app::typst_math::native_typst_document("x^2 + y; x=5, y=2", "27", "").unwrap();
+    assert!(doc.contains("= 27 quad (x = 5, y = 2)"), "{doc}");
+    // a value keeps its own commas: a call's, a thousands separator's
+    assert_eq!(at("x + 1; x = max(1, 2)"), "3");
+    assert_eq!(at("x + 1; x = 1,000"), "1001");
+    assert_eq!(at("x + y; x = 1,000, y = 1"), "1001");
+    // a letter left without a value still has no answer
+    assert_eq!(at("x + z; x=3, y=2"), "");
+    assert_eq!(at("x^2; 5, 6"), "");
 }
 
 #[test]

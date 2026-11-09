@@ -65,7 +65,7 @@ Q Calc runs on Mac and Windows. A few of the newest features, marked *(Mac)*, ar
 
 ### Algebra and solving
 
-- Variables and functions: `x = 5`, then `x*2`; `f(x) = x^3`, then `f(2)`. Definitions after a `;` apply to that line alone: `x^2 + y; x=5; y=2`.
+- Variables and functions: `x = 5`, then `x*2`; `f(x) = x^3`, then `f(2)`. Definitions after a `;` apply to that line alone: `x^2 + y; x=5; y=2`, or `x^2 + y; x=5, y=2`.
 - Type an equation with `=` to solve it: `x^2 - 5x + 6 = 0` gives `x = 2, 3`, and every root copies on its own. `solve(x^2 - cos(x) = 0, x = 0.2)` starts Newton's method from a guess, and equations can carry units: `solve(0.5 = e^(-t/0.384 ms), t)` is `0.266 ms`.
 - Rearrange a formula with `isolate`: `isolate T in PV = nRT` gives `T = P*V/(R*n)`. `solve y = mx + b for x` rearranges, or gives a number when every other letter is known.
 - Systems of equations: `sys 2` through `sys 5` open fields that solve as you type, units included (`x + y = 10 m`, `x - y = 2 m` gives `x = 6 m, y = 4 m`). Nonlinear systems solve too, exactly when they can and numerically when not. In one line: `solve({x^2 + y^2 = 4, x^2 - y = 2})`.
