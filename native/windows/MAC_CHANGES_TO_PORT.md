@@ -28,6 +28,8 @@ On Windows (branch `win-port-302`) all three pass, with the golden floors as set
 
 - **A root or π in a matrix entry** (core `matrix.rs`: `roots`, `spaced`, `SPACED_ROW`): `det([√3 1; 0 2])` is 3.46410161514 (exact `2sqrt(3)`), `[√3 √2]` is two entries, `[1 -√2]` is `[1 -1.41421]`, `[π 1]` and `[2π 1; 0 1]` work. Your report; fixed on the Mac. Test: `roots_and_pi_in_entries` in `tests/linear_algebra_typed.rs`, then type `det([sqrt(3) 1; 0 2])` in the bar.
 
+- **Named constants in words** (core `named_constants.rs`, called from `Sheet::line` in `evaluate.rs`): the constants page of Mitiguy's appendix answer when typed, `Earth's axial tilt` is 23.45 deg, `mass of earth / mass of moon` is 81.3924, `gravity on mars` is 3.7 m/s². Test: `named_constants_answer_in_words` in `tests/requested_features.rs`, then type `Earth's axial tilt` in the bar.
+
 The rest is done. (`dx` touching the integrand, halves powers as roots and the faster intersections were checked in the app on 8 Nov 2026, with the linear algebra tables.)
 
 ## 2. Edited on Windows but never run: test it

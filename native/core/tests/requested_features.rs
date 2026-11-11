@@ -523,3 +523,28 @@ fn soulver_style_phrases_still_answer() {
     assert_eq!(show("5 km in miles"), "3.10686 mi");
     assert_eq!(show("what is 20% of 50"), "10");
 }
+
+// 2026-11-10: the constants in Mitiguy's appendix (p. 306) answer when typed in words
+#[test]
+fn named_constants_answer_in_words() {
+    assert_eq!(show("Earth's axial tilt"), "23.45 deg");
+    assert_eq!(show("earths axial tilt"), "23.45 deg");
+    assert_eq!(show("Earth’s magnetic field tilt"), "11 deg");
+    assert_eq!(show("what is the mass of the earth?"), "5.9742e+24 kg");
+    assert_eq!(show("speed of light"), "299792458 m/s");
+    assert_eq!(show("gravity on mars"), "3.7 m/s²");
+    assert_eq!(show("radius of jupiter"), "71492 km");
+    assert_eq!(show("earth-moon distance"), "384400 km");
+    assert_eq!(show("Earth's sidereal day"), "23.935 hr");
+    assert_eq!(show("earth's minimum surface temperature"), "-69 °C");
+    // inside a longer line a constant is its quantity
+    assert_eq!(show("mass of earth / mass of moon"), "81.3924");
+    assert_eq!(show("earth's axial tilt to rad"), "0.40928 rad");
+    assert_eq!(show("aphelion - perihelion"), "5019180 km");
+    assert_eq!(show("speed of light * 2"), "599584916 m/s");
+    // a name the user defines stays theirs
+    assert_eq!(sheet(&["aphelion = 3", "aphelion * 2"]), ["3", "6"]);
+    // and ordinary lines are untouched
+    assert_eq!(show("gravity"), "1 g");
+    assert_eq!(show("5 kg"), "11.0231 lbs");
+}

@@ -57,6 +57,7 @@ Status: ✅ tested (a test covers it) · 🔧 fixed here · ❌ missing · 🖥 
 | Default significant figures 6 | 2026-10-27 | ✅ | `copy_unitless_and_six_sig_figs_by_default` |
 | `open messages with max2`, threads with past contacts | 2026-10-27 | ✅ | `message_commands`; `app::messaging::reads_the_conversation_commands` |
 | Custom hotkey (e.g. `alt+q`) is kept | 2026-10-18 | ✅ | `keybinds_are_the_users` |
+| Constants from Mitiguy's appendix (p. 306) answer in words: `Earth's axial tilt` is 23.45° | 2026-11-10 | ✅ | `named_constants_answer_in_words` (`core/src/named_constants.rs`) |
 | Default keybind ⌘⌥Space | 2026-10-27 | ❌ | Still `ctrl+alt+space` (`app/keybinds.rs` `default_keybind`, `macos/Keybinds.swift`). On hold since that session: macOS uses ⌘⌥Space for Finder search, so Q Calc would find it taken. Needs the user's call (take it over, or only where Finder's is off), then the default changed in both places plus the taken-hotkey note |
 
 ## Games

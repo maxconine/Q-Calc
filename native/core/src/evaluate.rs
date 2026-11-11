@@ -624,9 +624,11 @@ impl<'o> Sheet<'o> {
                 ..LineResult::blank(raw)
             };
         }
-        let marked = crate::feet_inches::foot_marks(raw);
+        // native only: `Earth's axial tilt`, `mass of the moon`, before an apostrophe could read as feet
+        let named = crate::named_constants::rewrite(raw, &|n| self.known(n));
+        let marked = crate::feet_inches::foot_marks(&named);
         let mut result = self.line_as_typed(&marked);
-        if let Cow::Owned(_) = marked {
+        if matches!(named, Cow::Owned(_)) || matches!(marked, Cow::Owned(_)) {
             result.raw = raw.to_string();
         }
         crate::feet_inches::answer_in_feet_and_inches(&marked, &mut result, self.sig_figs);
