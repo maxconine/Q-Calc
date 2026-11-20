@@ -172,8 +172,13 @@ fn with_quantities(expr: &str, quantities: &BTreeMap<String, String>) -> String 
 
 /// Native only, for definitions on the line (`… where m = 1200 kg, v = 20 m/s`): whether `name` is written as the
 /// unit of a number in `expr` (a rate after it, `20 m/s`, or the whole value one amount, `50 m`), so it is the
-/// unit there and not the variable. (A sheet's own lines keep the web's reading: the variable wins.)
+/// unit there and not the variable. A sheet's lines use it too (`m = 1200 kg`, then `v = 20 m/s` is metres), with
+/// `whole` false when the variable is a plain number, so `a = 5` then `2a` stays 10.
 fn unit_after_number(expr: &str, name: &str) -> bool {
+    unit_after_number_in(expr, name, true)
+}
+
+fn unit_after_number_in(expr: &str, name: &str, whole_ok: bool) -> bool {
     static AFTER_NUMBER: Lazy =
         Lazy::new(|| js(r"(?:^|[^A-Za-z0-9_.])\d+(?:\.\d*)?(?:e[+-]?\d+)?\s*$", "i"));
     static RATE_AFTER: Lazy = Lazy::new(|| js(r"^\s*/\s*\(?\s*[A-Za-zµμΩ°]", ""));
@@ -182,7 +187,7 @@ fn unit_after_number(expr: &str, name: &str) -> bool {
     if !crate::units::reads_as_unit(name) {
         return false;
     }
-    let whole = jsre::test(&ONE_AMOUNT, expr);
+    let whole = whole_ok && jsre::test(&ONE_AMOUNT, expr);
     let re = jsre::js_cached(&format!(r"(?<![A-Za-z_]){name}(?![A-Za-z0-9_])"), "");
     re.find_iter(expr).filter_map(Result::ok).any(|m| {
         jsre::test(&AFTER_NUMBER, &expr[..m.start()])
@@ -628,6 +633,13 @@ fn line_with_definitions(text: &str, options: &EvaluateOptions) -> Option<LineRe
     Some(result)
 }
 
+#[derive(Default)]
+struct HiddenNames {
+    variables: BTreeMap<String, f64>,
+    quantities: BTreeMap<String, String>,
+    measures: BTreeMap<String, Meas>,
+}
+
 struct Sheet<'o> {
     options: &'o EvaluateOptions,
     angle_mode: AngleMode,
@@ -666,8 +678,76 @@ impl<'o> Sheet<'o> {
     fn run(mut self, lines: &[String]) -> Vec<LineResult> {
         lines
             .iter()
-            .map(|raw| crate::symbolic::simplify::with_line_budget(|| self.line(raw)))
+            .map(|raw| {
+                let hidden = self.hide_unit_names(raw);
+                let result = crate::symbolic::simplify::with_line_budget(|| self.line(raw));
+                self.restore_unit_names(hidden);
+                result
+            })
             .collect()
+    }
+
+    /// Native only: a variable named like a unit (`m = 1200 kg`) written as a number's unit on a later line
+    /// (`v = 20 m/s`, or `50 m` when `m` holds a quantity) is the unit there, so it is set aside for that line.
+    fn hide_unit_names(&mut self, raw: &str) -> HiddenNames {
+        static DEFINED: Lazy = Lazy::new(|| js(r"^\s*[A-Za-z_][A-Za-z0-9_]*\s*=(?!=)", ""));
+        let mut hidden = HiddenNames::default();
+        if self.variables.is_empty() && self.quantities.is_empty() && self.measures.is_empty() {
+            return hidden;
+        }
+        let rhs = match DEFINED.find(raw).ok().flatten() {
+            Some(m) => &raw[m.end()..],
+            None => raw,
+        };
+        let names: Vec<String> = self
+            .variables
+            .keys()
+            .chain(self.quantities.keys())
+            .chain(self.measures.keys())
+            .filter(|n| n.as_str() != "ans")
+            .cloned()
+            .collect();
+        for name in names {
+            if hidden.variables.contains_key(&name)
+                || hidden.quantities.contains_key(&name)
+                || hidden.measures.contains_key(&name)
+            {
+                continue;
+            }
+            let has_unit = self.quantities.contains_key(&name);
+            if !unit_after_number_in(rhs, &name, has_unit) {
+                continue;
+            }
+            if let Some(v) = self.variables.remove(&name) {
+                hidden.variables.insert(name.clone(), v);
+            }
+            if let Some(q) = self.quantities.remove(&name) {
+                hidden.quantities.insert(name.clone(), q);
+            }
+            if let Some(m) = self.measures.remove(&name) {
+                hidden.measures.insert(name, m);
+            }
+        }
+        hidden
+    }
+
+    /// Puts back what `hide_unit_names` set aside, unless the line defined that name again.
+    fn restore_unit_names(&mut self, hidden: HiddenNames) {
+        let redefined: Vec<String> = hidden
+            .variables
+            .keys()
+            .chain(hidden.quantities.keys())
+            .chain(hidden.measures.keys())
+            .filter(|n| self.known(n))
+            .cloned()
+            .collect();
+        let keep = |n: &String| !redefined.contains(n);
+        self.variables
+            .extend(hidden.variables.into_iter().filter(|(n, _)| keep(n)));
+        self.quantities
+            .extend(hidden.quantities.into_iter().filter(|(n, _)| keep(n)));
+        self.measures
+            .extend(hidden.measures.into_iter().filter(|(n, _)| keep(n)));
     }
 
     fn sci(&self) -> ScientificContext {

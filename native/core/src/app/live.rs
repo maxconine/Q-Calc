@@ -33,6 +33,7 @@ use serde_json::{Map, Value as Json, json};
 
 use crate::app::answer::{
     AnswerForm, insertable_answer, insertable_history_answer, solve_roots, visible_answer,
+    without_degrees,
 };
 use crate::app::answer_forms::{FormSource, answer_forms};
 use crate::app::blank_reason::{EnterFacts, Names, Span, blank_reason, enter_hint};
@@ -673,7 +674,7 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
                 if solve.is_some() {
                     e.clone()
                 } else {
-                    insertable_answer(e, None, f64::from(DEFAULT_SIG_FIGS))
+                    without_degrees(&insertable_answer(e, None, f64::from(DEFAULT_SIG_FIGS)))
                 }
             }
             _ => String::new(),
@@ -683,7 +684,7 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
         } else if improper {
             String::new()
         } else {
-            insertable_answer(&display, number, sig_figs)
+            without_degrees(&insertable_answer(&display, number, sig_figs))
         },
     };
     let roots = solve.as_ref().and_then(|s| {

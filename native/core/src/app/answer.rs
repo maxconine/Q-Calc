@@ -464,6 +464,21 @@ fn copy_forms(shown: &str, full: &str) -> Vec<CopyForm> {
     out
 }
 
+/// native only (the user's call): an angle answer, `30 deg`, inserts as its number, `30` (the line reads it in the
+/// angle mode that showed it); copies keep the unit.
+pub fn without_degrees(text: &str) -> String {
+    static DEG: Lazy = Lazy::new(|| {
+        js(
+            r"^\s*([+-]?(?:\d[\d,]*\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)\s*deg\s*$",
+            "",
+        )
+    });
+    match DEG.captures(text).ok().flatten() {
+        Some(c) => jsre::group(&c, 1).to_string(),
+        None => text.to_string(),
+    }
+}
+
 fn row_answer(shown: &str, full: &str, unitless: bool) -> RowAnswer {
     // a reaction copies in ASCII, as the web's copyValue writes it (`2H2 + O2 -> 2H2O`)
     let copied = |t: &str| crate::app::touches::answer_copy(t, unitless);
@@ -474,7 +489,7 @@ fn row_answer(shown: &str, full: &str, unitless: bool) -> RowAnswer {
         full
     };
     RowAnswer {
-        insert: full.to_string(),
+        insert: without_degrees(full),
         bare: unitless_answer(full),
         copy: copied(shown),
         copy_full: copied(full_copy),
