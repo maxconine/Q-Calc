@@ -762,6 +762,8 @@ final class BarTextView: NSTextView {
         let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
         let sel = selectedRange()
         if stackArrow(event) { return }
+        // ⌫ / ⌦ on a selected tape row delete the row (the bar says no when none is selected)
+        if event.keyCode == 51 || event.keyCode == 117, flags.isEmpty, onKey?(event) == true { return }
         if sel.length == 0, flags.isSubset(of: [.shift]), let boundKey {
             let chars = event.charactersIgnoringModifiers ?? ""
             let name: String? = {

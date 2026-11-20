@@ -635,7 +635,8 @@ final class BarModel: ObservableObject {
             return
         }
         let solve = live.solve
-        let rootsOf = solve?.outcome == .roots ? solve?.variable ?? "" : ""
+        // complex roots (`x = ±i`) are an answer as real ones are (native only)
+        let rootsOf = solve?.outcome == .roots || solve?.outcome == .complex ? solve?.variable ?? "" : ""
         let tabbed = formIndex > 0 && forms.indices.contains(formIndex)
         // native only: a matrix answer is typeset from its parts (`P = [..]  D = [..]`), exact where it has it
         let matrix = live.matrix.flatMap { m -> MatrixAsk? in
@@ -975,6 +976,12 @@ final class BarModel: ObservableObject {
             guard let self else { return }
             let (done, failHint, offer, span) = result
             if !done.saved, !leaving, self.text == typed {
+                // native only: a line with no answer (pasted text, a note to self) is kept as typed, a note row
+                // (not a `graph` line, whose hint says how to finish it)
+                if offer == nil, !typed.trimmingCharacters(in: .whitespaces).lowercased().hasPrefix("graph") {
+                    self.saveNote(typed)
+                    return
+                }
                 self.hint = failHint ?? "nothing to save yet · finish the line, or esc to close"
                 track(offer != nil ? "error.unit" : "error.blank")
                 if let offer {
@@ -1004,6 +1011,19 @@ final class BarModel: ObservableObject {
         }
     }
 
+    /// A line saved as text with no answer: never `ans`, a variable or a function (the core skips `note` rows).
+    private func saveNote(_ typed: String) {
+        let now = Int64(Date().timeIntervalSince1970 * 1000)
+        let row = HistoryRow(id: "\(String(now, radix: 36))-note", expr: typed, display: "", kind: .note, at: now)
+        history.replace(rows + [row])
+        rows = history.rows
+        deleted = nil
+        refreshRecent()
+        track("note.save")
+        clearLine()
+        hint = "saved as a note"
+    }
+
     // MARK: - the tape
 
     /// The rows the tape shows: all of them while it's open, the recent ones otherwise (per the setting).
@@ -1026,7 +1046,7 @@ final class BarModel: ObservableObject {
     /// historyPicks (src/lib/answer.ts): what ← → step through on a row after its expression, as each inserts, and
     /// the pick ↑ lands on.
     func picks(_ row: HistoryRow) -> (answers: [String], start: Int) {
-        if row.kind == .function || row.kind == .system { return ([], 0) }
+        if row.kind == .function || row.kind == .system || row.kind == .note { return ([], 0) }
         if row.kind == .definition { return ([row.expr], 1) }
         if let solve = row.solve {
             guard solve.outcome == .roots else { return ([], 0) }
@@ -1352,6 +1372,23 @@ final class BarModel: ObservableObject {
         flashCopied()
     }
 
+    /// ⌘C on a tape row picked with ↑ (native only): copies what ← → picked there, the expression or an answer (a
+    /// note's text), as ↵ would insert it. False when no row is selected.
+    func copySelectedRow() -> Bool {
+        guard let i = selected, rows.indices.contains(i) else { return false }
+        let row = rows[i]
+        let answers = picks(row).answers
+        track("copy.row")
+        NSPasteboard.general.clearContents()
+        if row.kind != .note, row.kind != .definition, pick > 0, !answers.isEmpty {
+            NSPasteboard.general.setString(UnitlessCopy.copied(answers[min(pick, answers.count) - 1]), forType: .string)
+        } else {
+            NSPasteboard.general.setString(row.kind == .system ? row.display : row.expr, forType: .string)
+        }
+        flashCopied()
+        return true
+    }
+
     func copyLine() {
         guard !live.isBlank else { return }
         track("copy.line")
@@ -1362,7 +1399,7 @@ final class BarModel: ObservableObject {
 
     func copyRow(_ row: HistoryRow, answer: Bool) {
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(answer ? UnitlessCopy.copied(row.display) : row.expr, forType: .string)
+        NSPasteboard.general.setString(answer && row.kind != .note ? UnitlessCopy.copied(row.display) : row.expr, forType: .string)
         flashCopied()
     }
 
@@ -1426,6 +1463,12 @@ final class BarModel: ObservableObject {
                 stepPrefix(code == kVK_UpArrow ? 1 : -1)
                 return true
             }
+            // native only: ⌘↓ from the tape goes straight back to the line
+            if code == kVK_DownArrow, flags == [.command], selected != nil {
+                selected = nil
+                focusField?()
+                return true
+            }
             guard flags.isEmpty else { return false }
             // native only: ↓ from the line goes back into the open matrix grid, at its first cell
             if code == kVK_DownArrow, grid != nil, selected == nil {
@@ -1452,8 +1495,9 @@ final class BarModel: ObservableObject {
             }
             if !flags.contains(.shift) { _ = fillTourStep() || acceptCompletion() || acceptParens() || tabToCard() }
             return true
-        case kVK_Delete:
-            if flags == [.command], selected != nil { return deleteSelected() }
+        case kVK_Delete, kVK_ForwardDelete:
+            // ⌘⌫, and (native only) a plain ⌫ or ⌦ on a selected row, deletes it; ⌘Z brings it back
+            if selected != nil, flags.isEmpty || flags == [.command] { return deleteSelected() }
             return false
         case kVK_ANSI_Z:
             if flags == [.command] { return undoDelete() || undoText() }
@@ -1479,7 +1523,7 @@ final class BarModel: ObservableObject {
     func perform(_ action: String) {
         switch action {
         case "settings": onSettings?()
-        case "copyAnswer": copyAnswer()
+        case "copyAnswer": if !copySelectedRow() { copyAnswer() }
         case "copyLine": copyLine()
         case "angle": toggleAngle()
         case "fraction": toggleFractions()

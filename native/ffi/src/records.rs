@@ -656,6 +656,8 @@ pub enum HistoryKind {
     Definition,
     Function,
     System,
+    /// Text saved as it was typed or pasted, with no answer (native only): never `ans`, a variable or a function.
+    Note,
 }
 
 /// One row of the tape (`HistoryRow` in `src/lib/history.ts`).

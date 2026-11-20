@@ -161,6 +161,7 @@ pub fn row_json(r: &HistoryRow) -> Json {
                 HistoryKind::Definition => "definition",
                 HistoryKind::Function => "function",
                 HistoryKind::System => "system",
+                HistoryKind::Note => "note",
             })
         }),
     );
@@ -196,6 +197,7 @@ pub fn row_from_json(v: &Json) -> HistoryRow {
             Some("definition") => Some(HistoryKind::Definition),
             Some("function") => Some(HistoryKind::Function),
             Some("system") => Some(HistoryKind::System),
+            Some("note") => Some(HistoryKind::Note),
             _ => None,
         },
         equations: strings("equations"),

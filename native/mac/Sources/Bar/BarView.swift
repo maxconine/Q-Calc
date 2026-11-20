@@ -327,7 +327,7 @@ struct LiveAnswerView: View {
                 .foregroundStyle(Color.qMuted.opacity(0.5))
                 .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
                 .accessibilityHidden(true)
-        } else if let solve = model.live.solve, solve.outcome != .roots {
+        } else if let solve = model.live.solve, solve.outcome != .roots, solve.outcome != .complex {
             // a solve with no roots says so, as a message
             Text(model.live.display)
                 .font(.system(size: Theme.body))
@@ -352,7 +352,7 @@ struct LiveAnswerView: View {
             // .live-dual: two 20 pt halves around a 17 pt ≈, each its own copy
             HStack(spacing: 0) {
                 // native only: a solved letter's name in front, `x = √2 ≈ 1.41421`
-                if let v = model.live.solve?.variable, !v.isEmpty, model.live.solve?.outcome == .roots {
+                if let v = model.live.solve?.variable, !v.isEmpty, model.live.solve?.outcome == .roots || model.live.solve?.outcome == .complex {
                     Text("\(v) =").font(.system(size: Theme.answerPart)).foregroundStyle(Color.qMuted)
                         .padding(.trailing, 0.2 * Theme.answerPart)
                 }
@@ -784,9 +784,9 @@ private struct HistoryRowView: View, Equatable {
                         .truncationMode(.tail)
                         // a stacked expression takes the whole row's height
                         .padding(.vertical, StackedText.stacks(row.expr) ? 0 : 4)
-                        .padding(.horizontal, picked == 0 ? 4 : 0)
+                        .padding(.horizontal, picked == 0 || exprHover ? 4 : 0)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(PickedMark(on: picked == 0))
+                        .background(PickedMark(on: picked == 0 || exprHover))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -795,18 +795,30 @@ private struct HistoryRowView: View, Equatable {
                 .hoverTip(exprTip)
                 .accessibilityLabel("Expression \(row.expr)")
 
-                answers
-                    .frame(minWidth: 120, maxWidth: max(120, (geo.size.width - 16) * 0.46), alignment: .trailing)
+                // a note has no answer: its text takes the row
+                if row.kind != .note {
+                    answers
+                        .frame(minWidth: 120, maxWidth: max(120, (geo.size.width - 16) * 0.46), alignment: .trailing)
+                }
+                RowCopyButton(shown: hover || selected) {
+                    model.copyRow(row, answer: true)
+                    model.focusField?()
+                }
             }
-            .padding(.horizontal, 8)
+            .padding(.leading, 8)
+            .padding(.trailing, 4)
             .frame(height: Theme.tapeRow)
             .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(selected ? Color.qFillSelected : hover ? Color.qFillHover : .clear))
         }
         .frame(height: Theme.tapeRow)
         .onHover { hover = $0 }
         .contextMenu {
-            Button("Copy Expression") { model.copyRow(row, answer: false) }
-            Button("Copy Answer") { model.copyRow(row, answer: true) }
+            if row.kind == .note {
+                Button("Copy Note") { model.copyRow(row, answer: false) }
+            } else {
+                Button("Copy Expression") { model.copyRow(row, answer: false) }
+                Button("Copy Answer") { model.copyRow(row, answer: true) }
+            }
             Divider()
             Button("Delete") {
                 model.select(index)
@@ -814,19 +826,19 @@ private struct HistoryRowView: View, Equatable {
             }
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("\(row.expr) equals \(row.display)")
+        .accessibilityLabel(row.kind == .note ? "Note \(row.expr)" : "\(row.expr) equals \(row.display)")
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     private var exprTip: String {
         let what = row.kind == .system ? "Edit equations" : row.kind == .definition ? "Insert word at the cursor"
-            : "Insert expression at the cursor"
+            : row.kind == .note ? "Insert note at the cursor" : "Insert expression at the cursor"
         return row.expr.count > 40 ? "\(what) · \(row.expr)" : what
     }
 
     @ViewBuilder private var answers: some View {
         // native only: a solved row names its letter, `D = 26`; a click still inserts the number alone
-        if let v = row.solve?.variable, !v.isEmpty, row.solve?.outcome == .roots {
+        if let v = row.solve?.variable, !v.isEmpty, row.solve?.outcome == .roots || row.solve?.outcome == .complex {
             HStack(spacing: 4) {
                 Text("\(v) =").font(.system(size: Theme.body)).foregroundStyle(Color.qMuted).accessibilityHidden(true)
                 answerCells
@@ -857,6 +869,36 @@ private struct HistoryRowView: View, Equatable {
                         tip: String = "Insert the answer at the cursor") -> some View {
         AnswerCell(text: text, split: model.numberAndUnit(text), unitName: model.unitName(forAnswer: text), picked: picked, fill: fill, tip: tip) { model.insertFromRow(index, answer: true) }
             .onDrag { NSItemProvider(object: row.display as NSString) }
+    }
+}
+
+/// native only: copies a row's answer (a note's text) in one click, without touching the line. Always takes its room
+/// so the row doesn't shift; seen on hover or while the row is selected, and a check for 1.2 s once it copied.
+private struct RowCopyButton: View {
+    let shown: Bool
+    let action: () -> Void
+    @State private var hover = false
+    @State private var done = false
+
+    var body: some View {
+        Button {
+            action()
+            done = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { done = false }
+        } label: {
+            Image(systemName: done ? "checkmark" : "doc.on.doc")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(done ? Color.qAccentHover : hover ? Color.qInk : Color.qMuted)
+                .frame(width: 22, height: 22)
+                .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(hover ? Color.qInk.opacity(0.08) : .clear))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .opacity(shown || done ? 1 : 0)
+        .allowsHitTesting(shown || done)
+        .onHover { hover = $0 }
+        .hoverTip("Copy")
+        .accessibilityLabel("Copy")
     }
 }
 
@@ -897,8 +939,9 @@ private struct AnswerCell: View {
             }
         }
         .padding(.vertical, 4)
-        .padding(.horizontal, picked ? 4 : 0)
-        .background(PickedMark(on: picked))
+        // native only: hovering shows the same box ← → picks with
+        .padding(.horizontal, picked || hover ? 4 : 0)
+        .background(PickedMark(on: picked || hover))
         .onHover { hover = $0 }
     }
 

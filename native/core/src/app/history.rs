@@ -17,6 +17,8 @@ use crate::app::js::{self as jsstr, len16};
 
 pub const MAX_HISTORY: usize = 10;
 pub const MAX_HISTORY_EXPR: usize = 240;
+/// A note (text ↵ saved with no answer, native only) keeps more of what was pasted.
+pub const MAX_HISTORY_NOTE: usize = 1000;
 const MAX_MATRIX_LITERAL: usize = 4000;
 pub const MAX_HISTORY_DISPLAY: usize = 96;
 pub const MAX_HISTORY_EXACT: usize = 72;
@@ -56,6 +58,7 @@ fn kind_of(row: &Json) -> Option<&'static str> {
         Some("definition") => Some("definition"),
         Some("function") => Some("function"),
         Some("system") => Some("system"),
+        Some("note") => Some("note"),
         _ => None,
     }
 }
@@ -196,7 +199,12 @@ fn slim_function_fields(row: &Json, kind: Option<&str>, expr: &str, out: &mut Ma
 
 /// `slimHistoryRow`: the row as stored, or None when it holds nothing.
 pub fn slim_history_row(row: &Json) -> Option<Json> {
-    let expr = slim_expr(str_of(row, "expr").unwrap_or(""));
+    let raw_expr = str_of(row, "expr").unwrap_or("");
+    let expr = if kind_of(row) == Some("note") {
+        ellipsize(raw_expr, MAX_HISTORY_NOTE as i64)
+    } else {
+        slim_expr(raw_expr)
+    };
     let display = ellipsize(
         str_of(row, "display").unwrap_or(""),
         MAX_HISTORY_DISPLAY as i64,
@@ -325,7 +333,7 @@ pub struct Throws;
 
 // keyed so variable and function names stay in separate namespaces
 fn defined_name(row: &Json) -> Option<String> {
-    if kind_of(row) == Some("definition") || truthy(row.get("solve")) {
+    if matches!(kind_of(row), Some("definition" | "note")) || truthy(row.get("solve")) {
         return None;
     }
     let expr = jsstr::trim(str_of(row, "expr").unwrap_or(""));
@@ -536,7 +544,7 @@ pub fn history_functions(rows: &[Json]) -> Map<String, Json> {
     let mut fns = Map::new();
     for row in rows {
         let kind = kind_of(row);
-        if kind == Some("definition") || kind == Some("system") {
+        if kind == Some("definition") || kind == Some("system") || kind == Some("note") {
             continue;
         }
         if kind == Some("function")

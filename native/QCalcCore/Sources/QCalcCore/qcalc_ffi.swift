@@ -8997,6 +8997,208 @@ public func FfiConverterTypeRatesStatus_lower(_ value: RatesStatus) -> RustBuffe
 }
 
 
+public struct SlotsPay: Equatable, Hashable {
+    public var line: String
+    public var times: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(line: String, times: UInt32) {
+        self.line = line
+        self.times = times
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SlotsPay: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSlotsPay: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SlotsPay {
+        return
+            try SlotsPay(
+                line: FfiConverterString.read(from: &buf), 
+                times: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SlotsPay, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.line, into: &buf)
+        FfiConverterUInt32.write(value.times, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSlotsPay_lift(_ buf: RustBuffer) throws -> SlotsPay {
+    return try FfiConverterTypeSlotsPay.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSlotsPay_lower(_ value: SlotsPay) -> RustBuffer {
+    return FfiConverterTypeSlotsPay.lower(value)
+}
+
+
+/**
+ * `SlotsState`: `reels` are the three stops on the line, indexes into `slots_strip()`; `from`, `target` and
+ * `land` are each reel's path (see `slots_path`).
+ */
+public struct SlotsState: Equatable, Hashable {
+    public var chips: UInt32
+    public var bet: UInt32
+    public var best: UInt32
+    public var reels: [UInt32]
+    public var phase: SlotsPhase
+    public var since: Double
+    public var win: UInt32
+    public var spins: UInt32
+    public var from: [Double]
+    public var target: [Double]
+    public var land: [Double]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(chips: UInt32, bet: UInt32, best: UInt32, reels: [UInt32], phase: SlotsPhase, since: Double, win: UInt32, spins: UInt32, from: [Double], target: [Double], land: [Double]) {
+        self.chips = chips
+        self.bet = bet
+        self.best = best
+        self.reels = reels
+        self.phase = phase
+        self.since = since
+        self.win = win
+        self.spins = spins
+        self.from = from
+        self.target = target
+        self.land = land
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SlotsState: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSlotsState: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SlotsState {
+        return
+            try SlotsState(
+                chips: FfiConverterUInt32.read(from: &buf), 
+                bet: FfiConverterUInt32.read(from: &buf), 
+                best: FfiConverterUInt32.read(from: &buf), 
+                reels: FfiConverterSequenceUInt32.read(from: &buf), 
+                phase: FfiConverterTypeSlotsPhase.read(from: &buf), 
+                since: FfiConverterDouble.read(from: &buf), 
+                win: FfiConverterUInt32.read(from: &buf), 
+                spins: FfiConverterUInt32.read(from: &buf), 
+                from: FfiConverterSequenceDouble.read(from: &buf), 
+                target: FfiConverterSequenceDouble.read(from: &buf), 
+                land: FfiConverterSequenceDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SlotsState, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.chips, into: &buf)
+        FfiConverterUInt32.write(value.bet, into: &buf)
+        FfiConverterUInt32.write(value.best, into: &buf)
+        FfiConverterSequenceUInt32.write(value.reels, into: &buf)
+        FfiConverterTypeSlotsPhase.write(value.phase, into: &buf)
+        FfiConverterDouble.write(value.since, into: &buf)
+        FfiConverterUInt32.write(value.win, into: &buf)
+        FfiConverterUInt32.write(value.spins, into: &buf)
+        FfiConverterSequenceDouble.write(value.from, into: &buf)
+        FfiConverterSequenceDouble.write(value.target, into: &buf)
+        FfiConverterSequenceDouble.write(value.land, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSlotsState_lift(_ buf: RustBuffer) throws -> SlotsState {
+    return try FfiConverterTypeSlotsState.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSlotsState_lower(_ value: SlotsState) -> RustBuffer {
+    return FfiConverterTypeSlotsState.lower(value)
+}
+
+
+public struct SlotsStep: Equatable, Hashable {
+    public var state: SlotsState
+    public var event: SlotsEvent?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(state: SlotsState, event: SlotsEvent?) {
+        self.state = state
+        self.event = event
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SlotsStep: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSlotsStep: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SlotsStep {
+        return
+            try SlotsStep(
+                state: FfiConverterTypeSlotsState.read(from: &buf), 
+                event: FfiConverterOptionTypeSlotsEvent.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SlotsStep, into buf: inout [UInt8]) {
+        FfiConverterTypeSlotsState.write(value.state, into: &buf)
+        FfiConverterOptionTypeSlotsEvent.write(value.event, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSlotsStep_lift(_ buf: RustBuffer) throws -> SlotsStep {
+    return try FfiConverterTypeSlotsStep.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSlotsStep_lower(_ value: SlotsStep) -> RustBuffer {
+    return FfiConverterTypeSlotsStep.lower(value)
+}
+
+
 /**
  * One puff of the 420 smoke. `at`: where along the bar's top, 0–1, or -1 its left edge, -2 its right.
  */
@@ -12164,6 +12366,10 @@ public enum HistoryKind: Equatable, Hashable {
     case definition
     case function
     case system
+    /**
+     * Text saved as it was typed or pasted, with no answer (native only): never `ans`, a variable or a function.
+     */
+    case note
 
 
 
@@ -12191,6 +12397,8 @@ public struct FfiConverterTypeHistoryKind: FfiConverterRustBuffer {
         
         case 3: return .system
         
+        case 4: return .note
+        
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -12209,6 +12417,10 @@ public struct FfiConverterTypeHistoryKind: FfiConverterRustBuffer {
         
         case .system:
             writeInt(&buf, Int32(3))
+        
+        
+        case .note:
+            writeInt(&buf, Int32(4))
         
         }
     }
@@ -13296,6 +13508,166 @@ public func FfiConverterTypeRelaySocketCmd_lower(_ value: RelaySocketCmd) -> Rus
 
 
 
+
+public enum SlotsEvent: Equatable, Hashable {
+    
+    case spin
+    case stop
+    case win
+    case big
+    case lose
+    case refill
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension SlotsEvent: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSlotsEvent: FfiConverterRustBuffer {
+    typealias SwiftType = SlotsEvent
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SlotsEvent {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .spin
+        
+        case 2: return .stop
+        
+        case 3: return .win
+        
+        case 4: return .big
+        
+        case 5: return .lose
+        
+        case 6: return .refill
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: SlotsEvent, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .spin:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .stop:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .win:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .big:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .lose:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .refill:
+            writeInt(&buf, Int32(6))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSlotsEvent_lift(_ buf: RustBuffer) throws -> SlotsEvent {
+    return try FfiConverterTypeSlotsEvent.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSlotsEvent_lower(_ value: SlotsEvent) -> RustBuffer {
+    return FfiConverterTypeSlotsEvent.lower(value)
+}
+
+
+
+
+public enum SlotsPhase: Equatable, Hashable {
+    
+    case idle
+    case spinning
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension SlotsPhase: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSlotsPhase: FfiConverterRustBuffer {
+    typealias SwiftType = SlotsPhase
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SlotsPhase {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .idle
+        
+        case 2: return .spinning
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: SlotsPhase, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .idle:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .spinning:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSlotsPhase_lift(_ buf: RustBuffer) throws -> SlotsPhase {
+    return try FfiConverterTypeSlotsPhase.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSlotsPhase_lower(_ value: SlotsPhase) -> RustBuffer {
+    return FfiConverterTypeSlotsPhase.lower(value)
+}
+
+
+
 /**
  * How a solve ended.
  */
@@ -13307,6 +13679,10 @@ public enum SolveOutcome: Equatable, Hashable {
     case contradiction
     case noneFound
     case all
+    /**
+     * native only: the complex roots, `±i` (an answer, not a message)
+     */
+    case complex
 
 
 
@@ -13338,6 +13714,8 @@ public struct FfiConverterTypeSolveOutcome: FfiConverterRustBuffer {
         
         case 5: return .all
         
+        case 6: return .complex
+        
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -13364,6 +13742,10 @@ public struct FfiConverterTypeSolveOutcome: FfiConverterRustBuffer {
         
         case .all:
             writeInt(&buf, Int32(5))
+        
+        
+        case .complex:
+            writeInt(&buf, Int32(6))
         
         }
     }
@@ -14959,6 +15341,30 @@ fileprivate struct FfiConverterOptionTypePongSkill: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeSlotsEvent: FfiConverterRustBuffer {
+    typealias SwiftType = SlotsEvent?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeSlotsEvent.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeSlotsEvent.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeTypstPaint: FfiConverterRustBuffer {
     typealias SwiftType = TypstPaint?
 
@@ -15622,6 +16028,31 @@ fileprivate struct FfiConverterSequenceTypeMatrixStep: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeMatrixStep.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeSlotsPay: FfiConverterRustBuffer {
+    typealias SwiftType = [SlotsPay]
+
+    public static func write(_ value: [SlotsPay], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeSlotsPay.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [SlotsPay] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [SlotsPay]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeSlotsPay.read(from: &buf))
         }
         return seq
     }
@@ -16932,6 +17363,112 @@ public func pongGeometry() -> PongGeometry  {
 })
 }
 /**
+ * The game saved as `qcalc-slots`, or a fresh one.
+ */
+public func slotsLoad(raw: String?) -> SlotsState  {
+    return try!  FfiConverterTypeSlotsState_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_slots_load(
+        FfiConverterOptionString.lower(raw),uniffiCallStatus
+    )
+})
+}
+/**
+ * Reel `reel`'s position (stops; mod 32 is the stop on the line) at `count` times from `start`, `step` ms
+ * apart: a whole animation's keyframes in one call.
+ */
+public func slotsPath(state: SlotsState, reel: UInt32, start: Double, step: Double, count: UInt32) -> [Double]  {
+    return try!  FfiConverterSequenceDouble.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_slots_path(
+        FfiConverterTypeSlotsState_lower(state),
+        FfiConverterUInt32.lower(reel),
+        FfiConverterDouble.lower(start),
+        FfiConverterDouble.lower(step),
+        FfiConverterUInt32.lower(count),uniffiCallStatus
+    )
+})
+}
+public func slotsPayTable() -> [SlotsPay]  {
+    return try!  FfiConverterSequenceTypeSlotsPay.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_slots_pay_table(uniffiCallStatus
+    )
+})
+}
+/**
+ * Space while spinning: the leftmost reel still rolling stops on the next stop to reach the line.
+ */
+public func slotsPress(state: SlotsState, now: Double) -> SlotsStep  {
+    return try!  FfiConverterTypeSlotsStep_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_slots_press(
+        FfiConverterTypeSlotsState_lower(state),
+        FfiConverterDouble.lower(now),uniffiCallStatus
+    )
+})
+}
+/**
+ * What to save as `qcalc-slots`.
+ */
+public func slotsSave(state: SlotsState) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_slots_save(
+        FfiConverterTypeSlotsState_lower(state),uniffiCallStatus
+    )
+})
+}
+public func slotsSetBet(state: SlotsState, bet: Int64) -> SlotsState  {
+    return try!  FfiConverterTypeSlotsState_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_slots_set_bet(
+        FfiConverterTypeSlotsState_lower(state),
+        FfiConverterInt64.lower(bet),uniffiCallStatus
+    )
+})
+}
+/**
+ * When reel `reel` is still at last, its bounce done (ms).
+ */
+public func slotsSettledAt(state: SlotsState, reel: UInt32) -> Double  {
+    return try!  FfiConverterDouble.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_slots_settled_at(
+        FfiConverterTypeSlotsState_lower(state),
+        FfiConverterUInt32.lower(reel),uniffiCallStatus
+    )
+})
+}
+public func slotsSpin(state: SlotsState, now: Double) -> SlotsStep  {
+    return try!  FfiConverterTypeSlotsStep_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_slots_spin(
+        FfiConverterTypeSlotsState_lower(state),
+        FfiConverterDouble.lower(now),uniffiCallStatus
+    )
+})
+}
+/**
+ * One reel's stops top to bottom, as the symbols drawn ("" for a blank).
+ */
+public func slotsStrip() -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_slots_strip(uniffiCallStatus
+    )
+})
+}
+public func slotsTick(state: SlotsState, now: Double) -> SlotsStep  {
+    return try!  FfiConverterTypeSlotsStep_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_slots_tick(
+        FfiConverterTypeSlotsState_lower(state),
+        FfiConverterDouble.lower(now),uniffiCallStatus
+    )
+})
+}
+/**
  * `chalkBox(x, y, w, h, seed)`.
  */
 public func utChalkBox(x: Double, y: Double, w: Double, h: Double, seed: Double) -> String  {
@@ -17291,6 +17828,36 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_func_pong_geometry() != 9290) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_slots_load() != 28171) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_slots_path() != 22369) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_slots_pay_table() != 1301) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_slots_press() != 44392) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_slots_save() != 36910) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_slots_set_bet() != 52654) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_slots_settled_at() != 6294) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_slots_spin() != 59870) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_slots_strip() != 45497) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_slots_tick() != 36168) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_func_ut_chalk_box() != 7408) {

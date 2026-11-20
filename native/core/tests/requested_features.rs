@@ -672,6 +672,31 @@ fn a_date_answer_chains_by_spans() {
 }
 
 #[test]
+fn a_note_row_keeps_its_text_and_counts_for_nothing() {
+    use qcalc_core::app::history::{
+        history_functions, history_variables, last_history_number, persistable_history,
+    };
+    use serde_json::json;
+    let rows = vec![
+        json!({"id": "a", "expr": "2+3", "display": "5", "n": 5.0}),
+        // pasted text saved with no answer; one that reads like a definition stays text
+        json!({"id": "b", "expr": "f(x) = buy milk, x = later", "display": "", "kind": "note"}),
+    ];
+    assert_eq!(last_history_number(&rows), Some(5.0));
+    assert!(history_variables(&rows).is_empty());
+    assert!(history_functions(&rows).is_empty());
+    let kept = persistable_history(&rows);
+    assert_eq!(kept.len(), 2);
+    assert_eq!(kept[1]["kind"], "note");
+    assert_eq!(kept[1]["expr"], "f(x) = buy milk, x = later");
+    // a long paste keeps up to 1000 characters, more than an expression's 240
+    let long = "word ".repeat(300);
+    let slim =
+        persistable_history(&[json!({"id": "c", "expr": long, "display": "", "kind": "note"})]);
+    assert!(slim[0]["expr"].as_str().unwrap().chars().count() > 900);
+}
+
+#[test]
 fn every_sheet_can_be_searched() {
     use qcalc_core::app::identities::{native_identity_sheet_by_id, native_sheet_ids};
     let ids = native_sheet_ids();
