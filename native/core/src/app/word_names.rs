@@ -339,6 +339,33 @@ pub fn word_names(
     out
 }
 
+/// Native only: the bar's unit colours (`unitSpans`) squared with the hover names on a clock line: `3pm est in
+/// pst` colours both zones (the table only knows `pst`), and the am/pm of a clock time isn't a unit (picometers)
+/// where `word_names` doesn't name it one. Other lines are `unit_spans` as is.
+pub fn unit_colours(
+    text: &str,
+    variables: &[String],
+    functions: &[String],
+    ans: bool,
+) -> Vec<UnitSpan> {
+    let units = unit_spans(text, variables, functions);
+    let names = word_names(text, variables, functions, ans);
+    let units16: Vec<u16> = text.encode_utf16().collect();
+    let typed = |u: &UnitSpan| String::from_utf16_lossy(&units16[u.start..u.end]).to_lowercase();
+    let same = |a: &UnitSpan, b: &UnitSpan| a.start == b.start && a.end == b.end;
+    let mut out: Vec<UnitSpan> = units
+        .into_iter()
+        .filter(|u| !matches!(typed(u).as_str(), "am" | "pm") || names.iter().any(|n| same(n, u)))
+        .collect();
+    for n in names {
+        if zone_name(&typed(&n)) == Some(n.name.as_str()) && !out.iter().any(|u| same(u, &n)) {
+            out.push(n);
+        }
+    }
+    out.sort_by_key(|u| u.start);
+    out
+}
+
 /// Whole ASCII words (`2pi` and `4i` too, but not inside another word or a name like `x_pi`) and the constant signs, as byte ranges.
 fn constant_words(text: &str) -> Vec<(usize, usize)> {
     let mut out = Vec::new();

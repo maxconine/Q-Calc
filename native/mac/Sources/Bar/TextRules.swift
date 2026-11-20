@@ -32,6 +32,9 @@ enum Pretty {
         if let first = s.first, first == "±" || first == "∓", s.count > 1 {
             return String(first) + answer(String(s.dropFirst()))
         }
+        // native only (QA item 105): an exact form the engine writes with `pi` (a sum's `pi^2/6`, `1 - pi/4`) draws
+        // as maths, `π²/6`, `1 − π/4`; copy and the goldens keep the engine's text
+        if let t = ExactText.answer(s) { return t }
         if let g = leadNumber.groups(s), let whole = g[0] {
             let sign = g[1] ?? "", cur = g[2] ?? "", int = (g[3] ?? "").replacingOccurrences(of: ",", with: "")
             let frac = g[4] ?? "", exp = (g[5] ?? "").replacingOccurrences(of: "-", with: minus)

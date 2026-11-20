@@ -503,9 +503,12 @@ final class BarModel: ObservableObject {
         let variables = Array(request.context.variables.keys), functions = Array(request.context.functions.keys)
         // a chained line is read after its faint `ans`, so `in` in `in to mm` is the unit it follows
         let lead = request.chained ? "ans " : ""
-        d.units = logic.spans("lib/unitSpans", "unitSpans", [lead + text, variables, functions]).compactMap { r in
-            r.location < lead.utf16.count ? nil : NSRange(location: r.location - lead.utf16.count, length: r.length)
-        }
+        // native only: a clock line colours its zones (`3pm est in pst`) and not its am/pm (unitColours)
+        d.units = lead.isEmpty
+            ? logic.spans("lib/knownWords", "unitColours", [text, variables, functions, request.context.ans != nil])
+            : logic.spans("lib/unitSpans", "unitSpans", [lead + text, variables, functions]).compactMap { r in
+                r.location < lead.utf16.count ? nil : NSRange(location: r.location - lead.utf16.count, length: r.length)
+            }
         d.words = logic.spans("lib/knownWords", "knownWordSpans", [text, functions, request.context.ans != nil])
         let named = logic.call("lib/knownWords", "wordNames", [text, variables, functions, request.context.ans != nil]) as? [[String: Any]] ?? []
         d.names = named.compactMap { s in

@@ -177,5 +177,22 @@ fc.observe([:], caret: { _ in nil }, now: 40)
 fc.observe([a: ""], caret: { _ in nil }, now: 50)
 check("a cell brought back has no old history", fc.step(a, redo: false)?.value ?? "nil", "nil")
 
+// QA item 105: no squiggle under a word while its completion ghost shows; exact forms with `pi` drawn as maths
+let sq = NSRange(location: 0, length: 3)
+check("ghost after `sqr` hides its squiggle", GhostRules.squiggle(sq, ghost: "t(", text: "sqr", caret: NSRange(location: 3, length: 0)) == nil ? "hidden" : "kept", "hidden")
+check("no ghost keeps the squiggle", GhostRules.squiggle(sq, ghost: "", text: "sqr", caret: NSRange(location: 3, length: 0)) == sq ? "kept" : "hidden", "kept")
+check("caret off the end keeps the squiggle", GhostRules.squiggle(sq, ghost: "t(", text: "sqr", caret: NSRange(location: 1, length: 0)) == sq ? "kept" : "hidden", "kept")
+check("a squiggle before the ghosted word stays", GhostRules.squiggle(sq, ghost: "t(", text: "qqq + sqr", caret: NSRange(location: 9, length: 0)) == sq ? "kept" : "hidden", "kept")
+check("pi^2/6", ExactText.answer("pi^2/6") ?? "nil", "π²/6")
+check("pi^4/90", ExactText.answer("pi^4/90") ?? "nil", "π⁴/90")
+check("1 - pi/4", ExactText.answer("1 - pi/4") ?? "nil", "1 − π/4")
+check("-pi/2", ExactText.answer("-pi/2") ?? "nil", "−π/2")
+check("3*pi/2", ExactText.answer("3*pi/2") ?? "nil", "3π/2")
+check("pi*sqrt(2)", ExactText.answer("pi*sqrt(2)") ?? "nil", "π√2")
+check("sqrt(3)*pi/6", ExactText.answer("sqrt(3)*pi/6") ?? "nil", "√3·π/6")
+check("plain numbers left to Pretty", ExactText.answer("-1234.5") ?? "nil", "nil")
+check("words with pi left to Pretty", ExactText.answer("3 pint") ?? "nil", "nil")
+check("PSLQ π² left to Pretty", ExactText.answer("2 - π²/6") ?? "nil", "nil")
+
 if failures > 0 { print("\(failures) failed"); exit(1) }
 print("all passed")

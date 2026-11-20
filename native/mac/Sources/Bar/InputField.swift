@@ -145,6 +145,8 @@ final class BarTextView: NSTextView {
         if stackCaret != nil || !stacked.stacks.isEmpty || !limits.isEmpty || !caretGaps.isEmpty { refreshStackCaret() }
         // an empty limit's box darkens while the caret is in it
         if !holes.isEmpty { needsDisplay = true }
+        // the squiggle a completion ghost hid comes back once the caret leaves the end (GhostRules.squiggle)
+        if squiggle != nil, !ghostTail.isEmpty { needsDisplay = true }
     }
 
     override func mouseDown(with event: NSEvent) {
@@ -924,7 +926,8 @@ final class BarTextView: NSTextView {
         // .quick-inferred: the grey parens the engine would add, ahead of the text and after it
         let inferred: [NSAttributedString.Key: Any] = [.font: Self.lineFont, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)]
         // .quick-squiggle: a wavy line, muted at 70%, under where a blank answer stops reading
-        if let squiggle, let lm = layoutManager, let tc = textContainer, NSMaxRange(squiggle) <= (string as NSString).length {
+        if let squiggle = GhostRules.squiggle(squiggle, ghost: ghostTail, text: string, caret: selectedRange()),
+           let lm = layoutManager, let tc = textContainer, NSMaxRange(squiggle) <= (string as NSString).length {
             let glyphs = lm.glyphRange(forCharacterRange: squiggle, actualCharacterRange: nil)
             var rect = lm.boundingRect(forGlyphRange: glyphs, in: tc).offsetBy(dx: textContainerInset.width, dy: textContainerInset.height)
             // a stacked line's box reaches down to its lowest slot: the line goes under the text's own baseline

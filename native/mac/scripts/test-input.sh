@@ -8,7 +8,7 @@ arch="${ARCH:-$(uname -m)}"
 out="$(mktemp -d)"
 trap 'rm -rf "$out"' EXIT
 xcrun swiftc -O -target "$arch-apple-macos12.0" \
-  "$here/Sources/Bar/Symbols.swift" "$here/Sources/Bar/Undo.swift" "$here/Sources/Bar/GhostRules.swift" \
+  "$here/Sources/Bar/Symbols.swift" "$here/Sources/Bar/Undo.swift" "$here/Sources/Bar/GhostRules.swift" "$here/Sources/Bar/ExactText.swift" \
   "$here/Tests/input/main.swift" \
   -o "$out/input-test"
 "$out/input-test"

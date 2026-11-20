@@ -39,6 +39,15 @@ enum GhostRules {
         return text.hasSuffix("$") && text.filter({ $0 == "$" }).count == 2 && trimmed.hasPrefix("$") && trimmed.count > 2
     }
 
+    /// native only (QA item 105): the squiggle under a half-typed word goes while its completion ghost shows after
+    /// it (`sqr` + ghost `t(`): the ghost already says what it will be. Nil hides it; a squiggle elsewhere stays.
+    static func squiggle(_ squiggle: NSRange?, ghost: String, text: String, caret: NSRange) -> NSRange? {
+        guard let squiggle else { return nil }
+        let end = (text as NSString).length
+        let ghostShown = !ghost.isEmpty && caret.length == 0 && caret.location == end
+        return ghostShown && NSMaxRange(squiggle) == end ? nil : squiggle
+    }
+
     /// where a word typed mid-line can complete (QuickInput's `completionAt`): a collapsed caret inside the line
     /// (UTF-16 offset) with no letter, digit or `_` after it, so `2 sq|(9)` completes as `2 sq|` does. Nil at the
     /// end (the ghost after the text takes that) or inside a word.

@@ -472,6 +472,16 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
                 b(3),
             ))
         }
+        ("lib/knownWords", "unitColours") => {
+            let vars: Vec<String> = of(&a(1)).unwrap_or_default();
+            let fns: Vec<String> = of(&a(2)).unwrap_or_default();
+            to(&crate::app::word_names::unit_colours(
+                &s(0),
+                &vars,
+                &fns,
+                b(3),
+            ))
+        }
         // ---- lib/onboarding ----
         ("lib/onboarding", "advanceRotation") => {
             to(&ob::advance_rotation(of(&a(0)).unwrap_or_default()))
