@@ -126,5 +126,56 @@ check("typing after a wrap is its own step", wu.past.map(\.value).joined(separat
 wu = Undo.undo(Undo.undo(wu)!)!
 check("undo a wrap selects it again", "\(wu.current.value) \(wu.current.start) \(wu.current.end)", "2x+1 0 2")
 
+// `sys` equations and matrix cells: each field its own undo, typing runs joined (QA item 76)
+check("a letter is typing", "\(FieldKeyEdit.of(keyCode: 0, command: false, control: false, characters: "a") == .kind(.insert))", "true")
+check("⌫ deletes", "\(FieldKeyEdit.of(keyCode: 51, command: false, control: false, characters: "\u{7F}") == .kind(.delete))", "true")
+check("⌘⌫ is its own step", "\(FieldKeyEdit.of(keyCode: 51, command: true, control: false, characters: "\u{7F}") == .kind(nil))", "true")
+check("⌘V is its own step", "\(FieldKeyEdit.of(keyCode: 9, command: true, control: false, characters: "v") == .kind(nil))", "true")
+check("← ends the run", "\(FieldKeyEdit.of(keyCode: 123, command: false, control: false, characters: "\u{F702}") == .breakRun)", "true")
+check("↵ is no edit", "\(FieldKeyEdit.of(keyCode: 36, command: false, control: false, characters: "\r") == FieldKeyEdit.none)", "true")
+let fu = FieldUndo<Int>()
+var vals = [0: "", 1: "y = 2"]
+fu.observe(vals, caret: { _ in nil }, now: 0)
+for (i, ch) in ["x", "x+", "x+y", "x+y=", "x+y=3"].enumerated() {
+    fu.note(.kind(.insert), now: Double(1000 + i * 100))
+    vals[0] = ch
+    fu.observe(vals, caret: { _ in nil }, now: Double(1000 + i * 100 + 5))
+}
+fu.note(.kind(nil), now: 2000) // ⌘V
+vals[1] = "y = 2x"
+fu.observe(vals, caret: { _ in nil }, now: 2005)
+fu.note(.kind(.insert), now: 2100)
+vals[1] = "y = 2x+1"
+fu.observe(vals, caret: { _ in nil }, now: 2105)
+check("⌘Z in an equation takes its typing run", fu.step(0, redo: false)?.value ?? "nil", "")
+check("nothing more to undo there", fu.step(0, redo: false)?.value ?? "nil", "nil")
+check("⇧⌘Z puts the run back", fu.step(0, redo: true)?.value ?? "nil", "x+y=3")
+check("the other field's typing after a paste", fu.step(1, redo: false)?.value ?? "nil", "y = 2x")
+check("then the paste alone", fu.step(1, redo: false)?.value ?? "nil", "y = 2")
+// a change with no key just before it (→ filling parens, ⌘⌫) is its own step, a key long ago doesn't count
+let fp = FieldUndo<Int>()
+fp.observe([0: "sin x"], caret: { _ in nil }, now: 0)
+fp.note(.kind(.insert), now: 100)
+fp.observe([0: "sin x2"], caret: { _ in nil }, now: 105)
+fp.observe([0: "sin(x2)"], caret: { _ in nil }, now: 200)
+fp.note(.kind(.insert), now: 300)
+fp.observe([0: "sin(x2)+"], caret: { _ in nil }, now: 305)
+check("parens filled are a step of their own", fp.step(0, redo: false)?.value ?? "nil", "sin(x2)")
+check("then the typing before", fp.step(0, redo: false)?.value ?? "nil", "sin x2")
+// a run broken by a click or an arrow; undo puts the caret back where it was
+struct GridCellT: Hashable { let r: Int; let c: Int }
+let fc = FieldUndo<GridCellT>()
+let a = GridCellT(r: 0, c: 0)
+fc.observe([a: ""], caret: { _ in nil }, now: 0)
+fc.note(.kind(.insert), now: 10); fc.observe([a: "12"], caret: { _ in NSRange(location: 2, length: 0) }, now: 12)
+fc.note(.breakRun, now: 20)
+fc.note(.kind(.insert), now: 30); fc.observe([a: "312"], caret: { _ in NSRange(location: 1, length: 0) }, now: 32)
+let back = fc.step(a, redo: false)
+check("a click ends the cell's run, caret kept", "\(back?.value ?? "nil") \(back?.start ?? -1)", "12 2")
+// a cell taken away and brought back (grid resized) starts afresh
+fc.observe([:], caret: { _ in nil }, now: 40)
+fc.observe([a: ""], caret: { _ in nil }, now: 50)
+check("a cell brought back has no old history", fc.step(a, redo: false)?.value ?? "nil", "nil")
+
 if failures > 0 { print("\(failures) failed"); exit(1) }
 print("all passed")

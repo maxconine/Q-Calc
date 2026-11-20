@@ -126,6 +126,14 @@ extension BarModel {
         focusField?()
     }
 
+    /// ⌘Z / ⇧⌘Z in an equation: its value put back as it was, not read again for symbols (FieldUndo)
+    func restoreSysLine(_ i: Int, _ value: String) {
+        guard var lines = sysLines, lines.indices.contains(i), lines[i] != value else { return }
+        lines[i] = value
+        sysLines = lines
+        solveSystemLive()
+    }
+
     /// a system row in the tape reopens its fields (openHistorySystem)
     func openHistorySystem(_ i: Int) {
         guard rows.indices.contains(i), rows[i].kind == .system, let eqs = rows[i].equations, !eqs.isEmpty else { return }
@@ -180,6 +188,8 @@ struct SystemPanel: View {
     @ObservedObject var model: BarModel
     @FocusState private var focused: Int?
     @State private var paste = PasteWatch()
+    /// each equation's own ⌘Z / ⇧⌘Z (QA item 76)
+    @State private var undo = FieldUndo<Int>()
 
     var body: some View {
         VStack(spacing: 2) {
@@ -235,6 +245,14 @@ struct SystemPanel: View {
             DispatchQueue.main.async { focused = f }
         }
         .onAppear {
+            undo.reset()
+            observe(model.sysLines ?? [])
+            paste.edit = { [undo] in undo.note($0, now: FieldUndo<Int>.nowMs) }
+            paste.undo = { [weak model, undo, paste] redo in
+                guard let model, let i = paste.field, let step = undo.step(i, redo: redo) else { return }
+                model.restoreSysLine(i, step.value)
+                PasteWatch.select(step)
+            }
             focused = model.sysFocus ?? 0
             // spent, or asking for the same field again later wouldn't count as a change
             model.sysFocus = nil
@@ -252,6 +270,10 @@ struct SystemPanel: View {
             })
         }
         .onDisappear { paste.stop() }
+        .onChange(of: model.sysLines) { lines in
+            guard let lines else { return }
+            observe(lines)
+        }
         .onChange(of: focused) { field in
             paste.field = field
             // the caret at the end of the equation, not the whole of it selected for the next key to replace
@@ -264,21 +286,72 @@ struct SystemPanel: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("System of equations")
     }
+
+    /// the equations into their undo; a system of another size starts afresh
+    private func observe(_ lines: [String]) {
+        let values = Dictionary(uniqueKeysWithValues: lines.enumerated().map { ($0.offset, $0.element) })
+        if undo.count != values.count { undo.reset() }
+        undo.observe(values, caret: { i in i == focused ? PasteWatch.editorSelection(lines[i]) : nil }, now: FieldUndo<Int>.nowMs)
+    }
 }
 
-/// ⌘V and ⌘⌫ while a system field has the keys, offered to `paste` and `deleteLine` first
+/// ⌘V and ⌘⌫ while a system field has the keys, offered to `paste` and `deleteLine` first; with `undo` set, ⌘Z /
+/// ⇧⌘Z go to it (the field's own undo, FieldUndo) and every key and click is told to `edit` first
 final class PasteWatch {
     var field: Int?
+    /// ⌘Z (false) or ⇧⌘Z (true) in the field
+    var undo: ((Bool) -> Void)?
+    /// what each key (or a click) is to the field's typing run
+    var edit: ((FieldKeyEdit) -> Void)?
     private var monitor: Any?
 
     func start(paste: @escaping () -> Bool, deleteLine: @escaping () -> Bool) {
         stop()
-        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .leftMouseDown]) { [weak self] event in
+            guard let self, self.field != nil else { return event }
+            if event.type == .leftMouseDown {
+                self.edit?(.breakRun)
+                return event
+            }
             let mods = event.modifierFlags.intersection([.command, .option, .control, .shift])
-            guard self?.field != nil, mods == .command else { return event }
+            let editor = NSApp.keyWindow?.firstResponder as? NSTextView
+            // mid-IME the keys are the input method's
+            if editor?.hasMarkedText() == true { return event }
+            // the field's, not the line's (SwiftUI's focus can still name a field once the line has the keys)
+            if let undo = self.undo, editor?.isFieldEditor == true, !(editor is BarTextView), mods == .command || mods == [.command, .shift],
+               event.keyCode == 6 || event.charactersIgnoringModifiers?.lowercased() == "z" {
+                // the field editor's own undo has nothing (SwiftUI sets the text again each key): never left to it
+                undo(mods.contains(.shift))
+                return nil
+            }
+            self.edit?(FieldKeyEdit.of(keyCode: event.keyCode, command: mods.contains(.command),
+                                        control: mods.contains(.control), characters: event.characters ?? ""))
+            guard mods == .command else { return event }
             if event.keyCode == 51 { return deleteLine() ? nil : event }
             guard event.charactersIgnoringModifiers?.lowercased() == "v" else { return event }
             return paste() ? nil : event
+        }
+    }
+
+    /// the field editor's text and selection, when it's showing `value`
+    static func editorSelection(_ value: String) -> NSRange? {
+        guard let editor = NSApp.keyWindow?.firstResponder as? NSTextView, editor.isFieldEditor,
+              editor.string == value else { return nil }
+        return editor.selectedRange()
+    }
+
+    /// after an undo step is put back: its selection, once SwiftUI has given the field its text (the caret would be
+    /// left at the end)
+    static func select(_ step: Undo.Step) {
+        func apply() {
+            guard let editor = NSApp.keyWindow?.firstResponder as? NSTextView, editor.isFieldEditor,
+                  editor.string == step.value else { return }
+            let n = (step.value as NSString).length, start = min(step.start, n)
+            editor.setSelectedRange(NSRange(location: start, length: max(0, min(step.end, n) - start)))
+        }
+        DispatchQueue.main.async {
+            apply()
+            DispatchQueue.main.async { apply() }
         }
     }
 

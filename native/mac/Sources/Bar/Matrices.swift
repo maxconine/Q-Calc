@@ -291,6 +291,8 @@ struct MatrixGridPanel: View {
     @FocusState private var focused: GridCell?
     /// ⌘⌫ while a cell has the keys (Systems.swift's watch)
     @State private var deleteWatch = PasteWatch()
+    /// each cell's own ⌘Z / ⇧⌘Z (QA item 76)
+    @State private var undo = FieldUndo<GridCell>()
 
     private static let cellWidth: CGFloat = 64
 
@@ -332,12 +334,23 @@ struct MatrixGridPanel: View {
         // the cell takes the keys once the panel is in the window (the bar's line holds them as ↵ opens it)
         .onAppear {
             take(model.gridFocus ?? GridCell(r: 0, c: 0))
+            undo.reset()
+            observe(g)
+            deleteWatch.edit = { [undo] in undo.note($0, now: FieldUndo<GridCell>.nowMs) }
+            deleteWatch.undo = { [weak model, undo] redo in
+                guard let model, let at = focused, let step = undo.step(at, redo: redo) else { return }
+                model.setGridCell(at, step.value)
+                PasteWatch.select(step)
+            }
             deleteWatch.start(paste: { false }, deleteLine: {
                 guard let f = focused else { return false }
                 return model.gridDeleteLine(f)
             })
         }
         .onDisappear { deleteWatch.stop() }
+        .onChange(of: model.grid?.cells) { _ in if let g = model.grid { observe(g) } }
+        // another matrix in the grid starts afresh
+        .onChange(of: model.grid?.start) { _ in undo.reset(); if let g = model.grid { observe(g) } }
         .onChange(of: model.gridFocus) { f in if let f { focused = f } }
         .onChange(of: model.gridFocusAsk) { _ in take(model.gridFocus ?? GridCell(r: 0, c: 0)) }
         .onChange(of: focused) { f in
@@ -347,6 +360,14 @@ struct MatrixGridPanel: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Matrix, \(g.rows) by \(g.cols)")
+    }
+
+    /// the cells into their undo
+    private func observe(_ g: GridState) {
+        var values: [GridCell: String] = [:]
+        for (r, row) in g.cells.enumerated() { for (c, v) in row.enumerated() { values[GridCell(r: r, c: c)] = v } }
+        undo.observe(values, caret: { at in at == focused ? PasteWatch.editorSelection(values[at] ?? "") : nil },
+                     now: FieldUndo<GridCell>.nowMs)
     }
 
     /// focus on the next turns of the run loop: SwiftUI drops a focus set while the field editor is still the line's
