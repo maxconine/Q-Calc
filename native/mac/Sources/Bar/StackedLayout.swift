@@ -422,11 +422,39 @@ extension BarTextView {
         stackBlink = nil
         if let rect {
             setNeedsDisplay(rect.insetBy(dx: -2, dy: -2))
-            stackBlink = Timer.scheduledTimer(withTimeInterval: 0.53, repeats: true) { [weak self] _ in
-                guard let self, let r = self.stackCaret else { return }
-                self.stackCaretShown.toggle()
-                self.setNeedsDisplay(r.insetBy(dx: -2, dy: -2))
+            startStackBlink()
+        }
+    }
+
+    /// the drawn caret's blink; it stops while the bar is hidden (it woke the app twice a second for good once the
+    /// bar was away with a stacked line kept as the draft) and starts again on the first draw after the bar is back
+    private func startStackBlink() {
+        stackBlink?.invalidate()
+        stackBlink = Timer.scheduledTimer(withTimeInterval: 0.53, repeats: true) { [weak self] timer in
+            guard let self, let r = self.stackCaret else { return }
+            guard let window = self.window, window.isVisible else {
+                timer.invalidate()
+                self.stackBlink = nil
+                self.stackCaretShown = true
+                self.blinkWhenKey(self.window)
+                return
             }
+            self.stackCaretShown.toggle()
+            self.setNeedsDisplay(r.insetBy(dx: -2, dy: -2))
+        }
+    }
+
+    /// one wait for the bar to take the keys again (its next show), then the blink goes on
+    private func blinkWhenKey(_ window: NSWindow?) {
+        guard let window else { return }
+        final class Once: @unchecked Sendable { var token: NSObjectProtocol? }
+        let once = Once()
+        once.token = NotificationCenter.default.addObserver(forName: NSWindow.didBecomeKeyNotification, object: window, queue: .main) { [weak self] _ in
+            if let token = once.token { NotificationCenter.default.removeObserver(token) }
+            once.token = nil
+            guard let self, self.stackCaret != nil, self.stackBlink == nil else { return }
+            self.setNeedsDisplay(self.stackCaret!.insetBy(dx: -2, dy: -2))
+            self.startStackBlink()
         }
     }
 

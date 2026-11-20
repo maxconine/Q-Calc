@@ -139,6 +139,8 @@ The stacked fractions round (TeX sizes, Desmos keys, grown brackets, stacked his
 - **Graph: pinch and two-finger gestures:** Windows takes a touchpad's pinch as Ctrl + wheel (it zooms about the pointer, as before); a two-finger swipe arrives as the wheel. Shift + wheel pans.
 - **Graph: hover tips** on the head's new buttons (zoom out, zoom in, camera) aren't drawn: the head's icons had none on Windows.
 
+- **No timers while the bar is hidden** (Mac `Sources/Bar/StackedLayout.swift` startStackBlink, `Sources/Bar/Tour.swift` startRotationTimer): a stacked line's drawn caret blinked every 0.53 s for good after the bar hid with it kept as the draft (about 50 ms CPU per 30 s, two wakeups a second), and the empty bar's example rotation ticked every 2.5 s while hidden. Both now stop when the bar isn't visible and start again on the next show. On Windows, check any repeating timer of the bar (caret, examples, cards) stops while it's hidden. Test: `native/mac/parity/measure.sh <app> 1 show "type:1/2"` ends with `CPU while hidden: 0 ms over 20 s`; on Windows, Task Manager's CPU time for the hidden bar after typing `1/2` with stacked math on.
+
 Open questions for the Mac side:
 
 - **Matrix grid gaps left on Windows:** Ctrl+G and Ctrl+R are fixed chords (the core's keybinds have no matrix actions; a user binding on the same chord wins); a click in a cell puts the caret at the end (double-click selects it) rather than under the pointer; the grid doesn't scroll sideways (8 columns need about 590 px); no UI Automation for the cells yet.

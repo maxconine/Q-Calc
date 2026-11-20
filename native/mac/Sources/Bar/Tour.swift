@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 // Onboarding and the walkthrough, as QuickCalc.tsx runs them, with the rules from src/lib/onboarding.ts and tour.ts
@@ -168,8 +169,13 @@ extension BarModel {
     private func startRotationTimer() {
         rotationTimer?.invalidate()
         guard rotation.on else { return }
-        rotationTimer = Timer.scheduledTimer(withTimeInterval: 2.5, repeats: true) { [weak self] _ in
+        rotationTimer = Timer.scheduledTimer(withTimeInterval: 2.5, repeats: true) { [weak self] timer in
             guard let self, self.rotation.on else { return }
+            // the bar is away: no wakeups while hidden (each show starts the rotation again, in beginShowing)
+            guard NSApp.windows.contains(where: { $0 is OverlayPanel && $0.isVisible }) else {
+                timer.invalidate()
+                return
+            }
             self.rotation.tick += 1
             self.refreshExample()
         }
