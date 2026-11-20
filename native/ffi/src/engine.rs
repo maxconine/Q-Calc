@@ -184,8 +184,7 @@ fn graph_result(v: &Json) -> Option<GraphResult> {
             x_hi: num(g.get("xHi"))?,
             y_lo: num(g.get("yLo"))?,
             y_hi: num(g.get("yHi"))?,
-            z: g
-                .get("z")?
+            z: g.get("z")?
                 .as_array()?
                 .iter()
                 .map(|v| v.as_f64().unwrap_or(f64::NAN))
@@ -1024,7 +1023,12 @@ impl Engine {
 
     /// The preview document for a line whose answer is already Typst math (`MatrixView::typst`): after ⇒ when
     /// `arrow`, else after `=`. Native only.
-    pub fn typst_source_math(&self, expr: String, answer_typst: String, arrow: bool) -> Option<String> {
+    pub fn typst_source_math(
+        &self,
+        expr: String,
+        answer_typst: String,
+        arrow: bool,
+    ) -> Option<String> {
         self.on(None, move |_| {
             qcalc_core::app::typst_math::typst_document_math(&expr, &answer_typst, arrow)
         })

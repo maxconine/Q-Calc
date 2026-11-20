@@ -24,7 +24,10 @@ fn parts_and_documents() {
     let m = a.matrix.expect("a matrix view");
     assert_eq!(m.parts.len(), 2);
     assert_eq!(m.parts[0].label, "P");
-    assert!(m.document.contains(r#"$ P = mat(delim: "[", 1, - 1; 1, 2) quad D = "#));
+    assert!(
+        m.document
+            .contains(r#"$ P = mat(delim: "[", 1, - 1; 1, 2) quad D = "#)
+    );
     assert!(m.exact_document.is_none());
     assert!(m.steps.is_empty());
 
@@ -34,9 +37,15 @@ fn parts_and_documents() {
 
 #[test]
 fn steps_have_documents() {
-    let m = live("rref([1 2 | 5; 3 4 | 6])").matrix.expect("a matrix view");
+    let m = live("rref([1 2 | 5; 3 4 | 6])")
+        .matrix
+        .expect("a matrix view");
     assert_eq!(m.steps.len(), 4);
-    assert!(m.steps[1].document.contains("R_2 arrow.l R_2 - 3 R_1 quad mat("));
+    assert!(
+        m.steps[1]
+            .document
+            .contains("R_2 arrow.l R_2 - 3 R_1 quad mat(")
+    );
     assert!(m.steps[1].document.starts_with("#import \"/macros.typ\""));
 }
 
@@ -88,7 +97,10 @@ fn live_textbook_forms() {
         ("the null space of [1 1; 1 1]", "span{[-1; 1]}"),
         ("det(matrix 2x2)", ""),
         ("[2 1; 1 3] x = [3; 5]", "x = [0.8; 1.4]"),
-        ("det([1 2 0; 3 4 0])", "determinant needs a square matrix (this is 2×3)"),
+        (
+            "det([1 2 0; 3 4 0])",
+            "determinant needs a square matrix (this is 2×3)",
+        ),
     ] {
         let e = Engine::new(EngineConfig {
             is_windows: false,
