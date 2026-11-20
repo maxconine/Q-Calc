@@ -804,7 +804,96 @@ pub fn native_home(input: &str, options: &GraphOptions) -> (f64, f64, Option<f64
     let (lo, hi) = home_of(Some(intent.clone()), options, &|o| {
         Some(build_intent(intent.clone(), o, true))
     });
+    if intent.contour == Some(ContourKind::Levels)
+        && intent.bounds.is_none()
+        && intent.bounds_error.is_none()
+        && hi > lo
+    {
+        let g = compile_graph_z(
+            &intent.expression,
+            options,
+            options.angle_mode.or(Some(AngleMode::Rad)),
+        );
+        let (lo, hi, cy) = surface_home(&|x, y| g.at(x, y), (lo, hi));
+        return (lo, hi, cy);
+    }
     let (lo, hi) = widen_to_features(&intent, options, (lo, hi));
+    (lo, hi, None)
+}
+
+/// Native only: a surface's first view (the 3D cube, x and y one span about the y centre). The page's window
+/// (±10, or around its features' x) is kept centred on 0 when it holds 0, since y is (a lopsided
+/// `sin √(x² + y²)` opened on −4.5…6); a surface defined on only a small part of it (`√(1 − x² − y²)`, a dot
+/// at ±10) is framed where it is defined, and one that is flat but for a bump (`e^−(x² + y²)`, whose peak was
+/// clipped off as an outlier) is framed around the bump. Returns (lo, hi, the y centre when not 0).
+fn surface_home(
+    f: &dyn Fn(f64, f64) -> Option<f64>,
+    (lo, hi): (f64, f64),
+) -> (f64, f64, Option<f64>) {
+    const N: usize = 48;
+    let (mut lo, mut hi) = (lo, hi);
+    let w = hi - lo;
+    if lo < -w * 0.05 && hi > w * 0.05 {
+        (lo, hi) = nice_window(0.0, 2.0 * lo.abs().max(hi.abs()));
+    }
+    let w = hi - lo;
+    let (y0, d) = (-w / 2.0, w / N as f64);
+    let mut pts: Vec<(f64, f64, f64)> = Vec::with_capacity((N + 1) * (N + 1));
+    for j in 0..=N {
+        for i in 0..=N {
+            let (x, y) = (lo + i as f64 * d, y0 + j as f64 * d);
+            if let Some(z) = f(x, y).filter(|z| z.is_finite()) {
+                pts.push((x, y, z));
+            }
+        }
+    }
+    let total = (N + 1) * (N + 1);
+    // the box around some of the points, as a window: None unless it is well inside this one
+    let frame =
+        |keep: &dyn Fn(f64) -> bool, room: f64, most: f64| -> Option<(f64, f64, Option<f64>)> {
+            let mut b = (
+                f64::INFINITY,
+                f64::NEG_INFINITY,
+                f64::INFINITY,
+                f64::NEG_INFINITY,
+            );
+            for &(x, y, z) in &pts {
+                if keep(z) {
+                    b = (b.0.min(x), b.1.max(x), b.2.min(y), b.3.max(y));
+                }
+            }
+            // a point's cell either side, so a box of one sample still has a width
+            let extent = ((b.1 - b.0).max(b.3 - b.2) + 2.0 * d) * room;
+            if !extent.is_finite() || extent >= most * w {
+                return None;
+            }
+            let cx = (b.0 + b.1) / 2.0;
+            let cy = (b.2 + b.3) / 2.0;
+            let cx = if cx.abs() < extent * 0.1 { 0.0 } else { cx };
+            let (l, h) = nice_window(cx, extent);
+            let step = jsmath::pow(10.0, jsmath::log10(extent / 10.0).floor());
+            let cy = (cy.abs() >= extent * 0.1).then(|| (cy / step).round() * step);
+            Some((l, h, cy))
+        };
+    if pts.is_empty() {
+        return (lo, hi, None);
+    }
+    // defined on a small part only
+    if pts.len() * 2 < total {
+        if let Some(win) = frame(&|_| true, 1.3, 0.75) {
+            return win;
+        }
+    }
+    // flat but for a bump
+    let mut zs: Vec<f64> = pts.iter().map(|p| p.2).collect();
+    sort_numbers(&mut zs);
+    let (zmin, zmax, mid) = (zs[0], zs[zs.len() - 1], quantile(&zs, 0.5));
+    if zmax > zmin {
+        let cut = 0.05 * (zmax - zmin);
+        if let Some(win) = frame(&|z| (z - mid).abs() > cut, 1.6, 0.5) {
+            return win;
+        }
+    }
     (lo, hi, None)
 }
 
@@ -935,7 +1024,11 @@ pub fn surface_features(f: &dyn Fn(f64, f64) -> Option<f64>, w: Window) -> Vec<C
             if !c.is_finite() {
                 continue;
             }
-            let mut lowest = true;
+            // as low as every neighbour and lower than one: the grid's differences can tie two points either
+            // side of a turn (x⁴ + y⁴ − 4xy's minima at ±10 have one at (1, 1) and (0.5, 0.5)), which a strict
+            // test dropped both of; a plane, level everywhere, has none lower
+            let tol = c * 1e-9;
+            let (mut lowest, mut lower) = (true, false);
             for (di, dj) in [
                 (-1i32, -1i32),
                 (0, -1),
@@ -947,12 +1040,13 @@ pub fn surface_features(f: &dyn Fn(f64, f64) -> Option<f64>, w: Window) -> Vec<C
                 (1, 1),
             ] {
                 let v = g2((i as i32 + di) as usize, (j as i32 + dj) as usize);
-                if !(c < v) {
+                if !(c <= v + tol) {
                     lowest = false;
                     break;
                 }
+                lower |= c < v - tol;
             }
-            if !lowest {
+            if !lowest || !lower {
                 continue;
             }
             let start = (w.x.0 + i as f64 * dx, w.y.0 + j as f64 * dy);
