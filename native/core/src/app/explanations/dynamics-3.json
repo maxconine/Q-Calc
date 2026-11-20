@@ -1,0 +1,2830 @@
+{
+ "^{N}K^{Q} = (1/2) m^{Q} ^{N}v⃗^{Q} · ^{N}v⃗^{Q}": {
+  "title": "Kinetic energy of a particle in N",
+  "about": "A particle's kinetic energy in frame N is half its mass times the dot product of its N-velocity with itself, i.e. ½ m |v|². It is a scalar, never negative, and depends on the frame the velocity is measured in.",
+  "assumptions": [
+   "Q is treated as a particle (its size and spin don't matter)",
+   "N is the frame you measure velocity in; for work–energy N must be Newtonian"
+  ],
+  "vars": [
+   [
+    "^{N}K^{Q}",
+    "kinetic energy of Q in N",
+    "J"
+   ],
+   [
+    "m^{Q}",
+    "mass of Q",
+    "kg"
+   ],
+   [
+    "^{N}v⃗^{Q}",
+    "velocity of point Q in frame N",
+    "m/s"
+   ]
+  ],
+  "related": [
+   [
+    "^{N}P = F⃗^{Q} · ^{N}v⃗^{Q}",
+    "power: the rate this K changes"
+   ],
+   [
+    "W̃ = ΔK + ΔU",
+    "work–energy"
+   ]
+  ],
+  "example": {
+   "problem": "A 2 kg particle moves with ^{N}v⃗^{Q} = 3 n̂_{x} + 4 n̂_{y} m/s. Find its kinetic energy.",
+   "steps": [
+    "v⃗ · v⃗ = 3^{2} + 4^{2} = 25 m^{2}/s^{2}",
+    "K = ½ (2 kg)(25 m^{2}/s^{2}) = 25 J"
+   ],
+   "answer": "^{N}K^{Q} = 25 J"
+  },
+  "try": "0.5 * 2 kg * (5 m/s)^2 to J"
+ },
+ "^{N}K^{B} = (1/2) m^{B} ^{N}v⃗^{B_{p}} · ^{N}v⃗^{B_{p}} + (1/2) ^{N}ω⃗^{B} · I⃡^{B∕B_{p}} · ^{N}ω⃗^{B} + m^{B} ^{N}v⃗^{B_{p}} · (^{N}ω⃗^{B} × ^{B_{p}}r⃗^{B_{cm}})": {
+  "title": "Rigid body kinetic energy about any body point Bₚ",
+  "about": "Splits a rigid body's kinetic energy in N into a translational part at a body point Bₚ, a rotational part with the inertia dyadic about Bₚ, and a cross term that couples the two. Picking Bₚ at the mass centre (or a point fixed in N) kills the cross term.",
+  "assumptions": [
+   "B is rigid; Bₚ is a point fixed on B",
+   "I⃡^{B∕B_{p}} is the inertia dyadic about Bₚ, not about the mass centre",
+   "The cross term is zero when Bₚ is B_{cm}, or when ^{N}v⃗^{B_{p}} = 0⃗"
+  ],
+  "vars": [
+   [
+    "^{N}K^{B}",
+    "kinetic energy of B in N",
+    "J"
+   ],
+   [
+    "m^{B}",
+    "mass of B",
+    "kg"
+   ],
+   [
+    "^{N}v⃗^{B_{p}}",
+    "velocity of Bₚ in N",
+    "m/s"
+   ],
+   [
+    "^{N}ω⃗^{B}",
+    "angular velocity of B in N",
+    "rad/s"
+   ],
+   [
+    "I⃡^{B∕B_{p}}",
+    "inertia dyadic of B about Bₚ",
+    "kg·m^{2}"
+   ],
+   [
+    "^{B_{p}}r⃗^{B_{cm}}",
+    "position of the mass centre from Bₚ",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "^{N}K^{B} = (1/2) m^{B} ^{N}v⃗^{B_{p}} · ^{N}v⃗^{B_{p}} + (1/2) I_{kk}^{B∕B_{p}} (^{N}ω^{B})^{2}",
+    "planar form, Bₚ the mass centre or fixed"
+   ],
+   [
+    "I^{B∕P} = I^{B∕B_{cm}} + m d^{2}",
+    "parallel-axis theorem"
+   ]
+  ],
+  "example": {
+   "problem": "A uniform rod (m = 3 kg, L = 2 m) lies along n̂_{x}. Its end Bₚ moves at 2 n̂_{y} m/s and the rod spins at ^{N}ω⃗^{B} = 4 n̂_{z} rad/s. Find ^{N}K^{B} using Bₚ.",
+   "steps": [
+    "Translational: ½ (3)(2^{2}) = 6 J",
+    "I_{zz}^{B∕B_{p}} = mL^{2}/3 = 4 kg·m^{2}; rotational: ½ (4)(4^{2}) = 32 J",
+    "ω⃗ × r⃗ = 4 n̂_{z} × 1 n̂_{x} = 4 n̂_{y} m/s; cross term: 3 (2 n̂_{y}) · (4 n̂_{y}) = 24 J",
+    "K = 6 + 32 + 24 = 62 J (check at the mass centre: v_{cm} = 6 m/s, ½·3·36 + ½·1·16 = 62 J)"
+   ],
+   "answer": "^{N}K^{B} = 62 J"
+  },
+  "try": "0.5*3*2^2 + 0.5*4*4^2 + 3*2*4"
+ },
+ "^{N}K^{B} = (1/2) ^{N}v⃗^{B_{p}} · ^{N}L⃗^{B} + (1/2) ^{N}ω⃗^{B} · ^{N}H⃗^{B∕B_{p}}": {
+  "title": "Kinetic energy from linear and angular momentum",
+  "about": "A rigid body's kinetic energy is half the dot of the point velocity with linear momentum plus half the dot of angular velocity with angular momentum about Bₚ. It is handy when L⃗ and H⃗ are already worked out.",
+  "assumptions": [
+   "Bₚ is the mass centre, or a point of B fixed in N; otherwise a cross term appears",
+   "^{N}H⃗^{B∕B_{p}} = I⃡^{B∕B_{p}} · ^{N}ω⃗^{B} for a rigid body"
+  ],
+  "vars": [
+   [
+    "^{N}L⃗^{B}",
+    "linear momentum m^{B} ^{N}v⃗^{B_{cm}}",
+    "kg·m/s"
+   ],
+   [
+    "^{N}H⃗^{B∕B_{p}}",
+    "angular momentum of B about Bₚ in N",
+    "kg·m^{2}/s"
+   ],
+   [
+    "^{N}v⃗^{B_{p}}",
+    "velocity of Bₚ in N",
+    "m/s"
+   ],
+   [
+    "^{N}ω⃗^{B}",
+    "angular velocity of B in N",
+    "rad/s"
+   ]
+  ],
+  "related": [
+   [
+    "^{N}L⃗^{B} = m^{B} ^{N}v⃗^{B_{cm}}",
+    "linear momentum"
+   ],
+   [
+    "^{N}H⃗^{B∕B_{cm}} = I⃡^{B∕B_{cm}} · ^{N}ω⃗^{B}",
+    "angular momentum about the mass centre"
+   ]
+  ],
+  "example": {
+   "problem": "A disk (m = 2 kg, r = 0.5 m) rolls with its centre moving at 3 m/s, so ω = 6 rad/s. Take Bₚ at the centre and find K.",
+   "steps": [
+    "L = m v = 2 × 3 = 6 kg·m/s",
+    "H = (½ m r^{2}) ω = 0.25 × 6 = 1.5 kg·m^{2}/s",
+    "K = ½ (3)(6) + ½ (6)(1.5) = 9 + 4.5 = 13.5 J"
+   ],
+   "answer": "^{N}K^{B} = 13.5 J"
+  },
+  "try": "0.5*3*6 + 0.5*6*1.5"
+ },
+ "^{N}K^{B} = (1/2) m^{B} ^{N}v⃗^{B_{p}} · ^{N}v⃗^{B_{p}} + (1/2) I_{kk}^{B∕B_{p}} (^{N}ω^{B})^{2}": {
+  "title": "Planar rigid body kinetic energy",
+  "about": "For motion in a plane, kinetic energy is ½ m v² of the reference point plus ½ I ω² about the axis normal to the plane. The workhorse for rolling wheels, swinging links and spinning disks.",
+  "assumptions": [
+   "Planar motion: ω⃗ is along the fixed k̂ axis",
+   "Bₚ is the mass centre, or a point of B fixed in N (a pin); for any other point add the cross term",
+   "I_{kk} is about the k̂ axis through Bₚ"
+  ],
+  "vars": [
+   [
+    "m^{B}",
+    "mass of B",
+    "kg"
+   ],
+   [
+    "^{N}v⃗^{B_{p}}",
+    "velocity of Bₚ",
+    "m/s"
+   ],
+   [
+    "I_{kk}^{B∕B_{p}}",
+    "moment of inertia about the k̂ axis through Bₚ",
+    "kg·m^{2}"
+   ],
+   [
+    "^{N}ω^{B}",
+    "angular speed",
+    "rad/s"
+   ]
+  ],
+  "related": [
+   [
+    "I = (2/5) m r^{2}",
+    "solid sphere about its centre"
+   ],
+   [
+    "v = r ω",
+    "rolling without slip"
+   ]
+  ],
+  "example": {
+   "problem": "A 7 kg bowling ball (r = 0.11 m) rolls without slipping at 5 m/s. Find its kinetic energy.",
+   "steps": [
+    "Translational: ½ (7)(5^{2}) = 87.5 J",
+    "I = (2/5)(7)(0.11^{2}) = 0.03388 kg·m^{2}, ω = 5/0.11 = 45.45 rad/s",
+    "Rotational: ½ (0.03388)(45.45^{2}) = 35 J",
+    "K = 87.5 + 35 = 122.5 J"
+   ],
+   "answer": "^{N}K^{B} = 122.5 J"
+  },
+  "try": "0.5*7*5^2 + 0.5*(0.4*7*0.11^2)*(5/0.11)^2"
+ },
+ "F⃗^{Q} = Σ_{i=1}^{n} F⃗^{Q∕P_{i}}": {
+  "title": "Resultant force on a point",
+  "about": "The resultant on point Q is the vector sum of every force that the other particles or bodies Pᵢ exert on Q. Add the components; the order doesn't matter.",
+  "assumptions": [
+   "All forces act at the same point Q",
+   "Add vectors by components in one basis"
+  ],
+  "vars": [
+   [
+    "F⃗^{Q}",
+    "resultant force on Q",
+    "N"
+   ],
+   [
+    "F⃗^{Q∕P_{i}}",
+    "force on Q from Pᵢ",
+    "N"
+   ]
+  ],
+  "related": [
+   [
+    "F⃗^{Q} = m^{Q} ^{N}a⃗^{Q}",
+    "Newton's 2nd law"
+   ],
+   [
+    "F⃗^{P∕Q} = −F⃗^{Q∕P}",
+    "action and reaction"
+   ]
+  ],
+  "example": {
+   "problem": "Three forces act on Q: 3 n̂_{x} N, 4 n̂_{y} N and (−1 n̂_{x} + 2 n̂_{y}) N. Find the resultant and its size.",
+   "steps": [
+    "x: 3 − 1 = 2 N; y: 4 + 2 = 6 N",
+    "|F⃗^{Q}| = √(2^{2} + 6^{2}) = 6.32 N"
+   ],
+   "answer": "F⃗^{Q} = 2 n̂_{x} + 6 n̂_{y} N, |F⃗^{Q}| ≈ 6.32 N"
+  },
+  "try": "sqrt(2^2 + 6^2)"
+ },
+ "F⃗^{S} = Σ_{i=1}^{n} F⃗^{Q_{i}}": {
+  "title": "Resultant force on a system",
+  "about": "The resultant on a system S is the sum of the forces on all its points. It is what goes into F⃗ = m a⃗_{cm} for the whole system.",
+  "assumptions": [
+   "Every force on every point of S is counted once",
+   "Internal pairs cancel (see F⃗^{S} = (F⃗^{S})_{external})"
+  ],
+  "vars": [
+   [
+    "F⃗^{S}",
+    "resultant force on S",
+    "N"
+   ],
+   [
+    "F⃗^{Q_{i}}",
+    "resultant force on point Qᵢ of S",
+    "N"
+   ]
+  ],
+  "related": [
+   [
+    "F⃗^{S} = m^{S} ^{N}a⃗^{S_{cm}}",
+    "Newton for a system"
+   ]
+  ],
+  "example": {
+   "problem": "A crate feels gravity 50 N down, a floor normal 50 N up, a push of 20 N to the right and friction 8 N to the left. Find the resultant.",
+   "steps": [
+    "Vertical: 50 − 50 = 0",
+    "Horizontal: 20 − 8 = 12 N"
+   ],
+   "answer": "F⃗^{S} = 12 N to the right"
+  },
+  "try": "20 N - 8 N"
+ },
+ "F⃗^{P∕Q} = −F⃗^{Q∕P}": {
+  "title": "Action and reaction (Newton's 3rd law)",
+  "about": "The force P exerts on Q is equal and opposite to the force Q exerts on P, and (for contact and gravity) along the line joining them. Use it to pass a force from one free-body diagram to the next.",
+  "assumptions": [
+   "Holds for contact and gravitational forces between two bodies",
+   "The two forces act on different bodies, so they never cancel on one FBD"
+  ],
+  "vars": [
+   [
+    "F⃗^{P∕Q}",
+    "force on P from Q",
+    "N"
+   ],
+   [
+    "F⃗^{Q∕P}",
+    "force on Q from P",
+    "N"
+   ]
+  ],
+  "related": [
+   [
+    "F⃗^{S} = (F⃗^{S})_{external}",
+    "internal pairs cancel"
+   ],
+   [
+    "F = G m_{1} m_{2}/r^{2}",
+    "gravity between two masses"
+   ]
+  ],
+  "example": {
+   "problem": "Find the gravitational pull of the Earth (5.9742 × 10^{24} kg) on the Moon (7.34 × 10^{22} kg) at 384 400 km, and the Moon's pull on the Earth.",
+   "steps": [
+    "F = G M m/r^{2} = 6.67 × 10^{−11} × 5.9742 × 10^{24} × 7.34 × 10^{22} / (3.844 × 10^{8})^{2}",
+    "F ≈ 1.98 × 10^{20} N toward the Earth on the Moon",
+    "By action and reaction the Moon pulls the Earth with 1.98 × 10^{20} N toward the Moon"
+   ],
+   "answer": "|F⃗| ≈ 1.98 × 10^{20} N on each, opposite in direction"
+  },
+  "try": "6.67e-11 * 5.9742e24 * 7.34e22 / (3.844e8)^2"
+ },
+ "F⃗^{S} = (F⃗^{S})_{external}": {
+  "title": "Only external forces change a system's motion",
+  "about": "Forces between parts of a system come in action–reaction pairs and cancel in the sum, so the resultant on S is just the external forces. That is why you draw only external forces on an FBD.",
+  "assumptions": [
+   "Every internal force has its reaction inside S",
+   "Internal forces still matter for each part on its own"
+  ],
+  "vars": [
+   [
+    "F⃗^{S}",
+    "resultant force on S",
+    "N"
+   ]
+  ],
+  "related": [
+   [
+    "F⃗^{P∕Q} = −F⃗^{Q∕P}",
+    "action and reaction"
+   ],
+   [
+    "F⃗^{S} = m^{S} ^{N}a⃗^{S_{cm}}",
+    "Newton for a system"
+   ]
+  ],
+  "example": {
+   "problem": "A 30 N push acts on block A (2 kg), which pushes block B (3 kg) on a frictionless floor. Find their acceleration.",
+   "steps": [
+    "Take S = A + B; the contact force between them is internal and cancels",
+    "a = 30 N / 5 kg = 6 m/s^{2}"
+   ],
+   "answer": "a = 6 m/s^{2}"
+  },
+  "try": "30 N / (2 kg + 3 kg)"
+ },
+ "M⃗^{F⃗∕O} = ^{O}r⃗^{Q} × F⃗": {
+  "title": "Moment of a force about a point",
+  "about": "The moment of force F⃗ about O is the position vector from O to any point Q on F⃗'s line of action crossed with F⃗. Its size is force times perpendicular distance, and its direction is the axis it tends to turn about.",
+  "assumptions": [
+   "Q may be any point on F⃗'s line of action",
+   "Order matters: r⃗ × F⃗, not F⃗ × r⃗"
+  ],
+  "vars": [
+   [
+    "M⃗^{F⃗∕O}",
+    "moment of F⃗ about O",
+    "N·m"
+   ],
+   [
+    "^{O}r⃗^{Q}",
+    "position of Q from O",
+    "m"
+   ],
+   [
+    "F⃗",
+    "the force, applied at Q",
+    "N"
+   ]
+  ],
+  "related": [
+   [
+    "|M| = F d",
+    "perpendicular distance d"
+   ],
+   [
+    "M⃗^{S∕P} = M⃗^{S∕O} + ^{P}r⃗^{O} × F⃗^{S}",
+    "shifting the moment point"
+   ]
+  ],
+  "example": {
+   "problem": "F⃗ = 3 n̂_{x} + 4 n̂_{y} N acts at Q with ^{O}r⃗^{Q} = 2 n̂_{x} + 1 n̂_{y} m. Find the moment about O.",
+   "steps": [
+    "M_{z} = r_{x} F_{y} − r_{y} F_{x} = 2(4) − 1(3) = 5 N·m"
+   ],
+   "answer": "M⃗^{F⃗∕O} = 5 n̂_{z} N·m"
+  },
+  "try": "2*4 - 1*3"
+ },
+ "M⃗^{S∕O} = Σ_{i=1}^{n} ^{O}r⃗^{Q_{i}} × F⃗^{Q_{i}}": {
+  "title": "Moment of a set of forces about a point",
+  "about": "The moment of a set of forces about O is the sum of each force's moment, each with its own position vector from O.",
+  "assumptions": [
+   "Each r⃗ goes from O to a point on that force's line of action",
+   "Couples in the set add straight in"
+  ],
+  "vars": [
+   [
+    "M⃗^{S∕O}",
+    "moment of the set about O",
+    "N·m"
+   ],
+   [
+    "^{O}r⃗^{Q_{i}}",
+    "position of Qᵢ from O",
+    "m"
+   ],
+   [
+    "F⃗^{Q_{i}}",
+    "force at Qᵢ",
+    "N"
+   ]
+  ],
+  "related": [
+   [
+    "M⃗^{F⃗∕O} = ^{O}r⃗^{Q} × F⃗",
+    "one force"
+   ]
+  ],
+  "example": {
+   "problem": "A beam along n̂_{x} carries 100 N down at x = 2 m and 50 N down at x = 5 m. Find the moment of these loads about the end O.",
+   "steps": [
+    "2 n̂_{x} × (−100 n̂_{y}) = −200 n̂_{z} N·m",
+    "5 n̂_{x} × (−50 n̂_{y}) = −250 n̂_{z} N·m",
+    "Sum: −450 n̂_{z} N·m"
+   ],
+   "answer": "M⃗^{S∕O} = −450 n̂_{z} N·m (clockwise)"
+  },
+  "try": "-(2*100 + 5*50)"
+ },
+ "M⃗^{S∕O} = (M⃗^{S∕O})_{external}": {
+  "title": "Internal forces give no net moment",
+  "about": "Internal action–reaction pairs are equal, opposite and collinear, so their moments cancel about any point. Only external forces and couples count in M⃗^{S∕O}.",
+  "assumptions": [
+   "Pairs act along the line joining the two particles (true for contact through a point and gravity)"
+  ],
+  "vars": [
+   [
+    "M⃗^{S∕O}",
+    "moment of all forces on S about O",
+    "N·m"
+   ]
+  ],
+  "related": [
+   [
+    "F⃗^{S} = (F⃗^{S})_{external}",
+    "the force version"
+   ]
+  ],
+  "example": {
+   "problem": "Two particles at (0, 0) and (2, 0) m pull on each other with 5 N along the line between them. Find the net moment of this pair about O = (0, 3) m.",
+   "steps": [
+    "On the first: r⃗ = (0, −3), F⃗ = (5, 0): M_{z} = 0(0) − (−3)(5) = 15 N·m",
+    "On the second: r⃗ = (2, −3), F⃗ = (−5, 0): M_{z} = 2(0) − (−3)(−5) = −15 N·m",
+    "Sum = 0"
+   ],
+   "answer": "Net moment of the internal pair = 0"
+  }
+ },
+ "M⃗^{S∕P} = M⃗^{S∕O} + ^{P}r⃗^{O} × F⃗^{S}": {
+  "title": "Shifting the moment point",
+  "about": "Converts the moment of a set of forces about O into the moment about P: add the moment that the resultant, placed at O, makes about P. Lets you move to whichever point eliminates unknowns.",
+  "assumptions": [
+   "F⃗^{S} is the resultant of the same set",
+   "^{P}r⃗^{O} is the position of O measured from P"
+  ],
+  "vars": [
+   [
+    "M⃗^{S∕P}",
+    "moment about P",
+    "N·m"
+   ],
+   [
+    "M⃗^{S∕O}",
+    "moment about O",
+    "N·m"
+   ],
+   [
+    "^{P}r⃗^{O}",
+    "position of O from P",
+    "m"
+   ],
+   [
+    "F⃗^{S}",
+    "resultant force",
+    "N"
+   ]
+  ],
+  "related": [
+   [
+    "M⃗ = T⃗",
+    "a couple: no shift needed"
+   ]
+  ],
+  "example": {
+   "problem": "A set has F⃗^{S} = 5 n̂_{y} N and M⃗^{S∕O} = 10 n̂_{z} N·m. O is at ^{P}r⃗^{O} = 2 n̂_{x} m. Find M⃗^{S∕P}.",
+   "steps": [
+    "^{P}r⃗^{O} × F⃗^{S} = 2 n̂_{x} × 5 n̂_{y} = 10 n̂_{z} N·m",
+    "M⃗^{S∕P} = 10 + 10 = 20 n̂_{z} N·m"
+   ],
+   "answer": "M⃗^{S∕P} = 20 n̂_{z} N·m"
+  },
+  "try": "10 + 2*5"
+ },
+ "M⃗ = T⃗": {
+  "title": "A couple: a pure torque",
+  "about": "A couple is a set of forces whose resultant is zero, so its moment is the same about every point and is called a torque T⃗. Two equal and opposite parallel forces F a distance d apart make a couple of size F d.",
+  "assumptions": [
+   "The forces sum to zero",
+   "Its effect is pure rotation; it can be moved anywhere on the body"
+  ],
+  "vars": [
+   [
+    "T⃗",
+    "torque of the couple",
+    "N·m"
+   ],
+   [
+    "F",
+    "size of each force",
+    "N"
+   ],
+   [
+    "d",
+    "perpendicular distance between them",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "M⃗^{S∕P} = M⃗^{S∕O} + ^{P}r⃗^{O} × F⃗^{S}",
+    "with F⃗^{S} = 0⃗ the shift vanishes"
+   ],
+   [
+    "^{N}P = T⃗^{B} · ^{N}ω⃗^{B}",
+    "power of a torque"
+   ]
+  ],
+  "example": {
+   "problem": "Two hands push a steering wheel with 40 N each in opposite directions, 0.3 m apart. Find the torque.",
+   "steps": [
+    "T = F d = 40 N × 0.3 m = 12 N·m, about any point"
+   ],
+   "answer": "T = 12 N·m"
+  },
+  "try": "40*0.3"
+ },
+ "F⃗^{B_{p}} = F⃗^{S}": {
+  "title": "Equivalent set: the force",
+  "about": "Any set of forces on a body can be replaced by one force at a chosen point Bₚ plus one couple. The force is just the resultant F⃗^{S}, whatever point you pick.",
+  "assumptions": [
+   "Equivalent means same resultant and same moment about every point",
+   "Equivalent sets give the same motion of a rigid body, not the same internal stresses"
+  ],
+  "vars": [
+   [
+    "F⃗^{B_{p}}",
+    "the replacement force at Bₚ",
+    "N"
+   ],
+   [
+    "F⃗^{S}",
+    "resultant of the original set",
+    "N"
+   ]
+  ],
+  "related": [
+   [
+    "T⃗^{B} = M⃗^{S∕B_{p}}",
+    "the replacement couple"
+   ]
+  ],
+  "example": {
+   "problem": "A bracket carries 3 n̂_{x} N at one hole and 4 n̂_{y} N at another. Find the single force of the equivalent set.",
+   "steps": [
+    "F⃗^{B_{p}} = 3 n̂_{x} + 4 n̂_{y} N",
+    "|F⃗| = √(3^{2} + 4^{2}) = 5 N"
+   ],
+   "answer": "F⃗^{B_{p}} = 3 n̂_{x} + 4 n̂_{y} N (5 N)"
+  },
+  "try": "sqrt(3^2 + 4^2)"
+ },
+ "T⃗^{B} = M⃗^{S∕B_{p}}": {
+  "title": "Equivalent set: the couple",
+  "about": "The couple of the equivalent set is the original set's moment about the chosen point Bₚ. Together with F⃗^{S} at Bₚ it reproduces the set's effect on a rigid body.",
+  "assumptions": [
+   "The couple depends on the choice of Bₚ; the force does not"
+  ],
+  "vars": [
+   [
+    "T⃗^{B}",
+    "torque of the replacement couple",
+    "N·m"
+   ],
+   [
+    "M⃗^{S∕B_{p}}",
+    "moment of the original set about Bₚ",
+    "N·m"
+   ]
+  ],
+  "related": [
+   [
+    "F⃗^{B_{p}} = F⃗^{S}",
+    "the replacement force"
+   ],
+   [
+    "M⃗^{S∕P} = M⃗^{S∕O} + ^{P}r⃗^{O} × F⃗^{S}",
+    "changing Bₚ"
+   ]
+  ],
+  "example": {
+   "problem": "A beam has 20 N up at x = 0.5 m and 30 N down at x = 2 m. Replace them by a force and couple at Bₚ, the origin.",
+   "steps": [
+    "F⃗^{S} = 20 − 30 = −10 n̂_{y} N",
+    "M_{z} = 0.5(20) − 2(30) = −50 N·m"
+   ],
+   "answer": "F⃗ = −10 n̂_{y} N at Bₚ with T⃗^{B} = −50 n̂_{z} N·m"
+  },
+  "try": "0.5*20 - 2*30"
+ },
+ "^{N}P = F⃗^{Q} · ^{N}v⃗^{Q}": {
+  "title": "Power of a force",
+  "about": "The power of a force in N is the force dotted with the N-velocity of the point it acts on. Only the component along the velocity does work; a force perpendicular to the motion has zero power.",
+  "assumptions": [
+   "Use the velocity of the material point where the force acts (for rolling contact it is zero)"
+  ],
+  "vars": [
+   [
+    "^{N}P",
+    "power in N",
+    "W"
+   ],
+   [
+    "F⃗^{Q}",
+    "force on Q",
+    "N"
+   ],
+   [
+    "^{N}v⃗^{Q}",
+    "velocity of point Q in frame N",
+    "m/s"
+   ]
+  ],
+  "related": [
+   [
+    "^{N}P = T⃗^{B} · ^{N}ω⃗^{B}",
+    "power of a torque"
+   ],
+   [
+    "^{N}W^{S} = ∫ ^{N}P^{S} dt",
+    "work"
+   ]
+  ],
+  "example": {
+   "problem": "A rope pulls a sled with 10 N at 60° to its velocity of 3 m/s. Find the power.",
+   "steps": [
+    "P = F v cos θ = 10 × 3 × cos 60° = 15 W"
+   ],
+   "answer": "^{N}P = 15 W"
+  },
+  "try": "10 N * 3 m/s * cos(60 deg)"
+ },
+ "^{N}P^{S} = Σ_{i=1}^{ν} F⃗^{Q_{i}} · ^{N}v⃗^{Q_{i}}": {
+  "title": "Power of a set of forces",
+  "about": "The power of a set of forces is the sum of each force dotted with the velocity of its own point. It equals the rate of change of kinetic energy for the system.",
+  "assumptions": [
+   "Each force uses the velocity of its own point of application",
+   "For a rigid body, internal forces do no net power"
+  ],
+  "vars": [
+   [
+    "^{N}P^{S}",
+    "power of the set in N",
+    "W"
+   ],
+   [
+    "F⃗^{Q_{i}}",
+    "force at Qᵢ",
+    "N"
+   ],
+   [
+    "^{N}v⃗^{Q_{i}}",
+    "velocity of Qᵢ in N",
+    "m/s"
+   ]
+  ],
+  "related": [
+   [
+    "^{N}P^{S} = d(^{N}K^{S})/dt",
+    "power: rate of K"
+   ]
+  ],
+  "example": {
+   "problem": "A car at 20 m/s has 2000 N of drive force forward and 500 N of drag back. Gravity and the normal forces are vertical. Find the total power.",
+   "steps": [
+    "Vertical forces ⟂ velocity: no power",
+    "P = (2000 − 500) N × 20 m/s = 30 000 W"
+   ],
+   "answer": "^{N}P^{S} = 30 kW"
+  },
+  "try": "(2000 N - 500 N) * 20 m/s to kW"
+ },
+ "^{N}P = T⃗^{B} · ^{N}ω⃗^{B}": {
+  "title": "Power of a torque",
+  "about": "The power of a couple on a rigid body is the torque dotted with the body's angular velocity. It is how shaft power is rated: torque times spin rate.",
+  "assumptions": [
+   "ω must be in rad/s",
+   "Only the torque component along ω⃗ contributes"
+  ],
+  "vars": [
+   [
+    "^{N}P",
+    "power in N",
+    "W"
+   ],
+   [
+    "T⃗^{B}",
+    "torque on B",
+    "N·m"
+   ],
+   [
+    "^{N}ω⃗^{B}",
+    "angular velocity of B in N",
+    "rad/s"
+   ]
+  ],
+  "related": [
+   [
+    "^{N}P = F⃗^{Q} · ^{N}v⃗^{Q}",
+    "power of a force"
+   ]
+  ],
+  "example": {
+   "problem": "A motor delivers 50 N·m at 3000 rpm. Find its power.",
+   "steps": [
+    "ω = 3000 × 2π/60 = 314.16 rad/s",
+    "P = 50 × 314.16 = 15 708 W"
+   ],
+   "answer": "^{N}P ≈ 15.7 kW"
+  },
+  "try": "50 * 3000 * 2 pi / 60"
+ },
+ "^{N}W^{S} = ∫ ^{N}P^{S} dt": {
+  "title": "Work as the time integral of power",
+  "about": "The work done in N by a set of forces over a time interval is the integral of their power. For a constant force along a straight path it reduces to force times distance.",
+  "assumptions": [
+   "Power uses N-velocities, so work depends on the frame"
+  ],
+  "vars": [
+   [
+    "^{N}W^{S}",
+    "work done on S in N",
+    "J"
+   ],
+   [
+    "^{N}P^{S}",
+    "power",
+    "W"
+   ],
+   [
+    "t",
+    "time",
+    "s"
+   ]
+  ],
+  "related": [
+   [
+    "^{N}U^{S} = −^{N}W^{S}",
+    "potential energy"
+   ],
+   [
+    "W̃ = ΔK + ΔU",
+    "work–energy"
+   ]
+  ],
+  "example": {
+   "problem": "A force delivers power P = 6t W (t in s). Find the work done from t = 0 to 4 s.",
+   "steps": [
+    "W = ∫_{0}^{4} 6t dt = 3t^{2} |_{0}^{4}",
+    "W = 3 × 16 = 48 J"
+   ],
+   "answer": "^{N}W^{S} = 48 J"
+  },
+  "try": "3 * 4^2"
+ },
+ "^{N}U^{S} = −^{N}W^{S}": {
+  "title": "Potential energy from work",
+  "about": "When the work done by a force depends only on the configuration (not the path or speed), the force is conservative and has a potential energy equal to minus its work. Lifting against gravity stores the energy that gravity's negative work removes.",
+  "assumptions": [
+   "Valid only for conservative forces: gravity, springs; not friction or drag",
+   "U is defined up to an added constant"
+  ],
+  "vars": [
+   [
+    "^{N}U^{S}",
+    "potential energy",
+    "J"
+   ],
+   [
+    "^{N}W^{S}",
+    "work done by the conservative forces",
+    "J"
+   ]
+  ],
+  "related": [
+   [
+    "U = m g h",
+    "uniform gravity"
+   ],
+   [
+    "U = (1/2) k x^{2}",
+    "spring"
+   ]
+  ],
+  "example": {
+   "problem": "A 2 kg book is lifted 3 m. Find gravity's work and the change in potential energy.",
+   "steps": [
+    "W_{gravity} = −m g h = −2 × 9.81 × 3 = −58.86 J",
+    "ΔU = −W = +58.86 J"
+   ],
+   "answer": "ΔU = 58.86 J"
+  },
+  "try": "2 kg * 9.81 m/s^2 * 3 m to J"
+ },
+ "U = m g h": {
+  "title": "Gravitational potential energy near the ground",
+  "about": "Near Earth's surface, gravity's potential energy is weight times height above a chosen datum. Only changes in h matter.",
+  "assumptions": [
+   "g is uniform: heights small compared with Earth's radius",
+   "h is measured upward from any convenient datum"
+  ],
+  "vars": [
+   [
+    "U",
+    "gravitational potential energy",
+    "J"
+   ],
+   [
+    "m",
+    "mass",
+    "kg"
+   ],
+   [
+    "g",
+    "gravity, ≈ 9.81",
+    "m/s^{2}"
+   ],
+   [
+    "h",
+    "height above the datum",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "U = −(G m_{1} m_{2})/r",
+    "gravity far from the surface"
+   ]
+  ],
+  "example": {
+   "problem": "A 70 kg hiker climbs 500 m. Find the gain in potential energy.",
+   "steps": [
+    "ΔU = 70 × 9.81 × 500 = 343 350 J"
+   ],
+   "answer": "ΔU ≈ 343.4 kJ"
+  },
+  "try": "70 kg * 9.81 m/s^2 * 500 m to kJ"
+ },
+ "U = −(G m_{1} m_{2})/r": {
+  "title": "Gravitational potential energy (inverse square)",
+  "about": "For gravity between two masses at any distance, potential energy is −G m₁ m₂ / r, zero at infinity and more negative the closer they are. Use it for orbits, escape speed and anything where height isn't small.",
+  "assumptions": [
+   "Spherically symmetric masses (or particles); r is centre-to-centre",
+   "Zero datum at r → ∞, so U < 0 for bound bodies"
+  ],
+  "vars": [
+   [
+    "U",
+    "potential energy",
+    "J"
+   ],
+   [
+    "G",
+    "gravitational constant",
+    "N·m^{2}/kg^{2}"
+   ],
+   [
+    "m_{1}, m_{2}",
+    "the two masses",
+    "kg"
+   ],
+   [
+    "r",
+    "centre distance",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "U = m g h",
+    "near the surface"
+   ],
+   [
+    "v_{esc} = √(2GM/R)",
+    "escape speed"
+   ]
+  ],
+  "example": {
+   "problem": "Find the potential energy of a 1000 kg satellite on Earth's surface (M = 5.9742 × 10^{24} kg, R = 6378 km).",
+   "steps": [
+    "U = −6.67 × 10^{−11} × 5.9742 × 10^{24} × 1000 / 6.378 × 10^{6}",
+    "U ≈ −6.25 × 10^{10} J"
+   ],
+   "answer": "U ≈ −6.25 × 10^{10} J"
+  },
+  "try": "-6.67e-11 * 5.9742e24 * 1000 / 6378e3"
+ },
+ "U = (1/2) k x^{2}": {
+  "title": "Spring potential energy",
+  "about": "A linear spring stretched or compressed by x from its natural length stores ½ k x². The energy is the same for stretch and compression.",
+  "assumptions": [
+   "Linear (Hookean) spring",
+   "x is measured from the unstretched length"
+  ],
+  "vars": [
+   [
+    "U",
+    "elastic potential energy",
+    "J"
+   ],
+   [
+    "k",
+    "spring stiffness",
+    "N/m"
+   ],
+   [
+    "x",
+    "stretch or compression",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "F = −k x",
+    "spring force"
+   ],
+   [
+    "ω_{n} = √(k/m)",
+    "mass–spring natural frequency"
+   ]
+  ],
+  "example": {
+   "problem": "A spring with k = 400 N/m is compressed 5 cm. Find the stored energy.",
+   "steps": [
+    "U = ½ (400)(0.05)^{2} = 0.5 J"
+   ],
+   "answer": "U = 0.5 J"
+  },
+  "try": "0.5 * 400 N/m * (5 cm)^2 to J"
+ },
+ "F⃗^{Q} = m^{Q} ^{N}a⃗^{Q}": {
+  "title": "Newton's 2nd law for a particle",
+  "about": "The resultant force on a particle equals its mass times its acceleration in a Newtonian frame N. Write it along each unit vector to get scalar equations.",
+  "assumptions": [
+   "N is Newtonian (inertial); Earth is close enough for most work",
+   "Mass is constant"
+  ],
+  "vars": [
+   [
+    "F⃗^{Q}",
+    "resultant force on Q",
+    "N"
+   ],
+   [
+    "m^{Q}",
+    "mass of Q",
+    "kg"
+   ],
+   [
+    "^{N}a⃗^{Q}",
+    "acceleration of Q in N",
+    "m/s^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "F⃗^{S} = m^{S} ^{N}a⃗^{S_{cm}}",
+    "for a system"
+   ]
+  ],
+  "example": {
+   "problem": "A 1200 kg car has a net forward force of 3000 N. Find its acceleration.",
+   "steps": [
+    "a = F/m = 3000/1200 = 2.5 m/s^{2}"
+   ],
+   "answer": "a = 2.5 m/s^{2}"
+  },
+  "try": "3000 N / 1200 kg"
+ },
+ "F⃗^{S} = m^{S} ^{N}a⃗^{S_{cm}}": {
+  "title": "Newton's 2nd law for a system",
+  "about": "The resultant external force on any system equals its total mass times the acceleration of its mass centre. Internal forces drop out, however the parts move.",
+  "assumptions": [
+   "N is Newtonian",
+   "The system's mass is constant (no mass flowing in or out)"
+  ],
+  "vars": [
+   [
+    "F⃗^{S}",
+    "resultant external force on S",
+    "N"
+   ],
+   [
+    "m^{S}",
+    "total mass",
+    "kg"
+   ],
+   [
+    "^{N}a⃗^{S_{cm}}",
+    "acceleration of S's mass centre",
+    "m/s^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "F⃗^{Q} = m^{Q} ^{N}a⃗^{Q}",
+    "a single particle"
+   ],
+   [
+    "F⃗^{S} = (F⃗^{S})_{external}",
+    "internal forces cancel"
+   ]
+  ],
+  "example": {
+   "problem": "A 75 kg person holding a 5 kg box rides an elevator accelerating up at 1.5 m/s^{2}. Find the floor force on the person.",
+   "steps": [
+    "S = person + box: N − (80)(9.81) = 80 × 1.5",
+    "N = 80 × (9.81 + 1.5) = 904.8 N"
+   ],
+   "answer": "N ≈ 904.8 N"
+  },
+  "try": "80 kg * (9.81 + 1.5) m/s^2"
+ },
+ "M⃗^{S∕O} = ^{N}d(^{N}H⃗^{S∕S_{cm}})/dt + ^{O}r⃗^{S_{cm}} × ^{N}d(^{N}L⃗^{S})/dt": {
+  "title": "Angular momentum principle about any point",
+  "about": "The moment of external forces about any point O equals the rate of change of angular momentum about the mass centre plus the moment, about O, of the rate of change of linear momentum placed at the mass centre. With O at the mass centre the second term vanishes.",
+  "assumptions": [
+   "N is Newtonian; O is any point",
+   "The derivatives are taken in N"
+  ],
+  "vars": [
+   [
+    "M⃗^{S∕O}",
+    "moment of external forces about O",
+    "N·m"
+   ],
+   [
+    "^{N}H⃗^{S∕S_{cm}}",
+    "angular momentum about the mass centre",
+    "kg·m^{2}/s"
+   ],
+   [
+    "^{O}r⃗^{S_{cm}}",
+    "position of the mass centre from O",
+    "m"
+   ],
+   [
+    "^{N}L⃗^{S}",
+    "linear momentum",
+    "kg·m/s"
+   ]
+  ],
+  "related": [
+   [
+    "M⃗_{z}^{B∕P} = I_{zz}^{B∕B_{cm}} ^{N}α⃗^{B} + ^{P}r⃗^{B_{cm}} × m^{B} ^{N}a⃗^{B_{cm}}",
+    "planar rigid body"
+   ],
+   [
+    "Σ M_{O} = I_{O} α",
+    "fixed axis"
+   ]
+  ],
+  "example": {
+   "problem": "A uniform rod (L = 1.2 m) pinned at one end O is released from rest horizontal. Find its angular acceleration.",
+   "steps": [
+    "About O: M = m g L/2",
+    "dH/dt = (mL^{2}/12) α; a_{cm} = α L/2, so r × m a = m (L/2)(αL/2) = mL^{2}α/4",
+    "m g L/2 = (mL^{2}/12 + mL^{2}/4) α = (mL^{2}/3) α",
+    "α = 3g/(2L) = 3 × 9.81/2.4 = 12.26 rad/s^{2}"
+   ],
+   "answer": "α ≈ 12.26 rad/s^{2}"
+  },
+  "try": "3 * 9.81 / (2 * 1.2)"
+ },
+ "M⃗_{z}^{B∕P} = I_{zz}^{B∕B_{cm}} ^{N}α⃗^{B} + ^{P}r⃗^{B_{cm}} × m^{B} ^{N}a⃗^{B_{cm}}": {
+  "title": "Planar Euler equation about any point P",
+  "about": "For a rigid body in plane motion, the moment about any point P equals I_{cm} α plus the moment about P of m a⃗_{cm}. Choose P where unknown forces act so they drop out.",
+  "assumptions": [
+   "Planar motion; α⃗ and moments along ẑ",
+   "I_{zz} is about the mass centre, not P",
+   "P may be any point, moving or not"
+  ],
+  "vars": [
+   [
+    "M_{z}^{B∕P}",
+    "moment of external forces about P",
+    "N·m"
+   ],
+   [
+    "I_{zz}^{B∕B_{cm}}",
+    "moment of inertia about the mass centre",
+    "kg·m^{2}"
+   ],
+   [
+    "^{N}α⃗^{B}",
+    "angular acceleration",
+    "rad/s^{2}"
+   ],
+   [
+    "^{P}r⃗^{B_{cm}}",
+    "position of mass centre from P",
+    "m"
+   ],
+   [
+    "^{N}a⃗^{B_{cm}}",
+    "acceleration of the mass centre",
+    "m/s^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "F⃗^{S} = m^{S} ^{N}a⃗^{S_{cm}}",
+    "Newton for the body"
+   ]
+  ],
+  "example": {
+   "problem": "A 50 kg crate (0.6 m wide, 1.0 m tall, mass centre at its middle) rides a truck bed. What acceleration tips it about its rear bottom edge P?",
+   "steps": [
+    "Not rotating: α = 0, so M^{B∕P} = r⃗ × m a⃗_{cm}",
+    "On the verge of tipping, only gravity has a moment about P: m g (0.3) = m a (0.5)",
+    "a = 9.81 × 0.3/0.5 = 5.886 m/s^{2}"
+   ],
+   "answer": "a ≈ 5.89 m/s^{2}"
+  },
+  "try": "9.81 * 0.3 / 0.5"
+ },
+ "M⃗_{z}^{B∕B_{p}} = I_{zz}^{B∕B_{p}} ^{N}α⃗^{B} + ^{B_{p}}r⃗^{B_{cm}} × m^{B} ^{N}a⃗^{B_{p}}": {
+  "title": "Planar Euler equation about a body point Bₚ",
+  "about": "In plane motion, the moment about a point Bₚ on the body equals I about Bₚ times α plus a term from Bₚ's own acceleration. When Bₚ is fixed, or its acceleration points along the line to the mass centre, the last term drops out.",
+  "assumptions": [
+   "Bₚ is fixed on B; I_{zz} is about Bₚ",
+   "Last term zero if Bₚ is the mass centre, a fixed pin, or a(Bₚ) ∥ r⃗ to the mass centre (rolling contact on a flat)"
+  ],
+  "vars": [
+   [
+    "M_{z}^{B∕B_{p}}",
+    "moment about Bₚ",
+    "N·m"
+   ],
+   [
+    "I_{zz}^{B∕B_{p}}",
+    "moment of inertia about Bₚ",
+    "kg·m^{2}"
+   ],
+   [
+    "^{N}α⃗^{B}",
+    "angular acceleration",
+    "rad/s^{2}"
+   ],
+   [
+    "^{N}a⃗^{B_{p}}",
+    "acceleration of Bₚ",
+    "m/s^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "I^{B∕P} = I^{B∕B_{cm}} + m d^{2}",
+    "parallel-axis"
+   ]
+  ],
+  "example": {
+   "problem": "A uniform disk (r = 0.2 m) rolls without slipping down a 30° slope. Take Bₚ at the contact point and find α.",
+   "steps": [
+    "The contact point's acceleration (r ω^{2}, toward the centre) is parallel to ^{B_{p}}r⃗^{B_{cm}}, so the last term is 0",
+    "M = m g r sin 30°; I^{B∕B_{p}} = ½ m r^{2} + m r^{2} = (3/2) m r^{2}",
+    "α = 2 g sin 30°/(3r) = 2 × 9.81 × 0.5/0.6 = 16.35 rad/s^{2}"
+   ],
+   "answer": "α ≈ 16.35 rad/s^{2}"
+  },
+  "try": "2 * 9.81 * sin(30 deg) / (3 * 0.2)"
+ },
+ "M⃗^{B∕B_{p}} = I⃡^{B∕B_{p}} · ^{N}α⃗^{B} + ^{N}ω⃗^{B} × (I⃡^{B∕B_{p}} · ^{N}ω⃗^{B}) + ^{B_{p}}r⃗^{B_{cm}} × m^{B} ^{N}a⃗^{B_{p}}": {
+  "title": "Euler's equation in 3D",
+  "about": "For a rigid body in 3D, the moment about a body point Bₚ equals I⃡·α⃗ plus the gyroscopic term ω⃗ × (I⃡·ω⃗) plus a term from Bₚ's acceleration. The gyroscopic term is why spinning tops precess and why unbalanced shafts load their bearings.",
+  "assumptions": [
+   "B is rigid; I⃡ about Bₚ",
+   "Last term zero if Bₚ is the mass centre or fixed in N",
+   "Easiest in principal axes fixed in B"
+  ],
+  "vars": [
+   [
+    "M⃗^{B∕B_{p}}",
+    "moment about Bₚ",
+    "N·m"
+   ],
+   [
+    "I⃡^{B∕B_{p}}",
+    "inertia dyadic about Bₚ",
+    "kg·m^{2}"
+   ],
+   [
+    "^{N}α⃗^{B}",
+    "angular acceleration",
+    "rad/s^{2}"
+   ],
+   [
+    "^{N}ω⃗^{B}",
+    "angular velocity",
+    "rad/s"
+   ]
+  ],
+  "related": [
+   [
+    "M_{1} = I_{1} ω̇_{1} − (I_{2} − I_{3}) ω_{2} ω_{3}",
+    "principal-axis form"
+   ]
+  ],
+  "example": {
+   "problem": "A thin disk (m = 2 kg, r = 0.1 m) spins at 100 rad/s about a horizontal axle through its centre, while the axle turns about the vertical at 2 rad/s. Find the moment needed on the disk.",
+   "steps": [
+    "I_{s} = ½ m r^{2} = 0.01 kg·m^{2}",
+    "With ω⃗ = ω_{s} ŝ + Ω ẑ: I⃡·α⃗ + ω⃗ × (I⃡·ω⃗) = I_{s} ω_{s} Ω (ẑ × ŝ)",
+    "M = 0.01 × 100 × 2 = 2 N·m, horizontal and ⟂ to the axle"
+   ],
+   "answer": "|M⃗| = 2 N·m"
+  },
+  "try": "0.5*2*0.1^2*100*2"
+ },
+ "M_{1} = I_{1} ω̇_{1} − (I_{2} − I_{3}) ω_{2} ω_{3}": {
+  "title": "Euler's equations in principal axes",
+  "about": "With body-fixed principal axes through the mass centre (or a fixed point), Euler's equation splits into three scalar equations; the other two follow by cycling 1→2→3. The product terms couple the spins, which makes motion about the middle axis unstable.",
+  "assumptions": [
+   "Axes 1, 2, 3 are principal axes fixed in B",
+   "About the mass centre or a point fixed in N",
+   "Cycle: M_{2} = I_{2} ω̇_{2} − (I_{3} − I_{1}) ω_{3} ω_{1}, M_{3} = I_{3} ω̇_{3} − (I_{1} − I_{2}) ω_{1} ω_{2}"
+  ],
+  "vars": [
+   [
+    "M_{1}",
+    "moment about axis 1",
+    "N·m"
+   ],
+   [
+    "I_{1}, I_{2}, I_{3}",
+    "principal moments of inertia",
+    "kg·m^{2}"
+   ],
+   [
+    "ω_{1}, ω_{2}, ω_{3}",
+    "body angular velocity components",
+    "rad/s"
+   ],
+   [
+    "ω̇_{1}",
+    "rate of ω_{1}",
+    "rad/s^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "M⃗^{B∕B_{p}} = I⃡^{B∕B_{p}} · ^{N}α⃗^{B} + ^{N}ω⃗^{B} × (I⃡^{B∕B_{p}} · ^{N}ω⃗^{B}) + ^{B_{p}}r⃗^{B_{cm}} × m^{B} ^{N}a⃗^{B_{p}}",
+    "vector form"
+   ]
+  ],
+  "example": {
+   "problem": "A body has I_{1} = 2, I_{2} = 3, I_{3} = 4 kg·m^{2}. At an instant ω_{2} = 1 rad/s, ω_{3} = 2 rad/s and ω̇_{1} = 0.5 rad/s^{2}. Find M_{1}.",
+   "steps": [
+    "M_{1} = 2(0.5) − (3 − 4)(1)(2) = 1 + 2 = 3 N·m"
+   ],
+   "answer": "M_{1} = 3 N·m"
+  },
+  "try": "2*0.5 - (3-4)*1*2"
+ },
+ "Σ M_{O} = I_{O} α": {
+  "title": "Rotation about a fixed axis",
+  "about": "For a body turning in a plane about a fixed pin O (or about its mass centre), the sum of moments equals the moment of inertia about that axis times the angular acceleration.",
+  "assumptions": [
+   "O is a fixed pin or the mass centre; otherwise add the r⃗ × m a⃗ term",
+   "Planar motion"
+  ],
+  "vars": [
+   [
+    "Σ M_{O}",
+    "sum of moments about O",
+    "N·m"
+   ],
+   [
+    "I_{O}",
+    "moment of inertia about O",
+    "kg·m^{2}"
+   ],
+   [
+    "α",
+    "angular acceleration",
+    "rad/s^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "I = m L^{2}/3",
+    "rod or door about one edge"
+   ],
+   [
+    "F = m a",
+    "for the mass centre"
+   ]
+  ],
+  "example": {
+   "problem": "A 20 kg door 0.9 m wide is pushed with 30 N at 0.8 m from the hinge, perpendicular to it. Find α.",
+   "steps": [
+    "I_{O} = m w^{2}/3 = 20 × 0.81/3 = 5.4 kg·m^{2}",
+    "M = 30 × 0.8 = 24 N·m",
+    "α = 24/5.4 = 4.44 rad/s^{2}"
+   ],
+   "answer": "α ≈ 4.44 rad/s^{2}"
+  },
+  "try": "30*0.8/(20*0.9^2/3)"
+ },
+ "^{N}P^{S} = d(^{N}K^{S})/dt": {
+  "title": "Power equals the rate of kinetic energy",
+  "about": "The total power of all forces on a system (internal ones too, if parts deform) equals how fast its kinetic energy changes in N. Integrate it in time to get the work–energy theorem.",
+  "assumptions": [
+   "N is Newtonian",
+   "For a rigid body internal forces have zero power"
+  ],
+  "vars": [
+   [
+    "^{N}P^{S}",
+    "power of all forces on S",
+    "W"
+   ],
+   [
+    "^{N}K^{S}",
+    "kinetic energy",
+    "J"
+   ]
+  ],
+  "related": [
+   [
+    "W̃ = ΔK + ΔU",
+    "integrated form"
+   ]
+  ],
+  "example": {
+   "problem": "A 1000 kg car at 20 m/s accelerates at 2 m/s^{2}. What net power is going into its kinetic energy?",
+   "steps": [
+    "dK/dt = m v (dv/dt) = 1000 × 20 × 2 = 40 000 W"
+   ],
+   "answer": "^{N}P^{S} = 40 kW"
+  },
+  "try": "1000 kg * 20 m/s * 2 m/s^2 to kW"
+ },
+ "W̃ = ΔK + ΔU": {
+  "title": "Work–energy with potential energy",
+  "about": "The work of the forces not already in the potential energy (friction, drag, motors, pushes) equals the change in kinetic plus potential energy. With no such forces, energy is conserved.",
+  "assumptions": [
+   "W̃ excludes gravity and spring forces, which are in U",
+   "N is Newtonian"
+  ],
+  "vars": [
+   [
+    "W̃",
+    "work of non-conservative forces",
+    "J"
+   ],
+   [
+    "ΔK",
+    "change in kinetic energy",
+    "J"
+   ],
+   [
+    "ΔU",
+    "change in potential energy",
+    "J"
+   ]
+  ],
+  "related": [
+   [
+    "^{N}K^{S} + ^{N}U^{S} = constant",
+    "when W̃ = 0"
+   ]
+  ],
+  "example": {
+   "problem": "A 5 kg block slides from rest down a ramp, dropping 2 m; friction does −30 J. Find its speed at the bottom.",
+   "steps": [
+    "ΔU = −5 × 9.81 × 2 = −98.1 J",
+    "ΔK = W̃ − ΔU = −30 + 98.1 = 68.1 J",
+    "v = √(2 × 68.1/5) = 5.22 m/s"
+   ],
+   "answer": "v ≈ 5.22 m/s"
+  },
+  "try": "sqrt(2*(5*9.81*2 - 30)/5)"
+ },
+ "^{N}K^{S} + ^{N}U^{S} = constant": {
+  "title": "Conservation of mechanical energy",
+  "about": "If only conservative forces do work, kinetic plus potential energy stays constant. Compare two states and solve for a speed or a height without any accelerations.",
+  "assumptions": [
+   "Only gravity and springs do work; constraint forces do no work",
+   "No friction, drag or motor"
+  ],
+  "vars": [
+   [
+    "^{N}K^{S}",
+    "kinetic energy",
+    "J"
+   ],
+   [
+    "^{N}U^{S}",
+    "potential energy",
+    "J"
+   ]
+  ],
+  "related": [
+   [
+    "W̃ = ΔK + ΔU",
+    "when other forces work"
+   ],
+   [
+    "U = m g h",
+    "gravity"
+   ]
+  ],
+  "example": {
+   "problem": "A ball is dropped from 10 m. Find its speed just before it lands (no air drag).",
+   "steps": [
+    "m g h = ½ m v^{2}",
+    "v = √(2 × 9.81 × 10) = 14.0 m/s"
+   ],
+   "answer": "v ≈ 14.0 m/s"
+  },
+  "try": "sqrt(2 * 9.81 m/s^2 * 10 m)"
+ },
+ "F⃗^{S} · û = m^{S} ^{N}a⃗^{S_{cm}} · û": {
+  "title": "D'Alembert: Newton along one direction",
+  "about": "Dot Newton's law with a unit vector û to get one scalar equation. Picking û perpendicular to unknown forces removes them, which is the fastest route to a single unknown.",
+  "assumptions": [
+   "N is Newtonian",
+   "û is any unit vector; best one ⟂ the unknown forces"
+  ],
+  "vars": [
+   [
+    "F⃗^{S}",
+    "resultant external force",
+    "N"
+   ],
+   [
+    "û",
+    "chosen unit vector",
+    ""
+   ],
+   [
+    "^{N}a⃗^{S_{cm}}",
+    "acceleration of the mass centre",
+    "m/s^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "F⃗^{S} = m^{S} ^{N}a⃗^{S_{cm}}",
+    "full vector form"
+   ]
+  ],
+  "example": {
+   "problem": "A block slides down a frictionless 30° incline. Find its acceleration.",
+   "steps": [
+    "Take û down the slope: the normal force is ⟂ û and drops out",
+    "m g sin 30° = m a",
+    "a = 9.81 × 0.5 = 4.905 m/s^{2}"
+   ],
+   "answer": "a ≈ 4.905 m/s^{2}"
+  },
+  "try": "9.81 m/s^2 * sin(30 deg)"
+ },
+ "−∂U/∂q_{r} = d(∂K/∂q̇_{r})/dt − ∂K/∂q_{r}": {
+  "title": "Lagrange's equations (second kind)",
+  "about": "Writes one equation of motion per generalized coordinate qᵣ from the scalar energies K and U, with no constraint forces. Add a generalized force term for non-conservative forces.",
+  "assumptions": [
+   "Holonomic constraints and independent coordinates qᵣ",
+   "Only conservative forces as written; otherwise add the generalized force Fᵣ on the left",
+   "K in a Newtonian frame"
+  ],
+  "vars": [
+   [
+    "q_{r}",
+    "generalized coordinate",
+    ""
+   ],
+   [
+    "q̇_{r}",
+    "its time derivative",
+    ""
+   ],
+   [
+    "K",
+    "kinetic energy",
+    "J"
+   ],
+   [
+    "U",
+    "potential energy",
+    "J"
+   ]
+  ],
+  "related": [
+   [
+    "^{N}K^{S} + ^{N}U^{S} = constant",
+    "energy integral"
+   ]
+  ],
+  "example": {
+   "problem": "A simple pendulum (L = 0.5 m) is at θ = 20°. Use Lagrange to find θ̈.",
+   "steps": [
+    "K = ½ m L^{2} θ̇^{2}, U = −m g L cos θ",
+    "∂U/∂θ = m g L sin θ; d(∂K/∂θ̇)/dt = m L^{2} θ̈; ∂K/∂θ = 0",
+    "θ̈ = −(g/L) sin θ = −(9.81/0.5) sin 20° = −6.71 rad/s^{2}"
+   ],
+   "answer": "θ̈ ≈ −6.71 rad/s^{2}"
+  },
+  "try": "-9.81/0.5*sin(20 deg)"
+ },
+ "Pick a system S that answers the question; draw its FBD": {
+  "title": "Choose the system, then draw its FBD",
+  "about": "Pick a system whose free-body diagram includes the force or motion you want, so the equations answer the question. Sometimes the whole assembly gives the motion, and one part then gives the internal force.",
+  "assumptions": [
+   "A force can only appear in an equation if it is external to the chosen system"
+  ],
+  "vars": [],
+  "related": [
+   [
+    "F⃗^{S} = m^{S} ^{N}a⃗^{S_{cm}}",
+    "Newton for the chosen system"
+   ]
+  ],
+  "example": {
+   "problem": "Blocks A (2 kg) and B (3 kg) sit side by side on a frictionless floor; a 30 N push acts on A. Find the contact force between them.",
+   "steps": [
+    "S = A + B: a = 30/5 = 6 m/s^{2} (contact force is internal)",
+    "S = B alone: the contact force is external, N = 3 × 6 = 18 N"
+   ],
+   "answer": "N = 18 N"
+  },
+  "try": "3 kg * 30 N / (2 kg + 3 kg)"
+ },
+ "Draw only external forces on S: contact and distance (gravity)": {
+  "title": "Draw only external forces",
+  "about": "An FBD shows the forces from outside the system: contact forces wherever it touches something, and distance forces like gravity. Forces between its own parts are left off.",
+  "assumptions": [
+   "Every contact point gets a force (normal, friction, pin)",
+   "Gravity acts at the mass centre"
+  ],
+  "vars": [],
+  "related": [
+   [
+    "F⃗^{S} = (F⃗^{S})_{external}",
+    "why internal forces are left off"
+   ]
+  ],
+  "example": {
+   "problem": "A 10 kg crate is pulled across a floor by a 20 N horizontal rope; μ_{k} = 0.15. Find its acceleration.",
+   "steps": [
+    "External forces: gravity 98.1 N, normal 98.1 N, rope 20 N, friction 0.15 × 98.1 = 14.7 N",
+    "a = (20 − 14.7)/10 = 0.528 m/s^{2}"
+   ],
+   "answer": "a ≈ 0.528 m/s^{2}"
+  },
+  "try": "(20 N - 0.15*10 kg*9.81 m/s^2)/10 kg"
+ },
+ "Replace a messy set of forces with one force at a point and a couple": {
+  "title": "Replace a messy set by a force and a couple",
+  "about": "A distributed or scattered set of forces can be swapped for its resultant at a point plus the couple equal to its moment about that point. The motion of a rigid body is unchanged and the algebra gets much shorter.",
+  "assumptions": [
+   "Valid for rigid-body motion, not for internal stresses"
+  ],
+  "vars": [],
+  "related": [
+   [
+    "F⃗^{B_{p}} = F⃗^{S}",
+    "the force"
+   ],
+   [
+    "T⃗^{B} = M⃗^{S∕B_{p}}",
+    "the couple"
+   ]
+  ],
+  "example": {
+   "problem": "A beam carries a uniform load of 2 kN/m over its first 3 m. Replace it with one force.",
+   "steps": [
+    "F = 2 kN/m × 3 m = 6 kN",
+    "Placed at the load's centroid, x = 1.5 m, no couple is needed (about the end it is 6 × 1.5 = 9 kN·m)"
+   ],
+   "answer": "6 kN at x = 1.5 m"
+  },
+  "try": "2 kN/m * 3 m"
+ },
+ "Name points, unit vectors and force and torque measures as needed": {
+  "title": "Name points, unit vectors and measures",
+  "about": "Label the points, unit vectors and unknown force and torque measures before writing equations. Clear names turn the geometry into vectors you can cross and dot without sign mistakes.",
+  "assumptions": [
+   "Use right-handed unit vector sets fixed in the frame or body they belong to"
+  ],
+  "vars": [],
+  "related": [
+   [
+    "M⃗^{F⃗∕O} = ^{O}r⃗^{Q} × F⃗",
+    "positions feed moments"
+   ]
+  ],
+  "example": {
+   "problem": "A 0.4 m link OA makes 30° with horizontal n̂_{x}. Define â along OA and write ^{O}r⃗^{A} in n̂_{x}, n̂_{y}.",
+   "steps": [
+    "â = cos 30° n̂_{x} + sin 30° n̂_{y}",
+    "^{O}r⃗^{A} = 0.4 â = 0.346 n̂_{x} + 0.2 n̂_{y} m"
+   ],
+   "answer": "^{O}r⃗^{A} ≈ 0.346 n̂_{x} + 0.2 n̂_{y} m"
+  },
+  "try": "0.4 m * cos(30 deg)"
+ },
+ "Use action and reaction to cut down the unknowns": {
+  "title": "Action and reaction cut the unknowns",
+  "about": "The force one body puts on another is minus the force it receives, so each connection needs only one set of unknowns, shared by both FBDs.",
+  "assumptions": [
+   "Pins, strings and contacts between bodies in the problem"
+  ],
+  "vars": [],
+  "related": [
+   [
+    "F⃗^{P∕Q} = −F⃗^{Q∕P}",
+    "Newton's 3rd law"
+   ]
+  ],
+  "example": {
+   "problem": "Block A (4 kg) hangs by a string from block B (6 kg), which hangs from the ceiling. Find both string tensions.",
+   "steps": [
+    "A: T_{1} = 4 × 9.81 = 39.24 N",
+    "B: T_{1} acts down on B (same unknown); T_{2} = 6 × 9.81 + 39.24 = 98.1 N"
+   ],
+   "answer": "T_{1} ≈ 39.2 N, T_{2} = 98.1 N"
+  },
+  "try": "(6 kg + 4 kg) * 9.81 m/s^2"
+ },
+ "Motion limited along û at Q: there is a force on Q along û": {
+  "title": "A limited motion means a constraint force",
+  "about": "Wherever a point can't move along some direction û, something pushes on it along û: a normal force, a pin reaction, a string. Put that force on the FBD as an unknown.",
+  "assumptions": [
+   "The force may only push (contact) or only pull (string); check its sign"
+  ],
+  "vars": [],
+  "related": [
+   [
+    "F⃗^{Q} = m^{Q} ^{N}a⃗^{Q}",
+    "solves for the constraint force"
+   ]
+  ],
+  "example": {
+   "problem": "A 1200 kg car crosses a hill crest of radius 50 m at 15 m/s. Find the road's normal force.",
+   "steps": [
+    "The road limits motion downward, so a normal force N acts up",
+    "m g − N = m v^{2}/R",
+    "N = 1200 (9.81 − 15^{2}/50) = 6372 N"
+   ],
+   "answer": "N ≈ 6372 N"
+  },
+  "try": "1200 kg * (9.81 m/s^2 - (15 m/s)^2/(50 m))"
+ },
+ "Rotation limited about û: there is a torque on B about û": {
+  "title": "A limited rotation means a constraint torque",
+  "about": "Where a body can't rotate about some axis û (a weld, a clamp, a bearing pair), the support applies a torque about û. Include it as an unknown on the FBD.",
+  "assumptions": [
+   "A single pin allows rotation about its axis: no torque there, only force"
+  ],
+  "vars": [],
+  "related": [
+   [
+    "Σ M_{O} = I_{O} α",
+    "solves for the torque"
+   ]
+  ],
+  "example": {
+   "problem": "A 5 kg sign hangs at the end of a bar welded to a wall, its weight 1.2 m from the wall. Find the torque the weld supplies (bar mass neglected).",
+   "steps": [
+    "The weld stops rotation, so it supplies a torque",
+    "Statics about the weld: T = 5 × 9.81 × 1.2 = 58.9 N·m"
+   ],
+   "answer": "T ≈ 58.9 N·m"
+  },
+  "try": "5*9.81*1.2"
+ },
+ "Road-map: variable, translate or rotate, û, S, FBD, about point": {
+  "title": "The road-map for an equation of motion",
+  "about": "For each unknown: decide whether it is a translation or a rotation, pick a direction û, a system S, draw its FBD, and (for rotation) the point to take moments about. Choose so unknown forces drop out.",
+  "assumptions": [
+   "Moments about a pin remove the pin force; dotting with û ⟂ a force removes it"
+  ],
+  "vars": [],
+  "related": [
+   [
+    "M⃗_{z}^{B∕P} = I_{zz}^{B∕B_{cm}} ^{N}α⃗^{B} + ^{P}r⃗^{B_{cm}} × m^{B} ^{N}a⃗^{B_{cm}}",
+    "rotation"
+   ],
+   [
+    "F⃗^{S} · û = m^{S} ^{N}a⃗^{S_{cm}} · û",
+    "translation"
+   ]
+  ],
+  "example": {
+   "problem": "A 1 m uniform rod pinned at O swings. Find θ̈ when it is horizontal.",
+   "steps": [
+    "Variable θ̈: rotation; û = n̂_{z}; S = rod; FBD: gravity and pin force; about O",
+    "m g (L/2) = (mL^{2}/3) θ̈",
+    "θ̈ = 3g/(2L) = 14.7 rad/s^{2}"
+   ],
+   "answer": "|θ̈| ≈ 14.7 rad/s^{2}"
+  },
+  "try": "3*9.81/(2*1)"
+ },
+ "Then add constraint equations and their derivatives (linkages, rolling)": {
+  "title": "Add constraint equations",
+  "about": "Motion equations alone often have more unknowns than equations; geometric constraints (rolling, linkages, strings) and their time derivatives close the set.",
+  "assumptions": [
+   "Differentiate a position constraint to get velocity and acceleration relations"
+  ],
+  "vars": [],
+  "related": [
+   [
+    "v = r ω, a = r α",
+    "rolling without slip"
+   ]
+  ],
+  "example": {
+   "problem": "A uniform disk rolls without slipping down a 30° slope. Find the acceleration of its centre.",
+   "steps": [
+    "m g sin θ − f = m a; f r = ½ m r^{2} α",
+    "Constraint: a = r α",
+    "a = (2/3) g sin θ = (2/3)(9.81)(0.5) = 3.27 m/s^{2}"
+   ],
+   "answer": "a ≈ 3.27 m/s^{2}"
+  },
+  "try": "2/3 * 9.81 m/s^2 * sin(30 deg)"
+ },
+ "Momentum is conserved along û if no external force (or moment) acts there": {
+  "title": "Conservation of momentum along a direction",
+  "about": "If no external force acts along û, linear momentum along û is constant; if no external moment acts about an axis, angular momentum about it is constant. Great for collisions, throws and spinning skaters.",
+  "assumptions": [
+   "N is Newtonian",
+   "Brief impulsive internal forces are fine; external ones along û are not"
+  ],
+  "vars": [],
+  "related": [
+   [
+    "F⃗^{S} = m^{S} ^{N}a⃗^{S_{cm}}",
+    "zero force along û ⇒ zero change"
+   ]
+  ],
+  "example": {
+   "problem": "A 60 kg skater at rest on ice throws a 2 kg ball horizontally at 10 m/s. Find her recoil speed.",
+   "steps": [
+    "No horizontal external force: 0 = 2 × 10 − 60 v",
+    "v = 20/60 = 0.333 m/s"
+   ],
+   "answer": "v ≈ 0.333 m/s"
+  },
+  "try": "2 kg * 10 m/s / 60 kg"
+ },
+ "ω_{n} = √(g/L)": {
+  "title": "Simple pendulum natural frequency",
+  "about": "A point mass on a light string of length L swings with natural frequency √(g/L), independent of the mass. Period T = 2π/ω_{n}.",
+  "assumptions": [
+   "Small swings (sin θ ≈ θ, under about 15°)",
+   "Massless string, point mass, no damping"
+  ],
+  "vars": [
+   [
+    "ω_{n}",
+    "natural frequency",
+    "rad/s"
+   ],
+   [
+    "g",
+    "gravity",
+    "m/s^{2}"
+   ],
+   [
+    "L",
+    "string length",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "ω_{n} = √(m g d/I_{O})",
+    "physical pendulum"
+   ],
+   [
+    "T = 2π/ω_{n}",
+    "period"
+   ]
+  ],
+  "example": {
+   "problem": "Find ω_{n} and the period of a 1 m pendulum.",
+   "steps": [
+    "ω_{n} = √(9.81/1) = 3.13 rad/s",
+    "T = 2π/3.13 = 2.01 s"
+   ],
+   "answer": "ω_{n} ≈ 3.13 rad/s (T ≈ 2.01 s)"
+  },
+  "try": "sqrt(9.81 / 1)"
+ },
+ "ω_{n} = √(m g d/I_{O})": {
+  "title": "Physical pendulum natural frequency",
+  "about": "A rigid body swinging about a pivot O has natural frequency √(m g d/I_{O}), with d the distance from O to the mass centre and I_{O} the moment of inertia about O.",
+  "assumptions": [
+   "Small angles",
+   "I_{O} about the pivot axis (parallel-axis theorem: I_{cm} + m d^{2})"
+  ],
+  "vars": [
+   [
+    "ω_{n}",
+    "natural frequency",
+    "rad/s"
+   ],
+   [
+    "m",
+    "mass",
+    "kg"
+   ],
+   [
+    "d",
+    "pivot to mass centre",
+    "m"
+   ],
+   [
+    "I_{O}",
+    "moment of inertia about O",
+    "kg·m^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "ω_{n} = √(g/L)",
+    "simple pendulum: I_{O} = m L^{2}, d = L"
+   ]
+  ],
+  "example": {
+   "problem": "A uniform 1 m rod swings about one end. Find ω_{n}.",
+   "steps": [
+    "d = 0.5 m, I_{O} = m L^{2}/3",
+    "ω_{n} = √(g d/(L^{2}/3)) = √(9.81 × 0.5 × 3) = 3.84 rad/s"
+   ],
+   "answer": "ω_{n} ≈ 3.84 rad/s"
+  },
+  "try": "sqrt(9.81 * 0.5 / (1/3))"
+ },
+ "Standard g ‖ 9.80665 m/s^{2}": {
+  "title": "Standard gravity",
+  "about": "The defined standard acceleration of free fall, 9.80665 m/s², used to turn mass into weight and to define kgf and g-loads. Local g varies from about 9.78 at the equator to 9.83 at the poles.",
+  "assumptions": [
+   "A defined value; real g depends on latitude and altitude"
+  ],
+  "vars": [
+   [
+    "g",
+    "standard gravity",
+    "m/s^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "W = m g",
+    "weight"
+   ]
+  ],
+  "example": {
+   "problem": "Find the standard weight of a 75 kg person.",
+   "steps": [
+    "W = 75 × 9.80665 = 735.5 N"
+   ],
+   "answer": "W ≈ 735.5 N"
+  },
+  "try": "75 kg * 9.80665 m/s^2"
+ },
+ "G ‖ 6.67 × 10^{−11} N m^{2}/kg^{2}": {
+  "title": "Universal gravitational constant",
+  "about": "G sets the strength of gravity between any two masses: F = G m₁ m₂/r². With a planet's mass and radius it gives surface gravity, orbit speeds and escape speeds.",
+  "assumptions": [
+   "Measured value about 6.674 × 10^{−11}; 6.67 is the rounded book value"
+  ],
+  "vars": [
+   [
+    "G",
+    "gravitational constant",
+    "N·m^{2}/kg^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "g = G M/R^{2}",
+    "surface gravity"
+   ],
+   [
+    "U = −(G m_{1} m_{2})/r",
+    "potential energy"
+   ]
+  ],
+  "example": {
+   "problem": "Use G to find the Earth's surface gravity (M = 5.9742 × 10^{24} kg, R = 6378 km).",
+   "steps": [
+    "g = G M/R^{2} = 6.67 × 10^{−11} × 5.9742 × 10^{24}/(6.378 × 10^{6})^{2}",
+    "g ≈ 9.80 m/s^{2}"
+   ],
+   "answer": "g ≈ 9.80 m/s^{2}"
+  },
+  "try": "6.67e-11 * 5.9742e24 / (6378e3)^2"
+ },
+ "Speed of light ‖ 299792458 m/s": {
+  "title": "Speed of light",
+  "about": "The speed of light in vacuum is exactly 299 792 458 m/s (it defines the metre). Use it for signal delays and wherever speeds approach relativistic ones.",
+  "assumptions": [
+   "Exact by definition, in vacuum"
+  ],
+  "vars": [
+   [
+    "c",
+    "speed of light",
+    "m/s"
+   ]
+  ],
+  "related": [
+   [
+    "t = d/c",
+    "light travel time"
+   ]
+  ],
+  "example": {
+   "problem": "How long does sunlight take to reach Earth (149 597 870 km)?",
+   "steps": [
+    "t = 1.496 × 10^{11} m / 2.998 × 10^{8} m/s = 499 s ≈ 8.3 min"
+   ],
+   "answer": "t ≈ 499 s"
+  },
+  "try": "149597870 km / 299792458 m/s"
+ },
+ "Mass of the Earth ‖ 5.9742 × 10^{24} kg": {
+  "title": "Mass of the Earth",
+  "about": "Earth's mass, 5.9742 × 10^{24} kg. With its volume or radius it gives mean density, surface gravity and orbital speeds of satellites.",
+  "assumptions": [
+   "Known through GM, measured very precisely from satellite orbits"
+  ],
+  "vars": [
+   [
+    "M_{E}",
+    "mass of the Earth",
+    "kg"
+   ]
+  ],
+  "related": [
+   [
+    "g = G M/R^{2}",
+    "surface gravity"
+   ]
+  ],
+  "example": {
+   "problem": "Find Earth's mean density from its mass and volume (1.0832 × 10^{12} km^{3}).",
+   "steps": [
+    "V = 1.0832 × 10^{21} m^{3}",
+    "ρ = 5.9742 × 10^{24}/1.0832 × 10^{21} = 5515 kg/m^{3}"
+   ],
+   "answer": "ρ ≈ 5.515 g/cm^{3}"
+  },
+  "try": "5.9742e24 kg / 1.0832e12 km^3 to g/cm^3"
+ },
+ "Mass of the Moon ‖ 7.34 × 10^{22} kg": {
+  "title": "Mass of the Moon",
+  "about": "The Moon's mass, 7.34 × 10^{22} kg, about 1/81 of the Earth's. With its radius it gives the Moon's surface gravity.",
+  "assumptions": [],
+  "vars": [
+   [
+    "M_{M}",
+    "mass of the Moon",
+    "kg"
+   ]
+  ],
+  "related": [
+   [
+    "g = G M/R^{2}",
+    "surface gravity"
+   ]
+  ],
+  "example": {
+   "problem": "Find the Moon's surface gravity (R = 1737 km).",
+   "steps": [
+    "g = 6.67 × 10^{−11} × 7.34 × 10^{22}/(1.737 × 10^{6})^{2} = 1.62 m/s^{2}"
+   ],
+   "answer": "g ≈ 1.62 m/s^{2}"
+  },
+  "try": "6.67e-11 * 7.34e22 / (1737e3)^2"
+ },
+ "Earth to Moon ‖ 384400 km": {
+  "title": "Earth–Moon distance",
+  "about": "The mean centre-to-centre distance from the Earth to the Moon, 384 400 km, about 60 Earth radii.",
+  "assumptions": [
+   "Mean value; the orbit is slightly elliptical (about 363 000 to 406 000 km)"
+  ],
+  "vars": [
+   [
+    "r",
+    "Earth–Moon distance",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "t = d/c",
+    "light travel time"
+   ]
+  ],
+  "example": {
+   "problem": "How long does a radio signal take to reach the Moon?",
+   "steps": [
+    "t = 3.844 × 10^{8} m / 2.998 × 10^{8} m/s = 1.28 s"
+   ],
+   "answer": "t ≈ 1.28 s"
+  },
+  "try": "384400 km / 299792458 m/s"
+ },
+ "Earth to Sun (mean) ‖ 149597870 km": {
+  "title": "Earth–Sun mean distance",
+  "about": "The mean Earth–Sun distance, 149 597 870 km, is the astronomical unit (AU). It sets the size of Earth's orbit.",
+  "assumptions": [
+   "Mean value; the orbit runs from perihelion to aphelion"
+  ],
+  "vars": [
+   [
+    "r",
+    "Earth–Sun distance",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "v = 2π r/T",
+    "orbital speed of a near-circular orbit"
+   ]
+  ],
+  "example": {
+   "problem": "Find Earth's mean orbital speed from the mean distance and a year of 365.2422 days.",
+   "steps": [
+    "v = 2π × 1.496 × 10^{8} km / (365.2422 × 86 400 s)",
+    "v ≈ 29.8 km/s"
+   ],
+   "answer": "v ≈ 29.8 km/s"
+  },
+  "try": "2 * pi * 149597870 km / (365.2422 * 86400 s) to km/s"
+ },
+ "Perihelion, aphelion ‖ 147085800, 152104980 km": {
+  "title": "Earth's closest and farthest distances from the Sun",
+  "about": "Perihelion (closest, early January) and aphelion (farthest, early July) of Earth's elliptical orbit. Their difference gives the orbit's small eccentricity.",
+  "assumptions": [
+   "Values vary slightly year to year"
+  ],
+  "vars": [
+   [
+    "r_{p}",
+    "perihelion distance",
+    "m"
+   ],
+   [
+    "r_{a}",
+    "aphelion distance",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "e = (r_{a} − r_{p})/(r_{a} + r_{p})",
+    "eccentricity"
+   ]
+  ],
+  "example": {
+   "problem": "Find the eccentricity of Earth's orbit.",
+   "steps": [
+    "e = (152 104 980 − 147 085 800)/(152 104 980 + 147 085 800)",
+    "e ≈ 0.0168"
+   ],
+   "answer": "e ≈ 0.0168"
+  },
+  "try": "(152104980 - 147085800)/(152104980 + 147085800)"
+ },
+ "Earth radius (equatorial) ‖ 6378 km": {
+  "title": "Earth's radius",
+  "about": "The book's Earth radius, 6378 km, which is the equatorial value; the volumetric mean radius is about 6371 km.",
+  "assumptions": [
+   "Earth is slightly oblate, so the radius depends on latitude"
+  ],
+  "vars": [
+   [
+    "R_{E}",
+    "Earth radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "C = 2π R",
+    "circumference"
+   ]
+  ],
+  "example": {
+   "problem": "Find the length of the equator.",
+   "steps": [
+    "C = 2π × 6378 km = 40 074 km"
+   ],
+   "answer": "C ≈ 40 074 km"
+  },
+  "try": "2 * pi * 6378 km"
+ },
+ "Earth diameters ‖ 12712.02 polar, 12756.28 equatorial km": {
+  "title": "Earth's polar and equatorial diameters",
+  "about": "Earth is flattened by its spin: the equatorial diameter is about 44 km more than the polar one. The ratio of that difference gives the flattening.",
+  "assumptions": [],
+  "vars": [
+   [
+    "D_{p}",
+    "polar diameter",
+    "m"
+   ],
+   [
+    "D_{e}",
+    "equatorial diameter",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "f = (D_{e} − D_{p})/D_{e}",
+    "flattening"
+   ]
+  ],
+  "example": {
+   "problem": "Find Earth's flattening.",
+   "steps": [
+    "f = (12 756.28 − 12 712.02)/12 756.28 = 0.00347 ≈ 1/288"
+   ],
+   "answer": "f ≈ 0.00347"
+  },
+  "try": "(12756.28 - 12712.02)/12756.28"
+ },
+ "Earth surface area ‖ 5.10 × 10^{8} km^{2}": {
+  "title": "Earth's surface area",
+  "about": "Earth's surface area, about 5.10 × 10^{8} km², roughly 4πR² with R ≈ 6371 km.",
+  "assumptions": [
+   "The sphere formula slightly overestimates with the equatorial radius"
+  ],
+  "vars": [
+   [
+    "A",
+    "surface area",
+    "m^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "A = 4π R^{2}",
+    "sphere"
+   ]
+  ],
+  "example": {
+   "problem": "Check the area with a sphere of radius 6378 km.",
+   "steps": [
+    "A = 4π (6378 km)^{2} = 5.11 × 10^{8} km^{2}, within 0.3% of 5.10 × 10^{8}"
+   ],
+   "answer": "A ≈ 5.11 × 10^{8} km^{2}"
+  },
+  "try": "4 pi (6378 km)^2"
+ },
+ "Earth volume ‖ 1.0832 × 10^{12} km^{3}": {
+  "title": "Earth's volume",
+  "about": "Earth's volume, 1.0832 × 10^{12} km³. Combined with its mass it gives the mean density.",
+  "assumptions": [],
+  "vars": [
+   [
+    "V",
+    "volume",
+    "m^{3}"
+   ]
+  ],
+  "related": [
+   [
+    "V = (4/3)π R^{3}",
+    "sphere"
+   ]
+  ],
+  "example": {
+   "problem": "Find the radius of a sphere with Earth's volume.",
+   "steps": [
+    "R = (3V/(4π))^{1/3} = (3 × 1.0832 × 10^{12}/(4π))^{1/3}",
+    "R ≈ 6371 km (the mean radius)"
+   ],
+   "answer": "R ≈ 6371 km"
+  },
+  "try": "(3 * 1.0832e12 / (4 pi))^(1/3)"
+ },
+ "Earth density ‖ 5.515 g/cm^{3}": {
+  "title": "Earth's mean density",
+  "about": "Earth's mean density, 5.515 g/cm³, about twice that of surface rock, which shows the core is dense (iron).",
+  "assumptions": [],
+  "vars": [
+   [
+    "ρ",
+    "mean density",
+    "kg/m^{3}"
+   ]
+  ],
+  "related": [
+   [
+    "M = ρ V",
+    "mass"
+   ]
+  ],
+  "example": {
+   "problem": "Recover Earth's mass from its density and volume (1.0832 × 10^{12} km^{3}).",
+   "steps": [
+    "M = 5515 kg/m^{3} × 1.0832 × 10^{21} m^{3} = 5.97 × 10^{24} kg"
+   ],
+   "answer": "M ≈ 5.97 × 10^{24} kg"
+  },
+  "try": "5.515 g/cm^3 * 1.0832e12 km^3 to kg"
+ },
+ "Earth escape velocity ‖ 11.18 km/s": {
+  "title": "Earth's escape velocity",
+  "about": "The launch speed at Earth's surface needed to coast away forever, ignoring air drag: √(2GM/R) ≈ 11.18 km/s.",
+  "assumptions": [
+   "No drag, no thrust after launch; from a non-rotating Earth"
+  ],
+  "vars": [
+   [
+    "v_{esc}",
+    "escape speed",
+    "m/s"
+   ]
+  ],
+  "related": [
+   [
+    "v_{esc} = √(2GM/R)",
+    "from ½ m v^{2} = GMm/R"
+   ]
+  ],
+  "example": {
+   "problem": "Derive Earth's escape speed from G, M and R.",
+   "steps": [
+    "v = √(2 × 6.67 × 10^{−11} × 5.9742 × 10^{24}/6.378 × 10^{6})",
+    "v ≈ 11 180 m/s"
+   ],
+   "answer": "v_{esc} ≈ 11.18 km/s"
+  },
+  "try": "sqrt(2 * 6.67e-11 * 5.9742e24 / 6378e3) / 1000"
+ },
+ "Earth orbital velocity ‖ 107244 km/hr": {
+  "title": "Earth's orbital velocity",
+  "about": "Earth's mean speed around the Sun, 107 244 km/h, which is about 29.8 km/s.",
+  "assumptions": [
+   "Mean value; faster at perihelion, slower at aphelion"
+  ],
+  "vars": [
+   [
+    "v",
+    "orbital speed",
+    "m/s"
+   ]
+  ],
+  "related": [
+   [
+    "v = 2π r/T",
+    "near-circular orbit"
+   ]
+  ],
+  "example": {
+   "problem": "Convert Earth's orbital speed to km/s.",
+   "steps": [
+    "107 244 km/h ÷ 3600 s/h = 29.79 km/s"
+   ],
+   "answer": "v ≈ 29.79 km/s"
+  },
+  "try": "107244 km/hr to km/s"
+ },
+ "Earth axial tilt ‖ 23.45°": {
+  "title": "Earth's axial tilt",
+  "about": "The angle between Earth's spin axis and the normal to its orbit plane, 23.45°. It causes the seasons and sets the latitudes of the tropics and polar circles.",
+  "assumptions": [
+   "Varies slowly (about 22.1° to 24.5° over 41 000 years)"
+  ],
+  "vars": [
+   [
+    "ε",
+    "axial tilt (obliquity)",
+    "rad"
+   ]
+  ],
+  "related": [
+   [
+    "h_{max} = 90° − φ + ε",
+    "noon sun elevation at the June solstice, latitude φ N"
+   ]
+  ],
+  "example": {
+   "problem": "Find the Sun's noon elevation at 40° N on the June solstice.",
+   "steps": [
+    "h = 90° − 40° + 23.45° = 73.45°"
+   ],
+   "answer": "h = 73.45°"
+  },
+  "try": "90 - 40 + 23.45"
+ },
+ "Sidereal day ‖ 23 hr 56.1 min": {
+  "title": "Sidereal day",
+  "about": "The time for Earth to turn once relative to the stars, 23 h 56.1 min, about 4 min shorter than a solar day. It sets Earth's true spin rate.",
+  "assumptions": [],
+  "vars": [
+   [
+    "T_{s}",
+    "sidereal day",
+    "s"
+   ]
+  ],
+  "related": [
+   [
+    "ω = 2π/T",
+    "spin rate"
+   ]
+  ],
+  "example": {
+   "problem": "Find Earth's angular velocity.",
+   "steps": [
+    "T = 23 × 3600 + 56.1 × 60 = 86 166 s",
+    "ω = 2π/86 166 = 7.29 × 10^{−5} rad/s"
+   ],
+   "answer": "ω ≈ 7.29 × 10^{−5} rad/s"
+  },
+  "try": "2 pi / (23*3600 + 56.1*60)"
+ },
+ "Sidereal year ‖ 365.2422 days": {
+  "title": "Length of the year",
+  "about": "The year in the book, 365.2422 days, is the tropical year (equinox to equinox), which sets the calendar; the true sidereal year relative to the stars is 365.2564 days.",
+  "assumptions": [
+   "365.2422 d is strictly the tropical year; the two differ by about 20 min"
+  ],
+  "vars": [
+   [
+    "T",
+    "year",
+    "s"
+   ]
+  ],
+  "related": [
+   [
+    "ω = 2π/T",
+    "mean orbital rate"
+   ]
+  ],
+  "example": {
+   "problem": "How many degrees does Earth move along its orbit per day, on average?",
+   "steps": [
+    "360°/365.2422 = 0.9856° per day"
+   ],
+   "answer": "≈ 0.9856° per day"
+  },
+  "try": "360 / 365.2422"
+ },
+ "Geosynchronous radius ‖ 4.2108 × 10^{7} m": {
+  "title": "Geosynchronous orbit radius",
+  "about": "The orbit radius at which a satellite's period equals one sidereal day, so it stays over the same longitude. Measured from Earth's centre.",
+  "assumptions": [
+   "Circular, equatorial orbit for geostationary"
+  ],
+  "vars": [
+   [
+    "r",
+    "orbit radius from Earth's centre",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "r = (G M T^{2}/(4π^{2}))^{1/3}",
+    "Kepler's third law"
+   ]
+  ],
+  "example": {
+   "problem": "Find the altitude of a geosynchronous satellite above the surface (R = 6378 km).",
+   "steps": [
+    "h = 4.2108 × 10^{7} m − 6.378 × 10^{6} m = 3.573 × 10^{7} m"
+   ],
+   "answer": "h ≈ 35 730 km"
+  },
+  "try": "4.2108e7 m - 6378 km to km"
+ },
+ "Sun ‖ 274.0 ‖ 695500": {
+  "title": "The Sun: surface gravity and radius",
+  "about": "The Sun's surface gravity is about 274.0 m/s² and its mean radius 695 500 km. Use g for weights, falls and pendulums there; g R² gives G M, and √(2 g R) the escape speed.",
+  "assumptions": [
+   "g at the surface (for gas giants, at the 1-bar cloud level); rotation ignored"
+  ],
+  "vars": [
+   [
+    "g",
+    "surface gravity",
+    "m/s^{2}"
+   ],
+   [
+    "R",
+    "mean radius",
+    "km"
+   ]
+  ],
+  "related": [
+   [
+    "g = G M/R^{2}",
+    "gravity and mass"
+   ],
+   [
+    "v_{esc} = √(2 g R)",
+    "escape speed"
+   ]
+  ],
+  "example": {
+   "problem": "Find the escape speed from the Sun's surface.",
+   "steps": [
+    "v = √(2 g R) = √(2 × 274 × 6.955 × 10^{8})",
+    "v ≈ 617 km/s"
+   ],
+   "answer": "v_{esc} ≈ 617 km/s"
+  },
+  "try": "sqrt(2 * 274 m/s^2 * 695500 km) to km/s"
+ },
+ "Jupiter ‖ 20.9 ‖ 71492": {
+  "title": "Jupiter: surface gravity and radius",
+  "about": "Jupiter's surface gravity is about 20.9 m/s² and its mean radius 71 492 km. Use g for weights, falls and pendulums there; g R² gives G M, and √(2 g R) the escape speed.",
+  "assumptions": [
+   "g at the surface (for gas giants, at the 1-bar cloud level); rotation ignored"
+  ],
+  "vars": [
+   [
+    "g",
+    "surface gravity",
+    "m/s^{2}"
+   ],
+   [
+    "R",
+    "mean radius",
+    "km"
+   ]
+  ],
+  "related": [
+   [
+    "g = G M/R^{2}",
+    "gravity and mass"
+   ],
+   [
+    "v_{esc} = √(2 g R)",
+    "escape speed"
+   ]
+  ],
+  "example": {
+   "problem": "What would a 70 kg person weigh at Jupiter's cloud tops?",
+   "steps": [
+    "W = 70 × 20.9 = 1463 N (about 2.1 times Earth weight)"
+   ],
+   "answer": "W ≈ 1463 N"
+  },
+  "try": "70 kg * 20.9 m/s^2"
+ },
+ "Neptune ‖ 10.7 ‖ 24764": {
+  "title": "Neptune: surface gravity and radius",
+  "about": "Neptune's surface gravity is about 10.7 m/s² and its mean radius 24 764 km. Use g for weights, falls and pendulums there; g R² gives G M, and √(2 g R) the escape speed.",
+  "assumptions": [
+   "g at the surface (for gas giants, at the 1-bar cloud level); rotation ignored"
+  ],
+  "vars": [
+   [
+    "g",
+    "surface gravity",
+    "m/s^{2}"
+   ],
+   [
+    "R",
+    "mean radius",
+    "km"
+   ]
+  ],
+  "related": [
+   [
+    "g = G M/R^{2}",
+    "gravity and mass"
+   ],
+   [
+    "v_{esc} = √(2 g R)",
+    "escape speed"
+   ]
+  ],
+  "example": {
+   "problem": "Estimate Neptune's mass from g and R.",
+   "steps": [
+    "M = g R^{2}/G = 10.7 × (2.4764 × 10^{7})^{2}/6.67 × 10^{−11}",
+    "M ≈ 9.84 × 10^{25} kg"
+   ],
+   "answer": "M ≈ 9.84 × 10^{25} kg"
+  },
+  "try": "10.7 * 24764e3^2 / 6.67e-11"
+ },
+ "Saturn ‖ 10.4 ‖ 60268": {
+  "title": "Saturn: surface gravity and radius",
+  "about": "Saturn's surface gravity is about 10.4 m/s² and its mean radius 60 268 km. Use g for weights, falls and pendulums there; g R² gives G M, and √(2 g R) the escape speed.",
+  "assumptions": [
+   "g at the surface (for gas giants, at the 1-bar cloud level); rotation ignored"
+  ],
+  "vars": [
+   [
+    "g",
+    "surface gravity",
+    "m/s^{2}"
+   ],
+   [
+    "R",
+    "mean radius",
+    "km"
+   ]
+  ],
+  "related": [
+   [
+    "g = G M/R^{2}",
+    "gravity and mass"
+   ],
+   [
+    "v_{esc} = √(2 g R)",
+    "escape speed"
+   ]
+  ],
+  "example": {
+   "problem": "Find Saturn's escape speed.",
+   "steps": [
+    "v = √(2 × 10.4 × 6.0268 × 10^{7}) = 35 400 m/s"
+   ],
+   "answer": "v_{esc} ≈ 35.4 km/s"
+  },
+  "try": "sqrt(2 * 10.4 * 60268e3) / 1000"
+ },
+ "Earth ‖ 9.8 ‖ 6378": {
+  "title": "Earth: surface gravity and radius",
+  "about": "Earth's surface gravity is about 9.8 m/s² and its mean radius 6378 km. Use g for weights, falls and pendulums there; g R² gives G M, and √(2 g R) the escape speed.",
+  "assumptions": [
+   "g at the surface (for gas giants, at the 1-bar cloud level); rotation ignored"
+  ],
+  "vars": [
+   [
+    "g",
+    "surface gravity",
+    "m/s^{2}"
+   ],
+   [
+    "R",
+    "mean radius",
+    "km"
+   ]
+  ],
+  "related": [
+   [
+    "g = G M/R^{2}",
+    "gravity and mass"
+   ],
+   [
+    "v_{esc} = √(2 g R)",
+    "escape speed"
+   ]
+  ],
+  "example": {
+   "problem": "Find Earth's G M from g and R.",
+   "steps": [
+    "G M = g R^{2} = 9.8 × (6.378 × 10^{6})^{2} = 3.99 × 10^{14} m^{3}/s^{2}"
+   ],
+   "answer": "G M ≈ 3.99 × 10^{14} m^{3}/s^{2}"
+  },
+  "try": "9.8 * 6378e3^2"
+ },
+ "Venus ‖ 8.9 ‖ 6051": {
+  "title": "Venus: surface gravity and radius",
+  "about": "Venus's surface gravity is about 8.9 m/s² and its mean radius 6051 km. Use g for weights, falls and pendulums there; g R² gives G M, and √(2 g R) the escape speed.",
+  "assumptions": [
+   "g at the surface (for gas giants, at the 1-bar cloud level); rotation ignored"
+  ],
+  "vars": [
+   [
+    "g",
+    "surface gravity",
+    "m/s^{2}"
+   ],
+   [
+    "R",
+    "mean radius",
+    "km"
+   ]
+  ],
+  "related": [
+   [
+    "g = G M/R^{2}",
+    "gravity and mass"
+   ],
+   [
+    "v_{esc} = √(2 g R)",
+    "escape speed"
+   ]
+  ],
+  "example": {
+   "problem": "A jump that rises 0.5 m on Earth (g = 9.8) would rise how high on Venus with the same take-off speed?",
+   "steps": [
+    "h = v^{2}/(2g), so h scales as 1/g",
+    "h = 0.5 × 9.8/8.9 = 0.551 m"
+   ],
+   "answer": "h ≈ 0.551 m"
+  },
+  "try": "0.5 * 9.8/8.9"
+ },
+ "Uranus ‖ 8.4 ‖ 25559": {
+  "title": "Uranus: surface gravity and radius",
+  "about": "Uranus's surface gravity is about 8.4 m/s² and its mean radius 25 559 km. Use g for weights, falls and pendulums there; g R² gives G M, and √(2 g R) the escape speed.",
+  "assumptions": [
+   "g at the surface (for gas giants, at the 1-bar cloud level); rotation ignored"
+  ],
+  "vars": [
+   [
+    "g",
+    "surface gravity",
+    "m/s^{2}"
+   ],
+   [
+    "R",
+    "mean radius",
+    "km"
+   ]
+  ],
+  "related": [
+   [
+    "g = G M/R^{2}",
+    "gravity and mass"
+   ],
+   [
+    "v_{esc} = √(2 g R)",
+    "escape speed"
+   ]
+  ],
+  "example": {
+   "problem": "Find the period of a 1 m pendulum on Uranus.",
+   "steps": [
+    "T = 2π √(L/g) = 2π √(1/8.4) = 2.17 s"
+   ],
+   "answer": "T ≈ 2.17 s"
+  },
+  "try": "2 pi sqrt(1/8.4)"
+ },
+ "Mars ‖ 3.7 ‖ 3397": {
+  "title": "Mars: surface gravity and radius",
+  "about": "Mars's surface gravity is about 3.7 m/s² and its mean radius 3397 km. Use g for weights, falls and pendulums there; g R² gives G M, and √(2 g R) the escape speed.",
+  "assumptions": [
+   "g at the surface (for gas giants, at the 1-bar cloud level); rotation ignored"
+  ],
+  "vars": [
+   [
+    "g",
+    "surface gravity",
+    "m/s^{2}"
+   ],
+   [
+    "R",
+    "mean radius",
+    "km"
+   ]
+  ],
+  "related": [
+   [
+    "g = G M/R^{2}",
+    "gravity and mass"
+   ],
+   [
+    "v_{esc} = √(2 g R)",
+    "escape speed"
+   ]
+  ],
+  "example": {
+   "problem": "Find Mars's escape speed.",
+   "steps": [
+    "v = √(2 × 3.7 × 3.397 × 10^{6}) = 5014 m/s"
+   ],
+   "answer": "v_{esc} ≈ 5.01 km/s"
+  },
+  "try": "sqrt(2 * 3.7 * 3397e3) / 1000"
+ },
+ "Mercury ‖ 3.7 ‖ 2439": {
+  "title": "Mercury: surface gravity and radius",
+  "about": "Mercury's surface gravity is about 3.7 m/s² and its mean radius 2439 km. Use g for weights, falls and pendulums there; g R² gives G M, and √(2 g R) the escape speed.",
+  "assumptions": [
+   "g at the surface (for gas giants, at the 1-bar cloud level); rotation ignored"
+  ],
+  "vars": [
+   [
+    "g",
+    "surface gravity",
+    "m/s^{2}"
+   ],
+   [
+    "R",
+    "mean radius",
+    "km"
+   ]
+  ],
+  "related": [
+   [
+    "g = G M/R^{2}",
+    "gravity and mass"
+   ],
+   [
+    "v_{esc} = √(2 g R)",
+    "escape speed"
+   ]
+  ],
+  "example": {
+   "problem": "How long does a ball take to fall 2 m on Mercury?",
+   "steps": [
+    "t = √(2h/g) = √(2 × 2/3.7) = 1.04 s"
+   ],
+   "answer": "t ≈ 1.04 s"
+  },
+  "try": "sqrt(2 * 2 / 3.7)"
+ },
+ "Moon ‖ 1.6 ‖ 1737": {
+  "title": "The Moon: surface gravity and radius",
+  "about": "The Moon's surface gravity is about 1.6 m/s² and its mean radius 1737 km. Use g for weights, falls and pendulums there; g R² gives G M, and √(2 g R) the escape speed.",
+  "assumptions": [
+   "g at the surface (for gas giants, at the 1-bar cloud level); rotation ignored"
+  ],
+  "vars": [
+   [
+    "g",
+    "surface gravity",
+    "m/s^{2}"
+   ],
+   [
+    "R",
+    "mean radius",
+    "km"
+   ]
+  ],
+  "related": [
+   [
+    "g = G M/R^{2}",
+    "gravity and mass"
+   ],
+   [
+    "v_{esc} = √(2 g R)",
+    "escape speed"
+   ]
+  ],
+  "example": {
+   "problem": "Find the speed of a low circular orbit just above the Moon's surface.",
+   "steps": [
+    "g = v^{2}/R, so v = √(g R) = √(1.6 × 1.737 × 10^{6})",
+    "v ≈ 1667 m/s"
+   ],
+   "answer": "v ≈ 1.67 km/s"
+  },
+  "try": "sqrt(1.6 * 1737e3)"
+ },
+ "Pluto ‖ 0.8 ‖ 1151": {
+  "title": "Pluto: surface gravity and radius",
+  "about": "Pluto's surface gravity is about 0.8 m/s² and its mean radius 1151 km. Use g for weights, falls and pendulums there; g R² gives G M, and √(2 g R) the escape speed.",
+  "assumptions": [
+   "g at the surface (for gas giants, at the 1-bar cloud level); rotation ignored"
+  ],
+  "vars": [
+   [
+    "g",
+    "surface gravity",
+    "m/s^{2}"
+   ],
+   [
+    "R",
+    "mean radius",
+    "km"
+   ]
+  ],
+  "related": [
+   [
+    "g = G M/R^{2}",
+    "gravity and mass"
+   ],
+   [
+    "v_{esc} = √(2 g R)",
+    "escape speed"
+   ]
+  ],
+  "example": {
+   "problem": "Find Pluto's escape speed with these values.",
+   "steps": [
+    "v = √(2 × 0.8 × 1.151 × 10^{6}) = 1357 m/s",
+    "(Pluto's measured g is nearer 0.62 m/s^{2}, giving about 1.2 km/s)"
+   ],
+   "answer": "v_{esc} ≈ 1.36 km/s"
+  },
+  "try": "sqrt(2 * 0.8 * 1151e3)"
+ }
+}

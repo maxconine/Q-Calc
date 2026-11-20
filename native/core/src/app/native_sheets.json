@@ -618,61 +618,687 @@
   "hint": "statics and dynamics",
   "sections": [
    {
-    "title": "Statics",
+    "title": "Vectors",
+    "wide": true,
     "groups": [
      {
-      "title": "Equilibrium",
+      "title": "Dot and cross products",
       "items": [
        {
-        "show": "Σ F = 0",
-        "copy": "Σ F = 0",
+        "show": "a⃗ · b⃗ = |a⃗| |b⃗| cos(θ)",
+        "copy": "a⃗ · b⃗ = |a⃗| |b⃗| cos(θ)",
+        "note": "dot product",
         "typst": [
-         "sum F = 0"
+         "arrow(a) · arrow(b) = |arrow(a)| |arrow(b)| cos(θ)"
         ]
        },
        {
-        "show": "Σ M = 0",
-        "copy": "Σ M = 0",
-        "note": "about any point",
+        "show": "a⃗ · b⃗ = b⃗ · a⃗",
+        "copy": "a⃗ · b⃗ = b⃗ · a⃗",
         "typst": [
-         "sum M = 0"
+         "arrow(a) · arrow(b) = arrow(b) · arrow(a)"
         ]
        },
        {
-        "show": "M = F d",
-        "copy": "M = F d",
-        "note": "moment",
+        "show": "a⃗ · b⃗ = a_{x}b_{x} + a_{y}b_{y} + a_{z}b_{z}",
+        "copy": "a⃗ · b⃗ = a_x b_x + a_y b_y + a_z b_z",
         "typst": [
-         "M = F d"
+         "arrow(a) · arrow(b) = a_(x)b_(x) + a_(y)b_(y) + a_(z)b_(z)"
         ]
        },
        {
-        "show": "f ≤ μ N",
-        "copy": "f ≤ μ N",
-        "note": "friction",
+        "show": "|v⃗| = √(v⃗ · v⃗)",
+        "copy": "|v⃗| = √(v⃗ · v⃗)",
+        "note": "magnitude",
         "typst": [
-         "f <= μ N"
+         "|arrow(v)| = sqrt(arrow(v) · arrow(v))"
+        ]
+       },
+       {
+        "show": "v^{2} = |v⃗|^{2} = v⃗ · v⃗",
+        "copy": "v^2 = |v⃗|^2 = v⃗ · v⃗",
+        "note": "magnitude squared",
+        "typst": [
+         "v^(2) = |arrow(v)|^(2) = arrow(v) · arrow(v)"
+        ]
+       },
+       {
+        "show": "v̂ = v⃗/|v⃗|",
+        "copy": "v̂ = v⃗/|v⃗|",
+        "note": "unit vector",
+        "typst": [
+         "hat(v) = (arrow(v))/(|arrow(v)|)"
+        ]
+       },
+       {
+        "show": "θ = acos((a⃗ · b⃗)/(|a⃗| |b⃗|))",
+        "copy": "θ = acos((a⃗ · b⃗)/(|a⃗| |b⃗|))",
+        "note": "angle between",
+        "typst": [
+         "θ = \"acos\"((arrow(a) · arrow(b))/(|arrow(a)| |arrow(b)|))"
+        ]
+       },
+       {
+        "show": "(a⃗ · û) û",
+        "copy": "(a⃗ · û) û",
+        "note": "part of a⃗ along û",
+        "typst": [
+         "(arrow(a) · hat(u)) hat(u)"
+        ]
+       },
+       {
+        "show": "a⃗ × b⃗ = |a⃗| |b⃗| sin(θ) û",
+        "copy": "a⃗ × b⃗ = |a⃗| |b⃗| sin(θ) û",
+        "note": "cross product, û ⊥ both",
+        "typst": [
+         "arrow(a) × arrow(b) = |arrow(a)| |arrow(b)| sin(θ) hat(u)"
+        ]
+       },
+       {
+        "show": "a⃗ × b⃗ = −b⃗ × a⃗",
+        "copy": "a⃗ × b⃗ = -b⃗ × a⃗",
+        "typst": [
+         "arrow(a) × arrow(b) = -arrow(b) × arrow(a)"
+        ]
+       },
+       {
+        "show": "a⃗ × b⃗ = (a_{y}b_{z} − a_{z}b_{y}) x̂ + (a_{z}b_{x} − a_{x}b_{z}) ŷ + (a_{x}b_{y} − a_{y}b_{x}) ẑ",
+        "copy": "a⃗ × b⃗ = (a_y b_z - a_z b_y) x̂ + (a_z b_x - a_x b_z) ŷ + (a_x b_y - a_y b_x) ẑ",
+        "typst": [
+         "arrow(a) × arrow(b) = (a_(y)b_(z) - a_(z)b_(y)) hat(x) + (a_(z)b_(x) - a_(x)b_(z)) hat(y) + (a_(x)b_(y) - a_(y)b_(x)) hat(z)"
+        ]
+       },
+       {
+        "show": "a⃗ × b⃗ = det[x̂ ŷ ẑ; a_{x} a_{y} a_{z}; b_{x} b_{y} b_{z}]",
+        "copy": "a⃗ × b⃗ = det[x̂ ŷ ẑ; a_x a_y a_z; b_x b_y b_z]",
+        "typst": [
+         "arrow(a) times arrow(b) = det mat(hat(x), hat(y), hat(z); a_x, a_y, a_z; b_x, b_y, b_z)"
+        ]
+       },
+       {
+        "show": "x̂ × ŷ = ẑ,  ŷ × ẑ = x̂,  ẑ × x̂ = ŷ",
+        "copy": "x̂ × ŷ = ẑ,  ŷ × ẑ = x̂,  ẑ × x̂ = ŷ",
+        "note": "right-handed",
+        "typst": [
+         "hat(x) × hat(y) = hat(z),  hat(y) × hat(z) = hat(x),  hat(z) × hat(x) = hat(y)"
+        ]
+       },
+       {
+        "show": "a⃗ × a⃗ = 0⃗,  a⃗ · (a⃗ × b⃗) = 0",
+        "copy": "a⃗ × a⃗ = 0⃗,  a⃗ · (a⃗ × b⃗) = 0",
+        "typst": [
+         "arrow(a) × arrow(a) = arrow(0),  arrow(a) · (arrow(a) × arrow(b)) = 0"
         ]
        }
       ]
      },
      {
-      "title": "Centroids",
+      "title": "Triple products and more",
       "items": [
        {
-        "show": "x̄ = (Σ A_{i} x_{i})/(Σ A_{i})",
-        "copy": "x̄ = (Σ A_i x_i)/(Σ A_i)",
-        "note": "composite area",
+        "show": "a⃗ × (b⃗ × c⃗) = b⃗ (a⃗ · c⃗) − c⃗ (a⃗ · b⃗)",
+        "copy": "a⃗ × (b⃗ × c⃗) = b⃗ (a⃗ · c⃗) - c⃗ (a⃗ · b⃗)",
+        "note": "triple cross: BAC − CAB",
         "typst": [
-         "overline(x) = (sum A_(i) x_(i))/(sum A_(i))"
+         "arrow(a) × (arrow(b) × arrow(c)) = arrow(b) (arrow(a) · arrow(c)) - arrow(c) (arrow(a) · arrow(b))"
         ]
        },
        {
-        "show": "I = Ī + A d^{2}",
-        "copy": "I = Ī + A d^2",
-        "note": "parallel axis",
+        "show": "(a⃗ × b⃗) × c⃗ = b⃗ (a⃗ · c⃗) − a⃗ (b⃗ · c⃗)",
+        "copy": "(a⃗ × b⃗) × c⃗ = b⃗ (a⃗ · c⃗) - a⃗ (b⃗ · c⃗)",
         "typst": [
-         "I = overline(I) + A d^(2)"
+         "(arrow(a) × arrow(b)) × arrow(c) = arrow(b) (arrow(a) · arrow(c)) - arrow(a) (arrow(b) · arrow(c))"
+        ]
+       },
+       {
+        "show": "a⃗ · b⃗ × c⃗ = a⃗ × b⃗ · c⃗",
+        "copy": "a⃗ · b⃗ × c⃗ = a⃗ × b⃗ · c⃗",
+        "note": "scalar triple: swap · and ×",
+        "typst": [
+         "arrow(a) · arrow(b) × arrow(c) = arrow(a) × arrow(b) · arrow(c)"
+        ]
+       },
+       {
+        "show": "a⃗ · b⃗ × c⃗ = b⃗ · c⃗ × a⃗ = c⃗ · a⃗ × b⃗",
+        "copy": "a⃗ · b⃗ × c⃗ = b⃗ · c⃗ × a⃗ = c⃗ · a⃗ × b⃗",
+        "note": "cyclic; the box volume",
+        "typst": [
+         "arrow(a) · arrow(b) × arrow(c) = arrow(b) · arrow(c) × arrow(a) = arrow(c) · arrow(a) × arrow(b)"
+        ]
+       },
+       {
+        "show": "|a⃗ × b⃗|^{2} = |a⃗|^{2} |b⃗|^{2} − (a⃗ · b⃗)^{2}",
+        "copy": "|a⃗ × b⃗|^2 = |a⃗|^2 |b⃗|^2 - (a⃗ · b⃗)^2",
+        "note": "Lagrange",
+        "typst": [
+         "|arrow(a) × arrow(b)|^(2) = |arrow(a)|^(2) |arrow(b)|^(2) - (arrow(a) · arrow(b))^(2)"
+        ]
+       },
+       {
+        "show": "(a⃗ × b⃗) · (c⃗ × d⃗) = (a⃗ · c⃗)(b⃗ · d⃗) − (a⃗ · d⃗)(b⃗ · c⃗)",
+        "copy": "(a⃗ × b⃗) · (c⃗ × d⃗) = (a⃗ · c⃗)(b⃗ · d⃗) - (a⃗ · d⃗)(b⃗ · c⃗)",
+        "typst": [
+         "(arrow(a) × arrow(b)) · (arrow(c) × arrow(d)) = (arrow(a) · arrow(c))(arrow(b) · arrow(d)) - (arrow(a) · arrow(d))(arrow(b) · arrow(c))"
+        ]
+       },
+       {
+        "show": "a⃗ × (b⃗ + c⃗) = a⃗ × b⃗ + a⃗ × c⃗",
+        "copy": "a⃗ × (b⃗ + c⃗) = a⃗ × b⃗ + a⃗ × c⃗",
+        "typst": [
+         "arrow(a) × (arrow(b) + arrow(c)) = arrow(a) × arrow(b) + arrow(a) × arrow(c)"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Derivatives",
+      "items": [
+       {
+        "show": "^{A}dv⃗/dt = v̇_{1} â_{1} + v̇_{2} â_{2} + v̇_{3} â_{3}",
+        "copy": "^Adv⃗/dt = v̇_1 â_1 + v̇_2 â_2 + v̇_3 â_3",
+        "note": "â₁, â₂, â₃ fixed in A",
+        "typst": [
+         "(\"\"^(A)d#h(0pt)arrow(v))/(d\\t) = dot(v)_(1) hat(a)_(1) + dot(v)_(2) hat(a)_(2) + dot(v)_(3) hat(a)_(3)"
+        ]
+       },
+       {
+        "show": "^{A}d(a⃗ · b⃗)/dt = ^{A}da⃗/dt · b⃗ + a⃗ · ^{A}db⃗/dt",
+        "copy": "^Ad(a⃗ · b⃗)/dt = ^Ada⃗/dt · b⃗ + a⃗ · ^Adb⃗/dt",
+        "typst": [
+         "(\"\"^(A)d(arrow(a) · arrow(b)))/(d\\t) = (\"\"^(A)d#h(0pt)arrow(a))/(d\\t) · arrow(b) + arrow(a) · (\"\"^(A)d#h(0pt)arrow(b))/(d\\t)"
+        ]
+       },
+       {
+        "show": "^{A}d(a⃗ × b⃗)/dt = ^{A}da⃗/dt × b⃗ + a⃗ × ^{A}db⃗/dt",
+        "copy": "^Ad(a⃗ × b⃗)/dt = ^Ada⃗/dt × b⃗ + a⃗ × ^Adb⃗/dt",
+        "note": "keep the order",
+        "typst": [
+         "(\"\"^(A)d(arrow(a) × arrow(b)))/(d\\t) = (\"\"^(A)d#h(0pt)arrow(a))/(d\\t) × arrow(b) + arrow(a) × (\"\"^(A)d#h(0pt)arrow(b))/(d\\t)"
+        ]
+       },
+       {
+        "show": "^{A}d(s a⃗)/dt = ṡ a⃗ + s ^{A}da⃗/dt",
+        "copy": "^Ad(s a⃗)/dt = ṡ a⃗ + s ^Ada⃗/dt",
+        "typst": [
+         "(\"\"^(A)d(s arrow(a)))/(d\\t) = dot(s) arrow(a) + s (\"\"^(A)d#h(0pt)arrow(a))/(d\\t)"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Rotation matrices",
+    "wide": true,
+    "groups": [
+     {
+      "title": "Rotation table",
+      "items": [
+       {
+        "show": "^{a}R^{b}_{ij} = â_{i} · b̂_{j}",
+        "copy": "^aR^b_ij = â_i · b̂_j",
+        "note": "rows â, columns b̂",
+        "typst": [
+         "\"\"^(a)R^(b)_(i\\j) = hat(a)_(i) · hat(b)_(j)"
+        ]
+       },
+       {
+        "show": "^{b}R^{a} = (^{a}R^{b})^{−1} = (^{a}R^{b})^{T}",
+        "copy": "^bR^a = (^aR^b)^(-1) = (^aR^b)^T",
+        "note": "orthogonal",
+        "typst": [
+         "\"\"^(b)R^(a) = (\"\"^(a)R^(b))^(-1) = (\"\"^(a)R^(b))^(T)"
+        ]
+       },
+       {
+        "show": "^{a}R^{d} = ^{a}R^{b} ^{b}R^{c} ^{c}R^{d}",
+        "copy": "^aR^d = ^aR^b ^bR^c ^cR^d",
+        "note": "chain them",
+        "typst": [
+         "\"\"^(a)R^(d) = \"\"^(a)R^(b) #h(0.15em)\"\"^(b)R^(c) #h(0.15em)\"\"^(c)R^(d)"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "B turned θ about one axis of A",
+      "items": [
+       {
+        "show": "R_{z} = [cos θ, −sin θ, 0; sin θ, cos θ, 0; 0, 0, 1]",
+        "copy": "R_z = [cos θ, -sin θ, 0; sin θ, cos θ, 0; 0, 0, 1]",
+        "note": "â_{z} = b̂_{z}",
+        "typst": [
+         "R_z = mat(cos θ, -sin θ, 0; sin θ, cos θ, 0; 0, 0, 1)"
+        ],
+        "noteTypst": "hat(a)_(z) = hat(b)_(z)"
+       },
+       {
+        "show": "R_{x} = [1, 0, 0; 0, cos θ, −sin θ; 0, sin θ, cos θ]",
+        "copy": "R_x = [1, 0, 0; 0, cos θ, -sin θ; 0, sin θ, cos θ]",
+        "note": "â_{x} = b̂_{x}",
+        "typst": [
+         "R_x = mat(1, 0, 0; 0, cos θ, -sin θ; 0, sin θ, cos θ)"
+        ],
+        "noteTypst": "hat(a)_(x) = hat(b)_(x)"
+       },
+       {
+        "show": "R_{y} = [cos θ, 0, sin θ; 0, 1, 0; −sin θ, 0, cos θ]",
+        "copy": "R_y = [cos θ, 0, sin θ; 0, 1, 0; -sin θ, 0, cos θ]",
+        "note": "â_{y} = b̂_{y}",
+        "typst": [
+         "R_y = mat(cos θ, 0, sin θ; 0, 1, 0; -sin θ, 0, cos θ)"
+        ],
+        "noteTypst": "hat(a)_(y) = hat(b)_(y)"
+       },
+       {
+        "show": "b̂_{x} = cos θ â_{x} + sin θ â_{y}",
+        "copy": "b̂_x = cos θ â_x + sin θ â_y",
+        "note": "about z (SohCahToa)",
+        "typst": [
+         "hat(b)_(x) = cos θ hat(a)_(x) + sin θ hat(a)_(y)"
+        ]
+       },
+       {
+        "show": "b̂_{y} = −sin θ â_{x} + cos θ â_{y}",
+        "copy": "b̂_y = -sin θ â_x + cos θ â_y",
+        "typst": [
+         "hat(b)_(y) = -sin θ hat(a)_(x) + cos θ hat(a)_(y)"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Angular velocity and acceleration",
+    "wide": true,
+    "groups": [
+     {
+      "title": "Angular velocity",
+      "items": [
+       {
+        "show": "^{A}dv⃗/dt = ^{B}dv⃗/dt + ^{A}ω⃗^{B} × v⃗",
+        "copy": "^Adv⃗/dt = ^Bdv⃗/dt + ^Aω⃗^B × v⃗",
+        "note": "golden rule",
+        "typst": [
+         "(\"\"^(A)d#h(0pt)arrow(v))/(d\\t) = (\"\"^(B)d#h(0pt)arrow(v))/(d\\t) + \"\"^(A)arrow(ω)^(B) × arrow(v)"
+        ]
+       },
+       {
+        "show": "^{A}ω⃗^{B} = ±θ̇ λ̂",
+        "copy": "^Aω⃗^B = ±θ̇ λ̂",
+        "note": "λ̂ fixed in both A and B",
+        "typst": [
+         "\"\"^(A)arrow(ω)^(B) = ±dot(θ) hat(λ)"
+        ]
+       },
+       {
+        "show": "^{A}ω⃗^{D} = ^{A}ω⃗^{B} + ^{B}ω⃗^{C} + ^{C}ω⃗^{D}",
+        "copy": "^Aω⃗^D = ^Aω⃗^B + ^Bω⃗^C + ^Cω⃗^D",
+        "note": "addition theorem",
+        "typst": [
+         "\"\"^(A)arrow(ω)^(D) = \"\"^(A)arrow(ω)^(B) + \"\"^(B)arrow(ω)^(C) + \"\"^(C)arrow(ω)^(D)"
+        ]
+       },
+       {
+        "show": "^{A}ω⃗^{B} = −^{B}ω⃗^{A}",
+        "copy": "^Aω⃗^B = -^Bω⃗^A",
+        "typst": [
+         "\"\"^(A)arrow(ω)^(B) = -\"\"^(B)arrow(ω)^(A)"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Angular acceleration",
+      "items": [
+       {
+        "show": "^{A}α⃗^{B} = ^{A}d(^{A}ω⃗^{B})/dt = ^{B}d(^{A}ω⃗^{B})/dt",
+        "copy": "^Aα⃗^B = ^Ad(^Aω⃗^B)/dt = ^Bd(^Aω⃗^B)/dt",
+        "note": "either frame",
+        "typst": [
+         "\"\"^(A)arrow(α)^(B) = (\"\"^(A)d(\"\"^(A)arrow(ω)^(B)))/(d\\t) = (\"\"^(B)d(\"\"^(A)arrow(ω)^(B)))/(d\\t)"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Position, velocity and acceleration",
+    "wide": true,
+    "groups": [
+     {
+      "title": "Position and distance",
+      "items": [
+       {
+        "show": "^{P}r⃗^{Q} = −^{Q}r⃗^{P}",
+        "copy": "^Pr⃗^Q = -^Qr⃗^P",
+        "note": "negation",
+        "typst": [
+         "\"\"^(P)arrow(r)^(Q) = -\"\"^(Q)arrow(r)^(P)"
+        ]
+       },
+       {
+        "show": "^{Q_{1}}r⃗^{Q_{4}} = ^{Q_{3}}r⃗^{Q_{4}} + ^{Q_{2}}r⃗^{Q_{3}} + ^{Q_{1}}r⃗^{Q_{2}}",
+        "copy": "^(Q_1)r⃗^(Q_4) = ^(Q_3)r⃗^(Q_4) + ^(Q_2)r⃗^(Q_3) + ^(Q_1)r⃗^(Q_2)",
+        "note": "addition",
+        "typst": [
+         "\"\"^(Q_(1))arrow(r)^(Q_(4)) = \"\"^(Q_(3))arrow(r)^(Q_(4)) + \"\"^(Q_(2))arrow(r)^(Q_(3)) + \"\"^(Q_(1))arrow(r)^(Q_(2))"
+        ]
+       },
+       {
+        "show": "d = |^{P}r⃗^{Q}| = √(^{P}r⃗^{Q} · ^{P}r⃗^{Q})",
+        "copy": "d = |^Pr⃗^Q| = √(^Pr⃗^Q · ^Pr⃗^Q)",
+        "note": "distance P to Q",
+        "typst": [
+         "d = |\"\"^(P)arrow(r)^(Q)| = sqrt(\"\"^(P)arrow(r)^(Q) · \"\"^(P)arrow(r)^(Q))"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Velocity and acceleration in N",
+      "items": [
+       {
+        "show": "^{N}v⃗^{Q} = ^{N}d(^{N_{o}}r⃗^{Q})/dt",
+        "copy": "^Nv⃗^Q = ^Nd(^(N_o)r⃗^Q)/dt",
+        "typst": [
+         "\"\"^(N)arrow(v)^(Q) = (\"\"^(N)d(\"\"^(N_(o))arrow(r)^(Q)))/(d\\t)"
+        ]
+       },
+       {
+        "show": "^{N}a⃗^{Q} = ^{N}d(^{N}v⃗^{Q})/dt",
+        "copy": "^Na⃗^Q = ^Nd(^Nv⃗^Q)/dt",
+        "typst": [
+         "\"\"^(N)arrow(a)^(Q) = (\"\"^(N)d(\"\"^(N)arrow(v)^(Q)))/(d\\t)"
+        ]
+       },
+       {
+        "show": "^{N}v⃗^{Q} = ^{N}v⃗^{B_{o}} + ^{N}ω⃗^{B} × ^{B_{o}}r⃗^{Q}",
+        "copy": "^Nv⃗^Q = ^Nv⃗^(B_o) + ^Nω⃗^B × ^(B_o)r⃗^Q",
+        "note": "Bₒ and Q fixed on B",
+        "typst": [
+         "\"\"^(N)arrow(v)^(Q) = \"\"^(N)arrow(v)^(B_(o)) + \"\"^(N)arrow(ω)^(B) × \"\"^(B_(o))arrow(r)^(Q)"
+        ]
+       },
+       {
+        "show": "^{N}a⃗^{Q} = ^{N}a⃗^{B_{o}} + ^{N}α⃗^{B} × ^{B_{o}}r⃗^{Q} + ^{N}ω⃗^{B} × (^{N}ω⃗^{B} × ^{B_{o}}r⃗^{Q})",
+        "copy": "^Na⃗^Q = ^Na⃗^(B_o) + ^Nα⃗^B × ^(B_o)r⃗^Q + ^Nω⃗^B × (^Nω⃗^B × ^(B_o)r⃗^Q)",
+        "note": "Bₒ and Q fixed on B",
+        "typst": [
+         "\"\"^(N)arrow(a)^(Q) = \"\"^(N)arrow(a)^(B_(o)) + \"\"^(N)arrow(α)^(B) × \"\"^(B_(o))arrow(r)^(Q) + \"\"^(N)arrow(ω)^(B) × (\"\"^(N)arrow(ω)^(B) × \"\"^(B_(o))arrow(r)^(Q))"
+        ]
+       },
+       {
+        "show": "^{N}v⃗^{Q} = ^{N}v⃗^{B_{o}} + ^{N}ω⃗^{B} × ^{B_{o}}r⃗^{Q} + ^{B}v⃗^{Q}",
+        "copy": "^Nv⃗^Q = ^Nv⃗^(B_o) + ^Nω⃗^B × ^(B_o)r⃗^Q + ^Bv⃗^Q",
+        "note": "Q moving on B",
+        "typst": [
+         "\"\"^(N)arrow(v)^(Q) = \"\"^(N)arrow(v)^(B_(o)) + \"\"^(N)arrow(ω)^(B) × \"\"^(B_(o))arrow(r)^(Q) + \"\"^(B)arrow(v)^(Q)"
+        ]
+       },
+       {
+        "show": "^{N}a⃗^{Q} = ^{N}a⃗^{B_{o}} + ^{N}α⃗^{B} × r⃗ + ^{N}ω⃗^{B} × (^{N}ω⃗^{B} × r⃗) + 2 ^{N}ω⃗^{B} × ^{B}v⃗^{Q} + ^{B}a⃗^{Q}",
+        "copy": "^Na⃗^Q = ^Na⃗^(B_o) + ^Nα⃗^B × r⃗ + ^Nω⃗^B × (^Nω⃗^B × r⃗) + 2 ^Nω⃗^B × ^Bv⃗^Q + ^Ba⃗^Q",
+        "note": "Q moving on B; 2ω × v is Coriolis",
+        "typst": [
+         "\"\"^(N)arrow(a)^(Q) = \"\"^(N)arrow(a)^(B_(o)) + \"\"^(N)arrow(α)^(B) × arrow(r) + \"\"^(N)arrow(ω)^(B) × (\"\"^(N)arrow(ω)^(B) × arrow(r)) + 2 #h(0.15em)\"\"^(N)arrow(ω)^(B) × \"\"^(B)arrow(v)^(Q) + \"\"^(B)arrow(a)^(Q)"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Polar and path coordinates",
+      "items": [
+       {
+        "show": "v⃗ = ṙ r̂ + r θ̇ θ̂",
+        "copy": "v⃗ = ṙ r̂ + r θ̇ θ̂",
+        "note": "polar",
+        "typst": [
+         "arrow(v) = dot(r) hat(r) + r dot(θ) hat(θ)"
+        ]
+       },
+       {
+        "show": "a⃗ = (r̈ − r θ̇^{2}) r̂ + (r θ̈ + 2 ṙ θ̇) θ̂",
+        "copy": "a⃗ = (r̈ - r θ̇^2) r̂ + (r θ̈ + 2 ṙ θ̇) θ̂",
+        "note": "polar",
+        "typst": [
+         "arrow(a) = (dot.double(r) - r dot(θ)^(2)) hat(r) + (r dot.double(θ) + 2 dot(r) dot(θ)) hat(θ)"
+        ]
+       },
+       {
+        "show": "a⃗ = v̇ t̂ + (v^{2}/ρ) n̂",
+        "copy": "a⃗ = v̇ t̂ + (v^2/ρ) n̂",
+        "note": "along a path, radius ρ",
+        "typst": [
+         "arrow(a) = dot(v) hat(t) + (v^(2))/(ρ) hat(n)"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Constraints",
+    "groups": [
+     {
+      "title": "Rolling and gears",
+      "items": [
+       {
+        "show": "^{F}v⃗^{B_{A}} = ^{F}v⃗^{A_{B}}",
+        "copy": "^Fv⃗^(B_A) = ^Fv⃗^(A_B)",
+        "note": "rolling: the touching points",
+        "typst": [
+         "\"\"^(F)arrow(v)^(B_(A)) = \"\"^(F)arrow(v)^(A_(B))"
+        ]
+       },
+       {
+        "show": "^{F}ω^{A} r_{A} = ± ^{F}ω^{B} r_{B}",
+        "copy": "^Fω^A r_A = ± ^Fω^B r_B",
+        "note": "gears A and B",
+        "typst": [
+         "\"\"^(F)ω^(A) r_(A) = ± \"\"^(F)ω^(B) r_(B)"
+        ]
+       },
+       {
+        "show": "v = ω r",
+        "copy": "v = ω r",
+        "note": "disk rolling, no slip",
+        "typst": [
+         "v = ω r"
+        ]
+       },
+       {
+        "show": "a = α r",
+        "copy": "a = α r",
+        "note": "its centre, no slip",
+        "typst": [
+         "a = α r"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Mass and centre of mass",
+      "items": [
+       {
+        "show": "m^{S} = Σ_{i=1}^{n} m^{Q_{i}}",
+        "copy": "m^S = Σ_i=1^n m^(Q_i)",
+        "typst": [
+         "m^(S) = sum_(i=1)^(n) m^(Q_(i))"
+        ]
+       },
+       {
+        "show": "^{O}r⃗^{S_{cm}} = (1/m^{S}) Σ_{i=1}^{n} m^{Q_{i}} ^{O}r⃗^{Q_{i}}",
+        "copy": "^Or⃗^(S_cm) = (1/m^S) Σ_i=1^n m^(Q_i) ^Or⃗^(Q_i)",
+        "typst": [
+         "\"\"^(O)arrow(r)^(S_(\"cm\")) = (1)/(m^(S)) sum_(i=1)^(n) m^(Q_(i)) #h(0.15em)\"\"^(O)arrow(r)^(Q_(i))"
+        ]
+       },
+       {
+        "show": "m^{S} ^{N}v⃗^{S_{cm}} = Σ_{i=1}^{n} m^{Q_{i}} ^{N}v⃗^{Q_{i}}",
+        "copy": "m^S ^Nv⃗^(S_cm) = Σ_i=1^n m^(Q_i) ^Nv⃗^(Q_i)",
+        "typst": [
+         "m^(S) #h(0.15em)\"\"^(N)arrow(v)^(S_(\"cm\")) = sum_(i=1)^(n) m^(Q_(i)) #h(0.15em)\"\"^(N)arrow(v)^(Q_(i))"
+        ]
+       },
+       {
+        "show": "m^{S} ^{N}a⃗^{S_{cm}} = Σ_{i=1}^{n} m^{Q_{i}} ^{N}a⃗^{Q_{i}}",
+        "copy": "m^S ^Na⃗^(S_cm) = Σ_i=1^n m^(Q_i) ^Na⃗^(Q_i)",
+        "typst": [
+         "m^(S) #h(0.15em)\"\"^(N)arrow(a)^(S_(\"cm\")) = sum_(i=1)^(n) m^(Q_(i)) #h(0.15em)\"\"^(N)arrow(a)^(Q_(i))"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Inertia dyadics",
+    "wide": true,
+    "groups": [
+     {
+      "title": "Moments and products",
+      "items": [
+       {
+        "show": "I⃡^{Q∕O} = m^{Q} [1⃡ (^{O}r⃗^{Q} · ^{O}r⃗^{Q}) − ^{O}r⃗^{Q} ^{O}r⃗^{Q}]",
+        "copy": "I⃡^(Q∕O) = m^Q [1⃡ (^Or⃗^Q · ^Or⃗^Q) - ^Or⃗^Q ^Or⃗^Q]",
+        "note": "particle Q about O",
+        "typst": [
+         "arrow(arrow(I))^(Q∕O) = m^(Q) [arrow(arrow(1)) (\"\"^(O)arrow(r)^(Q) · \"\"^(O)arrow(r)^(Q)) - \"\"^(O)arrow(r)^(Q) #h(0.15em)\"\"^(O)arrow(r)^(Q)]"
+        ]
+       },
+       {
+        "show": "I⃡^{S∕O} = Σ_{i=1}^{n} I⃡^{Q_{i}∕O}",
+        "copy": "I⃡^(S∕O) = Σ_i=1^n I⃡^(Q_i∕O)",
+        "note": "a system: add them",
+        "typst": [
+         "arrow(arrow(I))^(S∕O) = sum_(i=1)^(n) arrow(arrow(I))^(Q_(i)∕O)"
+        ]
+       },
+       {
+        "show": "I_{ûû}^{S∕O} = û · I⃡^{S∕O} · û",
+        "copy": "I_ûû^(S∕O) = û · I⃡^(S∕O) · û",
+        "note": "moment, û a unit vector",
+        "typst": [
+         "I_(hat(u)hat(u))^(S∕O) = hat(u) · arrow(arrow(I))^(S∕O) · hat(u)"
+        ]
+       },
+       {
+        "show": "I_{ûv̂}^{S∕O} = û · I⃡^{S∕O} · v̂",
+        "copy": "I_ûv̂^(S∕O) = û · I⃡^(S∕O) · v̂",
+        "note": "product, û ⊥ v̂",
+        "typst": [
+         "I_(hat(u)hat(v))^(S∕O) = hat(u) · arrow(arrow(I))^(S∕O) · hat(v)"
+        ]
+       },
+       {
+        "show": "I_{ûû}^{S∕O} = Σ_{i=1}^{n} m^{Q_{i}} d_{i}^{2}",
+        "copy": "I_ûû^(S∕O) = Σ_i=1^n m^(Q_i) d_i^2",
+        "note": "d_{i} = |^{O}r⃗^{Q_{i}} × û|",
+        "typst": [
+         "I_(hat(u)hat(u))^(S∕O) = sum_(i=1)^(n) m^(Q_(i)) d_(i)^(2)"
+        ],
+        "noteTypst": "d_(i) = |\"\"^(O)arrow(r)^(Q_(i)) × hat(u)|"
+       },
+       {
+        "show": "I_{ûv̂}^{S∕O} = −Σ_{i=1}^{n} m^{Q_{i}} δ_{u_{i}} δ_{v_{i}}",
+        "copy": "I_ûv̂^(S∕O) = -Σ_i=1^n m^(Q_i) δ_u_i δ_v_i",
+        "note": "δ_{u_{i}} = ^{O}r⃗^{Q_{i}} · û",
+        "typst": [
+         "I_(hat(u)hat(v))^(S∕O) = -sum_(i=1)^(n) m^(Q_(i)) δ_(u_(i)) δ_(v_(i))"
+        ],
+        "noteTypst": "δ_(u_(i)) = \"\"^(O)arrow(r)^(Q_(i)) · hat(u)"
+       }
+      ]
+     },
+     {
+      "title": "Shift (parallel axis) theorems",
+      "items": [
+       {
+        "show": "I⃡^{S∕P} = I⃡^{S∕S_{cm}} + m^{S} [1⃡ (^{P}r⃗^{S_{cm}} · ^{P}r⃗^{S_{cm}}) − ^{P}r⃗^{S_{cm}} ^{P}r⃗^{S_{cm}}]",
+        "copy": "I⃡^(S∕P) = I⃡^(S∕S_cm) + m^S [1⃡ (^Pr⃗^(S_cm) · ^Pr⃗^(S_cm)) - ^Pr⃗^(S_cm) ^Pr⃗^(S_cm)]",
+        "note": "dyadic",
+        "typst": [
+         "arrow(arrow(I))^(S∕P) = arrow(arrow(I))^(S∕S_(\"cm\")) + m^(S) [arrow(arrow(1)) (\"\"^(P)arrow(r)^(S_(\"cm\")) · \"\"^(P)arrow(r)^(S_(\"cm\"))) - \"\"^(P)arrow(r)^(S_(\"cm\")) #h(0.15em)\"\"^(P)arrow(r)^(S_(\"cm\"))]"
+        ]
+       },
+       {
+        "show": "I_{ûû}^{S∕O} = I_{ûû}^{S∕S_{cm}} + m^{S} d^{2}",
+        "copy": "I_ûû^(S∕O) = I_ûû^(S∕S_cm) + m^S d^2",
+        "note": "d = |^{O}r⃗^{S_{cm}} × û|",
+        "typst": [
+         "I_(hat(u)hat(u))^(S∕O) = I_(hat(u)hat(u))^(S∕S_(\"cm\")) + m^(S) d^(2)"
+        ],
+        "noteTypst": "d = |\"\"^(O)arrow(r)^(S_(\"cm\")) × hat(u)|"
+       },
+       {
+        "show": "I_{xy}^{S∕O} = I_{xy}^{S∕S_{cm}} − m^{S} x_{cm} y_{cm}",
+        "copy": "I_xy^(S∕O) = I_xy^(S∕S_cm) - m^S x_cm y_cm",
+        "note": "product; x, y of the mass centre from O",
+        "typst": [
+         "I_(x\\y)^(S∕O) = I_(x\\y)^(S∕S_(\"cm\")) - m^(S) x_(\"cm\") y_(\"cm\")"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "As a matrix",
+      "items": [
+       {
+        "show": "[I] = [I_{xx}, I_{xy}, I_{xz}; I_{xy}, I_{yy}, I_{yz}; I_{xz}, I_{yz}, I_{zz}]",
+        "copy": "[I] = [I_xx, I_xy, I_xz; I_xy, I_yy, I_yz; I_xz, I_yz, I_zz]",
+        "note": "on the axes b̂x, b̂y, b̂z",
+        "typst": [
+         "[I] = mat(I_(x\\x), I_(x\\y), I_(x\\z); I_(x\\y), I_(y\\y), I_(y\\z); I_(x\\z), I_(y\\z), I_(z\\z))"
+        ]
+       },
+       {
+        "show": "I_{xx} = Σ m (y^{2} + z^{2})",
+        "copy": "I_xx = Σ m (y^2 + z^2)",
+        "typst": [
+         "I_(x\\x) = sum m (y^(2) + z^(2))"
+        ]
+       },
+       {
+        "show": "I_{xy} = −Σ m x y",
+        "copy": "I_xy = -Σ m x y",
+        "note": "Mitiguy's sign",
+        "typst": [
+         "I_(x\\y) = -sum m x y"
+        ]
+       },
+       {
+        "show": "I_{ûû} = [u]^{T} [I] [u]",
+        "copy": "I_ûû = [u]^T [I] [u]",
+        "note": "any direction û",
+        "typst": [
+         "I_(hat(u)hat(u)) = [u]^(T) [I] [u]"
+        ]
+       },
+       {
+        "show": "det([I] − λ [1]) = 0",
+        "copy": "det([I] - λ [1]) = 0",
+        "note": "principal moments λ",
+        "typst": [
+         "det([I] - λ [1]) = 0"
+        ]
+       },
+       {
+        "show": "I_{zz} = I_{xx} + I_{yy}",
+        "copy": "I_zz = I_xx + I_yy",
+        "note": "flat body in x-y (perpendicular axis)",
+        "typst": [
+         "I_(z\\z) = I_(x\\x) + I_(y\\y)"
+        ]
+       },
+       {
+        "show": "k = √(I/m)",
+        "copy": "k = √(I/m)",
+        "note": "radius of gyration",
+        "typst": [
+         "k = sqrt((I)/(m))"
         ]
        }
       ]
@@ -686,6 +1312,27 @@
      180
     ],
     "groups": [
+     {
+      "title": "Every body below",
+      "items": [
+       {
+        "show": "I_{xy} = I_{xz} = I_{yz} = 0",
+        "copy": "I_xy = I_xz = I_yz = 0",
+        "note": "about the mass centre, on the axes drawn",
+        "typst": [
+         "I_(x\\y) = I_(x\\z) = I_(y\\z) = 0"
+        ]
+       },
+       {
+        "show": "I = Ī + m d^{2}",
+        "copy": "I = Ī + m d^2",
+        "note": "parallel axis",
+        "typst": [
+         "I = overline(I) + m d^(2)"
+        ]
+       }
+      ]
+     },
      {
       "title": "About the centre, unless it says",
       "items": [
@@ -782,6 +1429,1475 @@
         "typst": [
          "\"Rod, about one end\"",
          "m (L^(2))/(3)"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Inertia of rods and wires",
+    "groups": [
+     {
+      "title": "Line or thin rod",
+      "items": [
+       {
+        "show": "I_{xx} = 0",
+        "copy": "I_xx = 0",
+        "typst": [
+         "#box(width: 125.4pt, height: 53.6pt, baseline: 23.5pt, {\nplace(top + left, curve(fill: rgb(128, 128, 128, 70), stroke: (paint: black, thickness: 0.6pt), curve.move((2.7pt, 29.8pt)), curve.line((122.7pt, 29.8pt)), curve.line((122.7pt, 26.3pt)), curve.line((2.7pt, 26.3pt)), curve.close()))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((62.7pt, 28.1pt)), curve.line((76.4pt, 28.1pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((79.0pt, 28.1pt)), curve.line((75.8pt, 26.7pt)), curve.line((75.8pt, 29.4pt)), curve.close()))\nplace(center + horizon, dx: 22.5pt, dy: 0.6pt, text(size: 6.5pt, $hat(b)_x$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((62.7pt, 28.1pt)), curve.line((62.7pt, 14.4pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((62.7pt, 11.8pt)), curve.line((61.4pt, 15.0pt)), curve.line((64.0pt, 15.0pt)), curve.close()))\nplace(center + horizon, dx: 0.6pt, dy: -21.2pt, text(size: 6.5pt, $hat(b)_y$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((62.7pt, 28.1pt)), curve.line((52.5pt, 34.0pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((50.3pt, 35.2pt)), curve.line((53.7pt, 34.8pt)), curve.line((52.4pt, 32.5pt)), curve.close()))\nplace(center + horizon, dx: -18.7pt, dy: 12.2pt, text(size: 6.5pt, $hat(b)_z$))\nplace(center + horizon, dx: 0.0pt, dy: 1.2pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.45pt), curve.move((4.6pt, 41.8pt)), curve.line((120.8pt, 41.8pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((122.7pt, 41.8pt)), curve.line((120.3pt, 40.8pt)), curve.line((120.3pt, 42.8pt)), curve.close()))\nplace(top + left, curve(fill: black, stroke: none, curve.move((2.7pt, 41.8pt)), curve.line((5.1pt, 42.8pt)), curve.line((5.1pt, 40.8pt)), curve.close()))\nplace(center + horizon, dx: 0.0pt, dy: 21.3pt, text(size: 6.5pt, $L$))\n}) quad I_(x\\x) = 0"
+        ]
+       },
+       {
+        "show": "I_{yy} = I_{zz} = (1/12) m L^{2}",
+        "copy": "I_yy = I_zz = (1/12) m L^2",
+        "typst": [
+         "I_(y\\y) = I_(z\\z) = (1)/(12) m L^(2)"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Circular arc",
+      "items": [
+       {
+        "show": "L = 2 r θ",
+        "copy": "L = 2 r θ",
+        "typst": [
+         "#box(width: 83.8pt, height: 71.9pt, baseline: 32.6pt, {\nplace(top + left, curve(stroke: (paint: black, thickness: 1.6pt), curve.move((80.2pt, 37.3pt)), curve.line((79.0pt, 36.0pt)), curve.line((77.8pt, 34.6pt)), curve.line((76.5pt, 33.3pt)), curve.line((75.1pt, 32.1pt)), curve.line((73.8pt, 30.9pt)), curve.line((72.3pt, 29.8pt)), curve.line((70.9pt, 28.7pt)), curve.line((69.4pt, 27.7pt)), curve.line((67.8pt, 26.7pt)), curve.line((66.3pt, 25.8pt)), curve.line((64.7pt, 24.9pt)), curve.line((63.0pt, 24.2pt)), curve.line((61.4pt, 23.4pt)), curve.line((59.7pt, 22.7pt)), curve.line((58.0pt, 22.1pt)), curve.line((56.2pt, 21.6pt)), curve.line((54.5pt, 21.1pt)), curve.line((52.7pt, 20.7pt)), curve.line((50.9pt, 20.3pt)), curve.line((49.1pt, 20.0pt)), curve.line((47.3pt, 19.8pt)), curve.line((45.5pt, 19.6pt)), curve.line((43.7pt, 19.5pt)), curve.line((41.9pt, 19.5pt)), curve.line((40.1pt, 19.5pt)), curve.line((38.3pt, 19.6pt)), curve.line((36.5pt, 19.8pt)), curve.line((34.7pt, 20.0pt)), curve.line((32.9pt, 20.3pt)), curve.line((31.1pt, 20.7pt)), curve.line((29.3pt, 21.1pt)), curve.line((27.6pt, 21.6pt)), curve.line((25.8pt, 22.1pt)), curve.line((24.1pt, 22.7pt)), curve.line((22.4pt, 23.4pt)), curve.line((20.8pt, 24.2pt)), curve.line((19.1pt, 24.9pt)), curve.line((17.5pt, 25.8pt)), curve.line((16.0pt, 26.7pt)), curve.line((14.4pt, 27.7pt)), curve.line((12.9pt, 28.7pt)), curve.line((11.5pt, 29.8pt)), curve.line((10.0pt, 30.9pt)), curve.line((8.7pt, 32.1pt)), curve.line((7.3pt, 33.3pt)), curve.line((6.0pt, 34.6pt)), curve.line((4.8pt, 36.0pt)), curve.line((3.6pt, 37.3pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt, dash: \"dashed\"), curve.move((41.9pt, 69.5pt)), curve.line((80.2pt, 37.3pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt, dash: \"dashed\"), curve.move((41.9pt, 69.5pt)), curve.line((3.6pt, 37.3pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt, dash: \"dotted\"), curve.move((41.9pt, 69.5pt)), curve.line((41.9pt, 19.5pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((41.9pt, 25.6pt)), curve.line((53.1pt, 25.6pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((55.7pt, 25.6pt)), curve.line((52.5pt, 24.2pt)), curve.line((52.5pt, 26.9pt)), curve.close()))\nplace(center + horizon, dx: 20.0pt, dy: -11.0pt, text(size: 6.5pt, $hat(b)_x$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((41.9pt, 25.6pt)), curve.line((41.9pt, 14.4pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((41.9pt, 11.8pt)), curve.line((40.6pt, 15.0pt)), curve.line((43.2pt, 15.0pt)), curve.close()))\nplace(center + horizon, dx: 0.6pt, dy: -30.4pt, text(size: 6.5pt, $hat(b)_y$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((41.9pt, 25.6pt)), curve.line((33.6pt, 30.4pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((31.4pt, 31.6pt)), curve.line((34.8pt, 31.2pt)), curve.line((33.5pt, 28.9pt)), curve.close()))\nplace(center + horizon, dx: -16.8pt, dy: -0.5pt, text(size: 6.5pt, $hat(b)_z$))\nplace(center + horizon, dx: 0.0pt, dy: -10.4pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt), curve.move((41.9pt, 57.0pt)), curve.line((41.7pt, 57.0pt)), curve.line((41.4pt, 57.0pt)), curve.line((41.2pt, 57.0pt)), curve.line((41.0pt, 57.0pt)), curve.line((40.8pt, 57.0pt)), curve.line((40.5pt, 57.0pt)), curve.line((40.3pt, 57.1pt)), curve.line((40.1pt, 57.1pt)), curve.line((39.9pt, 57.1pt)), curve.line((39.6pt, 57.2pt)), curve.line((39.4pt, 57.2pt)), curve.line((39.2pt, 57.3pt)), curve.line((39.0pt, 57.3pt)), curve.line((38.8pt, 57.4pt)), curve.line((38.5pt, 57.4pt)), curve.line((38.3pt, 57.5pt)), curve.line((38.1pt, 57.6pt)), curve.line((37.9pt, 57.6pt)), curve.line((37.7pt, 57.7pt)), curve.line((37.5pt, 57.8pt)), curve.line((37.2pt, 57.9pt)), curve.line((37.0pt, 58.0pt)), curve.line((36.8pt, 58.0pt)), curve.line((36.6pt, 58.1pt)), curve.line((36.4pt, 58.2pt)), curve.line((36.2pt, 58.3pt)), curve.line((36.0pt, 58.4pt)), curve.line((35.8pt, 58.6pt)), curve.line((35.6pt, 58.7pt)), curve.line((35.4pt, 58.8pt)), curve.line((35.2pt, 58.9pt)), curve.line((35.0pt, 59.0pt)), curve.line((34.8pt, 59.1pt)), curve.line((34.7pt, 59.3pt)), curve.line((34.5pt, 59.4pt)), curve.line((34.3pt, 59.5pt)), curve.line((34.1pt, 59.7pt)), curve.line((33.9pt, 59.8pt)), curve.line((33.8pt, 60.0pt)), curve.line((33.6pt, 60.1pt)), curve.line((33.4pt, 60.3pt)), curve.line((33.3pt, 60.4pt)), curve.line((33.1pt, 60.6pt)), curve.line((32.9pt, 60.8pt)), curve.line((32.8pt, 60.9pt)), curve.line((32.6pt, 61.1pt)), curve.line((32.5pt, 61.3pt)), curve.line((32.3pt, 61.4pt))))\nplace(center + horizon, dx: -8.8pt, dy: 14.8pt, text(size: 6.5pt, $θ$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt), curve.move((51.5pt, 61.4pt)), curve.line((51.3pt, 61.3pt)), curve.line((51.2pt, 61.1pt)), curve.line((51.0pt, 60.9pt)), curve.line((50.9pt, 60.8pt)), curve.line((50.7pt, 60.6pt)), curve.line((50.5pt, 60.4pt)), curve.line((50.4pt, 60.3pt)), curve.line((50.2pt, 60.1pt)), curve.line((50.0pt, 60.0pt)), curve.line((49.9pt, 59.8pt)), curve.line((49.7pt, 59.7pt)), curve.line((49.5pt, 59.5pt)), curve.line((49.3pt, 59.4pt)), curve.line((49.1pt, 59.3pt)), curve.line((49.0pt, 59.1pt)), curve.line((48.8pt, 59.0pt)), curve.line((48.6pt, 58.9pt)), curve.line((48.4pt, 58.8pt)), curve.line((48.2pt, 58.7pt)), curve.line((48.0pt, 58.6pt)), curve.line((47.8pt, 58.4pt)), curve.line((47.6pt, 58.3pt)), curve.line((47.4pt, 58.2pt)), curve.line((47.2pt, 58.1pt)), curve.line((47.0pt, 58.0pt)), curve.line((46.8pt, 58.0pt)), curve.line((46.6pt, 57.9pt)), curve.line((46.3pt, 57.8pt)), curve.line((46.1pt, 57.7pt)), curve.line((45.9pt, 57.6pt)), curve.line((45.7pt, 57.6pt)), curve.line((45.5pt, 57.5pt)), curve.line((45.3pt, 57.4pt)), curve.line((45.0pt, 57.4pt)), curve.line((44.8pt, 57.3pt)), curve.line((44.6pt, 57.3pt)), curve.line((44.4pt, 57.2pt)), curve.line((44.2pt, 57.2pt)), curve.line((43.9pt, 57.1pt)), curve.line((43.7pt, 57.1pt)), curve.line((43.5pt, 57.1pt)), curve.line((43.3pt, 57.0pt)), curve.line((43.0pt, 57.0pt)), curve.line((42.8pt, 57.0pt)), curve.line((42.6pt, 57.0pt)), curve.line((42.4pt, 57.0pt)), curve.line((42.1pt, 57.0pt)), curve.line((41.9pt, 57.0pt))))\nplace(center + horizon, dx: 8.8pt, dy: 14.8pt, text(size: 6.5pt, $θ$))\nplace(center + horizon, dx: 25.4pt, dy: 22.5pt, text(size: 6.5pt, $r$))\n}) quad L = 2 r θ"
+        ]
+       },
+       {
+        "show": "y_{cm} = r sin(θ)/θ",
+        "copy": "y_cm = r sin(θ)/θ",
+        "note": "from the centre",
+        "typst": [
+         "y_(\"cm\") = r (sin(θ))/(θ)"
+        ]
+       },
+       {
+        "show": "I_{xx} = (1/2) m r^{2} [1 + sin(2θ)/(2θ) − 2 sin^{2}(θ)/θ^{2}]",
+        "copy": "I_xx = (1/2) m r^2 [1 + sin(2θ)/(2θ) - 2 sin^2(θ)/θ^2]",
+        "typst": [
+         "I_(x\\x) = (1)/(2) m r^(2) [1 + (sin(2θ))/(2θ) - 2 (sin^(2)(θ))/(θ^(2))]"
+        ]
+       },
+       {
+        "show": "I_{yy} = (1/2) m r^{2} [1 − sin(2θ)/(2θ)]",
+        "copy": "I_yy = (1/2) m r^2 [1 - sin(2θ)/(2θ)]",
+        "typst": [
+         "I_(y\\y) = (1)/(2) m r^(2) [1 - (sin(2θ))/(2θ)]"
+        ]
+       },
+       {
+        "show": "I_{zz} = m r^{2} [1 − sin^{2}(θ)/θ^{2}]",
+        "copy": "I_zz = m r^2 [1 - sin^2(θ)/θ^2]",
+        "note": "= I_{xx} + I_{yy}",
+        "typst": [
+         "I_(z\\z) = m r^(2) [1 - (sin^(2)(θ))/(θ^(2))]"
+        ],
+        "noteTypst": "= I_(x\\x) + I_(y\\y)"
+       }
+      ]
+     },
+     {
+      "title": "Semicircle",
+      "items": [
+       {
+        "show": "L = π r",
+        "copy": "L = π r",
+        "typst": [
+         "#box(width: 97.2pt, height: 57.8pt, baseline: 25.6pt, {\nplace(top + left, curve(stroke: (paint: black, thickness: 1.6pt), curve.move((93.6pt, 54.2pt)), curve.line((93.5pt, 51.3pt)), curve.line((93.2pt, 48.3pt)), curve.line((92.7pt, 45.4pt)), curve.line((92.1pt, 42.6pt)), curve.line((91.2pt, 39.8pt)), curve.line((90.2pt, 37.0pt)), curve.line((89.0pt, 34.3pt)), curve.line((87.6pt, 31.7pt)), curve.line((86.0pt, 29.2pt)), curve.line((84.3pt, 26.8pt)), curve.line((82.4pt, 24.6pt)), curve.line((80.4pt, 22.4pt)), curve.line((78.3pt, 20.4pt)), curve.line((76.0pt, 18.5pt)), curve.line((73.6pt, 16.8pt)), curve.line((71.1pt, 15.3pt)), curve.line((68.5pt, 13.9pt)), curve.line((65.8pt, 12.6pt)), curve.line((63.1pt, 11.6pt)), curve.line((60.2pt, 10.8pt)), curve.line((57.4pt, 10.1pt)), curve.line((54.5pt, 9.6pt)), curve.line((51.5pt, 9.3pt)), curve.line((48.6pt, 9.2pt)), curve.line((45.7pt, 9.3pt)), curve.line((42.7pt, 9.6pt)), curve.line((39.8pt, 10.1pt)), curve.line((37.0pt, 10.8pt)), curve.line((34.1pt, 11.6pt)), curve.line((31.4pt, 12.6pt)), curve.line((28.7pt, 13.9pt)), curve.line((26.1pt, 15.3pt)), curve.line((23.6pt, 16.8pt)), curve.line((21.2pt, 18.5pt)), curve.line((18.9pt, 20.4pt)), curve.line((16.8pt, 22.4pt)), curve.line((14.8pt, 24.6pt)), curve.line((12.9pt, 26.8pt)), curve.line((11.2pt, 29.2pt)), curve.line((9.6pt, 31.7pt)), curve.line((8.2pt, 34.3pt)), curve.line((7.0pt, 37.0pt)), curve.line((6.0pt, 39.8pt)), curve.line((5.1pt, 42.6pt)), curve.line((4.5pt, 45.4pt)), curve.line((4.0pt, 48.3pt)), curve.line((3.7pt, 51.3pt)), curve.line((3.6pt, 54.2pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt, dash: \"dashed\"), curve.move((3.6pt, 54.2pt)), curve.line((93.6pt, 54.2pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((48.6pt, 25.6pt)), curve.line((59.8pt, 25.6pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((62.4pt, 25.6pt)), curve.line((59.1pt, 24.2pt)), curve.line((59.1pt, 26.9pt)), curve.close()))\nplace(center + horizon, dx: 20.0pt, dy: -4.0pt, text(size: 6.5pt, $hat(b)_x$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((48.6pt, 25.6pt)), curve.line((48.6pt, 14.4pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((48.6pt, 11.8pt)), curve.line((47.3pt, 15.0pt)), curve.line((49.9pt, 15.0pt)), curve.close()))\nplace(center + horizon, dx: 0.6pt, dy: -23.3pt, text(size: 6.5pt, $hat(b)_y$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((48.6pt, 25.6pt)), curve.line((40.3pt, 30.4pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((38.1pt, 31.6pt)), curve.line((41.5pt, 31.2pt)), curve.line((40.2pt, 28.9pt)), curve.close()))\nplace(center + horizon, dx: -16.8pt, dy: 6.5pt, text(size: 6.5pt, $hat(b)_z$))\nplace(center + horizon, dx: 0.0pt, dy: -3.3pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt), curve.move((48.6pt, 54.2pt)), curve.line((21.6pt, 18.2pt))))\nplace(center + horizon, dx: -19.8pt, dy: 9.8pt, text(size: 6.5pt, $r$))\n}) quad L = π r"
+        ]
+       },
+       {
+        "show": "y_{cm} = 2r/π",
+        "copy": "y_cm = 2r/π",
+        "note": "from the centre",
+        "typst": [
+         "y_(\"cm\") = (2r)/(π)"
+        ]
+       },
+       {
+        "show": "I_{xx} = (1/2) m r^{2} (1 − 8/π^{2})",
+        "copy": "I_xx = (1/2) m r^2 (1 - 8/π^2)",
+        "typst": [
+         "I_(x\\x) = (1)/(2) m r^(2) (1 - (8)/(π^(2)))"
+        ]
+       },
+       {
+        "show": "I_{yy} = (1/2) m r^{2}",
+        "copy": "I_yy = (1/2) m r^2",
+        "typst": [
+         "I_(y\\y) = (1)/(2) m r^(2)"
+        ]
+       },
+       {
+        "show": "I_{zz} = m r^{2} (1 − 4/π^{2})",
+        "copy": "I_zz = m r^2 (1 - 4/π^2)",
+        "note": "= I_{xx} + I_{yy}",
+        "typst": [
+         "I_(z\\z) = m r^(2) (1 - (4)/(π^(2)))"
+        ],
+        "noteTypst": "= I_(x\\x) + I_(y\\y)"
+       }
+      ]
+     },
+     {
+      "title": "Circle or thin hoop",
+      "items": [
+       {
+        "show": "L = 2π r",
+        "copy": "L = 2π r",
+        "typst": [
+         "#box(width: 82.2pt, height: 82.2pt, baseline: 37.8pt, {\nplace(top + left, curve(stroke: (paint: black, thickness: 1.6pt), curve.move((78.6pt, 41.1pt)), curve.line((78.3pt, 36.2pt)), curve.line((77.3pt, 31.4pt)), curve.line((75.7pt, 26.7pt)), curve.line((73.6pt, 22.4pt)), curve.line((70.9pt, 18.3pt)), curve.line((67.6pt, 14.6pt)), curve.line((63.9pt, 11.3pt)), curve.line((59.9pt, 8.6pt)), curve.line((55.5pt, 6.5pt)), curve.line((50.8pt, 4.9pt)), curve.line((46.0pt, 3.9pt)), curve.line((41.1pt, 3.6pt)), curve.line((36.2pt, 3.9pt)), curve.line((31.4pt, 4.9pt)), curve.line((26.7pt, 6.5pt)), curve.line((22.4pt, 8.6pt)), curve.line((18.3pt, 11.3pt)), curve.line((14.6pt, 14.6pt)), curve.line((11.3pt, 18.3pt)), curve.line((8.6pt, 22.4pt)), curve.line((6.5pt, 26.7pt)), curve.line((4.9pt, 31.4pt)), curve.line((3.9pt, 36.2pt)), curve.line((3.6pt, 41.1pt)), curve.line((3.9pt, 46.0pt)), curve.line((4.9pt, 50.8pt)), curve.line((6.5pt, 55.5pt)), curve.line((8.6pt, 59.9pt)), curve.line((11.3pt, 63.9pt)), curve.line((14.6pt, 67.6pt)), curve.line((18.3pt, 70.9pt)), curve.line((22.3pt, 73.6pt)), curve.line((26.7pt, 75.7pt)), curve.line((31.4pt, 77.3pt)), curve.line((36.2pt, 78.3pt)), curve.line((41.1pt, 78.6pt)), curve.line((46.0pt, 78.3pt)), curve.line((50.8pt, 77.3pt)), curve.line((55.5pt, 75.7pt)), curve.line((59.9pt, 73.6pt)), curve.line((63.9pt, 70.9pt)), curve.line((67.6pt, 67.6pt)), curve.line((70.9pt, 63.9pt)), curve.line((73.6pt, 59.9pt)), curve.line((75.7pt, 55.5pt)), curve.line((77.3pt, 50.8pt)), curve.line((78.3pt, 46.0pt)), curve.line((78.6pt, 41.1pt)), curve.close()))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((41.1pt, 41.1pt)), curve.line((53.5pt, 41.1pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((56.1pt, 41.1pt)), curve.line((52.9pt, 39.8pt)), curve.line((52.9pt, 42.4pt)), curve.close()))\nplace(center + horizon, dx: 21.2pt, dy: -0.6pt, text(size: 6.5pt, $hat(b)_x$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((41.1pt, 41.1pt)), curve.line((41.1pt, 28.7pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((41.1pt, 26.1pt)), curve.line((39.8pt, 29.3pt)), curve.line((42.4pt, 29.3pt)), curve.close()))\nplace(center + horizon, dx: 0.6pt, dy: -21.2pt, text(size: 6.5pt, $hat(b)_y$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((41.1pt, 41.1pt)), curve.line((31.9pt, 46.4pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((29.6pt, 47.7pt)), curve.line((33.1pt, 47.3pt)), curve.line((31.7pt, 45.0pt)), curve.close()))\nplace(center + horizon, dx: -17.7pt, dy: 10.4pt, text(size: 6.5pt, $hat(b)_z$))\nplace(center + horizon, dx: 0.0pt, dy: 0.0pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt), curve.move((41.1pt, 41.1pt)), curve.line((67.3pt, 14.9pt))))\nplace(center + horizon, dx: 21.9pt, dy: -13.1pt, text(size: 6.5pt, $r$))\n}) quad L = 2π r"
+        ]
+       },
+       {
+        "show": "I_{xx} = I_{yy} = (1/2) m r^{2}",
+        "copy": "I_xx = I_yy = (1/2) m r^2",
+        "typst": [
+         "I_(x\\x) = I_(y\\y) = (1)/(2) m r^(2)"
+        ]
+       },
+       {
+        "show": "I_{zz} = m r^{2}",
+        "copy": "I_zz = m r^2",
+        "typst": [
+         "I_(z\\z) = m r^(2)"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Inertia of flat plates",
+    "groups": [
+     {
+      "title": "Circular sector",
+      "items": [
+       {
+        "show": "A = θ r^{2}",
+        "copy": "A = θ r^2",
+        "typst": [
+         "#box(width: 82.2pt, height: 57.6pt, baseline: 25.5pt, {\nplace(top + left, curve(fill: rgb(128, 128, 128, 70), stroke: (paint: black, thickness: 0.8pt), curve.move((41.1pt, 54.8pt)), curve.line((79.4pt, 22.7pt)), curve.line((78.2pt, 21.3pt)), curve.line((77.0pt, 20.0pt)), curve.line((75.7pt, 18.7pt)), curve.line((74.3pt, 17.5pt)), curve.line((73.0pt, 16.3pt)), curve.line((71.5pt, 15.2pt)), curve.line((70.1pt, 14.1pt)), curve.line((68.6pt, 13.1pt)), curve.line((67.0pt, 12.1pt)), curve.line((65.5pt, 11.2pt)), curve.line((63.9pt, 10.3pt)), curve.line((62.2pt, 9.5pt)), curve.line((60.6pt, 8.8pt)), curve.line((58.9pt, 8.1pt)), curve.line((57.2pt, 7.5pt)), curve.line((55.4pt, 6.9pt)), curve.line((53.7pt, 6.4pt)), curve.line((51.9pt, 6.0pt)), curve.line((50.1pt, 5.7pt)), curve.line((48.3pt, 5.4pt)), curve.line((46.5pt, 5.1pt)), curve.line((44.7pt, 5.0pt)), curve.line((42.9pt, 4.9pt)), curve.line((41.1pt, 4.8pt)), curve.line((39.3pt, 4.9pt)), curve.line((37.5pt, 5.0pt)), curve.line((35.7pt, 5.1pt)), curve.line((33.9pt, 5.4pt)), curve.line((32.1pt, 5.7pt)), curve.line((30.3pt, 6.0pt)), curve.line((28.5pt, 6.4pt)), curve.line((26.8pt, 6.9pt)), curve.line((25.0pt, 7.5pt)), curve.line((23.3pt, 8.1pt)), curve.line((21.6pt, 8.8pt)), curve.line((20.0pt, 9.5pt)), curve.line((18.3pt, 10.3pt)), curve.line((16.7pt, 11.2pt)), curve.line((15.2pt, 12.1pt)), curve.line((13.6pt, 13.1pt)), curve.line((12.1pt, 14.1pt)), curve.line((10.7pt, 15.2pt)), curve.line((9.2pt, 16.3pt)), curve.line((7.9pt, 17.5pt)), curve.line((6.5pt, 18.7pt)), curve.line((5.2pt, 20.0pt)), curve.line((4.0pt, 21.3pt)), curve.line((2.8pt, 22.7pt)), curve.close()))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt, dash: \"dotted\"), curve.move((41.1pt, 54.8pt)), curve.line((41.1pt, 4.8pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((41.1pt, 25.6pt)), curve.line((52.3pt, 25.6pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((54.9pt, 25.6pt)), curve.line((51.7pt, 24.2pt)), curve.line((51.7pt, 26.9pt)), curve.close()))\nplace(center + horizon, dx: 20.0pt, dy: -3.9pt, text(size: 6.5pt, $hat(b)_x$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((41.1pt, 25.6pt)), curve.line((41.1pt, 14.4pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((41.1pt, 11.8pt)), curve.line((39.8pt, 15.0pt)), curve.line((42.4pt, 15.0pt)), curve.close()))\nplace(center + horizon, dx: 0.6pt, dy: -23.2pt, text(size: 6.5pt, $hat(b)_y$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((41.1pt, 25.6pt)), curve.line((32.8pt, 30.4pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((30.6pt, 31.6pt)), curve.line((34.0pt, 31.2pt)), curve.line((32.7pt, 28.9pt)), curve.close()))\nplace(center + horizon, dx: -16.8pt, dy: 6.6pt, text(size: 6.5pt, $hat(b)_z$))\nplace(center + horizon, dx: 0.0pt, dy: -3.2pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt), curve.move((41.1pt, 42.3pt)), curve.line((40.9pt, 42.3pt)), curve.line((40.6pt, 42.3pt)), curve.line((40.4pt, 42.4pt)), curve.line((40.2pt, 42.4pt)), curve.line((40.0pt, 42.4pt)), curve.line((39.7pt, 42.4pt)), curve.line((39.5pt, 42.4pt)), curve.line((39.3pt, 42.5pt)), curve.line((39.1pt, 42.5pt)), curve.line((38.8pt, 42.5pt)), curve.line((38.6pt, 42.6pt)), curve.line((38.4pt, 42.6pt)), curve.line((38.2pt, 42.7pt)), curve.line((38.0pt, 42.7pt)), curve.line((37.7pt, 42.8pt)), curve.line((37.5pt, 42.9pt)), curve.line((37.3pt, 42.9pt)), curve.line((37.1pt, 43.0pt)), curve.line((36.9pt, 43.1pt)), curve.line((36.7pt, 43.2pt)), curve.line((36.4pt, 43.2pt)), curve.line((36.2pt, 43.3pt)), curve.line((36.0pt, 43.4pt)), curve.line((35.8pt, 43.5pt)), curve.line((35.6pt, 43.6pt)), curve.line((35.4pt, 43.7pt)), curve.line((35.2pt, 43.8pt)), curve.line((35.0pt, 43.9pt)), curve.line((34.8pt, 44.0pt)), curve.line((34.6pt, 44.1pt)), curve.line((34.4pt, 44.3pt)), curve.line((34.2pt, 44.4pt)), curve.line((34.0pt, 44.5pt)), curve.line((33.9pt, 44.6pt)), curve.line((33.7pt, 44.8pt)), curve.line((33.5pt, 44.9pt)), curve.line((33.3pt, 45.1pt)), curve.line((33.1pt, 45.2pt)), curve.line((33.0pt, 45.3pt)), curve.line((32.8pt, 45.5pt)), curve.line((32.6pt, 45.7pt)), curve.line((32.5pt, 45.8pt)), curve.line((32.3pt, 46.0pt)), curve.line((32.1pt, 46.1pt)), curve.line((32.0pt, 46.3pt)), curve.line((31.8pt, 46.5pt)), curve.line((31.7pt, 46.6pt)), curve.line((31.5pt, 46.8pt))))\nplace(center + horizon, dx: -8.8pt, dy: 7.3pt, text(size: 6.5pt, $θ$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt), curve.move((50.7pt, 46.8pt)), curve.line((50.5pt, 46.6pt)), curve.line((50.4pt, 46.5pt)), curve.line((50.2pt, 46.3pt)), curve.line((50.1pt, 46.1pt)), curve.line((49.9pt, 46.0pt)), curve.line((49.7pt, 45.8pt)), curve.line((49.6pt, 45.7pt)), curve.line((49.4pt, 45.5pt)), curve.line((49.2pt, 45.3pt)), curve.line((49.1pt, 45.2pt)), curve.line((48.9pt, 45.1pt)), curve.line((48.7pt, 44.9pt)), curve.line((48.5pt, 44.8pt)), curve.line((48.3pt, 44.6pt)), curve.line((48.2pt, 44.5pt)), curve.line((48.0pt, 44.4pt)), curve.line((47.8pt, 44.3pt)), curve.line((47.6pt, 44.1pt)), curve.line((47.4pt, 44.0pt)), curve.line((47.2pt, 43.9pt)), curve.line((47.0pt, 43.8pt)), curve.line((46.8pt, 43.7pt)), curve.line((46.6pt, 43.6pt)), curve.line((46.4pt, 43.5pt)), curve.line((46.2pt, 43.4pt)), curve.line((46.0pt, 43.3pt)), curve.line((45.8pt, 43.2pt)), curve.line((45.5pt, 43.2pt)), curve.line((45.3pt, 43.1pt)), curve.line((45.1pt, 43.0pt)), curve.line((44.9pt, 42.9pt)), curve.line((44.7pt, 42.9pt)), curve.line((44.5pt, 42.8pt)), curve.line((44.2pt, 42.7pt)), curve.line((44.0pt, 42.7pt)), curve.line((43.8pt, 42.6pt)), curve.line((43.6pt, 42.6pt)), curve.line((43.4pt, 42.5pt)), curve.line((43.1pt, 42.5pt)), curve.line((42.9pt, 42.5pt)), curve.line((42.7pt, 42.4pt)), curve.line((42.5pt, 42.4pt)), curve.line((42.2pt, 42.4pt)), curve.line((42.0pt, 42.4pt)), curve.line((41.8pt, 42.4pt)), curve.line((41.6pt, 42.3pt)), curve.line((41.3pt, 42.3pt)), curve.line((41.1pt, 42.3pt))))\nplace(center + horizon, dx: 8.8pt, dy: 7.3pt, text(size: 6.5pt, $θ$))\nplace(center + horizon, dx: 25.4pt, dy: 14.9pt, text(size: 6.5pt, $r$))\n}) quad A = θ r^(2)"
+        ]
+       },
+       {
+        "show": "y_{cm} = 2r sin(θ)/(3θ)",
+        "copy": "y_cm = 2r sin(θ)/(3θ)",
+        "note": "from the apex",
+        "typst": [
+         "y_(\"cm\") = 2r (sin(θ))/(3θ)"
+        ]
+       },
+       {
+        "show": "I_{xx} = (1/4) m r^{2} [1 + sin(2θ)/(2θ) − 16 sin^{2}(θ)/(9θ^{2})]",
+        "copy": "I_xx = (1/4) m r^2 [1 + sin(2θ)/(2θ) - 16 sin^2(θ)/(9θ^2)]",
+        "typst": [
+         "I_(x\\x) = (1)/(4) m r^(2) [1 + (sin(2θ))/(2θ) - 16 (sin^(2)(θ))/(9θ^(2))]"
+        ]
+       },
+       {
+        "show": "I_{yy} = (1/4) m r^{2} [1 − sin(2θ)/(2θ)]",
+        "copy": "I_yy = (1/4) m r^2 [1 - sin(2θ)/(2θ)]",
+        "typst": [
+         "I_(y\\y) = (1)/(4) m r^(2) [1 - (sin(2θ))/(2θ)]"
+        ]
+       },
+       {
+        "show": "I_{zz} = I_{xx} + I_{yy}",
+        "copy": "I_zz = I_xx + I_yy",
+        "typst": [
+         "I_(z\\z) = I_(x\\x) + I_(y\\y)"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Semicircular sector",
+      "items": [
+       {
+        "show": "A = (1/2) π r^{2}",
+        "copy": "A = (1/2) π r^2",
+        "typst": [
+         "#box(width: 95.6pt, height: 50.6pt, baseline: 22.0pt, {\nplace(top + left, curve(fill: rgb(128, 128, 128, 70), stroke: (paint: black, thickness: 0.8pt), curve.move((92.8pt, 47.8pt)), curve.line((92.7pt, 44.9pt)), curve.line((92.4pt, 41.9pt)), curve.line((91.9pt, 39.0pt)), curve.line((91.3pt, 36.2pt)), curve.line((90.4pt, 33.3pt)), curve.line((89.4pt, 30.6pt)), curve.line((88.2pt, 27.9pt)), curve.line((86.8pt, 25.3pt)), curve.line((85.2pt, 22.8pt)), curve.line((83.5pt, 20.4pt)), curve.line((81.6pt, 18.1pt)), curve.line((79.6pt, 16.0pt)), curve.line((77.5pt, 14.0pt)), curve.line((75.2pt, 12.1pt)), curve.line((72.8pt, 10.4pt)), curve.line((70.3pt, 8.8pt)), curve.line((67.7pt, 7.4pt)), curve.line((65.0pt, 6.2pt)), curve.line((62.3pt, 5.2pt)), curve.line((59.4pt, 4.3pt)), curve.line((56.6pt, 3.7pt)), curve.line((53.7pt, 3.2pt)), curve.line((50.7pt, 2.9pt)), curve.line((47.8pt, 2.8pt)), curve.line((44.9pt, 2.9pt)), curve.line((41.9pt, 3.2pt)), curve.line((39.0pt, 3.7pt)), curve.line((36.2pt, 4.3pt)), curve.line((33.3pt, 5.2pt)), curve.line((30.6pt, 6.2pt)), curve.line((27.9pt, 7.4pt)), curve.line((25.3pt, 8.8pt)), curve.line((22.8pt, 10.4pt)), curve.line((20.4pt, 12.1pt)), curve.line((18.1pt, 14.0pt)), curve.line((16.0pt, 16.0pt)), curve.line((14.0pt, 18.1pt)), curve.line((12.1pt, 20.4pt)), curve.line((10.4pt, 22.8pt)), curve.line((8.8pt, 25.3pt)), curve.line((7.4pt, 27.9pt)), curve.line((6.2pt, 30.6pt)), curve.line((5.2pt, 33.3pt)), curve.line((4.3pt, 36.2pt)), curve.line((3.7pt, 39.0pt)), curve.line((3.2pt, 41.9pt)), curve.line((2.9pt, 44.9pt)), curve.line((2.8pt, 47.8pt)), curve.close()))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((47.8pt, 28.7pt)), curve.line((59.0pt, 28.7pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((61.5pt, 28.7pt)), curve.line((58.3pt, 27.4pt)), curve.line((58.3pt, 30.0pt)), curve.close()))\nplace(center + horizon, dx: 20.0pt, dy: 2.8pt, text(size: 6.5pt, $hat(b)_x$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((47.8pt, 28.7pt)), curve.line((47.8pt, 17.5pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((47.8pt, 15.0pt)), curve.line((46.5pt, 18.2pt)), curve.line((49.1pt, 18.2pt)), curve.close()))\nplace(center + horizon, dx: 0.6pt, dy: -16.6pt, text(size: 6.5pt, $hat(b)_y$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((47.8pt, 28.7pt)), curve.line((39.5pt, 33.5pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((37.3pt, 34.8pt)), curve.line((40.7pt, 34.3pt)), curve.line((39.4pt, 32.0pt)), curve.close()))\nplace(center + horizon, dx: -16.8pt, dy: 13.2pt, text(size: 6.5pt, $hat(b)_z$))\nplace(center + horizon, dx: 0.0pt, dy: 3.4pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt), curve.move((47.8pt, 47.8pt)), curve.line((20.8pt, 11.8pt))))\nplace(center + horizon, dx: -19.8pt, dy: 7.0pt, text(size: 6.5pt, $r$))\n}) quad A = (1)/(2) π r^(2)"
+        ]
+       },
+       {
+        "show": "y_{cm} = 4r/(3π)",
+        "copy": "y_cm = 4r/(3π)",
+        "note": "from the flat edge",
+        "typst": [
+         "y_(\"cm\") = (4r)/(3π)"
+        ]
+       },
+       {
+        "show": "I_{xx} = (1/4) m r^{2} (1 − 64/(9π^{2}))",
+        "copy": "I_xx = (1/4) m r^2 (1 - 64/(9π^2))",
+        "typst": [
+         "I_(x\\x) = (1)/(4) m r^(2) (1 - (64)/(9π^(2)))"
+        ]
+       },
+       {
+        "show": "I_{yy} = (1/4) m r^{2}",
+        "copy": "I_yy = (1/4) m r^2",
+        "typst": [
+         "I_(y\\y) = (1)/(4) m r^(2)"
+        ]
+       },
+       {
+        "show": "I_{zz} = (1/2) m r^{2} (1 − 32/(9π^{2}))",
+        "copy": "I_zz = (1/2) m r^2 (1 - 32/(9π^2))",
+        "typst": [
+         "I_(z\\z) = (1)/(2) m r^(2) (1 - (32)/(9π^(2)))"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Thin solid disk",
+      "items": [
+       {
+        "show": "A = π r^{2}",
+        "copy": "A = π r^2",
+        "typst": [
+         "#box(width: 80.6pt, height: 80.6pt, baseline: 37.0pt, {\nplace(top + left, curve(fill: rgb(128, 128, 128, 70), stroke: (paint: black, thickness: 0.8pt), curve.move((77.8pt, 40.3pt)), curve.line((77.5pt, 35.4pt)), curve.line((76.5pt, 30.6pt)), curve.line((74.9pt, 25.9pt)), curve.line((72.8pt, 21.6pt)), curve.line((70.1pt, 17.5pt)), curve.line((66.8pt, 13.8pt)), curve.line((63.1pt, 10.5pt)), curve.line((59.0pt, 7.8pt)), curve.line((54.7pt, 5.7pt)), curve.line((50.0pt, 4.1pt)), curve.line((45.2pt, 3.1pt)), curve.line((40.3pt, 2.8pt)), curve.line((35.4pt, 3.1pt)), curve.line((30.6pt, 4.1pt)), curve.line((25.9pt, 5.7pt)), curve.line((21.6pt, 7.8pt)), curve.line((17.5pt, 10.5pt)), curve.line((13.8pt, 13.8pt)), curve.line((10.5pt, 17.5pt)), curve.line((7.8pt, 21.6pt)), curve.line((5.7pt, 25.9pt)), curve.line((4.1pt, 30.6pt)), curve.line((3.1pt, 35.4pt)), curve.line((2.8pt, 40.3pt)), curve.line((3.1pt, 45.2pt)), curve.line((4.1pt, 50.0pt)), curve.line((5.7pt, 54.7pt)), curve.line((7.8pt, 59.0pt)), curve.line((10.5pt, 63.1pt)), curve.line((13.8pt, 66.8pt)), curve.line((17.5pt, 70.1pt)), curve.line((21.5pt, 72.8pt)), curve.line((25.9pt, 74.9pt)), curve.line((30.6pt, 76.5pt)), curve.line((35.4pt, 77.5pt)), curve.line((40.3pt, 77.8pt)), curve.line((45.2pt, 77.5pt)), curve.line((50.0pt, 76.5pt)), curve.line((54.7pt, 74.9pt)), curve.line((59.0pt, 72.8pt)), curve.line((63.1pt, 70.1pt)), curve.line((66.8pt, 66.8pt)), curve.line((70.1pt, 63.1pt)), curve.line((72.8pt, 59.1pt)), curve.line((74.9pt, 54.7pt)), curve.line((76.5pt, 50.0pt)), curve.line((77.5pt, 45.2pt)), curve.line((77.8pt, 40.3pt)), curve.close()))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((40.3pt, 40.3pt)), curve.line((52.7pt, 40.3pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((55.3pt, 40.3pt)), curve.line((52.1pt, 39.0pt)), curve.line((52.1pt, 41.6pt)), curve.close()))\nplace(center + horizon, dx: 21.2pt, dy: -0.6pt, text(size: 6.5pt, $hat(b)_x$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((40.3pt, 40.3pt)), curve.line((40.3pt, 27.9pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((40.3pt, 25.3pt)), curve.line((39.0pt, 28.5pt)), curve.line((41.6pt, 28.5pt)), curve.close()))\nplace(center + horizon, dx: 0.6pt, dy: -21.2pt, text(size: 6.5pt, $hat(b)_y$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((40.3pt, 40.3pt)), curve.line((31.1pt, 45.6pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((28.8pt, 46.9pt)), curve.line((32.3pt, 46.5pt)), curve.line((30.9pt, 44.2pt)), curve.close()))\nplace(center + horizon, dx: -17.7pt, dy: 10.4pt, text(size: 6.5pt, $hat(b)_z$))\nplace(center + horizon, dx: 0.0pt, dy: 0.0pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt), curve.move((40.3pt, 40.3pt)), curve.line((66.5pt, 14.0pt))))\nplace(center + horizon, dx: 21.9pt, dy: -13.1pt, text(size: 6.5pt, $r$))\n}) quad A = π r^(2)"
+        ]
+       },
+       {
+        "show": "I_{xx} = I_{yy} = (1/4) m r^{2}",
+        "copy": "I_xx = I_yy = (1/4) m r^2",
+        "typst": [
+         "I_(x\\x) = I_(y\\y) = (1)/(4) m r^(2)"
+        ]
+       },
+       {
+        "show": "I_{zz} = (1/2) m r^{2}",
+        "copy": "I_zz = (1/2) m r^2",
+        "typst": [
+         "I_(z\\z) = (1)/(2) m r^(2)"
+        ]
+       },
+       {
+        "show": "x^{2} + y^{2} = r^{2}",
+        "copy": "x^2 + y^2 = r^2",
+        "note": "Q = x b̂_{x} + y b̂_{y}",
+        "typst": [
+         "x^(2) + y^(2) = r^(2)"
+        ],
+        "noteTypst": "Q = x hat(b)_(x) + y hat(b)_(y)"
+       }
+      ]
+     },
+     {
+      "title": "Ellipse",
+      "items": [
+       {
+        "show": "A = π a b",
+        "copy": "A = π a b",
+        "typst": [
+         "#box(width: 95.6pt, height: 65.6pt, baseline: 29.5pt, {\nplace(top + left, curve(fill: rgb(128, 128, 128, 70), stroke: (paint: black, thickness: 0.8pt), curve.move((92.8pt, 32.8pt)), curve.line((92.4pt, 28.9pt)), curve.line((91.3pt, 25.0pt)), curve.line((89.4pt, 21.3pt)), curve.line((86.8pt, 17.8pt)), curve.line((83.5pt, 14.5pt)), curve.line((79.6pt, 11.6pt)), curve.line((75.2pt, 9.0pt)), curve.line((70.3pt, 6.8pt)), curve.line((65.0pt, 5.1pt)), curve.line((59.4pt, 3.8pt)), curve.line((53.7pt, 3.1pt)), curve.line((47.8pt, 2.8pt)), curve.line((41.9pt, 3.1pt)), curve.line((36.2pt, 3.8pt)), curve.line((30.6pt, 5.1pt)), curve.line((25.3pt, 6.8pt)), curve.line((20.4pt, 9.0pt)), curve.line((16.0pt, 11.6pt)), curve.line((12.1pt, 14.5pt)), curve.line((8.8pt, 17.8pt)), curve.line((6.2pt, 21.3pt)), curve.line((4.3pt, 25.0pt)), curve.line((3.2pt, 28.9pt)), curve.line((2.8pt, 32.8pt)), curve.line((3.2pt, 36.7pt)), curve.line((4.3pt, 40.6pt)), curve.line((6.2pt, 44.3pt)), curve.line((8.8pt, 47.8pt)), curve.line((12.1pt, 51.1pt)), curve.line((16.0pt, 54.0pt)), curve.line((20.4pt, 56.6pt)), curve.line((25.3pt, 58.8pt)), curve.line((30.6pt, 60.5pt)), curve.line((36.2pt, 61.8pt)), curve.line((41.9pt, 62.5pt)), curve.line((47.8pt, 62.8pt)), curve.line((53.7pt, 62.5pt)), curve.line((59.4pt, 61.8pt)), curve.line((65.0pt, 60.5pt)), curve.line((70.3pt, 58.8pt)), curve.line((75.2pt, 56.6pt)), curve.line((79.6pt, 54.0pt)), curve.line((83.5pt, 51.1pt)), curve.line((86.8pt, 47.8pt)), curve.line((89.4pt, 44.3pt)), curve.line((91.3pt, 40.6pt)), curve.line((92.4pt, 36.7pt)), curve.line((92.8pt, 32.8pt)), curve.close()))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((47.8pt, 32.8pt)), curve.line((60.2pt, 32.8pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((62.8pt, 32.8pt)), curve.line((59.6pt, 31.5pt)), curve.line((59.6pt, 34.1pt)), curve.close()))\nplace(center + horizon, dx: 21.2pt, dy: -0.6pt, text(size: 6.5pt, $hat(b)_x$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((47.8pt, 32.8pt)), curve.line((47.8pt, 20.4pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((47.8pt, 17.8pt)), curve.line((46.5pt, 21.0pt)), curve.line((49.1pt, 21.0pt)), curve.close()))\nplace(center + horizon, dx: 0.6pt, dy: -21.2pt, text(size: 6.5pt, $hat(b)_y$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((47.8pt, 32.8pt)), curve.line((38.6pt, 38.1pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((36.3pt, 39.4pt)), curve.line((39.8pt, 39.0pt)), curve.line((38.4pt, 36.7pt)), curve.close()))\nplace(center + horizon, dx: -17.7pt, dy: 10.4pt, text(size: 6.5pt, $hat(b)_z$))\nplace(center + horizon, dx: 0.0pt, dy: 0.0pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt, dash: \"dotted\"), curve.move((47.8pt, 32.8pt)), curve.line((2.8pt, 32.8pt))))\nplace(center + horizon, dx: -22.5pt, dy: -4.4pt, text(size: 6.5pt, $a$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt, dash: \"dotted\"), curve.move((47.8pt, 32.8pt)), curve.line((47.8pt, 62.8pt))))\nplace(center + horizon, dx: 4.4pt, dy: 15.0pt, text(size: 6.5pt, $b$))\n}) quad A = π a b"
+        ]
+       },
+       {
+        "show": "I_{xx} = (1/4) m b^{2}",
+        "copy": "I_xx = (1/4) m b^2",
+        "typst": [
+         "I_(x\\x) = (1)/(4) m b^(2)"
+        ]
+       },
+       {
+        "show": "I_{yy} = (1/4) m a^{2}",
+        "copy": "I_yy = (1/4) m a^2",
+        "typst": [
+         "I_(y\\y) = (1)/(4) m a^(2)"
+        ]
+       },
+       {
+        "show": "I_{zz} = I_{xx} + I_{yy}",
+        "copy": "I_zz = I_xx + I_yy",
+        "typst": [
+         "I_(z\\z) = I_(x\\x) + I_(y\\y)"
+        ]
+       },
+       {
+        "show": "x^{2}/a^{2} + y^{2}/b^{2} = 1",
+        "copy": "x^2/a^2 + y^2/b^2 = 1",
+        "note": "edge point Q",
+        "typst": [
+         "(x^(2))/(a^(2)) + (y^(2))/(b^(2)) = 1"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Thin rectangular plate",
+      "items": [
+       {
+        "show": "A = a b",
+        "copy": "A = a b",
+        "typst": [
+         "#box(width: 84.9pt, height: 61.2pt, baseline: 27.3pt, {\nplace(top + left, curve(fill: rgb(128, 128, 128, 70), stroke: (paint: black, thickness: 0.8pt), curve.move((2.8pt, 49.3pt)), curve.line((72.8pt, 49.3pt)), curve.line((72.8pt, 4.3pt)), curve.line((2.8pt, 4.3pt)), curve.close()))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((37.8pt, 26.8pt)), curve.line((50.2pt, 26.8pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((52.8pt, 26.8pt)), curve.line((49.6pt, 25.5pt)), curve.line((49.6pt, 28.2pt)), curve.close()))\nplace(center + horizon, dx: 16.6pt, dy: -4.4pt, text(size: 6.5pt, $hat(b)_x$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((37.8pt, 26.8pt)), curve.line((37.8pt, 14.4pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((37.8pt, 11.8pt)), curve.line((36.5pt, 15.0pt)), curve.line((39.1pt, 15.0pt)), curve.close()))\nplace(center + horizon, dx: -4.0pt, dy: -25.0pt, text(size: 6.5pt, $hat(b)_y$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((37.8pt, 26.8pt)), curve.line((28.6pt, 32.2pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((26.3pt, 33.4pt)), curve.line((29.8pt, 33.0pt)), curve.line((28.4pt, 30.7pt)), curve.close()))\nplace(center + horizon, dx: -22.4pt, dy: 6.6pt, text(size: 6.5pt, $hat(b)_z$))\nplace(center + horizon, dx: -4.7pt, dy: -3.8pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(center + horizon, dx: -4.7pt, dy: 25.0pt, text(size: 6.5pt, $a$))\nplace(center + horizon, dx: 36.6pt, dy: 7.5pt, text(size: 6.5pt, $b$))\n}) quad A = a b"
+        ]
+       },
+       {
+        "show": "I_{xx} = (1/12) m b^{2}",
+        "copy": "I_xx = (1/12) m b^2",
+        "typst": [
+         "I_(x\\x) = (1)/(12) m b^(2)"
+        ]
+       },
+       {
+        "show": "I_{yy} = (1/12) m a^{2}",
+        "copy": "I_yy = (1/12) m a^2",
+        "typst": [
+         "I_(y\\y) = (1)/(12) m a^(2)"
+        ]
+       },
+       {
+        "show": "I_{zz} = I_{xx} + I_{yy}",
+        "copy": "I_zz = I_xx + I_yy",
+        "typst": [
+         "I_(z\\z) = I_(x\\x) + I_(y\\y)"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Inertia of cylinders and cones",
+    "groups": [
+     {
+      "title": "Solid cylinder",
+      "items": [
+       {
+        "show": "V = π r^{2} h",
+        "copy": "V = π r^2 h",
+        "typst": [
+         "#box(width: 94.7pt, height: 84.3pt, baseline: 38.8pt, {\nplace(top + left, curve(fill: rgb(128, 128, 128, 40), stroke: (paint: black, thickness: 0.8pt), curve.move((76.9pt, 58.8pt)), curve.line((80.2pt, 56.6pt)), curve.line((83.1pt, 54.0pt)), curve.line((85.7pt, 51.1pt)), curve.line((87.9pt, 47.8pt)), curve.line((89.6pt, 44.3pt)), curve.line((90.9pt, 40.6pt)), curve.line((91.6pt, 36.7pt)), curve.line((91.9pt, 32.8pt)), curve.line((91.6pt, 28.9pt)), curve.line((90.9pt, 25.0pt)), curve.line((89.6pt, 21.3pt)), curve.line((87.9pt, 17.8pt)), curve.line((85.7pt, 14.5pt)), curve.line((83.1pt, 11.6pt)), curve.line((80.2pt, 9.0pt)), curve.line((76.9pt, 6.8pt)), curve.line((73.4pt, 5.1pt)), curve.line((69.7pt, 3.8pt)), curve.line((65.8pt, 3.1pt)), curve.line((61.9pt, 2.8pt)), curve.line((58.0pt, 3.1pt)), curve.line((54.1pt, 3.8pt)), curve.line((50.4pt, 5.1pt)), curve.line((46.9pt, 6.8pt)), curve.line((17.8pt, 23.6pt)), curve.line((21.3pt, 21.9pt)), curve.line((25.0pt, 20.6pt)), curve.line((28.9pt, 19.9pt)), curve.line((32.8pt, 19.6pt)), curve.line((36.7pt, 19.9pt)), curve.line((40.6pt, 20.6pt)), curve.line((44.3pt, 21.9pt)), curve.line((47.8pt, 23.6pt)), curve.line((51.1pt, 25.8pt)), curve.line((54.0pt, 28.4pt)), curve.line((56.6pt, 31.3pt)), curve.line((58.8pt, 34.6pt)), curve.line((60.5pt, 38.1pt)), curve.line((61.8pt, 41.8pt)), curve.line((62.5pt, 45.7pt)), curve.line((62.8pt, 49.6pt)), curve.line((62.5pt, 53.5pt)), curve.line((61.8pt, 57.4pt)), curve.line((60.5pt, 61.1pt)), curve.line((58.8pt, 64.6pt)), curve.line((56.6pt, 67.9pt)), curve.line((54.0pt, 70.8pt)), curve.line((51.1pt, 73.4pt)), curve.line((47.8pt, 75.6pt)), curve.close()))\nplace(top + left, curve(fill: rgb(128, 128, 128, 70), stroke: (paint: black, thickness: 0.8pt), curve.move((62.8pt, 49.6pt)), curve.line((62.5pt, 45.7pt)), curve.line((61.8pt, 41.8pt)), curve.line((60.5pt, 38.1pt)), curve.line((58.8pt, 34.6pt)), curve.line((56.6pt, 31.3pt)), curve.line((54.0pt, 28.4pt)), curve.line((51.1pt, 25.8pt)), curve.line((47.8pt, 23.6pt)), curve.line((44.3pt, 21.9pt)), curve.line((40.6pt, 20.6pt)), curve.line((36.7pt, 19.9pt)), curve.line((32.8pt, 19.6pt)), curve.line((28.9pt, 19.9pt)), curve.line((25.0pt, 20.6pt)), curve.line((21.3pt, 21.9pt)), curve.line((17.8pt, 23.6pt)), curve.line((14.5pt, 25.8pt)), curve.line((11.6pt, 28.4pt)), curve.line((9.0pt, 31.3pt)), curve.line((6.8pt, 34.6pt)), curve.line((5.1pt, 38.1pt)), curve.line((3.8pt, 41.8pt)), curve.line((3.1pt, 45.7pt)), curve.line((2.8pt, 49.6pt)), curve.line((3.1pt, 53.5pt)), curve.line((3.8pt, 57.4pt)), curve.line((5.1pt, 61.1pt)), curve.line((6.8pt, 64.6pt)), curve.line((9.0pt, 67.9pt)), curve.line((11.6pt, 70.8pt)), curve.line((14.5pt, 73.4pt)), curve.line((17.8pt, 75.6pt)), curve.line((21.3pt, 77.3pt)), curve.line((25.0pt, 78.6pt)), curve.line((28.9pt, 79.3pt)), curve.line((32.8pt, 79.6pt)), curve.line((36.7pt, 79.3pt)), curve.line((40.6pt, 78.6pt)), curve.line((44.3pt, 77.3pt)), curve.line((47.8pt, 75.6pt)), curve.line((51.1pt, 73.4pt)), curve.line((54.0pt, 70.8pt)), curve.line((56.6pt, 67.9pt)), curve.line((58.8pt, 64.6pt)), curve.line((60.5pt, 61.1pt)), curve.line((61.8pt, 57.4pt)), curve.line((62.5pt, 53.5pt)), curve.line((62.8pt, 49.6pt)), curve.close()))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((47.3pt, 41.2pt)), curve.line((59.8pt, 41.2pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((62.3pt, 41.2pt)), curve.line((59.1pt, 39.9pt)), curve.line((59.1pt, 42.5pt)), curve.close()))\nplace(center + horizon, dx: 21.3pt, dy: -1.6pt, text(size: 6.5pt, $hat(b)_x$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((47.3pt, 41.2pt)), curve.line((47.3pt, 28.8pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((47.3pt, 26.2pt)), curve.line((46.0pt, 29.4pt)), curve.line((48.7pt, 29.4pt)), curve.close()))\nplace(center + horizon, dx: 0.6pt, dy: -22.2pt, text(size: 6.5pt, $hat(b)_y$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((47.3pt, 41.2pt)), curve.line((25.0pt, 54.1pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((22.8pt, 55.4pt)), curve.line((26.2pt, 54.9pt)), curve.line((24.9pt, 52.6pt)), curve.close()))\nplace(center + horizon, dx: -30.8pt, dy: 17.0pt, text(size: 6.5pt, $hat(b)_z$))\nplace(center + horizon, dx: 0.0pt, dy: -0.9pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt), curve.move((32.8pt, 49.6pt)), curve.line((61.9pt, 57.4pt))))\nplace(center + horizon, dx: 0.5pt, dy: 16.4pt, text(size: 6.5pt, $r$))\nplace(center + horizon, dx: 5.0pt, dy: 36.6pt, text(size: 6.5pt, $h$))\n}) quad V = π r^(2) h"
+        ]
+       },
+       {
+        "show": "I_{xx} = I_{yy} = (1/12) m (3r^{2} + h^{2})",
+        "copy": "I_xx = I_yy = (1/12) m (3r^2 + h^2)",
+        "typst": [
+         "I_(x\\x) = I_(y\\y) = (1)/(12) m (3r^(2) + h^(2))"
+        ]
+       },
+       {
+        "show": "I_{zz} = (1/2) m r^{2}",
+        "copy": "I_zz = (1/2) m r^2",
+        "typst": [
+         "I_(z\\z) = (1)/(2) m r^(2)"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Thick cylindrical shell",
+      "items": [
+       {
+        "show": "V = π (r_{o}^{2} − r_{i}^{2}) h",
+        "copy": "V = π (r_o^2 - r_i^2) h",
+        "typst": [
+         "#box(width: 94.7pt, height: 84.3pt, baseline: 38.8pt, {\nplace(top + left, curve(fill: rgb(128, 128, 128, 70), stroke: (paint: black, thickness: 0.8pt), curve.move((76.9pt, 58.8pt)), curve.line((80.2pt, 56.6pt)), curve.line((83.1pt, 54.0pt)), curve.line((85.7pt, 51.1pt)), curve.line((87.9pt, 47.8pt)), curve.line((89.6pt, 44.3pt)), curve.line((90.9pt, 40.6pt)), curve.line((91.6pt, 36.7pt)), curve.line((91.9pt, 32.8pt)), curve.line((91.6pt, 28.9pt)), curve.line((90.9pt, 25.0pt)), curve.line((89.6pt, 21.3pt)), curve.line((87.9pt, 17.8pt)), curve.line((85.7pt, 14.5pt)), curve.line((83.1pt, 11.6pt)), curve.line((80.2pt, 9.0pt)), curve.line((76.9pt, 6.8pt)), curve.line((73.4pt, 5.1pt)), curve.line((69.7pt, 3.8pt)), curve.line((65.8pt, 3.1pt)), curve.line((61.9pt, 2.8pt)), curve.line((58.0pt, 3.1pt)), curve.line((54.1pt, 3.8pt)), curve.line((50.4pt, 5.1pt)), curve.line((46.9pt, 6.8pt)), curve.line((17.8pt, 23.6pt)), curve.line((21.3pt, 21.9pt)), curve.line((25.0pt, 20.6pt)), curve.line((28.9pt, 19.9pt)), curve.line((32.8pt, 19.6pt)), curve.line((36.7pt, 19.9pt)), curve.line((40.6pt, 20.6pt)), curve.line((44.3pt, 21.9pt)), curve.line((47.8pt, 23.6pt)), curve.line((51.1pt, 25.8pt)), curve.line((54.0pt, 28.4pt)), curve.line((56.6pt, 31.3pt)), curve.line((58.8pt, 34.6pt)), curve.line((60.5pt, 38.1pt)), curve.line((61.8pt, 41.8pt)), curve.line((62.5pt, 45.7pt)), curve.line((62.8pt, 49.6pt)), curve.line((62.5pt, 53.5pt)), curve.line((61.8pt, 57.4pt)), curve.line((60.5pt, 61.1pt)), curve.line((58.8pt, 64.6pt)), curve.line((56.6pt, 67.9pt)), curve.line((54.0pt, 70.8pt)), curve.line((51.1pt, 73.4pt)), curve.line((47.8pt, 75.6pt)), curve.close()))\nplace(top + left, curve(fill: rgb(128, 128, 128, 70), fill-rule: \"even-odd\", stroke: (paint: black, thickness: 0.8pt), curve.move((62.8pt, 49.6pt)), curve.line((62.5pt, 45.7pt)), curve.line((61.8pt, 41.8pt)), curve.line((60.5pt, 38.1pt)), curve.line((58.8pt, 34.6pt)), curve.line((56.6pt, 31.3pt)), curve.line((54.0pt, 28.4pt)), curve.line((51.1pt, 25.8pt)), curve.line((47.8pt, 23.6pt)), curve.line((44.3pt, 21.9pt)), curve.line((40.6pt, 20.6pt)), curve.line((36.7pt, 19.9pt)), curve.line((32.8pt, 19.6pt)), curve.line((28.9pt, 19.9pt)), curve.line((25.0pt, 20.6pt)), curve.line((21.3pt, 21.9pt)), curve.line((17.8pt, 23.6pt)), curve.line((14.5pt, 25.8pt)), curve.line((11.6pt, 28.4pt)), curve.line((9.0pt, 31.3pt)), curve.line((6.8pt, 34.6pt)), curve.line((5.1pt, 38.1pt)), curve.line((3.8pt, 41.8pt)), curve.line((3.1pt, 45.7pt)), curve.line((2.8pt, 49.6pt)), curve.line((3.1pt, 53.5pt)), curve.line((3.8pt, 57.4pt)), curve.line((5.1pt, 61.1pt)), curve.line((6.8pt, 64.6pt)), curve.line((9.0pt, 67.9pt)), curve.line((11.6pt, 70.8pt)), curve.line((14.5pt, 73.4pt)), curve.line((17.8pt, 75.6pt)), curve.line((21.3pt, 77.3pt)), curve.line((25.0pt, 78.6pt)), curve.line((28.9pt, 79.3pt)), curve.line((32.8pt, 79.6pt)), curve.line((36.7pt, 79.3pt)), curve.line((40.6pt, 78.6pt)), curve.line((44.3pt, 77.3pt)), curve.line((47.8pt, 75.6pt)), curve.line((51.1pt, 73.4pt)), curve.line((54.0pt, 70.8pt)), curve.line((56.6pt, 67.9pt)), curve.line((58.8pt, 64.6pt)), curve.line((60.5pt, 61.1pt)), curve.line((61.8pt, 57.4pt)), curve.line((62.5pt, 53.5pt)), curve.line((62.8pt, 49.6pt)), curve.close(), curve.move((50.3pt, 49.6pt)), curve.line((50.2pt, 47.3pt)), curve.line((49.7pt, 45.1pt)), curve.line((49.0pt, 42.9pt)), curve.line((48.0pt, 40.8pt)), curve.line((46.7pt, 38.9pt)), curve.line((45.2pt, 37.2pt)), curve.line((43.5pt, 35.7pt)), curve.line((41.5pt, 34.4pt)), curve.line((39.5pt, 33.4pt)), curve.line((37.3pt, 32.7pt)), curve.line((35.1pt, 32.2pt)), curve.line((32.8pt, 32.1pt)), curve.line((30.5pt, 32.2pt)), curve.line((28.3pt, 32.7pt)), curve.line((26.1pt, 33.4pt)), curve.line((24.1pt, 34.4pt)), curve.line((22.1pt, 35.7pt)), curve.line((20.4pt, 37.2pt)), curve.line((18.9pt, 38.9pt)), curve.line((17.6pt, 40.8pt)), curve.line((16.6pt, 42.9pt)), curve.line((15.9pt, 45.1pt)), curve.line((15.4pt, 47.3pt)), curve.line((15.3pt, 49.6pt)), curve.line((15.4pt, 51.9pt)), curve.line((15.9pt, 54.1pt)), curve.line((16.6pt, 56.3pt)), curve.line((17.6pt, 58.3pt)), curve.line((18.9pt, 60.3pt)), curve.line((20.4pt, 62.0pt)), curve.line((22.1pt, 63.5pt)), curve.line((24.0pt, 64.8pt)), curve.line((26.1pt, 65.8pt)), curve.line((28.3pt, 66.5pt)), curve.line((30.5pt, 67.0pt)), curve.line((32.8pt, 67.1pt)), curve.line((35.1pt, 67.0pt)), curve.line((37.3pt, 66.5pt)), curve.line((39.5pt, 65.8pt)), curve.line((41.5pt, 64.8pt)), curve.line((43.5pt, 63.5pt)), curve.line((45.2pt, 62.0pt)), curve.line((46.7pt, 60.3pt)), curve.line((48.0pt, 58.3pt)), curve.line((49.0pt, 56.3pt)), curve.line((49.7pt, 54.1pt)), curve.line((50.2pt, 51.9pt)), curve.line((50.3pt, 49.6pt)), curve.close()))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((47.3pt, 41.2pt)), curve.line((59.8pt, 41.2pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((62.3pt, 41.2pt)), curve.line((59.1pt, 39.9pt)), curve.line((59.1pt, 42.5pt)), curve.close()))\nplace(center + horizon, dx: 21.3pt, dy: -1.6pt, text(size: 6.5pt, $hat(b)_x$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((47.3pt, 41.2pt)), curve.line((47.3pt, 28.8pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((47.3pt, 26.2pt)), curve.line((46.0pt, 29.4pt)), curve.line((48.7pt, 29.4pt)), curve.close()))\nplace(center + horizon, dx: 0.6pt, dy: -22.2pt, text(size: 6.5pt, $hat(b)_y$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((47.3pt, 41.2pt)), curve.line((25.0pt, 54.1pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((22.8pt, 55.4pt)), curve.line((26.2pt, 54.9pt)), curve.line((24.9pt, 52.6pt)), curve.close()))\nplace(center + horizon, dx: -30.8pt, dy: 17.0pt, text(size: 6.5pt, $hat(b)_z$))\nplace(center + horizon, dx: 0.0pt, dy: -0.9pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt), curve.move((32.8pt, 49.6pt)), curve.line((45.0pt, 37.3pt))))\nplace(center + horizon, dx: -9.5pt, dy: -6.3pt, text(size: 6pt, $r_i$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt), curve.move((32.8pt, 49.6pt)), curve.line((61.9pt, 57.4pt))))\nplace(center + horizon, dx: 20.5pt, dy: 16.5pt, text(size: 6pt, $r_o$))\nplace(center + horizon, dx: 5.0pt, dy: 36.6pt, text(size: 6.5pt, $h$))\n}) quad V = π (r_(o)^(2) - r_(i)^(2)) h"
+        ]
+       },
+       {
+        "show": "I_{xx} = I_{yy} = (1/12) m [3(r_{o}^{2} + r_{i}^{2}) + h^{2}]",
+        "copy": "I_xx = I_yy = (1/12) m [3(r_o^2 + r_i^2) + h^2]",
+        "typst": [
+         "I_(x\\x) = I_(y\\y) = (1)/(12) m [3(r_(o)^(2) + r_(i)^(2)) + h^(2)]"
+        ]
+       },
+       {
+        "show": "I_{zz} = (1/2) m (r_{o}^{2} + r_{i}^{2})",
+        "copy": "I_zz = (1/2) m (r_o^2 + r_i^2)",
+        "typst": [
+         "I_(z\\z) = (1)/(2) m (r_(o)^(2) + r_(i)^(2))"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Thin cylindrical shell",
+      "items": [
+       {
+        "show": "A = 2π r h",
+        "copy": "A = 2π r h",
+        "typst": [
+         "#box(width: 94.7pt, height: 84.3pt, baseline: 38.8pt, {\nplace(top + left, curve(fill: rgb(128, 128, 128, 70), stroke: (paint: black, thickness: 0.8pt), curve.move((76.9pt, 58.8pt)), curve.line((80.2pt, 56.6pt)), curve.line((83.1pt, 54.0pt)), curve.line((85.7pt, 51.1pt)), curve.line((87.9pt, 47.8pt)), curve.line((89.6pt, 44.3pt)), curve.line((90.9pt, 40.6pt)), curve.line((91.6pt, 36.7pt)), curve.line((91.9pt, 32.8pt)), curve.line((91.6pt, 28.9pt)), curve.line((90.9pt, 25.0pt)), curve.line((89.6pt, 21.3pt)), curve.line((87.9pt, 17.8pt)), curve.line((85.7pt, 14.5pt)), curve.line((83.1pt, 11.6pt)), curve.line((80.2pt, 9.0pt)), curve.line((76.9pt, 6.8pt)), curve.line((73.4pt, 5.1pt)), curve.line((69.7pt, 3.8pt)), curve.line((65.8pt, 3.1pt)), curve.line((61.9pt, 2.8pt)), curve.line((58.0pt, 3.1pt)), curve.line((54.1pt, 3.8pt)), curve.line((50.4pt, 5.1pt)), curve.line((46.9pt, 6.8pt)), curve.line((17.8pt, 23.6pt)), curve.line((21.3pt, 21.9pt)), curve.line((25.0pt, 20.6pt)), curve.line((28.9pt, 19.9pt)), curve.line((32.8pt, 19.6pt)), curve.line((36.7pt, 19.9pt)), curve.line((40.6pt, 20.6pt)), curve.line((44.3pt, 21.9pt)), curve.line((47.8pt, 23.6pt)), curve.line((51.1pt, 25.8pt)), curve.line((54.0pt, 28.4pt)), curve.line((56.6pt, 31.3pt)), curve.line((58.8pt, 34.6pt)), curve.line((60.5pt, 38.1pt)), curve.line((61.8pt, 41.8pt)), curve.line((62.5pt, 45.7pt)), curve.line((62.8pt, 49.6pt)), curve.line((62.5pt, 53.5pt)), curve.line((61.8pt, 57.4pt)), curve.line((60.5pt, 61.1pt)), curve.line((58.8pt, 64.6pt)), curve.line((56.6pt, 67.9pt)), curve.line((54.0pt, 70.8pt)), curve.line((51.1pt, 73.4pt)), curve.line((47.8pt, 75.6pt)), curve.close()))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt, dash: \"dashed\"), curve.move((46.9pt, 6.8pt)), curve.line((43.6pt, 9.0pt)), curve.line((40.7pt, 11.6pt)), curve.line((38.1pt, 14.5pt)), curve.line((35.9pt, 17.8pt)), curve.line((34.2pt, 21.3pt)), curve.line((32.9pt, 25.0pt)), curve.line((32.2pt, 28.9pt)), curve.line((31.9pt, 32.8pt)), curve.line((32.2pt, 36.7pt)), curve.line((32.9pt, 40.6pt)), curve.line((34.2pt, 44.3pt)), curve.line((35.9pt, 47.8pt)), curve.line((38.1pt, 51.1pt)), curve.line((40.7pt, 54.0pt)), curve.line((43.6pt, 56.6pt)), curve.line((46.9pt, 58.8pt)), curve.line((50.4pt, 60.5pt)), curve.line((54.1pt, 61.8pt)), curve.line((58.0pt, 62.5pt)), curve.line((61.9pt, 62.8pt)), curve.line((65.8pt, 62.5pt)), curve.line((69.7pt, 61.8pt)), curve.line((73.4pt, 60.5pt)), curve.line((76.9pt, 58.8pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.8pt), curve.move((62.8pt, 49.6pt)), curve.line((62.5pt, 45.7pt)), curve.line((61.8pt, 41.8pt)), curve.line((60.5pt, 38.1pt)), curve.line((58.8pt, 34.6pt)), curve.line((56.6pt, 31.3pt)), curve.line((54.0pt, 28.4pt)), curve.line((51.1pt, 25.8pt)), curve.line((47.8pt, 23.6pt)), curve.line((44.3pt, 21.9pt)), curve.line((40.6pt, 20.6pt)), curve.line((36.7pt, 19.9pt)), curve.line((32.8pt, 19.6pt)), curve.line((28.9pt, 19.9pt)), curve.line((25.0pt, 20.6pt)), curve.line((21.3pt, 21.9pt)), curve.line((17.8pt, 23.6pt)), curve.line((14.5pt, 25.8pt)), curve.line((11.6pt, 28.4pt)), curve.line((9.0pt, 31.3pt)), curve.line((6.8pt, 34.6pt)), curve.line((5.1pt, 38.1pt)), curve.line((3.8pt, 41.8pt)), curve.line((3.1pt, 45.7pt)), curve.line((2.8pt, 49.6pt)), curve.line((3.1pt, 53.5pt)), curve.line((3.8pt, 57.4pt)), curve.line((5.1pt, 61.1pt)), curve.line((6.8pt, 64.6pt)), curve.line((9.0pt, 67.9pt)), curve.line((11.6pt, 70.8pt)), curve.line((14.5pt, 73.4pt)), curve.line((17.8pt, 75.6pt)), curve.line((21.3pt, 77.3pt)), curve.line((25.0pt, 78.6pt)), curve.line((28.9pt, 79.3pt)), curve.line((32.8pt, 79.6pt)), curve.line((36.7pt, 79.3pt)), curve.line((40.6pt, 78.6pt)), curve.line((44.3pt, 77.3pt)), curve.line((47.8pt, 75.6pt)), curve.line((51.1pt, 73.4pt)), curve.line((54.0pt, 70.8pt)), curve.line((56.6pt, 67.9pt)), curve.line((58.8pt, 64.6pt)), curve.line((60.5pt, 61.1pt)), curve.line((61.8pt, 57.4pt)), curve.line((62.5pt, 53.5pt)), curve.line((62.8pt, 49.6pt)), curve.close()))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((47.3pt, 41.2pt)), curve.line((59.8pt, 41.2pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((62.3pt, 41.2pt)), curve.line((59.1pt, 39.9pt)), curve.line((59.1pt, 42.5pt)), curve.close()))\nplace(center + horizon, dx: 21.3pt, dy: -1.6pt, text(size: 6.5pt, $hat(b)_x$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((47.3pt, 41.2pt)), curve.line((47.3pt, 28.8pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((47.3pt, 26.2pt)), curve.line((46.0pt, 29.4pt)), curve.line((48.7pt, 29.4pt)), curve.close()))\nplace(center + horizon, dx: 0.6pt, dy: -22.2pt, text(size: 6.5pt, $hat(b)_y$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((47.3pt, 41.2pt)), curve.line((25.0pt, 54.1pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((22.8pt, 55.4pt)), curve.line((26.2pt, 54.9pt)), curve.line((24.9pt, 52.6pt)), curve.close()))\nplace(center + horizon, dx: -30.8pt, dy: 17.0pt, text(size: 6.5pt, $hat(b)_z$))\nplace(center + horizon, dx: 0.0pt, dy: -0.9pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt), curve.move((32.8pt, 49.6pt)), curve.line((61.9pt, 57.4pt))))\nplace(center + horizon, dx: 0.5pt, dy: 16.4pt, text(size: 6.5pt, $r$))\nplace(center + horizon, dx: 5.0pt, dy: 36.6pt, text(size: 6.5pt, $h$))\n}) quad A = 2π r h"
+        ]
+       },
+       {
+        "show": "I_{xx} = I_{yy} = (1/12) m (6r^{2} + h^{2})",
+        "copy": "I_xx = I_yy = (1/12) m (6r^2 + h^2)",
+        "typst": [
+         "I_(x\\x) = I_(y\\y) = (1)/(12) m (6r^(2) + h^(2))"
+        ]
+       },
+       {
+        "show": "I_{zz} = m r^{2}",
+        "copy": "I_zz = m r^2",
+        "typst": [
+         "I_(z\\z) = m r^(2)"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Solid right-circular cone",
+      "items": [
+       {
+        "show": "V = (1/3) π r^{2} h",
+        "copy": "V = (1/3) π r^2 h",
+        "typst": [
+         "#box(width: 98.1pt, height: 98.4pt, baseline: 45.9pt, {\nplace(top + left, curve(fill: rgb(128, 128, 128, 70), stroke: (paint: black, thickness: 0.8pt), curve.move((20.3pt, 77.8pt)), curve.line((57.8pt, 2.8pt)), curve.line((95.3pt, 77.8pt)), curve.line((95.3pt, 77.8pt)), curve.line((95.2pt, 78.5pt)), curve.line((95.0pt, 79.1pt)), curve.line((94.6pt, 79.8pt)), curve.line((94.0pt, 80.4pt)), curve.line((93.3pt, 81.0pt)), curve.line((92.4pt, 81.6pt)), curve.line((91.4pt, 82.2pt)), curve.line((90.3pt, 82.8pt)), curve.line((89.0pt, 83.4pt)), curve.line((87.5pt, 83.9pt)), curve.line((86.0pt, 84.4pt)), curve.line((84.3pt, 84.9pt)), curve.line((82.5pt, 85.3pt)), curve.line((80.6pt, 85.7pt)), curve.line((78.6pt, 86.1pt)), curve.line((76.5pt, 86.5pt)), curve.line((74.4pt, 86.8pt)), curve.line((72.1pt, 87.0pt)), curve.line((69.8pt, 87.3pt)), curve.line((67.5pt, 87.5pt)), curve.line((65.1pt, 87.6pt)), curve.line((62.7pt, 87.7pt)), curve.line((60.2pt, 87.8pt)), curve.line((57.8pt, 87.8pt)), curve.line((55.3pt, 87.8pt)), curve.line((52.9pt, 87.7pt)), curve.line((50.5pt, 87.6pt)), curve.line((48.1pt, 87.5pt)), curve.line((45.7pt, 87.3pt)), curve.line((43.4pt, 87.0pt)), curve.line((41.2pt, 86.8pt)), curve.line((39.0pt, 86.5pt)), curve.line((36.9pt, 86.1pt)), curve.line((34.9pt, 85.7pt)), curve.line((33.0pt, 85.3pt)), curve.line((31.3pt, 84.9pt)), curve.line((29.6pt, 84.4pt)), curve.line((28.0pt, 83.9pt)), curve.line((26.6pt, 83.4pt)), curve.line((25.3pt, 82.8pt)), curve.line((24.1pt, 82.2pt)), curve.line((23.1pt, 81.6pt)), curve.line((22.3pt, 81.0pt)), curve.line((21.6pt, 80.4pt)), curve.line((21.0pt, 79.8pt)), curve.line((20.6pt, 79.1pt)), curve.line((20.4pt, 78.5pt)), curve.line((20.3pt, 77.8pt)), curve.close()))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt, dash: \"dashed\"), curve.move((95.3pt, 77.8pt)), curve.line((95.2pt, 77.1pt)), curve.line((95.0pt, 76.5pt)), curve.line((94.6pt, 75.8pt)), curve.line((94.0pt, 75.2pt)), curve.line((93.3pt, 74.6pt)), curve.line((92.4pt, 74.0pt)), curve.line((91.4pt, 73.4pt)), curve.line((90.3pt, 72.8pt)), curve.line((89.0pt, 72.2pt)), curve.line((87.5pt, 71.7pt)), curve.line((86.0pt, 71.2pt)), curve.line((84.3pt, 70.7pt)), curve.line((82.5pt, 70.3pt)), curve.line((80.6pt, 69.9pt)), curve.line((78.6pt, 69.5pt)), curve.line((76.5pt, 69.1pt)), curve.line((74.4pt, 68.8pt)), curve.line((72.1pt, 68.6pt)), curve.line((69.8pt, 68.3pt)), curve.line((67.5pt, 68.1pt)), curve.line((65.1pt, 68.0pt)), curve.line((62.7pt, 67.9pt)), curve.line((60.2pt, 67.8pt)), curve.line((57.8pt, 67.8pt)), curve.line((55.3pt, 67.8pt)), curve.line((52.9pt, 67.9pt)), curve.line((50.5pt, 68.0pt)), curve.line((48.1pt, 68.1pt)), curve.line((45.7pt, 68.3pt)), curve.line((43.4pt, 68.6pt)), curve.line((41.2pt, 68.8pt)), curve.line((39.0pt, 69.1pt)), curve.line((36.9pt, 69.5pt)), curve.line((34.9pt, 69.9pt)), curve.line((33.0pt, 70.3pt)), curve.line((31.3pt, 70.7pt)), curve.line((29.6pt, 71.2pt)), curve.line((28.0pt, 71.7pt)), curve.line((26.6pt, 72.2pt)), curve.line((25.3pt, 72.8pt)), curve.line((24.1pt, 73.4pt)), curve.line((23.1pt, 74.0pt)), curve.line((22.3pt, 74.6pt)), curve.line((21.6pt, 75.2pt)), curve.line((21.0pt, 75.8pt)), curve.line((20.6pt, 76.5pt)), curve.line((20.4pt, 77.1pt)), curve.line((20.3pt, 77.8pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((57.8pt, 59.0pt)), curve.line((70.2pt, 59.0pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((72.8pt, 59.0pt)), curve.line((69.6pt, 57.7pt)), curve.line((69.6pt, 60.4pt)), curve.close()))\nplace(center + horizon, dx: 30.0pt, dy: 9.2pt, text(size: 6.5pt, $hat(b)_x$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((57.8pt, 59.0pt)), curve.line((57.8pt, 46.6pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((57.8pt, 44.0pt)), curve.line((56.4pt, 47.2pt)), curve.line((59.1pt, 47.2pt)), curve.close()))\nplace(center + horizon, dx: 9.4pt, dy: -11.4pt, text(size: 6.5pt, $hat(b)_y$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((57.8pt, 59.0pt)), curve.line((48.5pt, 64.4pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((46.3pt, 65.7pt)), curve.line((49.8pt, 65.2pt)), curve.line((48.4pt, 62.9pt)), curve.close()))\nplace(center + horizon, dx: -9.0pt, dy: 20.2pt, text(size: 6.5pt, $hat(b)_z$))\nplace(center + horizon, dx: 8.7pt, dy: 9.9pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt), curve.move((57.8pt, 77.8pt)), curve.line((95.3pt, 77.8pt))))\nplace(center + horizon, dx: 29.4pt, dy: 43.6pt, text(size: 6.5pt, $r$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.45pt), curve.move((11.5pt, 75.9pt)), curve.line((11.5pt, 4.7pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((11.5pt, 2.8pt)), curve.line((10.5pt, 5.2pt)), curve.line((12.5pt, 5.2pt)), curve.close()))\nplace(top + left, curve(fill: black, stroke: none, curve.move((11.5pt, 77.8pt)), curve.line((12.5pt, 75.4pt)), curve.line((10.5pt, 75.4pt)), curve.close()))\nplace(center + horizon, dx: -43.1pt, dy: -8.9pt, text(size: 6.5pt, $h$))\n}) quad V = (1)/(3) π r^(2) h"
+        ]
+       },
+       {
+        "show": "y_{cm} = h/4",
+        "copy": "y_cm = h/4",
+        "note": "from the base",
+        "typst": [
+         "y_(\"cm\") = (h)/(4)"
+        ]
+       },
+       {
+        "show": "I_{xx} = I_{zz} = (3/80) m (4r^{2} + h^{2})",
+        "copy": "I_xx = I_zz = (3/80) m (4r^2 + h^2)",
+        "typst": [
+         "I_(x\\x) = I_(z\\z) = (3)/(80) m (4r^(2) + h^(2))"
+        ]
+       },
+       {
+        "show": "I_{yy} = (3/10) m r^{2}",
+        "copy": "I_yy = (3/10) m r^2",
+        "typst": [
+         "I_(y\\y) = (3)/(10) m r^(2)"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Thin-walled cone (no base)",
+      "items": [
+       {
+        "show": "A = π r √(r^{2} + h^{2})",
+        "copy": "A = π r √(r^2 + h^2)",
+        "typst": [
+         "#box(width: 98.1pt, height: 98.4pt, baseline: 45.9pt, {\nplace(top + left, curve(stroke: (paint: black, thickness: 0.5pt, dash: \"dashed\"), curve.move((95.3pt, 77.8pt)), curve.line((95.2pt, 77.1pt)), curve.line((95.0pt, 76.5pt)), curve.line((94.6pt, 75.8pt)), curve.line((94.0pt, 75.2pt)), curve.line((93.3pt, 74.6pt)), curve.line((92.4pt, 74.0pt)), curve.line((91.4pt, 73.4pt)), curve.line((90.3pt, 72.8pt)), curve.line((89.0pt, 72.2pt)), curve.line((87.5pt, 71.7pt)), curve.line((86.0pt, 71.2pt)), curve.line((84.3pt, 70.7pt)), curve.line((82.5pt, 70.3pt)), curve.line((80.6pt, 69.9pt)), curve.line((78.6pt, 69.5pt)), curve.line((76.5pt, 69.1pt)), curve.line((74.4pt, 68.8pt)), curve.line((72.1pt, 68.6pt)), curve.line((69.8pt, 68.3pt)), curve.line((67.5pt, 68.1pt)), curve.line((65.1pt, 68.0pt)), curve.line((62.7pt, 67.9pt)), curve.line((60.2pt, 67.8pt)), curve.line((57.8pt, 67.8pt)), curve.line((55.3pt, 67.8pt)), curve.line((52.9pt, 67.9pt)), curve.line((50.5pt, 68.0pt)), curve.line((48.1pt, 68.1pt)), curve.line((45.7pt, 68.3pt)), curve.line((43.4pt, 68.6pt)), curve.line((41.2pt, 68.8pt)), curve.line((39.0pt, 69.1pt)), curve.line((36.9pt, 69.5pt)), curve.line((34.9pt, 69.9pt)), curve.line((33.0pt, 70.3pt)), curve.line((31.3pt, 70.7pt)), curve.line((29.6pt, 71.2pt)), curve.line((28.0pt, 71.7pt)), curve.line((26.6pt, 72.2pt)), curve.line((25.3pt, 72.8pt)), curve.line((24.1pt, 73.4pt)), curve.line((23.1pt, 74.0pt)), curve.line((22.3pt, 74.6pt)), curve.line((21.6pt, 75.2pt)), curve.line((21.0pt, 75.8pt)), curve.line((20.6pt, 76.5pt)), curve.line((20.4pt, 77.1pt)), curve.line((20.3pt, 77.8pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.8pt), curve.move((20.3pt, 77.8pt)), curve.line((20.4pt, 78.5pt)), curve.line((20.6pt, 79.1pt)), curve.line((21.0pt, 79.8pt)), curve.line((21.6pt, 80.4pt)), curve.line((22.3pt, 81.0pt)), curve.line((23.1pt, 81.6pt)), curve.line((24.1pt, 82.2pt)), curve.line((25.3pt, 82.8pt)), curve.line((26.6pt, 83.4pt)), curve.line((28.0pt, 83.9pt)), curve.line((29.6pt, 84.4pt)), curve.line((31.3pt, 84.9pt)), curve.line((33.0pt, 85.3pt)), curve.line((34.9pt, 85.7pt)), curve.line((36.9pt, 86.1pt)), curve.line((39.0pt, 86.5pt)), curve.line((41.2pt, 86.8pt)), curve.line((43.4pt, 87.0pt)), curve.line((45.7pt, 87.3pt)), curve.line((48.1pt, 87.5pt)), curve.line((50.5pt, 87.6pt)), curve.line((52.9pt, 87.7pt)), curve.line((55.3pt, 87.8pt)), curve.line((57.8pt, 87.8pt)), curve.line((60.2pt, 87.8pt)), curve.line((62.7pt, 87.7pt)), curve.line((65.1pt, 87.6pt)), curve.line((67.5pt, 87.5pt)), curve.line((69.8pt, 87.3pt)), curve.line((72.1pt, 87.0pt)), curve.line((74.4pt, 86.8pt)), curve.line((76.5pt, 86.5pt)), curve.line((78.6pt, 86.1pt)), curve.line((80.6pt, 85.7pt)), curve.line((82.5pt, 85.3pt)), curve.line((84.3pt, 84.9pt)), curve.line((86.0pt, 84.4pt)), curve.line((87.5pt, 83.9pt)), curve.line((89.0pt, 83.4pt)), curve.line((90.3pt, 82.8pt)), curve.line((91.4pt, 82.2pt)), curve.line((92.4pt, 81.6pt)), curve.line((93.3pt, 81.0pt)), curve.line((94.0pt, 80.4pt)), curve.line((94.6pt, 79.8pt)), curve.line((95.0pt, 79.1pt)), curve.line((95.2pt, 78.5pt)), curve.line((95.3pt, 77.8pt)), curve.line((95.3pt, 77.8pt)), curve.line((57.8pt, 2.8pt)), curve.line((20.3pt, 77.8pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((57.8pt, 52.8pt)), curve.line((70.2pt, 52.8pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((72.8pt, 52.8pt)), curve.line((69.6pt, 51.5pt)), curve.line((69.6pt, 54.1pt)), curve.close()))\nplace(center + horizon, dx: 30.0pt, dy: 3.0pt, text(size: 6.5pt, $hat(b)_x$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((57.8pt, 52.8pt)), curve.line((57.8pt, 40.4pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((57.8pt, 37.8pt)), curve.line((56.4pt, 41.0pt)), curve.line((59.1pt, 41.0pt)), curve.close()))\nplace(center + horizon, dx: 9.4pt, dy: -17.6pt, text(size: 6.5pt, $hat(b)_y$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((57.8pt, 52.8pt)), curve.line((48.5pt, 58.1pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((46.3pt, 59.4pt)), curve.line((49.8pt, 59.0pt)), curve.line((48.4pt, 56.7pt)), curve.close()))\nplace(center + horizon, dx: -9.0pt, dy: 14.0pt, text(size: 6.5pt, $hat(b)_z$))\nplace(center + horizon, dx: 8.7pt, dy: 3.6pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt), curve.move((57.8pt, 77.8pt)), curve.line((95.3pt, 77.8pt))))\nplace(center + horizon, dx: 29.4pt, dy: 43.6pt, text(size: 6.5pt, $r$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.45pt), curve.move((11.5pt, 75.9pt)), curve.line((11.5pt, 4.7pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((11.5pt, 2.8pt)), curve.line((10.5pt, 5.2pt)), curve.line((12.5pt, 5.2pt)), curve.close()))\nplace(top + left, curve(fill: black, stroke: none, curve.move((11.5pt, 77.8pt)), curve.line((12.5pt, 75.4pt)), curve.line((10.5pt, 75.4pt)), curve.close()))\nplace(center + horizon, dx: -43.1pt, dy: -8.9pt, text(size: 6.5pt, $h$))\n}) quad A = π r sqrt(r^(2) + h^(2))"
+        ]
+       },
+       {
+        "show": "y_{cm} = h/3",
+        "copy": "y_cm = h/3",
+        "note": "from the base",
+        "typst": [
+         "y_(\"cm\") = (h)/(3)"
+        ]
+       },
+       {
+        "show": "I_{xx} = I_{zz} = m (r^{2}/4 + h^{2}/18)",
+        "copy": "I_xx = I_zz = m (r^2/4 + h^2/18)",
+        "typst": [
+         "I_(x\\x) = I_(z\\z) = m ((r^(2))/(4) + (h^(2))/(18))"
+        ]
+       },
+       {
+        "show": "I_{yy} = (1/2) m r^{2}",
+        "copy": "I_yy = (1/2) m r^2",
+        "typst": [
+         "I_(y\\y) = (1)/(2) m r^(2)"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Solid paraboloid of revolution",
+      "items": [
+       {
+        "show": "V = (1/2) π r^{2} a",
+        "copy": "V = (1/2) π r^2 a",
+        "typst": [
+         "#box(width: 107.7pt, height: 84.6pt, baseline: 39.0pt, {\nplace(top + left, curve(fill: rgb(128, 128, 128, 70), stroke: (paint: black, thickness: 0.8pt), curve.move((24.9pt, 67.8pt)), curve.line((31.4pt, 66.4pt)), curve.line((37.7pt, 65.1pt)), curve.line((43.6pt, 63.7pt)), curve.line((49.3pt, 62.4pt)), curve.line((54.8pt, 61.0pt)), curve.line((59.9pt, 59.7pt)), curve.line((64.8pt, 58.3pt)), curve.line((69.3pt, 57.0pt)), curve.line((73.7pt, 55.6pt)), curve.line((77.7pt, 54.3pt)), curve.line((81.4pt, 52.9pt)), curve.line((84.9pt, 51.5pt)), curve.line((88.1pt, 50.2pt)), curve.line((91.0pt, 48.8pt)), curve.line((93.7pt, 47.5pt)), curve.line((96.0pt, 46.1pt)), curve.line((98.1pt, 44.8pt)), curve.line((99.9pt, 43.4pt)), curve.line((101.4pt, 42.1pt)), curve.line((102.7pt, 40.7pt)), curve.line((103.7pt, 39.4pt)), curve.line((104.3pt, 38.0pt)), curve.line((104.8pt, 36.7pt)), curve.line((104.9pt, 35.3pt)), curve.line((104.8pt, 33.9pt)), curve.line((104.3pt, 32.6pt)), curve.line((103.7pt, 31.2pt)), curve.line((102.7pt, 29.9pt)), curve.line((101.4pt, 28.5pt)), curve.line((99.9pt, 27.2pt)), curve.line((98.1pt, 25.8pt)), curve.line((96.0pt, 24.5pt)), curve.line((93.7pt, 23.1pt)), curve.line((91.0pt, 21.8pt)), curve.line((88.1pt, 20.4pt)), curve.line((84.9pt, 19.0pt)), curve.line((81.4pt, 17.7pt)), curve.line((77.7pt, 16.3pt)), curve.line((73.7pt, 15.0pt)), curve.line((69.3pt, 13.6pt)), curve.line((64.8pt, 12.3pt)), curve.line((59.9pt, 10.9pt)), curve.line((54.8pt, 9.6pt)), curve.line((49.3pt, 8.2pt)), curve.line((43.6pt, 6.9pt)), curve.line((37.7pt, 5.5pt)), curve.line((31.4pt, 4.2pt)), curve.line((24.9pt, 2.8pt)), curve.close()))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.8pt), curve.move((24.9pt, 2.8pt)), curve.line((24.3pt, 2.9pt)), curve.line((23.8pt, 3.1pt)), curve.line((23.2pt, 3.4pt)), curve.line((22.6pt, 3.9pt)), curve.line((22.1pt, 4.5pt)), curve.line((21.6pt, 5.3pt)), curve.line((21.0pt, 6.2pt)), curve.line((20.5pt, 7.2pt)), curve.line((20.0pt, 8.3pt)), curve.line((19.6pt, 9.5pt)), curve.line((19.1pt, 10.9pt)), curve.line((18.7pt, 12.3pt)), curve.line((18.3pt, 13.9pt)), curve.line((18.0pt, 15.5pt)), curve.line((17.6pt, 17.2pt)), curve.line((17.3pt, 19.1pt)), curve.line((17.1pt, 20.9pt)), curve.line((16.8pt, 22.9pt)), curve.line((16.6pt, 24.9pt)), curve.line((16.4pt, 26.9pt)), curve.line((16.3pt, 29.0pt)), curve.line((16.2pt, 31.1pt)), curve.line((16.2pt, 33.2pt)), curve.line((16.1pt, 35.3pt)), curve.line((16.2pt, 37.4pt)), curve.line((16.2pt, 39.5pt)), curve.line((16.3pt, 41.6pt)), curve.line((16.4pt, 43.7pt)), curve.line((16.6pt, 45.7pt)), curve.line((16.8pt, 47.7pt)), curve.line((17.1pt, 49.7pt)), curve.line((17.3pt, 51.5pt)), curve.line((17.6pt, 53.4pt)), curve.line((18.0pt, 55.1pt)), curve.line((18.3pt, 56.7pt)), curve.line((18.7pt, 58.3pt)), curve.line((19.1pt, 59.7pt)), curve.line((19.6pt, 61.1pt)), curve.line((20.0pt, 62.3pt)), curve.line((20.5pt, 63.4pt)), curve.line((21.0pt, 64.4pt)), curve.line((21.6pt, 65.3pt)), curve.line((22.1pt, 66.1pt)), curve.line((22.6pt, 66.7pt)), curve.line((23.2pt, 67.2pt)), curve.line((23.8pt, 67.5pt)), curve.line((24.3pt, 67.7pt)), curve.line((24.9pt, 67.8pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((51.6pt, 35.3pt)), curve.line((64.0pt, 35.3pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((66.6pt, 35.3pt)), curve.line((63.4pt, 34.0pt)), curve.line((63.4pt, 36.6pt)), curve.close()))\nplace(center + horizon, dx: 19.0pt, dy: -7.6pt, text(size: 6.5pt, $hat(b)_x$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((51.6pt, 35.3pt)), curve.line((51.6pt, 22.9pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((51.6pt, 20.3pt)), curve.line((50.2pt, 23.5pt)), curve.line((52.9pt, 23.5pt)), curve.close()))\nplace(center + horizon, dx: -1.7pt, dy: -28.3pt, text(size: 6.5pt, $hat(b)_y$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((51.6pt, 35.3pt)), curve.line((42.3pt, 40.6pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((40.1pt, 41.9pt)), curve.line((43.6pt, 41.5pt)), curve.line((42.2pt, 39.2pt)), curve.close()))\nplace(center + horizon, dx: -20.0pt, dy: 3.4pt, text(size: 6.5pt, $hat(b)_z$))\nplace(center + horizon, dx: -2.3pt, dy: -7.0pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(center + horizon, dx: -28.9pt, dy: -7.0pt, circle(radius: 1.4pt, fill: black, stroke: none))\nplace(center + horizon, dx: -46.4pt, dy: -7.0pt, text(size: 6pt, $B_o$))\nplace(center + horizon, dx: -43.9pt, dy: -26.5pt, text(size: 6.5pt, $r$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.45pt), curve.move((26.8pt, 74.0pt)), curve.line((103.0pt, 74.0pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((104.9pt, 74.0pt)), curve.line((102.5pt, 73.0pt)), curve.line((102.5pt, 75.1pt)), curve.close()))\nplace(top + left, curve(fill: black, stroke: none, curve.move((24.9pt, 74.0pt)), curve.line((27.3pt, 75.1pt)), curve.line((27.3pt, 73.0pt)), curve.close()))\nplace(center + horizon, dx: 11.1pt, dy: 36.7pt, text(size: 6.5pt, $a$))\n}) quad V = (1)/(2) π r^(2) a"
+        ]
+       },
+       {
+        "show": "x_{cm} = a/3",
+        "copy": "x_cm = a/3",
+        "note": "from the flat face, Bₒ",
+        "typst": [
+         "x_(\"cm\") = (a)/(3)"
+        ]
+       },
+       {
+        "show": "I_{xx} = (1/3) m r^{2}",
+        "copy": "I_xx = (1/3) m r^2",
+        "note": "about the mass centre or Bₒ",
+        "typst": [
+         "I_(x\\x) = (1)/(3) m r^(2)"
+        ]
+       },
+       {
+        "show": "I_{yy} = I_{zz} = (1/18) m (a^{2} + 3r^{2})",
+        "copy": "I_yy = I_zz = (1/18) m (a^2 + 3r^2)",
+        "note": "about the mass centre",
+        "typst": [
+         "I_(y\\y) = I_(z\\z) = (1)/(18) m (a^(2) + 3r^(2))"
+        ]
+       },
+       {
+        "show": "I_{yy} = I_{zz} = (1/6) m (a^{2} + r^{2})",
+        "copy": "I_yy = I_zz = (1/6) m (a^2 + r^2)",
+        "note": "about Bₒ",
+        "typst": [
+         "I_(y\\y) = I_(z\\z) = (1)/(6) m (a^(2) + r^(2))"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Inertia of spheres and ellipsoids",
+    "groups": [
+     {
+      "title": "Solid sphere",
+      "items": [
+       {
+        "show": "V = (4/3) π r^{3}",
+        "copy": "V = (4/3) π r^3",
+        "typst": [
+         "#box(width: 80.6pt, height: 80.6pt, baseline: 37.0pt, {\nplace(top + left, curve(fill: rgb(128, 128, 128, 70), stroke: (paint: black, thickness: 0.8pt), curve.move((77.8pt, 40.3pt)), curve.line((77.5pt, 35.4pt)), curve.line((76.5pt, 30.6pt)), curve.line((74.9pt, 25.9pt)), curve.line((72.8pt, 21.6pt)), curve.line((70.1pt, 17.5pt)), curve.line((66.8pt, 13.8pt)), curve.line((63.1pt, 10.5pt)), curve.line((59.0pt, 7.8pt)), curve.line((54.7pt, 5.7pt)), curve.line((50.0pt, 4.1pt)), curve.line((45.2pt, 3.1pt)), curve.line((40.3pt, 2.8pt)), curve.line((35.4pt, 3.1pt)), curve.line((30.6pt, 4.1pt)), curve.line((25.9pt, 5.7pt)), curve.line((21.6pt, 7.8pt)), curve.line((17.5pt, 10.5pt)), curve.line((13.8pt, 13.8pt)), curve.line((10.5pt, 17.5pt)), curve.line((7.8pt, 21.6pt)), curve.line((5.7pt, 25.9pt)), curve.line((4.1pt, 30.6pt)), curve.line((3.1pt, 35.4pt)), curve.line((2.8pt, 40.3pt)), curve.line((3.1pt, 45.2pt)), curve.line((4.1pt, 50.0pt)), curve.line((5.7pt, 54.7pt)), curve.line((7.8pt, 59.0pt)), curve.line((10.5pt, 63.1pt)), curve.line((13.8pt, 66.8pt)), curve.line((17.5pt, 70.1pt)), curve.line((21.5pt, 72.8pt)), curve.line((25.9pt, 74.9pt)), curve.line((30.6pt, 76.5pt)), curve.line((35.4pt, 77.5pt)), curve.line((40.3pt, 77.8pt)), curve.line((45.2pt, 77.5pt)), curve.line((50.0pt, 76.5pt)), curve.line((54.7pt, 74.9pt)), curve.line((59.0pt, 72.8pt)), curve.line((63.1pt, 70.1pt)), curve.line((66.8pt, 66.8pt)), curve.line((70.1pt, 63.1pt)), curve.line((72.8pt, 59.1pt)), curve.line((74.9pt, 54.7pt)), curve.line((76.5pt, 50.0pt)), curve.line((77.5pt, 45.2pt)), curve.line((77.8pt, 40.3pt)), curve.close()))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.5pt), curve.move((2.8pt, 40.3pt)), curve.line((2.9pt, 41.1pt)), curve.line((3.1pt, 41.9pt)), curve.line((3.5pt, 42.7pt)), curve.line((4.1pt, 43.5pt)), curve.line((4.8pt, 44.3pt)), curve.line((5.7pt, 45.1pt)), curve.line((6.7pt, 45.8pt)), curve.line((7.8pt, 46.5pt)), curve.line((9.1pt, 47.2pt)), curve.line((10.5pt, 47.9pt)), curve.line((12.1pt, 48.5pt)), curve.line((13.8pt, 49.1pt)), curve.line((15.6pt, 49.7pt)), curve.line((17.5pt, 50.2pt)), curve.line((19.5pt, 50.7pt)), curve.line((21.5pt, 51.1pt)), curve.line((23.7pt, 51.5pt)), curve.line((25.9pt, 51.8pt)), curve.line((28.2pt, 52.1pt)), curve.line((30.6pt, 52.4pt)), curve.line((33.0pt, 52.6pt)), curve.line((35.4pt, 52.7pt)), curve.line((37.8pt, 52.8pt)), curve.line((40.3pt, 52.8pt)), curve.line((42.8pt, 52.8pt)), curve.line((45.2pt, 52.7pt)), curve.line((47.6pt, 52.6pt)), curve.line((50.0pt, 52.4pt)), curve.line((52.4pt, 52.1pt)), curve.line((54.7pt, 51.8pt)), curve.line((56.9pt, 51.5pt)), curve.line((59.0pt, 51.1pt)), curve.line((61.1pt, 50.7pt)), curve.line((63.1pt, 50.2pt)), curve.line((65.0pt, 49.7pt)), curve.line((66.8pt, 49.1pt)), curve.line((68.5pt, 48.5pt)), curve.line((70.1pt, 47.9pt)), curve.line((71.5pt, 47.2pt)), curve.line((72.8pt, 46.6pt)), curve.line((73.9pt, 45.8pt)), curve.line((74.9pt, 45.1pt)), curve.line((75.8pt, 44.3pt)), curve.line((76.5pt, 43.5pt)), curve.line((77.1pt, 42.7pt)), curve.line((77.5pt, 41.9pt)), curve.line((77.7pt, 41.1pt)), curve.line((77.8pt, 40.3pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt, dash: \"dashed\"), curve.move((77.8pt, 40.3pt)), curve.line((77.7pt, 39.5pt)), curve.line((77.5pt, 38.7pt)), curve.line((77.1pt, 37.9pt)), curve.line((76.5pt, 37.1pt)), curve.line((75.8pt, 36.3pt)), curve.line((74.9pt, 35.5pt)), curve.line((73.9pt, 34.8pt)), curve.line((72.8pt, 34.0pt)), curve.line((71.5pt, 33.4pt)), curve.line((70.1pt, 32.7pt)), curve.line((68.5pt, 32.1pt)), curve.line((66.8pt, 31.5pt)), curve.line((65.0pt, 30.9pt)), curve.line((63.1pt, 30.4pt)), curve.line((61.1pt, 29.9pt)), curve.line((59.0pt, 29.5pt)), curve.line((56.9pt, 29.1pt)), curve.line((54.7pt, 28.8pt)), curve.line((52.4pt, 28.5pt)), curve.line((50.0pt, 28.2pt)), curve.line((47.6pt, 28.0pt)), curve.line((45.2pt, 27.9pt)), curve.line((42.8pt, 27.8pt)), curve.line((40.3pt, 27.8pt)), curve.line((37.8pt, 27.8pt)), curve.line((35.4pt, 27.9pt)), curve.line((33.0pt, 28.0pt)), curve.line((30.6pt, 28.2pt)), curve.line((28.2pt, 28.5pt)), curve.line((25.9pt, 28.8pt)), curve.line((23.7pt, 29.1pt)), curve.line((21.6pt, 29.5pt)), curve.line((19.5pt, 29.9pt)), curve.line((17.5pt, 30.4pt)), curve.line((15.6pt, 30.9pt)), curve.line((13.8pt, 31.5pt)), curve.line((12.1pt, 32.1pt)), curve.line((10.5pt, 32.7pt)), curve.line((9.1pt, 33.4pt)), curve.line((7.8pt, 34.0pt)), curve.line((6.7pt, 34.8pt)), curve.line((5.7pt, 35.5pt)), curve.line((4.8pt, 36.3pt)), curve.line((4.1pt, 37.1pt)), curve.line((3.5pt, 37.9pt)), curve.line((3.1pt, 38.7pt)), curve.line((2.9pt, 39.5pt)), curve.line((2.8pt, 40.3pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((40.3pt, 40.3pt)), curve.line((52.7pt, 40.3pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((55.3pt, 40.3pt)), curve.line((52.1pt, 39.0pt)), curve.line((52.1pt, 41.6pt)), curve.close()))\nplace(center + horizon, dx: 21.2pt, dy: -0.6pt, text(size: 6.5pt, $hat(b)_x$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((40.3pt, 40.3pt)), curve.line((40.3pt, 27.9pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((40.3pt, 25.3pt)), curve.line((39.0pt, 28.5pt)), curve.line((41.6pt, 28.5pt)), curve.close()))\nplace(center + horizon, dx: 0.6pt, dy: -21.2pt, text(size: 6.5pt, $hat(b)_y$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((40.3pt, 40.3pt)), curve.line((31.1pt, 45.6pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((28.8pt, 46.9pt)), curve.line((32.3pt, 46.5pt)), curve.line((30.9pt, 44.2pt)), curve.close()))\nplace(center + horizon, dx: -17.7pt, dy: 10.4pt, text(size: 6.5pt, $hat(b)_z$))\nplace(center + horizon, dx: 0.0pt, dy: 0.0pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt), curve.move((40.3pt, 40.3pt)), curve.line((14.8pt, 12.9pt))))\nplace(center + horizon, dx: -17.8pt, dy: -17.6pt, text(size: 6.5pt, $r$))\n}) quad V = (4)/(3) π r^(3)"
+        ]
+       },
+       {
+        "show": "I_{xx} = I_{yy} = I_{zz} = (2/5) m r^{2}",
+        "copy": "I_xx = I_yy = I_zz = (2/5) m r^2",
+        "typst": [
+         "I_(x\\x) = I_(y\\y) = I_(z\\z) = (2)/(5) m r^(2)"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Thin hollow sphere",
+      "items": [
+       {
+        "show": "A = 4π r^{2}",
+        "copy": "A = 4π r^2",
+        "typst": [
+         "#box(width: 81.8pt, height: 81.8pt, baseline: 37.6pt, {\nplace(top + left, curve(stroke: (paint: black, thickness: 1.4pt), curve.move((78.4pt, 40.9pt)), curve.line((78.1pt, 36.0pt)), curve.line((77.1pt, 31.2pt)), curve.line((75.5pt, 26.5pt)), curve.line((73.4pt, 22.2pt)), curve.line((70.7pt, 18.1pt)), curve.line((67.4pt, 14.4pt)), curve.line((63.7pt, 11.1pt)), curve.line((59.7pt, 8.4pt)), curve.line((55.3pt, 6.3pt)), curve.line((50.6pt, 4.7pt)), curve.line((45.8pt, 3.7pt)), curve.line((40.9pt, 3.4pt)), curve.line((36.0pt, 3.7pt)), curve.line((31.2pt, 4.7pt)), curve.line((26.5pt, 6.3pt)), curve.line((22.2pt, 8.4pt)), curve.line((18.1pt, 11.1pt)), curve.line((14.4pt, 14.4pt)), curve.line((11.1pt, 18.1pt)), curve.line((8.4pt, 22.2pt)), curve.line((6.3pt, 26.5pt)), curve.line((4.7pt, 31.2pt)), curve.line((3.7pt, 36.0pt)), curve.line((3.4pt, 40.9pt)), curve.line((3.7pt, 45.8pt)), curve.line((4.7pt, 50.6pt)), curve.line((6.3pt, 55.3pt)), curve.line((8.4pt, 59.7pt)), curve.line((11.1pt, 63.7pt)), curve.line((14.4pt, 67.4pt)), curve.line((18.1pt, 70.7pt)), curve.line((22.1pt, 73.4pt)), curve.line((26.5pt, 75.5pt)), curve.line((31.2pt, 77.1pt)), curve.line((36.0pt, 78.1pt)), curve.line((40.9pt, 78.4pt)), curve.line((45.8pt, 78.1pt)), curve.line((50.6pt, 77.1pt)), curve.line((55.3pt, 75.5pt)), curve.line((59.7pt, 73.4pt)), curve.line((63.7pt, 70.7pt)), curve.line((67.4pt, 67.4pt)), curve.line((70.7pt, 63.7pt)), curve.line((73.4pt, 59.7pt)), curve.line((75.5pt, 55.3pt)), curve.line((77.1pt, 50.6pt)), curve.line((78.1pt, 45.8pt)), curve.line((78.4pt, 40.9pt)), curve.close()))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.5pt), curve.move((3.4pt, 40.9pt)), curve.line((3.5pt, 41.7pt)), curve.line((3.7pt, 42.5pt)), curve.line((4.1pt, 43.3pt)), curve.line((4.7pt, 44.1pt)), curve.line((5.4pt, 44.9pt)), curve.line((6.3pt, 45.7pt)), curve.line((7.3pt, 46.4pt)), curve.line((8.4pt, 47.1pt)), curve.line((9.7pt, 47.8pt)), curve.line((11.1pt, 48.5pt)), curve.line((12.7pt, 49.1pt)), curve.line((14.4pt, 49.7pt)), curve.line((16.2pt, 50.3pt)), curve.line((18.1pt, 50.8pt)), curve.line((20.1pt, 51.3pt)), curve.line((22.1pt, 51.7pt)), curve.line((24.3pt, 52.1pt)), curve.line((26.5pt, 52.4pt)), curve.line((28.8pt, 52.7pt)), curve.line((31.2pt, 53.0pt)), curve.line((33.6pt, 53.2pt)), curve.line((36.0pt, 53.3pt)), curve.line((38.4pt, 53.4pt)), curve.line((40.9pt, 53.4pt)), curve.line((43.4pt, 53.4pt)), curve.line((45.8pt, 53.3pt)), curve.line((48.2pt, 53.2pt)), curve.line((50.6pt, 53.0pt)), curve.line((53.0pt, 52.7pt)), curve.line((55.3pt, 52.4pt)), curve.line((57.5pt, 52.1pt)), curve.line((59.7pt, 51.7pt)), curve.line((61.7pt, 51.3pt)), curve.line((63.7pt, 50.8pt)), curve.line((65.6pt, 50.3pt)), curve.line((67.4pt, 49.7pt)), curve.line((69.1pt, 49.1pt)), curve.line((70.7pt, 48.5pt)), curve.line((72.1pt, 47.8pt)), curve.line((73.4pt, 47.2pt)), curve.line((74.5pt, 46.4pt)), curve.line((75.5pt, 45.7pt)), curve.line((76.4pt, 44.9pt)), curve.line((77.1pt, 44.1pt)), curve.line((77.7pt, 43.3pt)), curve.line((78.1pt, 42.5pt)), curve.line((78.3pt, 41.7pt)), curve.line((78.4pt, 40.9pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt, dash: \"dashed\"), curve.move((78.4pt, 40.9pt)), curve.line((78.3pt, 40.1pt)), curve.line((78.1pt, 39.3pt)), curve.line((77.7pt, 38.5pt)), curve.line((77.1pt, 37.7pt)), curve.line((76.4pt, 36.9pt)), curve.line((75.5pt, 36.1pt)), curve.line((74.5pt, 35.4pt)), curve.line((73.4pt, 34.6pt)), curve.line((72.1pt, 34.0pt)), curve.line((70.7pt, 33.3pt)), curve.line((69.1pt, 32.7pt)), curve.line((67.4pt, 32.1pt)), curve.line((65.6pt, 31.5pt)), curve.line((63.7pt, 31.0pt)), curve.line((61.7pt, 30.5pt)), curve.line((59.7pt, 30.1pt)), curve.line((57.5pt, 29.7pt)), curve.line((55.3pt, 29.4pt)), curve.line((53.0pt, 29.1pt)), curve.line((50.6pt, 28.8pt)), curve.line((48.2pt, 28.6pt)), curve.line((45.8pt, 28.5pt)), curve.line((43.4pt, 28.4pt)), curve.line((40.9pt, 28.4pt)), curve.line((38.4pt, 28.4pt)), curve.line((36.0pt, 28.5pt)), curve.line((33.6pt, 28.6pt)), curve.line((31.2pt, 28.8pt)), curve.line((28.8pt, 29.1pt)), curve.line((26.5pt, 29.4pt)), curve.line((24.3pt, 29.7pt)), curve.line((22.2pt, 30.1pt)), curve.line((20.1pt, 30.5pt)), curve.line((18.1pt, 31.0pt)), curve.line((16.2pt, 31.5pt)), curve.line((14.4pt, 32.1pt)), curve.line((12.7pt, 32.7pt)), curve.line((11.1pt, 33.3pt)), curve.line((9.7pt, 34.0pt)), curve.line((8.4pt, 34.6pt)), curve.line((7.3pt, 35.4pt)), curve.line((6.3pt, 36.1pt)), curve.line((5.4pt, 36.9pt)), curve.line((4.7pt, 37.7pt)), curve.line((4.1pt, 38.5pt)), curve.line((3.7pt, 39.3pt)), curve.line((3.5pt, 40.1pt)), curve.line((3.4pt, 40.9pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((40.9pt, 40.9pt)), curve.line((53.3pt, 40.9pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((55.9pt, 40.9pt)), curve.line((52.7pt, 39.6pt)), curve.line((52.7pt, 42.2pt)), curve.close()))\nplace(center + horizon, dx: 21.2pt, dy: -0.6pt, text(size: 6.5pt, $hat(b)_x$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((40.9pt, 40.9pt)), curve.line((40.9pt, 28.5pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((40.9pt, 25.9pt)), curve.line((39.6pt, 29.1pt)), curve.line((42.2pt, 29.1pt)), curve.close()))\nplace(center + horizon, dx: 0.6pt, dy: -21.2pt, text(size: 6.5pt, $hat(b)_y$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((40.9pt, 40.9pt)), curve.line((31.7pt, 46.2pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((29.4pt, 47.5pt)), curve.line((32.9pt, 47.1pt)), curve.line((31.5pt, 44.8pt)), curve.close()))\nplace(center + horizon, dx: -17.7pt, dy: 10.4pt, text(size: 6.5pt, $hat(b)_z$))\nplace(center + horizon, dx: 0.0pt, dy: 0.0pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt), curve.move((40.9pt, 40.9pt)), curve.line((15.4pt, 13.5pt))))\nplace(center + horizon, dx: -17.8pt, dy: -17.6pt, text(size: 6.5pt, $r$))\n}) quad A = 4π r^(2)"
+        ]
+       },
+       {
+        "show": "I_{xx} = I_{yy} = I_{zz} = (2/3) m r^{2}",
+        "copy": "I_xx = I_yy = I_zz = (2/3) m r^2",
+        "typst": [
+         "I_(x\\x) = I_(y\\y) = I_(z\\z) = (2)/(3) m r^(2)"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Solid half sphere",
+      "items": [
+       {
+        "show": "V = (2/3) π r^{3}",
+        "copy": "V = (2/3) π r^3",
+        "typst": [
+         "#box(width: 90.6pt, height: 59.3pt, baseline: 26.4pt, {\nplace(top + left, curve(fill: rgb(128, 128, 128, 70), stroke: (paint: black, thickness: 0.8pt), curve.move((87.8pt, 45.3pt)), curve.line((87.7pt, 42.5pt)), curve.line((87.4pt, 39.8pt)), curve.line((87.0pt, 37.0pt)), curve.line((86.4pt, 34.3pt)), curve.line((85.5pt, 31.6pt)), curve.line((84.6pt, 29.0pt)), curve.line((83.4pt, 26.5pt)), curve.line((82.1pt, 24.1pt)), curve.line((80.6pt, 21.7pt)), curve.line((79.0pt, 19.4pt)), curve.line((77.3pt, 17.3pt)), curve.line((75.4pt, 15.2pt)), curve.line((73.3pt, 13.3pt)), curve.line((71.2pt, 11.6pt)), curve.line((68.9pt, 10.0pt)), curve.line((66.5pt, 8.5pt)), curve.line((64.1pt, 7.2pt)), curve.line((61.6pt, 6.0pt)), curve.line((59.0pt, 5.1pt)), curve.line((56.3pt, 4.2pt)), curve.line((53.6pt, 3.6pt)), curve.line((50.8pt, 3.2pt)), curve.line((48.1pt, 2.9pt)), curve.line((45.3pt, 2.8pt)), curve.line((42.5pt, 2.9pt)), curve.line((39.8pt, 3.2pt)), curve.line((37.0pt, 3.6pt)), curve.line((34.3pt, 4.2pt)), curve.line((31.6pt, 5.1pt)), curve.line((29.0pt, 6.0pt)), curve.line((26.5pt, 7.2pt)), curve.line((24.1pt, 8.5pt)), curve.line((21.7pt, 10.0pt)), curve.line((19.4pt, 11.6pt)), curve.line((17.3pt, 13.3pt)), curve.line((15.2pt, 15.2pt)), curve.line((13.3pt, 17.3pt)), curve.line((11.6pt, 19.4pt)), curve.line((10.0pt, 21.7pt)), curve.line((8.5pt, 24.1pt)), curve.line((7.2pt, 26.5pt)), curve.line((6.0pt, 29.0pt)), curve.line((5.1pt, 31.6pt)), curve.line((4.2pt, 34.3pt)), curve.line((3.6pt, 37.0pt)), curve.line((3.2pt, 39.8pt)), curve.line((2.9pt, 42.5pt)), curve.line((2.8pt, 45.3pt)), curve.line((2.8pt, 45.3pt)), curve.line((2.9pt, 46.0pt)), curve.line((3.2pt, 46.8pt)), curve.line((3.6pt, 47.5pt)), curve.line((4.2pt, 48.2pt)), curve.line((5.1pt, 48.9pt)), curve.line((6.0pt, 49.6pt)), curve.line((7.2pt, 50.3pt)), curve.line((8.5pt, 50.9pt)), curve.line((10.0pt, 51.6pt)), curve.line((11.6pt, 52.1pt)), curve.line((13.3pt, 52.7pt)), curve.line((15.2pt, 53.3pt)), curve.line((17.3pt, 53.8pt)), curve.line((19.4pt, 54.2pt)), curve.line((21.7pt, 54.7pt)), curve.line((24.0pt, 55.0pt)), curve.line((26.5pt, 55.4pt)), curve.line((29.0pt, 55.7pt)), curve.line((31.6pt, 56.0pt)), curve.line((34.3pt, 56.2pt)), curve.line((37.0pt, 56.3pt)), curve.line((39.8pt, 56.5pt)), curve.line((42.5pt, 56.5pt)), curve.line((45.3pt, 56.5pt)), curve.line((48.1pt, 56.5pt)), curve.line((50.8pt, 56.5pt)), curve.line((53.6pt, 56.3pt)), curve.line((56.3pt, 56.2pt)), curve.line((59.0pt, 56.0pt)), curve.line((61.6pt, 55.7pt)), curve.line((64.1pt, 55.4pt)), curve.line((66.5pt, 55.0pt)), curve.line((68.9pt, 54.7pt)), curve.line((71.2pt, 54.2pt)), curve.line((73.3pt, 53.8pt)), curve.line((75.4pt, 53.3pt)), curve.line((77.3pt, 52.7pt)), curve.line((79.0pt, 52.1pt)), curve.line((80.6pt, 51.6pt)), curve.line((82.1pt, 50.9pt)), curve.line((83.4pt, 50.3pt)), curve.line((84.6pt, 49.6pt)), curve.line((85.5pt, 48.9pt)), curve.line((86.4pt, 48.2pt)), curve.line((87.0pt, 47.5pt)), curve.line((87.4pt, 46.8pt)), curve.line((87.7pt, 46.0pt)), curve.line((87.8pt, 45.3pt)), curve.close()))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt, dash: \"dashed\"), curve.move((87.8pt, 45.3pt)), curve.line((87.7pt, 44.6pt)), curve.line((87.4pt, 43.8pt)), curve.line((87.0pt, 43.1pt)), curve.line((86.4pt, 42.4pt)), curve.line((85.5pt, 41.7pt)), curve.line((84.6pt, 41.0pt)), curve.line((83.4pt, 40.3pt)), curve.line((82.1pt, 39.7pt)), curve.line((80.6pt, 39.0pt)), curve.line((79.0pt, 38.5pt)), curve.line((77.3pt, 37.9pt)), curve.line((75.4pt, 37.3pt)), curve.line((73.3pt, 36.8pt)), curve.line((71.2pt, 36.4pt)), curve.line((68.9pt, 35.9pt)), curve.line((66.5pt, 35.6pt)), curve.line((64.1pt, 35.2pt)), curve.line((61.6pt, 34.9pt)), curve.line((59.0pt, 34.6pt)), curve.line((56.3pt, 34.4pt)), curve.line((53.6pt, 34.3pt)), curve.line((50.8pt, 34.1pt)), curve.line((48.1pt, 34.1pt)), curve.line((45.3pt, 34.0pt)), curve.line((42.5pt, 34.1pt)), curve.line((39.8pt, 34.1pt)), curve.line((37.0pt, 34.3pt)), curve.line((34.3pt, 34.4pt)), curve.line((31.6pt, 34.6pt)), curve.line((29.0pt, 34.9pt)), curve.line((26.5pt, 35.2pt)), curve.line((24.1pt, 35.6pt)), curve.line((21.7pt, 35.9pt)), curve.line((19.4pt, 36.4pt)), curve.line((17.3pt, 36.8pt)), curve.line((15.2pt, 37.3pt)), curve.line((13.3pt, 37.9pt)), curve.line((11.6pt, 38.5pt)), curve.line((10.0pt, 39.0pt)), curve.line((8.5pt, 39.7pt)), curve.line((7.2pt, 40.3pt)), curve.line((6.0pt, 41.0pt)), curve.line((5.1pt, 41.7pt)), curve.line((4.2pt, 42.4pt)), curve.line((3.6pt, 43.1pt)), curve.line((3.2pt, 43.8pt)), curve.line((2.9pt, 44.6pt)), curve.line((2.8pt, 45.3pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((45.3pt, 29.4pt)), curve.line((56.5pt, 29.4pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((59.0pt, 29.4pt)), curve.line((55.8pt, 28.0pt)), curve.line((55.8pt, 30.7pt)), curve.close()))\nplace(center + horizon, dx: 20.0pt, dy: -0.9pt, text(size: 6.5pt, $hat(b)_x$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((45.3pt, 29.4pt)), curve.line((45.3pt, 18.2pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((45.3pt, 15.6pt)), curve.line((44.0pt, 18.8pt)), curve.line((46.6pt, 18.8pt)), curve.close()))\nplace(center + horizon, dx: 0.6pt, dy: -20.3pt, text(size: 6.5pt, $hat(b)_y$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((45.3pt, 29.4pt)), curve.line((37.0pt, 34.1pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((34.8pt, 35.4pt)), curve.line((38.2pt, 35.0pt)), curve.line((36.9pt, 32.7pt)), curve.close()))\nplace(center + horizon, dx: -16.8pt, dy: 9.5pt, text(size: 6.5pt, $hat(b)_z$))\nplace(center + horizon, dx: 0.0pt, dy: -0.3pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(center + horizon, dx: 0.0pt, dy: 15.6pt, circle(radius: 1.4pt, fill: black, stroke: none))\nplace(center + horizon, dx: 10.0pt, dy: 20.6pt, text(size: 6pt, $B_o$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt), curve.move((45.3pt, 45.3pt)), curve.line((70.8pt, 11.3pt))))\nplace(center + horizon, dx: 22.9pt, dy: -7.8pt, text(size: 6.5pt, $r$))\n}) quad V = (2)/(3) π r^(3)"
+        ]
+       },
+       {
+        "show": "y_{cm} = 3r/8",
+        "copy": "y_cm = 3r/8",
+        "note": "above Bₒ",
+        "typst": [
+         "y_(\"cm\") = (3r)/(8)"
+        ]
+       },
+       {
+        "show": "I_{xx} = I_{yy} = I_{zz} = (2/5) m r^{2}",
+        "copy": "I_xx = I_yy = I_zz = (2/5) m r^2",
+        "note": "about Bₒ",
+        "typst": [
+         "I_(x\\x) = I_(y\\y) = I_(z\\z) = (2)/(5) m r^(2)"
+        ]
+       },
+       {
+        "show": "I_{xx} = I_{zz} = (83/320) m r^{2}",
+        "copy": "I_xx = I_zz = (83/320) m r^2",
+        "note": "about the mass centre",
+        "typst": [
+         "I_(x\\x) = I_(z\\z) = (83)/(320) m r^(2)"
+        ]
+       },
+       {
+        "show": "I_{yy} = (2/5) m r^{2}",
+        "copy": "I_yy = (2/5) m r^2",
+        "note": "about the mass centre",
+        "typst": [
+         "I_(y\\y) = (2)/(5) m r^(2)"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Solid ellipsoid",
+      "items": [
+       {
+        "show": "V = (4/3) π a b c",
+        "copy": "V = (4/3) π a b c",
+        "typst": [
+         "#box(width: 106.2pt, height: 79.6pt, baseline: 36.5pt, {\nplace(top + left, curve(fill: rgb(128, 128, 128, 70), stroke: (paint: black, thickness: 0.8pt), curve.move((87.8pt, 32.8pt)), curve.line((87.4pt, 28.9pt)), curve.line((86.4pt, 25.0pt)), curve.line((84.6pt, 21.3pt)), curve.line((82.1pt, 17.8pt)), curve.line((79.0pt, 14.5pt)), curve.line((75.4pt, 11.6pt)), curve.line((71.2pt, 9.0pt)), curve.line((66.5pt, 6.8pt)), curve.line((61.6pt, 5.1pt)), curve.line((56.3pt, 3.8pt)), curve.line((50.8pt, 3.1pt)), curve.line((45.3pt, 2.8pt)), curve.line((39.8pt, 3.1pt)), curve.line((34.3pt, 3.8pt)), curve.line((29.0pt, 5.1pt)), curve.line((24.1pt, 6.8pt)), curve.line((19.4pt, 9.0pt)), curve.line((15.2pt, 11.6pt)), curve.line((11.6pt, 14.5pt)), curve.line((8.5pt, 17.8pt)), curve.line((6.0pt, 21.3pt)), curve.line((4.2pt, 25.0pt)), curve.line((3.2pt, 28.9pt)), curve.line((2.8pt, 32.8pt)), curve.line((3.2pt, 36.7pt)), curve.line((4.2pt, 40.6pt)), curve.line((6.0pt, 44.3pt)), curve.line((8.5pt, 47.8pt)), curve.line((11.6pt, 51.1pt)), curve.line((15.2pt, 54.0pt)), curve.line((19.4pt, 56.6pt)), curve.line((24.0pt, 58.8pt)), curve.line((29.0pt, 60.5pt)), curve.line((34.3pt, 61.8pt)), curve.line((39.8pt, 62.5pt)), curve.line((45.3pt, 62.8pt)), curve.line((50.8pt, 62.5pt)), curve.line((56.3pt, 61.8pt)), curve.line((61.6pt, 60.5pt)), curve.line((66.5pt, 58.8pt)), curve.line((71.2pt, 56.6pt)), curve.line((75.4pt, 54.0pt)), curve.line((79.0pt, 51.1pt)), curve.line((82.1pt, 47.8pt)), curve.line((84.6pt, 44.3pt)), curve.line((86.4pt, 40.6pt)), curve.line((87.4pt, 36.7pt)), curve.line((87.8pt, 32.8pt)), curve.close()))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.5pt), curve.move((2.8pt, 32.8pt)), curve.line((2.9pt, 33.5pt)), curve.line((3.2pt, 34.3pt)), curve.line((3.6pt, 35.0pt)), curve.line((4.2pt, 35.7pt)), curve.line((5.1pt, 36.4pt)), curve.line((6.0pt, 37.1pt)), curve.line((7.2pt, 37.8pt)), curve.line((8.5pt, 38.4pt)), curve.line((10.0pt, 39.1pt)), curve.line((11.6pt, 39.6pt)), curve.line((13.3pt, 40.2pt)), curve.line((15.2pt, 40.8pt)), curve.line((17.3pt, 41.3pt)), curve.line((19.4pt, 41.7pt)), curve.line((21.7pt, 42.2pt)), curve.line((24.0pt, 42.5pt)), curve.line((26.5pt, 42.9pt)), curve.line((29.0pt, 43.2pt)), curve.line((31.6pt, 43.5pt)), curve.line((34.3pt, 43.7pt)), curve.line((37.0pt, 43.8pt)), curve.line((39.8pt, 44.0pt)), curve.line((42.5pt, 44.0pt)), curve.line((45.3pt, 44.0pt)), curve.line((48.1pt, 44.0pt)), curve.line((50.8pt, 44.0pt)), curve.line((53.6pt, 43.8pt)), curve.line((56.3pt, 43.7pt)), curve.line((59.0pt, 43.5pt)), curve.line((61.6pt, 43.2pt)), curve.line((64.1pt, 42.9pt)), curve.line((66.5pt, 42.5pt)), curve.line((68.9pt, 42.2pt)), curve.line((71.2pt, 41.7pt)), curve.line((73.3pt, 41.3pt)), curve.line((75.4pt, 40.8pt)), curve.line((77.3pt, 40.2pt)), curve.line((79.0pt, 39.6pt)), curve.line((80.6pt, 39.1pt)), curve.line((82.1pt, 38.4pt)), curve.line((83.4pt, 37.8pt)), curve.line((84.6pt, 37.1pt)), curve.line((85.5pt, 36.4pt)), curve.line((86.4pt, 35.7pt)), curve.line((87.0pt, 35.0pt)), curve.line((87.4pt, 34.3pt)), curve.line((87.7pt, 33.5pt)), curve.line((87.8pt, 32.8pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt, dash: \"dashed\"), curve.move((87.8pt, 32.8pt)), curve.line((87.7pt, 32.1pt)), curve.line((87.4pt, 31.3pt)), curve.line((87.0pt, 30.6pt)), curve.line((86.4pt, 29.9pt)), curve.line((85.5pt, 29.2pt)), curve.line((84.6pt, 28.5pt)), curve.line((83.4pt, 27.8pt)), curve.line((82.1pt, 27.2pt)), curve.line((80.6pt, 26.5pt)), curve.line((79.0pt, 26.0pt)), curve.line((77.3pt, 25.4pt)), curve.line((75.4pt, 24.8pt)), curve.line((73.3pt, 24.3pt)), curve.line((71.2pt, 23.9pt)), curve.line((68.9pt, 23.4pt)), curve.line((66.5pt, 23.1pt)), curve.line((64.1pt, 22.7pt)), curve.line((61.6pt, 22.4pt)), curve.line((59.0pt, 22.1pt)), curve.line((56.3pt, 21.9pt)), curve.line((53.6pt, 21.8pt)), curve.line((50.8pt, 21.6pt)), curve.line((48.1pt, 21.6pt)), curve.line((45.3pt, 21.5pt)), curve.line((42.5pt, 21.6pt)), curve.line((39.8pt, 21.6pt)), curve.line((37.0pt, 21.8pt)), curve.line((34.3pt, 21.9pt)), curve.line((31.6pt, 22.1pt)), curve.line((29.0pt, 22.4pt)), curve.line((26.5pt, 22.7pt)), curve.line((24.1pt, 23.1pt)), curve.line((21.7pt, 23.4pt)), curve.line((19.4pt, 23.9pt)), curve.line((17.3pt, 24.3pt)), curve.line((15.2pt, 24.8pt)), curve.line((13.3pt, 25.4pt)), curve.line((11.6pt, 26.0pt)), curve.line((10.0pt, 26.5pt)), curve.line((8.5pt, 27.2pt)), curve.line((7.2pt, 27.8pt)), curve.line((6.0pt, 28.5pt)), curve.line((5.1pt, 29.2pt)), curve.line((4.2pt, 29.9pt)), curve.line((3.6pt, 30.6pt)), curve.line((3.2pt, 31.3pt)), curve.line((2.9pt, 32.1pt)), curve.line((2.8pt, 32.8pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((45.3pt, 32.8pt)), curve.line((56.5pt, 32.8pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((59.0pt, 32.8pt)), curve.line((55.8pt, 31.5pt)), curve.line((55.8pt, 34.1pt)), curve.close()))\nplace(center + horizon, dx: 12.2pt, dy: -7.6pt, text(size: 6.5pt, $hat(b)_x$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((45.3pt, 32.8pt)), curve.line((45.3pt, 21.6pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((45.3pt, 19.0pt)), curve.line((44.0pt, 22.2pt)), curve.line((46.6pt, 22.2pt)), curve.close()))\nplace(center + horizon, dx: -7.2pt, dy: -27.0pt, text(size: 6.5pt, $hat(b)_y$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((45.3pt, 32.8pt)), curve.line((37.0pt, 37.6pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((34.8pt, 38.9pt)), curve.line((38.2pt, 38.4pt)), curve.line((36.9pt, 36.1pt)), curve.close()))\nplace(center + horizon, dx: -24.6pt, dy: 2.8pt, text(size: 6.5pt, $hat(b)_z$))\nplace(center + horizon, dx: -7.8pt, dy: -7.0pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.45pt), curve.move((47.2pt, 69.0pt)), curve.line((85.9pt, 69.0pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((87.8pt, 69.0pt)), curve.line((85.4pt, 68.0pt)), curve.line((85.4pt, 70.1pt)), curve.close()))\nplace(top + left, curve(fill: black, stroke: none, curve.move((45.3pt, 69.0pt)), curve.line((47.7pt, 70.1pt)), curve.line((47.7pt, 68.0pt)), curve.close()))\nplace(center + horizon, dx: 13.5pt, dy: 34.2pt, text(size: 6.5pt, $a$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.45pt), curve.move((95.3pt, 30.9pt)), curve.line((95.3pt, 4.7pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((95.3pt, 2.8pt)), curve.line((94.3pt, 5.2pt)), curve.line((96.3pt, 5.2pt)), curve.close()))\nplace(top + left, curve(fill: black, stroke: none, curve.move((95.3pt, 32.8pt)), curve.line((96.3pt, 30.4pt)), curve.line((94.3pt, 30.4pt)), curve.close()))\nplace(center + horizon, dx: 47.2pt, dy: -22.0pt, text(size: 6.5pt, $b$))\nplace(center + horizon, dx: 27.2pt, dy: 3.0pt, text(size: 6pt, $c$))\n}) quad V = (4)/(3) π a b c"
+        ]
+       },
+       {
+        "show": "I_{xx} = (1/5) m (b^{2} + c^{2})",
+        "copy": "I_xx = (1/5) m (b^2 + c^2)",
+        "typst": [
+         "I_(x\\x) = (1)/(5) m (b^(2) + c^(2))"
+        ]
+       },
+       {
+        "show": "I_{yy} = (1/5) m (a^{2} + c^{2})",
+        "copy": "I_yy = (1/5) m (a^2 + c^2)",
+        "typst": [
+         "I_(y\\y) = (1)/(5) m (a^(2) + c^(2))"
+        ]
+       },
+       {
+        "show": "I_{zz} = (1/5) m (a^{2} + b^{2})",
+        "copy": "I_zz = (1/5) m (a^2 + b^2)",
+        "typst": [
+         "I_(z\\z) = (1)/(5) m (a^(2) + b^(2))"
+        ]
+       },
+       {
+        "show": "x^{2}/a^{2} + y^{2}/b^{2} + z^{2}/c^{2} = 1",
+        "copy": "x^2/a^2 + y^2/b^2 + z^2/c^2 = 1",
+        "note": "surface point Q",
+        "typst": [
+         "(x^(2))/(a^(2)) + (y^(2))/(b^(2)) + (z^(2))/(c^(2)) = 1"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Thin-walled ellipsoid",
+      "items": [
+       {
+        "show": "A ≈ 4π [((ab)^{p} + (ac)^{p} + (bc)^{p})/3]^{1/p}",
+        "copy": "A ≈ 4π [((ab)^p + (ac)^p + (bc)^p)/3]^(1/p)",
+        "typst": [
+         "#box(width: 106.8pt, height: 80.2pt, baseline: 36.8pt, {\nplace(top + left, curve(stroke: (paint: black, thickness: 1.4pt), curve.move((88.4pt, 33.4pt)), curve.line((88.0pt, 29.5pt)), curve.line((87.0pt, 25.6pt)), curve.line((85.2pt, 21.9pt)), curve.line((82.7pt, 18.4pt)), curve.line((79.6pt, 15.1pt)), curve.line((76.0pt, 12.2pt)), curve.line((71.8pt, 9.6pt)), curve.line((67.2pt, 7.4pt)), curve.line((62.2pt, 5.7pt)), curve.line((56.9pt, 4.4pt)), curve.line((51.4pt, 3.7pt)), curve.line((45.9pt, 3.4pt)), curve.line((40.4pt, 3.7pt)), curve.line((34.9pt, 4.4pt)), curve.line((29.6pt, 5.7pt)), curve.line((24.7pt, 7.4pt)), curve.line((20.0pt, 9.6pt)), curve.line((15.8pt, 12.2pt)), curve.line((12.2pt, 15.1pt)), curve.line((9.1pt, 18.4pt)), curve.line((6.6pt, 21.9pt)), curve.line((4.8pt, 25.6pt)), curve.line((3.8pt, 29.5pt)), curve.line((3.4pt, 33.4pt)), curve.line((3.8pt, 37.3pt)), curve.line((4.8pt, 41.2pt)), curve.line((6.6pt, 44.9pt)), curve.line((9.1pt, 48.4pt)), curve.line((12.2pt, 51.7pt)), curve.line((15.8pt, 54.6pt)), curve.line((20.0pt, 57.2pt)), curve.line((24.6pt, 59.4pt)), curve.line((29.6pt, 61.1pt)), curve.line((34.9pt, 62.4pt)), curve.line((40.4pt, 63.1pt)), curve.line((45.9pt, 63.4pt)), curve.line((51.4pt, 63.1pt)), curve.line((56.9pt, 62.4pt)), curve.line((62.2pt, 61.1pt)), curve.line((67.2pt, 59.4pt)), curve.line((71.8pt, 57.2pt)), curve.line((76.0pt, 54.6pt)), curve.line((79.6pt, 51.7pt)), curve.line((82.7pt, 48.4pt)), curve.line((85.2pt, 44.9pt)), curve.line((87.0pt, 41.2pt)), curve.line((88.0pt, 37.3pt)), curve.line((88.4pt, 33.4pt)), curve.close()))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.5pt), curve.move((3.4pt, 33.4pt)), curve.line((3.5pt, 34.1pt)), curve.line((3.8pt, 34.9pt)), curve.line((4.2pt, 35.6pt)), curve.line((4.8pt, 36.3pt)), curve.line((5.7pt, 37.0pt)), curve.line((6.6pt, 37.7pt)), curve.line((7.8pt, 38.4pt)), curve.line((9.1pt, 39.0pt)), curve.line((10.6pt, 39.7pt)), curve.line((12.2pt, 40.2pt)), curve.line((13.9pt, 40.8pt)), curve.line((15.8pt, 41.4pt)), curve.line((17.9pt, 41.9pt)), curve.line((20.0pt, 42.3pt)), curve.line((22.3pt, 42.8pt)), curve.line((24.6pt, 43.1pt)), curve.line((27.1pt, 43.5pt)), curve.line((29.6pt, 43.8pt)), curve.line((32.2pt, 44.1pt)), curve.line((34.9pt, 44.3pt)), curve.line((37.6pt, 44.4pt)), curve.line((40.4pt, 44.6pt)), curve.line((43.1pt, 44.6pt)), curve.line((45.9pt, 44.6pt)), curve.line((48.7pt, 44.6pt)), curve.line((51.4pt, 44.6pt)), curve.line((54.2pt, 44.4pt)), curve.line((56.9pt, 44.3pt)), curve.line((59.6pt, 44.1pt)), curve.line((62.2pt, 43.8pt)), curve.line((64.7pt, 43.5pt)), curve.line((67.2pt, 43.1pt)), curve.line((69.5pt, 42.8pt)), curve.line((71.8pt, 42.3pt)), curve.line((73.9pt, 41.9pt)), curve.line((76.0pt, 41.4pt)), curve.line((77.9pt, 40.8pt)), curve.line((79.6pt, 40.2pt)), curve.line((81.2pt, 39.7pt)), curve.line((82.7pt, 39.0pt)), curve.line((84.0pt, 38.4pt)), curve.line((85.2pt, 37.7pt)), curve.line((86.1pt, 37.0pt)), curve.line((87.0pt, 36.3pt)), curve.line((87.6pt, 35.6pt)), curve.line((88.0pt, 34.9pt)), curve.line((88.3pt, 34.1pt)), curve.line((88.4pt, 33.4pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt, dash: \"dashed\"), curve.move((88.4pt, 33.4pt)), curve.line((88.3pt, 32.7pt)), curve.line((88.0pt, 31.9pt)), curve.line((87.6pt, 31.2pt)), curve.line((87.0pt, 30.5pt)), curve.line((86.1pt, 29.8pt)), curve.line((85.2pt, 29.1pt)), curve.line((84.0pt, 28.4pt)), curve.line((82.7pt, 27.8pt)), curve.line((81.2pt, 27.1pt)), curve.line((79.6pt, 26.6pt)), curve.line((77.9pt, 26.0pt)), curve.line((76.0pt, 25.4pt)), curve.line((73.9pt, 24.9pt)), curve.line((71.8pt, 24.5pt)), curve.line((69.5pt, 24.0pt)), curve.line((67.2pt, 23.7pt)), curve.line((64.7pt, 23.3pt)), curve.line((62.2pt, 23.0pt)), curve.line((59.6pt, 22.7pt)), curve.line((56.9pt, 22.5pt)), curve.line((54.2pt, 22.4pt)), curve.line((51.4pt, 22.2pt)), curve.line((48.7pt, 22.2pt)), curve.line((45.9pt, 22.1pt)), curve.line((43.1pt, 22.2pt)), curve.line((40.4pt, 22.2pt)), curve.line((37.6pt, 22.4pt)), curve.line((34.9pt, 22.5pt)), curve.line((32.2pt, 22.7pt)), curve.line((29.6pt, 23.0pt)), curve.line((27.1pt, 23.3pt)), curve.line((24.7pt, 23.7pt)), curve.line((22.3pt, 24.0pt)), curve.line((20.0pt, 24.5pt)), curve.line((17.9pt, 24.9pt)), curve.line((15.8pt, 25.4pt)), curve.line((13.9pt, 26.0pt)), curve.line((12.2pt, 26.6pt)), curve.line((10.6pt, 27.1pt)), curve.line((9.1pt, 27.8pt)), curve.line((7.8pt, 28.4pt)), curve.line((6.6pt, 29.1pt)), curve.line((5.7pt, 29.8pt)), curve.line((4.8pt, 30.5pt)), curve.line((4.2pt, 31.2pt)), curve.line((3.8pt, 31.9pt)), curve.line((3.5pt, 32.7pt)), curve.line((3.4pt, 33.4pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((45.9pt, 33.4pt)), curve.line((57.1pt, 33.4pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((59.6pt, 33.4pt)), curve.line((56.4pt, 32.1pt)), curve.line((56.4pt, 34.7pt)), curve.close()))\nplace(center + horizon, dx: 12.5pt, dy: -7.3pt, text(size: 6.5pt, $hat(b)_x$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((45.9pt, 33.4pt)), curve.line((45.9pt, 22.2pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((45.9pt, 19.6pt)), curve.line((44.6pt, 22.9pt)), curve.line((47.2pt, 22.9pt)), curve.close()))\nplace(center + horizon, dx: -6.9pt, dy: -26.7pt, text(size: 6.5pt, $hat(b)_y$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((45.9pt, 33.4pt)), curve.line((37.6pt, 38.2pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((35.4pt, 39.5pt)), curve.line((38.8pt, 39.0pt)), curve.line((37.5pt, 36.7pt)), curve.close()))\nplace(center + horizon, dx: -24.3pt, dy: 3.1pt, text(size: 6.5pt, $hat(b)_z$))\nplace(center + horizon, dx: -7.5pt, dy: -6.7pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.45pt), curve.move((47.8pt, 69.7pt)), curve.line((86.5pt, 69.7pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((88.4pt, 69.7pt)), curve.line((86.0pt, 68.6pt)), curve.line((86.0pt, 70.7pt)), curve.close()))\nplace(top + left, curve(fill: black, stroke: none, curve.move((45.9pt, 69.7pt)), curve.line((48.3pt, 70.7pt)), curve.line((48.3pt, 68.6pt)), curve.close()))\nplace(center + horizon, dx: 13.8pt, dy: 34.5pt, text(size: 6.5pt, $a$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.45pt), curve.move((95.9pt, 31.5pt)), curve.line((95.9pt, 5.3pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((95.9pt, 3.4pt)), curve.line((94.9pt, 5.8pt)), curve.line((96.9pt, 5.8pt)), curve.close()))\nplace(top + left, curve(fill: black, stroke: none, curve.move((95.9pt, 33.4pt)), curve.line((96.9pt, 31.0pt)), curve.line((94.9pt, 31.0pt)), curve.close()))\nplace(center + horizon, dx: 47.5pt, dy: -21.7pt, text(size: 6.5pt, $b$))\nplace(center + horizon, dx: 27.5pt, dy: 3.3pt, text(size: 6pt, $c$))\n}) quad A ≈ 4π [((a\\b)^(p) + (a\\c)^(p) + (b\\c)^(p))/(3)]^((1)/(p))"
+        ]
+       },
+       {
+        "show": "p = 1.6075",
+        "copy": "p = 1.6075",
+        "typst": [
+         "p = 1.6075"
+        ]
+       },
+       {
+        "show": "I_{xx} = (1/3) m (b^{2} + c^{2})",
+        "copy": "I_xx = (1/3) m (b^2 + c^2)",
+        "typst": [
+         "I_(x\\x) = (1)/(3) m (b^(2) + c^(2))"
+        ]
+       },
+       {
+        "show": "I_{yy} = (1/3) m (a^{2} + c^{2})",
+        "copy": "I_yy = (1/3) m (a^2 + c^2)",
+        "typst": [
+         "I_(y\\y) = (1)/(3) m (a^(2) + c^(2))"
+        ]
+       },
+       {
+        "show": "I_{zz} = (1/3) m (a^{2} + b^{2})",
+        "copy": "I_zz = (1/3) m (a^2 + b^2)",
+        "typst": [
+         "I_(z\\z) = (1)/(3) m (a^(2) + b^(2))"
+        ]
+       },
+       {
+        "show": "x^{2}/a^{2} + y^{2}/b^{2} + z^{2}/c^{2} = 1",
+        "copy": "x^2/a^2 + y^2/b^2 + z^2/c^2 = 1",
+        "note": "surface point Q",
+        "typst": [
+         "(x^(2))/(a^(2)) + (y^(2))/(b^(2)) + (z^(2))/(c^(2)) = 1"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Inertia of boxes",
+    "groups": [
+     {
+      "title": "Solid box",
+      "items": [
+       {
+        "show": "V = a b c",
+        "copy": "V = a b c",
+        "typst": [
+         "#box(width: 99.0pt, height: 62.7pt, baseline: 28.0pt, {\nplace(top + left, curve(fill: rgb(128, 128, 128, 70), stroke: (paint: black, thickness: 0.8pt), curve.move((2.8pt, 50.8pt)), curve.line((77.8pt, 50.8pt)), curve.line((77.8pt, 13.3pt)), curve.line((2.8pt, 13.3pt)), curve.close()))\nplace(top + left, curve(fill: rgb(128, 128, 128, 70), stroke: (paint: black, thickness: 0.8pt), curve.move((77.8pt, 50.8pt)), curve.line((96.0pt, 40.3pt)), curve.line((96.0pt, 2.8pt)), curve.line((77.8pt, 13.3pt)), curve.close()))\nplace(top + left, curve(fill: rgb(128, 128, 128, 70), stroke: (paint: black, thickness: 0.8pt), curve.move((2.8pt, 13.3pt)), curve.line((77.8pt, 13.3pt)), curve.line((96.0pt, 2.8pt)), curve.line((21.0pt, 2.8pt)), curve.close()))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((49.4pt, 26.8pt)), curve.line((61.8pt, 26.8pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((64.4pt, 26.8pt)), curve.line((61.2pt, 25.5pt)), curve.line((61.2pt, 28.2pt)), curve.close()))\nplace(center + horizon, dx: 21.1pt, dy: -5.1pt, text(size: 6.5pt, $hat(b)_x$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((49.4pt, 26.8pt)), curve.line((49.4pt, 14.4pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((49.4pt, 11.8pt)), curve.line((48.0pt, 15.0pt)), curve.line((50.7pt, 15.0pt)), curve.close()))\nplace(center + horizon, dx: 0.5pt, dy: -25.8pt, text(size: 6.5pt, $hat(b)_y$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((49.4pt, 26.8pt)), curve.line((40.2pt, 32.2pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((37.9pt, 33.4pt)), curve.line((41.4pt, 33.0pt)), curve.line((40.0pt, 30.7pt)), curve.close()))\nplace(center + horizon, dx: -17.8pt, dy: 5.9pt, text(size: 6.5pt, $hat(b)_z$))\nplace(center + horizon, dx: -0.1pt, dy: -4.5pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(center + horizon, dx: -9.2pt, dy: 25.8pt, text(size: 6.5pt, $a$))\nplace(center + horizon, dx: 34.5pt, dy: 0.7pt, text(size: 6.5pt, $b$))\nplace(center + horizon, dx: 43.6pt, dy: 18.0pt, text(size: 6.5pt, $c$))\n}) quad V = a b c"
+        ]
+       },
+       {
+        "show": "I_{xx} = (1/12) m (b^{2} + c^{2})",
+        "copy": "I_xx = (1/12) m (b^2 + c^2)",
+        "typst": [
+         "I_(x\\x) = (1)/(12) m (b^(2) + c^(2))"
+        ]
+       },
+       {
+        "show": "I_{yy} = (1/12) m (a^{2} + c^{2})",
+        "copy": "I_yy = (1/12) m (a^2 + c^2)",
+        "typst": [
+         "I_(y\\y) = (1)/(12) m (a^(2) + c^(2))"
+        ]
+       },
+       {
+        "show": "I_{zz} = (1/12) m (a^{2} + b^{2})",
+        "copy": "I_zz = (1/12) m (a^2 + b^2)",
+        "typst": [
+         "I_(z\\z) = (1)/(12) m (a^(2) + b^(2))"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Box of 8 particles",
+      "items": [
+       {
+        "show": "m_{i} = m/8",
+        "copy": "m_i = m/8",
+        "typst": [
+         "#box(width: 102.4pt, height: 64.0pt, baseline: 28.7pt, {\nplace(top + left, curve(stroke: (paint: black, thickness: 0.5pt), curve.move((22.4pt, 41.7pt)), curve.line((4.2pt, 52.2pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.5pt), curve.move((22.4pt, 41.7pt)), curve.line((22.4pt, 4.2pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.5pt), curve.move((22.4pt, 41.7pt)), curve.line((97.4pt, 41.7pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.5pt), curve.move((4.2pt, 52.2pt)), curve.line((4.2pt, 14.7pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.5pt), curve.move((4.2pt, 52.2pt)), curve.line((79.2pt, 52.2pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.5pt), curve.move((22.4pt, 4.2pt)), curve.line((4.2pt, 14.7pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.5pt), curve.move((22.4pt, 4.2pt)), curve.line((97.4pt, 4.2pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.5pt), curve.move((4.2pt, 14.7pt)), curve.line((79.2pt, 14.7pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.5pt), curve.move((97.4pt, 41.7pt)), curve.line((79.2pt, 52.2pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.5pt), curve.move((97.4pt, 41.7pt)), curve.line((97.4pt, 4.2pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.5pt), curve.move((79.2pt, 52.2pt)), curve.line((79.2pt, 14.7pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.5pt), curve.move((97.4pt, 4.2pt)), curve.line((79.2pt, 14.7pt))))\nplace(center + horizon, dx: -28.8pt, dy: 9.7pt, circle(radius: 2.2pt, fill: black, stroke: none))\nplace(center + horizon, dx: -47.0pt, dy: 20.2pt, circle(radius: 2.2pt, fill: black, stroke: none))\nplace(center + horizon, dx: -28.8pt, dy: -27.8pt, circle(radius: 2.2pt, fill: black, stroke: none))\nplace(center + horizon, dx: -47.0pt, dy: -17.3pt, circle(radius: 2.2pt, fill: black, stroke: none))\nplace(center + horizon, dx: 46.2pt, dy: 9.7pt, circle(radius: 2.2pt, fill: black, stroke: none))\nplace(center + horizon, dx: 28.0pt, dy: 20.2pt, circle(radius: 2.2pt, fill: black, stroke: none))\nplace(center + horizon, dx: 46.2pt, dy: -27.8pt, circle(radius: 2.2pt, fill: black, stroke: none))\nplace(center + horizon, dx: 28.0pt, dy: -17.3pt, circle(radius: 2.2pt, fill: black, stroke: none))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((50.8pt, 28.2pt)), curve.line((63.2pt, 28.2pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((65.8pt, 28.2pt)), curve.line((62.6pt, 26.9pt)), curve.line((62.6pt, 29.5pt)), curve.close()))\nplace(center + horizon, dx: 20.8pt, dy: -4.4pt, text(size: 6.5pt, $hat(b)_x$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((50.8pt, 28.2pt)), curve.line((50.8pt, 15.8pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((50.8pt, 13.2pt)), curve.line((49.4pt, 16.4pt)), curve.line((52.1pt, 16.4pt)), curve.close()))\nplace(center + horizon, dx: 0.2pt, dy: -25.1pt, text(size: 6.5pt, $hat(b)_y$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.7pt), curve.move((50.8pt, 28.2pt)), curve.line((41.6pt, 33.5pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((39.3pt, 34.8pt)), curve.line((42.8pt, 34.4pt)), curve.line((41.4pt, 32.1pt)), curve.close()))\nplace(center + horizon, dx: -18.1pt, dy: 6.6pt, text(size: 6.5pt, $hat(b)_z$))\nplace(center + horizon, dx: -0.4pt, dy: -3.8pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(center + horizon, dx: -9.5pt, dy: 26.4pt, text(size: 6.5pt, $2a$))\nplace(center + horizon, dx: 34.3pt, dy: 1.4pt, text(size: 6.5pt, $2b$))\nplace(center + horizon, dx: 43.3pt, dy: 18.7pt, text(size: 6.5pt, $2c$))\n}) quad m_(i) = (m)/(8)"
+        ]
+       },
+       {
+        "show": "I_{xx} = m (b^{2} + c^{2})",
+        "copy": "I_xx = m (b^2 + c^2)",
+        "note": "at (±a, ±b, ±c)",
+        "typst": [
+         "I_(x\\x) = m (b^(2) + c^(2))"
+        ]
+       },
+       {
+        "show": "I_{yy} = m (a^{2} + c^{2})",
+        "copy": "I_yy = m (a^2 + c^2)",
+        "typst": [
+         "I_(y\\y) = m (a^(2) + c^(2))"
+        ]
+       },
+       {
+        "show": "I_{zz} = m (a^{2} + b^{2})",
+        "copy": "I_zz = m (a^2 + b^2)",
+        "typst": [
+         "I_(z\\z) = m (a^(2) + b^(2))"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Inertia of a triangle and a tetrahedron",
+    "wide": true,
+    "groups": [
+     {
+      "title": "Triangle O P Q",
+      "items": [
+       {
+        "show": "A = (1/2) |p⃗ × q⃗|",
+        "copy": "A = (1/2) |p⃗ × q⃗|",
+        "typst": [
+         "#box(width: 133.1pt, height: 88.7pt, baseline: 41.0pt, {\nplace(top + left, curve(fill: rgb(128, 128, 128, 70), stroke: (paint: black, thickness: 0.5pt), curve.move((12.2pt, 20.6pt)), curve.line((82.2pt, 80.6pt)), curve.line((122.2pt, 10.6pt)), curve.close()))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.9pt), curve.move((12.2pt, 20.6pt)), curve.line((80.2pt, 78.9pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((82.2pt, 80.6pt)), curve.line((80.6pt, 77.5pt)), curve.line((78.8pt, 79.5pt)), curve.close()))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.9pt), curve.move((12.2pt, 20.6pt)), curve.line((119.6pt, 10.8pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((122.2pt, 10.6pt)), curve.line((118.8pt, 9.5pt)), curve.line((119.1pt, 12.2pt)), curve.close()))\nplace(center + horizon, dx: -54.4pt, dy: -23.8pt, circle(radius: 1.4pt, fill: black, stroke: none))\nplace(center + horizon, dx: 5.6pt, dy: -7.1pt, circle(radius: 1.8pt, fill: black, stroke: none))\nplace(center + horizon, dx: -60.6pt, dy: -27.5pt, text(size: 6.5pt, $O$))\nplace(center + horizon, dx: 21.9pt, dy: 38.8pt, text(size: 6.5pt, $P$))\nplace(center + horizon, dx: 60.6pt, dy: -38.8pt, text(size: 6.5pt, $Q$))\nplace(center + horizon, dx: -26.9pt, dy: 11.2pt, text(size: 7pt, $arrow(p)$))\nplace(center + horizon, dx: 0.6pt, dy: -37.5pt, text(size: 7pt, $arrow(q)$))\n}) quad A = (1)/(2) |arrow(p) × arrow(q)|"
+        ]
+       },
+       {
+        "show": "^{O}r⃗^{B_{cm}} = (p⃗ + q⃗)/3",
+        "copy": "^Or⃗^(B_cm) = (p⃗ + q⃗)/3",
+        "typst": [
+         "\"\"^(O)arrow(r)^(B_(\"cm\")) = (arrow(p) + arrow(q))/(3)"
+        ]
+       },
+       {
+        "show": "I⃡^{B∕O} = (m/6) [1⃡ (p⃗ · p⃗ + q⃗ · q⃗ + p⃗ · q⃗) − (p⃗ p⃗ + p⃗ q⃗/2 + q⃗ p⃗/2 + q⃗ q⃗)]",
+        "copy": "I⃡^(B∕O) = (m/6) [1⃡ (p⃗ · p⃗ + q⃗ · q⃗ + p⃗ · q⃗) - (p⃗ p⃗ + p⃗ q⃗/2 + q⃗ p⃗/2 + q⃗ q⃗)]",
+        "typst": [
+         "arrow(arrow(I))^(B∕O) = (m)/(6) [arrow(arrow(1)) (arrow(p) · arrow(p) + arrow(q) · arrow(q) + arrow(p) · arrow(q)) - (arrow(p) arrow(p) + arrow(p) (arrow(q))/(2) + arrow(q) (arrow(p))/(2) + arrow(q) arrow(q))]"
+        ]
+       },
+       {
+        "show": "I⃡^{B∕O} = (m/6) [d 1⃡ − (p⃗ p⃗_{sum} + q⃗ q⃗_{sum})]",
+        "copy": "I⃡^(B∕O) = (m/6) [d 1⃡ - (p⃗ p⃗_sum + q⃗ q⃗_sum)]",
+        "typst": [
+         "arrow(arrow(I))^(B∕O) = (m)/(6) [d arrow(arrow(1)) - (arrow(p) arrow(p)_(s\\u\\m) + arrow(q) arrow(q)_(s\\u\\m))]"
+        ]
+       },
+       {
+        "show": "p⃗_{sum} = p⃗ + q⃗/2,  q⃗_{sum} = q⃗ + p⃗/2",
+        "copy": "p⃗_sum = p⃗ + q⃗/2,  q⃗_sum = q⃗ + p⃗/2",
+        "typst": [
+         "arrow(p)_(s\\u\\m) = arrow(p) + (arrow(q))/(2),  arrow(q)_(s\\u\\m) = arrow(q) + (arrow(p))/(2)"
+        ]
+       },
+       {
+        "show": "d = p⃗ · p⃗_{sum} + q⃗ · q⃗_{sum}",
+        "copy": "d = p⃗ · p⃗_sum + q⃗ · q⃗_sum",
+        "typst": [
+         "d = arrow(p) · arrow(p)_(s\\u\\m) + arrow(q) · arrow(q)_(s\\u\\m)"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Tetrahedron O P Q R",
+      "items": [
+       {
+        "show": "V = (1/6) p⃗ × q⃗ · r⃗",
+        "copy": "V = (1/6) p⃗ × q⃗ · r⃗",
+        "note": "= A h/3",
+        "typst": [
+         "#box(width: 134.3pt, height: 107.4pt, baseline: 50.4pt, {\nplace(top + left, curve(fill: rgb(128, 128, 128, 70), stroke: (paint: black, thickness: 0.4pt), curve.move((12.2pt, 36.8pt)), curve.line((77.2pt, 99.3pt)), curve.line((122.2pt, 36.8pt)), curve.close()))\nplace(top + left, curve(fill: rgb(128, 128, 128, 70), stroke: (paint: black, thickness: 0.4pt), curve.move((77.2pt, 99.3pt)), curve.line((122.2pt, 36.8pt)), curve.line((87.2pt, 11.8pt)), curve.close()))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.4pt), curve.move((12.2pt, 36.8pt)), curve.line((87.2pt, 11.8pt))))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.9pt), curve.move((12.2pt, 36.8pt)), curve.line((75.3pt, 97.6pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((77.2pt, 99.3pt)), curve.line((75.8pt, 96.1pt)), curve.line((73.9pt, 98.1pt)), curve.close()))\nplace(center + horizon, dx: -31.3pt, dy: 19.4pt, text(size: 7pt, $arrow(p)$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.9pt), curve.move((12.2pt, 36.8pt)), curve.line((119.6pt, 36.8pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((122.2pt, 36.8pt)), curve.line((119.0pt, 35.5pt)), curve.line((119.0pt, 38.2pt)), curve.close()))\nplace(center + horizon, dx: 2.5pt, dy: -9.4pt, text(size: 7pt, $arrow(q)$))\nplace(top + left, curve(stroke: (paint: black, thickness: 0.9pt), curve.move((12.2pt, 36.8pt)), curve.line((84.7pt, 12.6pt))))\nplace(top + left, curve(fill: black, stroke: none, curve.move((87.2pt, 11.8pt)), curve.line((83.7pt, 11.6pt)), curve.line((84.5pt, 14.1pt)), curve.close()))\nplace(center + horizon, dx: -25.0pt, dy: -35.6pt, text(size: 7pt, $arrow(r)$))\nplace(center + horizon, dx: -55.0pt, dy: -16.9pt, circle(radius: 1.4pt, fill: black, stroke: none))\nplace(center + horizon, dx: -61.3pt, dy: -20.6pt, text(size: 6.5pt, $O$))\nplace(center + horizon, dx: 16.2pt, dy: 48.1pt, text(size: 6.5pt, $P$))\nplace(center + horizon, dx: 61.2pt, dy: -16.9pt, text(size: 6.5pt, $Q$))\nplace(center + horizon, dx: 22.5pt, dy: -48.1pt, text(size: 6.5pt, $R$))\n}) quad V = (1)/(6) arrow(p) × arrow(q) · arrow(r)"
+        ],
+        "noteTypst": "= A (h)/(3)"
+       },
+       {
+        "show": "h = r⃗ · (p⃗ × q⃗)/(|p⃗ × q⃗|)",
+        "copy": "h = r⃗ · (p⃗ × q⃗)/(|p⃗ × q⃗|)",
+        "note": "height above O P Q",
+        "typst": [
+         "h = arrow(r) · (arrow(p) × arrow(q))/(|arrow(p) × arrow(q)|)"
+        ]
+       },
+       {
+        "show": "^{O}r⃗^{B_{cm}} = (p⃗ + q⃗ + r⃗)/4",
+        "copy": "^Or⃗^(B_cm) = (p⃗ + q⃗ + r⃗)/4",
+        "typst": [
+         "\"\"^(O)arrow(r)^(B_(\"cm\")) = (arrow(p) + arrow(q) + arrow(r))/(4)"
+        ]
+       },
+       {
+        "show": "I⃡^{B∕O} = (m/10) [1⃡ (p⃗ · p⃗ + q⃗ · q⃗ + r⃗ · r⃗ + p⃗ · q⃗ + p⃗ · r⃗ + q⃗ · r⃗) − (p⃗ p⃗ + q⃗ q⃗ + r⃗ r⃗ + (p⃗ q⃗ + q⃗ p⃗ + p⃗ r⃗ + r⃗ p⃗ + q⃗ r⃗ + r⃗ q⃗)/2)]",
+        "copy": "I⃡^(B∕O) = (m/10) [1⃡ (p⃗ · p⃗ + q⃗ · q⃗ + r⃗ · r⃗ + p⃗ · q⃗ + p⃗ · r⃗ + q⃗ · r⃗) - (p⃗ p⃗ + q⃗ q⃗ + r⃗ r⃗ + (p⃗ q⃗ + q⃗ p⃗ + p⃗ r⃗ + r⃗ p⃗ + q⃗ r⃗ + r⃗ q⃗)/2)]",
+        "typst": [
+         "arrow(arrow(I))^(B∕O) = (m)/(10) [arrow(arrow(1)) (arrow(p) · arrow(p) + arrow(q) · arrow(q) + arrow(r) · arrow(r) + arrow(p) · arrow(q) + arrow(p) · arrow(r) + arrow(q) · arrow(r)) - (arrow(p) arrow(p) + arrow(q) arrow(q) + arrow(r) arrow(r) + (arrow(p) arrow(q) + arrow(q) arrow(p) + arrow(p) arrow(r) + arrow(r) arrow(p) + arrow(q) arrow(r) + arrow(r) arrow(q))/(2))]"
+        ]
+       },
+       {
+        "show": "I⃡^{B∕O} = (m/10) [d 1⃡ − (p⃗ p⃗_{sum} + q⃗ q⃗_{sum} + r⃗ r⃗_{sum})]",
+        "copy": "I⃡^(B∕O) = (m/10) [d 1⃡ - (p⃗ p⃗_sum + q⃗ q⃗_sum + r⃗ r⃗_sum)]",
+        "typst": [
+         "arrow(arrow(I))^(B∕O) = (m)/(10) [d arrow(arrow(1)) - (arrow(p) arrow(p)_(s\\u\\m) + arrow(q) arrow(q)_(s\\u\\m) + arrow(r) arrow(r)_(s\\u\\m))]"
+        ]
+       },
+       {
+        "show": "p⃗_{sum} = p⃗ + (q⃗ + r⃗)/2,  q⃗_{sum} = q⃗ + (p⃗ + r⃗)/2,  r⃗_{sum} = r⃗ + (p⃗ + q⃗)/2",
+        "copy": "p⃗_sum = p⃗ + (q⃗ + r⃗)/2,  q⃗_sum = q⃗ + (p⃗ + r⃗)/2,  r⃗_sum = r⃗ + (p⃗ + q⃗)/2",
+        "typst": [
+         "arrow(p)_(s\\u\\m) = arrow(p) + (arrow(q) + arrow(r))/(2),  arrow(q)_(s\\u\\m) = arrow(q) + (arrow(p) + arrow(r))/(2),  arrow(r)_(s\\u\\m) = arrow(r) + (arrow(p) + arrow(q))/(2)"
+        ]
+       },
+       {
+        "show": "d = p⃗ · p⃗_{sum} + q⃗ · q⃗_{sum} + r⃗ · r⃗_{sum}",
+        "copy": "d = p⃗ · p⃗_sum + q⃗ · q⃗_sum + r⃗ · r⃗_sum",
+        "typst": [
+         "d = arrow(p) · arrow(p)_(s\\u\\m) + arrow(q) · arrow(q)_(s\\u\\m) + arrow(r) · arrow(r)_(s\\u\\m)"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Momentum",
+    "wide": true,
+    "groups": [
+     {
+      "title": "Translational momentum",
+      "items": [
+       {
+        "show": "^{N}L⃗^{Q} = m^{Q} ^{N}v⃗^{Q}",
+        "copy": "^NL⃗^Q = m^Q ^Nv⃗^Q",
+        "note": "particle",
+        "typst": [
+         "\"\"^(N)arrow(L)^(Q) = m^(Q) #h(0.15em)\"\"^(N)arrow(v)^(Q)"
+        ]
+       },
+       {
+        "show": "^{N}L⃗^{S} = Σ_{i=1}^{n} m^{Q_{i}} ^{N}v⃗^{Q_{i}} = m^{S} ^{N}v⃗^{S_{cm}}",
+        "copy": "^NL⃗^S = Σ_i=1^n m^(Q_i) ^Nv⃗^(Q_i) = m^S ^Nv⃗^(S_cm)",
+        "note": "system",
+        "typst": [
+         "\"\"^(N)arrow(L)^(S) = sum_(i=1)^(n) m^(Q_(i)) #h(0.15em)\"\"^(N)arrow(v)^(Q_(i)) = m^(S) #h(0.15em)\"\"^(N)arrow(v)^(S_(\"cm\"))"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Angular momentum",
+      "items": [
+       {
+        "show": "^{N}H⃗^{Q∕P} = ^{P}r⃗^{Q} × ^{N}L⃗^{Q}",
+        "copy": "^NH⃗^(Q∕P) = ^Pr⃗^Q × ^NL⃗^Q",
+        "note": "particle Q about P",
+        "typst": [
+         "\"\"^(N)arrow(H)^(Q∕P) = \"\"^(P)arrow(r)^(Q) × \"\"^(N)arrow(L)^(Q)"
+        ]
+       },
+       {
+        "show": "^{N}H⃗^{B∕B_{p}} = I⃡^{B∕B_{p}} · ^{N}ω⃗^{B} + ^{B_{p}}r⃗^{B_{cm}} × m^{B} ^{N}v⃗^{B_{p}}",
+        "copy": "^NH⃗^(B∕B_p) = I⃡^(B∕B_p) · ^Nω⃗^B + ^(B_p)r⃗^(B_cm) × m^B ^Nv⃗^(B_p)",
+        "note": "last term 0 if Bₚ is the mass centre or still",
+        "typst": [
+         "\"\"^(N)arrow(H)^(B∕B_(p)) = arrow(arrow(I))^(B∕B_(p)) · \"\"^(N)arrow(ω)^(B) + \"\"^(B_(p))arrow(r)^(B_(\"cm\")) × m^(B) #h(0.15em)\"\"^(N)arrow(v)^(B_(p))"
+        ]
+       },
+       {
+        "show": "^{N}H⃗^{B∕B_{p}} = I_{zz}^{B∕B_{p}} ^{N}ω⃗^{B} + ^{B_{p}}r⃗^{B_{cm}} × m^{B} ^{N}v⃗^{B_{p}}",
+        "copy": "^NH⃗^(B∕B_p) = I_zz^(B∕B_p) ^Nω⃗^B + ^(B_p)r⃗^(B_cm) × m^B ^Nv⃗^(B_p)",
+        "note": "ω⃗ = ω_{z} b̂_{z}",
+        "typst": [
+         "\"\"^(N)arrow(H)^(B∕B_(p)) = I_(z\\z)^(B∕B_(p)) #h(0.15em)\"\"^(N)arrow(ω)^(B) + \"\"^(B_(p))arrow(r)^(B_(\"cm\")) × m^(B) #h(0.15em)\"\"^(N)arrow(v)^(B_(p))"
+        ],
+        "noteTypst": "arrow(ω) = ω_(z) hat(b)_(z)"
+       },
+       {
+        "show": "^{N}H⃗^{S∕P} = ^{N}H⃗^{S∕O} + ^{P}r⃗^{O} × ^{N}L⃗^{S}",
+        "copy": "^NH⃗^(S∕P) = ^NH⃗^(S∕O) + ^Pr⃗^O × ^NL⃗^S",
+        "note": "shift",
+        "typst": [
+         "\"\"^(N)arrow(H)^(S∕P) = \"\"^(N)arrow(H)^(S∕O) + \"\"^(P)arrow(r)^(O) × \"\"^(N)arrow(L)^(S)"
+        ]
+       },
+       {
+        "show": "^{N}H⃗^{B∕P} = ^{N}H⃗^{B∕B_{p}} + ^{P}r⃗^{B_{p}} × ^{N}L⃗^{B}",
+        "copy": "^NH⃗^(B∕P) = ^NH⃗^(B∕B_p) + ^Pr⃗^(B_p) × ^NL⃗^B",
+        "note": "shift, rigid body",
+        "typst": [
+         "\"\"^(N)arrow(H)^(B∕P) = \"\"^(N)arrow(H)^(B∕B_(p)) + \"\"^(P)arrow(r)^(B_(p)) × \"\"^(N)arrow(L)^(B)"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Impulse",
+      "items": [
+       {
+        "show": "∫ F⃗ dt = ΔL⃗",
+        "copy": "∫ F⃗ dt = ΔL⃗",
+        "note": "impulse-momentum",
+        "typst": [
+         "integral arrow(F) thin d\\t = Δ#h(0pt)arrow(L)"
+        ]
+       },
+       {
+        "show": "∫ M⃗^{S∕O} dt = ΔH⃗^{S∕O}",
+        "copy": "∫ M⃗^(S∕O) dt = ΔH⃗^(S∕O)",
+        "note": "O fixed, or the mass centre",
+        "typst": [
+         "integral arrow(M)^(S∕O) thin d\\t = Δ#h(0pt)arrow(H)^(S∕O)"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Kinetic energy",
+    "wide": true,
+    "groups": [
+     {
+      "title": "In N",
+      "items": [
+       {
+        "show": "^{N}K^{Q} = (1/2) m^{Q} ^{N}v⃗^{Q} · ^{N}v⃗^{Q}",
+        "copy": "^NK^Q = (1/2) m^Q ^Nv⃗^Q · ^Nv⃗^Q",
+        "note": "particle",
+        "typst": [
+         "\"\"^(N)K^(Q) = (1)/(2) m^(Q) #h(0.15em)\"\"^(N)arrow(v)^(Q) · \"\"^(N)arrow(v)^(Q)"
+        ]
+       },
+       {
+        "show": "^{N}K^{B} = (1/2) m^{B} ^{N}v⃗^{B_{p}} · ^{N}v⃗^{B_{p}} + (1/2) ^{N}ω⃗^{B} · I⃡^{B∕B_{p}} · ^{N}ω⃗^{B} + m^{B} ^{N}v⃗^{B_{p}} · (^{N}ω⃗^{B} × ^{B_{p}}r⃗^{B_{cm}})",
+        "copy": "^NK^B = (1/2) m^B ^Nv⃗^(B_p) · ^Nv⃗^(B_p) + (1/2) ^Nω⃗^B · I⃡^(B∕B_p) · ^Nω⃗^B + m^B ^Nv⃗^(B_p) · (^Nω⃗^B × ^(B_p)r⃗^(B_cm))",
+        "note": "last term 0 at the mass centre",
+        "typst": [
+         "\"\"^(N)K^(B) = (1)/(2) m^(B) #h(0.15em)\"\"^(N)arrow(v)^(B_(p)) · \"\"^(N)arrow(v)^(B_(p)) + (1)/(2) #h(0.15em)\"\"^(N)arrow(ω)^(B) · arrow(arrow(I))^(B∕B_(p)) · \"\"^(N)arrow(ω)^(B) + m^(B) #h(0.15em)\"\"^(N)arrow(v)^(B_(p)) · (\"\"^(N)arrow(ω)^(B) × \"\"^(B_(p))arrow(r)^(B_(\"cm\")))"
+        ]
+       },
+       {
+        "show": "^{N}K^{B} = (1/2) ^{N}v⃗^{B_{p}} · ^{N}L⃗^{B} + (1/2) ^{N}ω⃗^{B} · ^{N}H⃗^{B∕B_{p}}",
+        "copy": "^NK^B = (1/2) ^Nv⃗^(B_p) · ^NL⃗^B + (1/2) ^Nω⃗^B · ^NH⃗^(B∕B_p)",
+        "note": "Bₚ the mass centre, or fixed in B and N",
+        "typst": [
+         "\"\"^(N)K^(B) = (1)/(2) #h(0.15em)\"\"^(N)arrow(v)^(B_(p)) · \"\"^(N)arrow(L)^(B) + (1)/(2) #h(0.15em)\"\"^(N)arrow(ω)^(B) · \"\"^(N)arrow(H)^(B∕B_(p))"
+        ]
+       },
+       {
+        "show": "^{N}K^{B} = (1/2) m^{B} ^{N}v⃗^{B_{p}} · ^{N}v⃗^{B_{p}} + (1/2) I_{kk}^{B∕B_{p}} (^{N}ω^{B})^{2}",
+        "copy": "^NK^B = (1/2) m^B ^Nv⃗^(B_p) · ^Nv⃗^(B_p) + (1/2) I_kk^(B∕B_p) (^Nω^B)^2",
+        "note": "simple 2D, Bₚ as above",
+        "typst": [
+         "\"\"^(N)K^(B) = (1)/(2) m^(B) #h(0.15em)\"\"^(N)arrow(v)^(B_(p)) · \"\"^(N)arrow(v)^(B_(p)) + (1)/(2) I_(k\\k)^(B∕B_(p)) (\"\"^(N)ω^(B))^(2)"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Forces and moments",
+    "wide": true,
+    "groups": [
+     {
+      "title": "Forces",
+      "items": [
+       {
+        "show": "F⃗^{Q} = Σ_{i=1}^{n} F⃗^{Q∕P_{i}}",
+        "copy": "F⃗^Q = Σ_i=1^n F⃗^(Q∕P_i)",
+        "note": "resultant on point Q",
+        "typst": [
+         "arrow(F)^(Q) = sum_(i=1)^(n) arrow(F)^(Q∕P_(i))"
+        ]
+       },
+       {
+        "show": "F⃗^{S} = Σ_{i=1}^{n} F⃗^{Q_{i}}",
+        "copy": "F⃗^S = Σ_i=1^n F⃗^(Q_i)",
+        "note": "resultant on a system",
+        "typst": [
+         "arrow(F)^(S) = sum_(i=1)^(n) arrow(F)^(Q_(i))"
+        ]
+       },
+       {
+        "show": "F⃗^{P∕Q} = −F⃗^{Q∕P}",
+        "copy": "F⃗^(P∕Q) = -F⃗^(Q∕P)",
+        "note": "action and reaction",
+        "typst": [
+         "arrow(F)^(P∕Q) = -arrow(F)^(Q∕P)"
+        ]
+       },
+       {
+        "show": "F⃗^{S} = (F⃗^{S})_{external}",
+        "copy": "F⃗^S = (F⃗^S)_external",
+        "note": "internal forces cancel",
+        "typst": [
+         "arrow(F)^(S) = (arrow(F)^(S))_(\"external\")"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Moments and torques",
+      "items": [
+       {
+        "show": "M⃗^{F⃗∕O} = ^{O}r⃗^{Q} × F⃗",
+        "copy": "M⃗^(F⃗∕O) = ^Or⃗^Q × F⃗",
+        "note": "force F⃗ at Q, about O",
+        "typst": [
+         "arrow(M)^(arrow(F)∕O) = \"\"^(O)arrow(r)^(Q) × arrow(F)"
+        ]
+       },
+       {
+        "show": "M⃗^{S∕O} = Σ_{i=1}^{n} ^{O}r⃗^{Q_{i}} × F⃗^{Q_{i}}",
+        "copy": "M⃗^(S∕O) = Σ_i=1^n ^Or⃗^(Q_i) × F⃗^(Q_i)",
+        "note": "a set of forces",
+        "typst": [
+         "arrow(M)^(S∕O) = sum_(i=1)^(n) #h(0.15em)\"\"^(O)arrow(r)^(Q_(i)) × arrow(F)^(Q_(i))"
+        ]
+       },
+       {
+        "show": "M⃗^{S∕O} = (M⃗^{S∕O})_{external}",
+        "copy": "M⃗^(S∕O) = (M⃗^(S∕O))_external",
+        "note": "internal moments cancel",
+        "typst": [
+         "arrow(M)^(S∕O) = (arrow(M)^(S∕O))_(\"external\")"
+        ]
+       },
+       {
+        "show": "M⃗^{S∕P} = M⃗^{S∕O} + ^{P}r⃗^{O} × F⃗^{S}",
+        "copy": "M⃗^(S∕P) = M⃗^(S∕O) + ^Pr⃗^O × F⃗^S",
+        "note": "shift",
+        "typst": [
+         "arrow(M)^(S∕P) = arrow(M)^(S∕O) + \"\"^(P)arrow(r)^(O) × arrow(F)^(S)"
+        ]
+       },
+       {
+        "show": "M⃗ = T⃗",
+        "copy": "M⃗ = T⃗",
+        "note": "a couple: the same about any point",
+        "typst": [
+         "arrow(M) = arrow(T)"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Equivalent set",
+      "items": [
+       {
+        "show": "F⃗^{B_{p}} = F⃗^{S}",
+        "copy": "F⃗^(B_p) = F⃗^S",
+        "note": "one force at Bₚ",
+        "typst": [
+         "arrow(F)^(B_(p)) = arrow(F)^(S)"
+        ]
+       },
+       {
+        "show": "T⃗^{B} = M⃗^{S∕B_{p}}",
+        "copy": "T⃗^B = M⃗^(S∕B_p)",
+        "note": "plus one couple",
+        "typst": [
+         "arrow(T)^(B) = arrow(M)^(S∕B_(p))"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Power, work and energy",
+    "wide": true,
+    "groups": [
+     {
+      "title": "In N",
+      "items": [
+       {
+        "show": "^{N}P = F⃗^{Q} · ^{N}v⃗^{Q}",
+        "copy": "^NP = F⃗^Q · ^Nv⃗^Q",
+        "note": "a force on Q",
+        "typst": [
+         "\"\"^(N)P = arrow(F)^(Q) · \"\"^(N)arrow(v)^(Q)"
+        ]
+       },
+       {
+        "show": "^{N}P^{S} = Σ_{i=1}^{ν} F⃗^{Q_{i}} · ^{N}v⃗^{Q_{i}}",
+        "copy": "^NP^S = Σ_i=1^ν F⃗^(Q_i) · ^Nv⃗^(Q_i)",
+        "note": "a set of forces",
+        "typst": [
+         "\"\"^(N)P^(S) = sum_(i=1)^(ν) arrow(F)^(Q_(i)) · \"\"^(N)arrow(v)^(Q_(i))"
+        ]
+       },
+       {
+        "show": "^{N}P = T⃗^{B} · ^{N}ω⃗^{B}",
+        "copy": "^NP = T⃗^B · ^Nω⃗^B",
+        "note": "a torque on B",
+        "typst": [
+         "\"\"^(N)P = arrow(T)^(B) · \"\"^(N)arrow(ω)^(B)"
+        ]
+       },
+       {
+        "show": "^{N}W^{S} = ∫ ^{N}P^{S} dt",
+        "copy": "^NW^S = ∫ ^NP^S dt",
+        "note": "work",
+        "typst": [
+         "\"\"^(N)W^(S) = integral #h(0.15em)\"\"^(N)P^(S) thin d\\t"
+        ]
+       },
+       {
+        "show": "^{N}U^{S} = −^{N}W^{S}",
+        "copy": "^NU^S = -^NW^S",
+        "note": "if W depends on configuration only",
+        "typst": [
+         "\"\"^(N)U^(S) = -\"\"^(N)W^(S)"
+        ]
+       },
+       {
+        "show": "U = m g h",
+        "copy": "U = m g h",
+        "note": "gravity, near the ground",
+        "typst": [
+         "U = m g h"
+        ]
+       },
+       {
+        "show": "U = −(G m_{1} m_{2})/r",
+        "copy": "U = -(G m_1 m_2)/r",
+        "note": "gravity",
+        "typst": [
+         "U = (-(G m_(1) m_(2)))/(r)"
+        ]
+       },
+       {
+        "show": "U = (1/2) k x^{2}",
+        "copy": "U = (1/2) k x^2",
+        "note": "spring",
+        "typst": [
+         "U = (1)/(2) k x^(2)"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Equations of motion",
+    "wide": true,
+    "groups": [
+     {
+      "title": "Newton and Euler (N Newtonian)",
+      "items": [
+       {
+        "show": "F⃗^{Q} = m^{Q} ^{N}a⃗^{Q}",
+        "copy": "F⃗^Q = m^Q ^Na⃗^Q",
+        "note": "particle",
+        "typst": [
+         "arrow(F)^(Q) = m^(Q) #h(0.15em)\"\"^(N)arrow(a)^(Q)"
+        ]
+       },
+       {
+        "show": "F⃗^{S} = m^{S} ^{N}a⃗^{S_{cm}}",
+        "copy": "F⃗^S = m^S ^Na⃗^(S_cm)",
+        "note": "system",
+        "typst": [
+         "arrow(F)^(S) = m^(S) #h(0.15em)\"\"^(N)arrow(a)^(S_(\"cm\"))"
+        ]
+       },
+       {
+        "show": "M⃗^{S∕O} = ^{N}d(^{N}H⃗^{S∕S_{cm}})/dt + ^{O}r⃗^{S_{cm}} × ^{N}d(^{N}L⃗^{S})/dt",
+        "copy": "M⃗^(S∕O) = ^Nd(^NH⃗^(S∕S_cm))/dt + ^Or⃗^(S_cm) × ^Nd(^NL⃗^S)/dt",
+        "note": "angular momentum principle",
+        "typst": [
+         "arrow(M)^(S∕O) = (\"\"^(N)d(\"\"^(N)arrow(H)^(S∕S_(\"cm\"))))/(d\\t) + \"\"^(O)arrow(r)^(S_(\"cm\")) × (\"\"^(N)d(\"\"^(N)arrow(L)^(S)))/(d\\t)"
+        ]
+       },
+       {
+        "show": "M⃗_{z}^{B∕P} = I_{zz}^{B∕B_{cm}} ^{N}α⃗^{B} + ^{P}r⃗^{B_{cm}} × m^{B} ^{N}a⃗^{B_{cm}}",
+        "copy": "M⃗_z^(B∕P) = I_zz^(B∕B_cm) ^Nα⃗^B + ^Pr⃗^(B_cm) × m^B ^Na⃗^(B_cm)",
+        "note": "Euler 2D, any P",
+        "typst": [
+         "arrow(M)_(z)^(B∕P) = I_(z\\z)^(B∕B_(\"cm\")) #h(0.15em)\"\"^(N)arrow(α)^(B) + \"\"^(P)arrow(r)^(B_(\"cm\")) × m^(B) #h(0.15em)\"\"^(N)arrow(a)^(B_(\"cm\"))"
+        ]
+       },
+       {
+        "show": "M⃗_{z}^{B∕B_{p}} = I_{zz}^{B∕B_{p}} ^{N}α⃗^{B} + ^{B_{p}}r⃗^{B_{cm}} × m^{B} ^{N}a⃗^{B_{p}}",
+        "copy": "M⃗_z^(B∕B_p) = I_zz^(B∕B_p) ^Nα⃗^B + ^(B_p)r⃗^(B_cm) × m^B ^Na⃗^(B_p)",
+        "note": "Euler 2D, Bₚ on B",
+        "typst": [
+         "arrow(M)_(z)^(B∕B_(p)) = I_(z\\z)^(B∕B_(p)) #h(0.15em)\"\"^(N)arrow(α)^(B) + \"\"^(B_(p))arrow(r)^(B_(\"cm\")) × m^(B) #h(0.15em)\"\"^(N)arrow(a)^(B_(p))"
+        ]
+       },
+       {
+        "show": "M⃗^{B∕B_{p}} = I⃡^{B∕B_{p}} · ^{N}α⃗^{B} + ^{N}ω⃗^{B} × (I⃡^{B∕B_{p}} · ^{N}ω⃗^{B}) + ^{B_{p}}r⃗^{B_{cm}} × m^{B} ^{N}a⃗^{B_{p}}",
+        "copy": "M⃗^(B∕B_p) = I⃡^(B∕B_p) · ^Nα⃗^B + ^Nω⃗^B × (I⃡^(B∕B_p) · ^Nω⃗^B) + ^(B_p)r⃗^(B_cm) × m^B ^Na⃗^(B_p)",
+        "note": "Euler 3D",
+        "typst": [
+         "arrow(M)^(B∕B_(p)) = arrow(arrow(I))^(B∕B_(p)) · \"\"^(N)arrow(α)^(B) + \"\"^(N)arrow(ω)^(B) × (arrow(arrow(I))^(B∕B_(p)) · \"\"^(N)arrow(ω)^(B)) + \"\"^(B_(p))arrow(r)^(B_(\"cm\")) × m^(B) #h(0.15em)\"\"^(N)arrow(a)^(B_(p))"
+        ]
+       },
+       {
+        "show": "M_{1} = I_{1} ω̇_{1} − (I_{2} − I_{3}) ω_{2} ω_{3}",
+        "copy": "M_1 = I_1 ω̇_1 - (I_2 - I_3) ω_2 ω_3",
+        "note": "principal axes; and cyclic",
+        "typst": [
+         "M_(1) = I_(1) dot(ω)_(1) - (I_(2) - I_(3)) ω_(2) ω_(3)"
+        ]
+       },
+       {
+        "show": "Σ M_{O} = I_{O} α",
+        "copy": "Σ M_O = I_O α",
+        "note": "2D, O fixed or the mass centre",
+        "typst": [
+         "sum M_(O) = I_(O) α"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Energy and momentum",
+      "items": [
+       {
+        "show": "^{N}P^{S} = d(^{N}K^{S})/dt",
+        "copy": "^NP^S = d(^NK^S)/dt",
+        "note": "power: rate of K",
+        "typst": [
+         "\"\"^(N)P^(S) = (d(\"\"^(N)K^(S)))/(d\\t)"
+        ]
+       },
+       {
+        "show": "W̃ = ΔK + ΔU",
+        "copy": "W̃ = ΔK + ΔU",
+        "note": "work of the forces not in U",
+        "typst": [
+         "tilde(W) = Δ\\K + Δ\\U"
+        ]
+       },
+       {
+        "show": "^{N}K^{S} + ^{N}U^{S} = constant",
+        "copy": "^NK^S + ^NU^S = constant",
+        "note": "mechanical energy",
+        "typst": [
+         "\"\"^(N)K^(S) + \"\"^(N)U^(S) = \"constant\""
+        ]
+       },
+       {
+        "show": "F⃗^{S} · û = m^{S} ^{N}a⃗^{S_{cm}} · û",
+        "copy": "F⃗^S · û = m^S ^Na⃗^(S_cm) · û",
+        "note": "D'Alembert: one direction û",
+        "typst": [
+         "arrow(F)^(S) · hat(u) = m^(S) #h(0.15em)\"\"^(N)arrow(a)^(S_(\"cm\")) · hat(u)"
+        ]
+       },
+       {
+        "show": "−∂U/∂q_{r} = d(∂K/∂q̇_{r})/dt − ∂K/∂q_{r}",
+        "copy": "-∂U/∂q_r = d(∂K/∂q̇_r)/dt - ∂K/∂q_r",
+        "note": "Lagrange (2nd kind)",
+        "typst": [
+         "(-∂U)/(∂q_(r)) = (d((∂K)/(∂dot(q)_(r))))/(d\\t) - (∂K)/(∂q_(r))"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Solving a problem",
+    "wide": true,
+    "groups": [
+     {
+      "title": "Free-body diagram and road-map",
+      "items": [
+       {
+        "show": "Pick a system S that answers the question; draw its FBD",
+        "copy": "Pick a system S that answers the question; draw its FBD",
+        "typst": [
+         "\"Pick a system S that answers the question; draw its FBD\""
+        ]
+       },
+       {
+        "show": "Draw only external forces on S: contact and distance (gravity)",
+        "copy": "Draw only external forces on S: contact and distance (gravity)",
+        "typst": [
+         "\"Draw only external forces on S: contact and distance (gravity)\""
+        ]
+       },
+       {
+        "show": "Replace a messy set of forces with one force at a point and a couple",
+        "copy": "Replace a messy set of forces with one force at a point and a couple",
+        "typst": [
+         "\"Replace a messy set of forces with one force at a point and a couple\""
+        ]
+       },
+       {
+        "show": "Name points, unit vectors and force and torque measures as needed",
+        "copy": "Name points, unit vectors and force and torque measures as needed",
+        "typst": [
+         "\"Name points, unit vectors and force and torque measures as needed\""
+        ]
+       },
+       {
+        "show": "Use action and reaction to cut down the unknowns",
+        "copy": "Use action and reaction to cut down the unknowns",
+        "typst": [
+         "\"Use action and reaction to cut down the unknowns\""
+        ]
+       },
+       {
+        "show": "Motion limited along û at Q: there is a force on Q along û",
+        "copy": "Motion limited along û at Q: there is a force on Q along û",
+        "typst": [
+         "\"Motion limited along û at Q: there is a force on Q along û\""
+        ]
+       },
+       {
+        "show": "Rotation limited about û: there is a torque on B about û",
+        "copy": "Rotation limited about û: there is a torque on B about û",
+        "typst": [
+         "\"Rotation limited about û: there is a torque on B about û\""
+        ]
+       },
+       {
+        "show": "Road-map: variable, translate or rotate, û, S, FBD, about point",
+        "copy": "Road-map: variable, translate or rotate, û, S, FBD, about point",
+        "typst": [
+         "\"Road-map: variable, translate or rotate, û, S, FBD, about point\""
+        ]
+       },
+       {
+        "show": "Then add constraint equations and their derivatives (linkages, rolling)",
+        "copy": "Then add constraint equations and their derivatives (linkages, rolling)",
+        "typst": [
+         "\"Then add constraint equations and their derivatives (linkages, rolling)\""
+        ]
+       },
+       {
+        "show": "Momentum is conserved along û if no external force (or moment) acts there",
+        "copy": "Momentum is conserved along û if no external force (or moment) acts there",
+        "typst": [
+         "\"Momentum is conserved along û if no external force (or moment) acts there\""
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Statics",
+    "groups": [
+     {
+      "title": "Equilibrium",
+      "items": [
+       {
+        "show": "Σ F = 0",
+        "copy": "Σ F = 0",
+        "typst": [
+         "sum F = 0"
+        ]
+       },
+       {
+        "show": "Σ M = 0",
+        "copy": "Σ M = 0",
+        "note": "about any point",
+        "typst": [
+         "sum M = 0"
+        ]
+       },
+       {
+        "show": "M = F d",
+        "copy": "M = F d",
+        "note": "moment",
+        "typst": [
+         "M = F d"
+        ]
+       },
+       {
+        "show": "f ≤ μ N",
+        "copy": "f ≤ μ N",
+        "note": "friction",
+        "typst": [
+         "f <= μ N"
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Centroids",
+      "items": [
+       {
+        "show": "x̄ = (Σ A_{i} x_{i})/(Σ A_{i})",
+        "copy": "x̄ = (Σ A_i x_i)/(Σ A_i)",
+        "note": "composite area",
+        "typst": [
+         "overline(x) = (sum A_(i) x_(i))/(sum A_(i))"
+        ]
+       },
+       {
+        "show": "I = Ī + A d^{2}",
+        "copy": "I = Ī + A d^2",
+        "note": "parallel axis",
+        "typst": [
+         "I = overline(I) + A d^(2)"
         ]
        }
       ]
@@ -932,6 +3048,519 @@
         "note": "logarithmic decrement",
         "typst": [
          "δ = ln((x_(1))/(x_(2)))"
+        ]
+       },
+       {
+        "show": "ω_{n} = √(g/L)",
+        "copy": "ω_n = √(g/L)",
+        "note": "simple pendulum",
+        "typst": [
+         "ω_(n) = sqrt((g)/(L))"
+        ]
+       },
+       {
+        "show": "ω_{n} = √(m g d/I_{O})",
+        "copy": "ω_n = √(m g d/I_O)",
+        "note": "physical pendulum, pivot O",
+        "typst": [
+         "ω_(n) = sqrt(m g (d)/(I_(O)))"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "title": "Constants",
+    "wide": true,
+    "leadWidths": [
+     180,
+     90
+    ],
+    "groups": [
+     {
+      "title": "Mitiguy, p. 306",
+      "items": [
+       {
+        "lead": [
+         "Quantity"
+        ],
+        "show": "Value",
+        "copy": "",
+        "typst": [
+         "\"Quantity\"",
+         "\"Value\""
+        ]
+       },
+       {
+        "lead": [
+         "Standard g"
+        ],
+        "leadCopy": [
+         ""
+        ],
+        "show": "9.80665 m/s^{2}",
+        "copy": "9.80665 m/s^2",
+        "typst": [
+         "\"Standard g\"",
+         "9.80665#h(0.28em)\"m\"\\/\"s\"^(2)"
+        ]
+       },
+       {
+        "lead": [
+         "G"
+        ],
+        "leadCopy": [
+         ""
+        ],
+        "show": "6.67 × 10^{−11} N m^{2}/kg^{2}",
+        "copy": "6.67 × 10^(-11) N m^2/kg^2",
+        "typst": [
+         "\"G\"",
+         "6.67 × 10^(-11)#h(0.28em)\"N\"#h(0.28em)\"m\"^(2)\\/\"kg\"^(2)"
+        ]
+       },
+       {
+        "lead": [
+         "Speed of light"
+        ],
+        "leadCopy": [
+         ""
+        ],
+        "show": "299792458 m/s",
+        "copy": "299792458 m/s",
+        "typst": [
+         "\"Speed of light\"",
+         "299792458#h(0.28em)\"m\"\\/\"s\""
+        ]
+       },
+       {
+        "lead": [
+         "Mass of the Earth"
+        ],
+        "leadCopy": [
+         ""
+        ],
+        "show": "5.9742 × 10^{24} kg",
+        "copy": "5.9742 × 10^24 kg",
+        "typst": [
+         "\"Mass of the Earth\"",
+         "5.9742 × 10^(24)#h(0.28em)\"kg\""
+        ]
+       },
+       {
+        "lead": [
+         "Mass of the Moon"
+        ],
+        "leadCopy": [
+         ""
+        ],
+        "show": "7.34 × 10^{22} kg",
+        "copy": "7.34 × 10^22 kg",
+        "typst": [
+         "\"Mass of the Moon\"",
+         "7.34 × 10^(22)#h(0.28em)\"kg\""
+        ]
+       },
+       {
+        "lead": [
+         "Earth to Moon"
+        ],
+        "leadCopy": [
+         ""
+        ],
+        "show": "384400 km",
+        "copy": "384400 km",
+        "typst": [
+         "\"Earth to Moon\"",
+         "384400#h(0.28em)\"km\""
+        ]
+       },
+       {
+        "lead": [
+         "Earth to Sun (mean)"
+        ],
+        "leadCopy": [
+         ""
+        ],
+        "show": "149597870 km",
+        "copy": "149597870 km",
+        "typst": [
+         "\"Earth to Sun (mean)\"",
+         "149597870#h(0.28em)\"km\""
+        ]
+       },
+       {
+        "lead": [
+         "Perihelion, aphelion"
+        ],
+        "leadCopy": [
+         ""
+        ],
+        "show": "147085800, 152104980 km",
+        "copy": "147085800, 152104980 km",
+        "typst": [
+         "\"Perihelion, aphelion\"",
+         "147085800,#h(0.28em)152104980#h(0.28em)\"km\""
+        ]
+       },
+       {
+        "lead": [
+         "Earth radius (equatorial)"
+        ],
+        "leadCopy": [
+         ""
+        ],
+        "show": "6378 km",
+        "copy": "6378 km",
+        "typst": [
+         "\"Earth radius (equatorial)\"",
+         "6378#h(0.28em)\"km\""
+        ]
+       },
+       {
+        "lead": [
+         "Earth diameters"
+        ],
+        "leadCopy": [
+         ""
+        ],
+        "show": "12712.02 polar, 12756.28 equatorial km",
+        "copy": "12712.02 polar, 12756.28 equatorial km",
+        "typst": [
+         "\"Earth diameters\"",
+         "12712.02#h(0.28em)\"polar\",#h(0.28em)12756.28#h(0.28em)\"equatorial\"#h(0.28em)\"km\""
+        ]
+       },
+       {
+        "lead": [
+         "Earth surface area"
+        ],
+        "leadCopy": [
+         ""
+        ],
+        "show": "5.10 × 10^{8} km^{2}",
+        "copy": "5.10 × 10^8 km^2",
+        "typst": [
+         "\"Earth surface area\"",
+         "5.10 × 10^(8)#h(0.28em)\"km\"^(2)"
+        ]
+       },
+       {
+        "lead": [
+         "Earth volume"
+        ],
+        "leadCopy": [
+         ""
+        ],
+        "show": "1.0832 × 10^{12} km^{3}",
+        "copy": "1.0832 × 10^12 km^3",
+        "typst": [
+         "\"Earth volume\"",
+         "1.0832 × 10^(12)#h(0.28em)\"km\"^(3)"
+        ]
+       },
+       {
+        "lead": [
+         "Earth density"
+        ],
+        "leadCopy": [
+         ""
+        ],
+        "show": "5.515 g/cm^{3}",
+        "copy": "5.515 g/cm^3",
+        "typst": [
+         "\"Earth density\"",
+         "5.515#h(0.28em)\"g\"\\/\"cm\"^(3)"
+        ]
+       },
+       {
+        "lead": [
+         "Earth escape velocity"
+        ],
+        "leadCopy": [
+         ""
+        ],
+        "show": "11.18 km/s",
+        "copy": "11.18 km/s",
+        "typst": [
+         "\"Earth escape velocity\"",
+         "11.18#h(0.28em)\"km\"\\/\"s\""
+        ]
+       },
+       {
+        "lead": [
+         "Earth orbital velocity"
+        ],
+        "leadCopy": [
+         ""
+        ],
+        "show": "107244 km/hr",
+        "copy": "107244 km/hr",
+        "typst": [
+         "\"Earth orbital velocity\"",
+         "107244#h(0.28em)\"km\"\\/\"hr\""
+        ]
+       },
+       {
+        "lead": [
+         "Earth axial tilt"
+        ],
+        "leadCopy": [
+         ""
+        ],
+        "show": "23.45°",
+        "copy": "23.45°",
+        "typst": [
+         "\"Earth axial tilt\"",
+         "23.45°"
+        ]
+       },
+       {
+        "lead": [
+         "Sidereal day"
+        ],
+        "leadCopy": [
+         ""
+        ],
+        "show": "23 hr 56.1 min",
+        "copy": "23 hr 56.1 min",
+        "typst": [
+         "\"Sidereal day\"",
+         "23#h(0.28em)\"hr\"#h(0.28em)56.1#h(0.28em)\"min\""
+        ]
+       },
+       {
+        "lead": [
+         "Sidereal year"
+        ],
+        "leadCopy": [
+         ""
+        ],
+        "show": "365.2422 days",
+        "copy": "365.2422 days",
+        "typst": [
+         "\"Sidereal year\"",
+         "365.2422#h(0.28em)\"days\""
+        ]
+       },
+       {
+        "lead": [
+         "Geosynchronous radius"
+        ],
+        "leadCopy": [
+         ""
+        ],
+        "show": "4.2108 × 10^{7} m",
+        "copy": "4.2108 × 10^7 m",
+        "typst": [
+         "\"Geosynchronous radius\"",
+         "4.2108 × 10^(7)#h(0.28em)\"m\""
+        ]
+       }
+      ]
+     },
+     {
+      "title": "Little g and radius",
+      "items": [
+       {
+        "lead": [
+         "Body",
+         "g (m/s²)"
+        ],
+        "show": "Radius (km)",
+        "copy": "",
+        "typst": [
+         "\"Body\"",
+         "g (m)/(s#h(0pt)²)",
+         "\"Radius\" (k\\m)"
+        ]
+       },
+       {
+        "lead": [
+         "Sun",
+         "274.0"
+        ],
+        "leadCopy": [
+         "",
+         "274.0"
+        ],
+        "show": "695500",
+        "copy": "695500",
+        "typst": [
+         "\"Sun\"",
+         "274.0",
+         "695500"
+        ]
+       },
+       {
+        "lead": [
+         "Jupiter",
+         "20.9"
+        ],
+        "leadCopy": [
+         "",
+         "20.9"
+        ],
+        "show": "71492",
+        "copy": "71492",
+        "typst": [
+         "\"Jupiter\"",
+         "20.9",
+         "71492"
+        ]
+       },
+       {
+        "lead": [
+         "Neptune",
+         "10.7"
+        ],
+        "leadCopy": [
+         "",
+         "10.7"
+        ],
+        "show": "24764",
+        "copy": "24764",
+        "typst": [
+         "\"Neptune\"",
+         "10.7",
+         "24764"
+        ]
+       },
+       {
+        "lead": [
+         "Saturn",
+         "10.4"
+        ],
+        "leadCopy": [
+         "",
+         "10.4"
+        ],
+        "show": "60268",
+        "copy": "60268",
+        "typst": [
+         "\"Saturn\"",
+         "10.4",
+         "60268"
+        ]
+       },
+       {
+        "lead": [
+         "Earth",
+         "9.8"
+        ],
+        "leadCopy": [
+         "",
+         "9.8"
+        ],
+        "show": "6378",
+        "copy": "6378",
+        "typst": [
+         "\"Earth\"",
+         "9.8",
+         "6378"
+        ]
+       },
+       {
+        "lead": [
+         "Venus",
+         "8.9"
+        ],
+        "leadCopy": [
+         "",
+         "8.9"
+        ],
+        "show": "6051",
+        "copy": "6051",
+        "typst": [
+         "\"Venus\"",
+         "8.9",
+         "6051"
+        ]
+       },
+       {
+        "lead": [
+         "Uranus",
+         "8.4"
+        ],
+        "leadCopy": [
+         "",
+         "8.4"
+        ],
+        "show": "25559",
+        "copy": "25559",
+        "typst": [
+         "\"Uranus\"",
+         "8.4",
+         "25559"
+        ]
+       },
+       {
+        "lead": [
+         "Mars",
+         "3.7"
+        ],
+        "leadCopy": [
+         "",
+         "3.7"
+        ],
+        "show": "3397",
+        "copy": "3397",
+        "typst": [
+         "\"Mars\"",
+         "3.7",
+         "3397"
+        ]
+       },
+       {
+        "lead": [
+         "Mercury",
+         "3.7"
+        ],
+        "leadCopy": [
+         "",
+         "3.7"
+        ],
+        "show": "2439",
+        "copy": "2439",
+        "typst": [
+         "\"Mercury\"",
+         "3.7",
+         "2439"
+        ]
+       },
+       {
+        "lead": [
+         "Moon",
+         "1.6"
+        ],
+        "leadCopy": [
+         "",
+         "1.6"
+        ],
+        "show": "1737",
+        "copy": "1737",
+        "typst": [
+         "\"Moon\"",
+         "1.6",
+         "1737"
+        ]
+       },
+       {
+        "lead": [
+         "Pluto",
+         "0.8"
+        ],
+        "leadCopy": [
+         "",
+         "0.8"
+        ],
+        "show": "1151",
+        "copy": "1151",
+        "typst": [
+         "\"Pluto\"",
+         "0.8",
+         "1151"
         ]
        }
       ]
@@ -10407,12 +13036,12 @@
         "lead": [
          "dynamics"
         ],
-        "show": "statics, inertia, vibrations",
+        "show": "vectors, inertia, Euler, energy",
         "copy": "dynamics",
         "open": "dynamics",
         "typst": [
          "\"dynamics\"",
-         "\"statics, inertia, vibrations\""
+         "\"vectors, inertia, Euler, energy\""
         ]
        },
        {

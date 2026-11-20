@@ -1,0 +1,3743 @@
+{
+ "a⃗ · b⃗ = |a⃗| |b⃗| cos(θ)": {
+  "title": "Dot product from magnitudes and angle",
+  "about": "The dot product multiplies the lengths of two vectors and the cosine of the angle between them, giving a scalar. It measures how much the two point the same way: zero when perpendicular, |a⃗||b⃗| when parallel, negative when they oppose.",
+  "assumptions": [
+   "θ is the angle between the vectors placed tail to tail, from 0 to π",
+   "Neither vector needs a basis: this form is frame free, which is why Mitiguy uses it for work and power"
+  ],
+  "vars": [
+   [
+    "a⃗ · b⃗",
+    "dot (scalar) product",
+    ""
+   ],
+   [
+    "a⃗",
+    "first vector",
+    ""
+   ],
+   [
+    "b⃗",
+    "second vector",
+    ""
+   ],
+   [
+    "θ",
+    "angle between a⃗ and b⃗ when drawn tail to tail, 0 ≤ θ ≤ π",
+    "rad"
+   ]
+  ],
+  "related": [
+   [
+    "a⃗ · b⃗ = a_{x}b_{x} + a_{y}b_{y} + a_{z}b_{z}",
+    "the same product from components"
+   ],
+   [
+    "P = F⃗ · v⃗",
+    "power of a force"
+   ],
+   [
+    "W = ∫ F⃗ · dr⃗",
+    "work"
+   ]
+  ],
+  "example": {
+   "problem": "A 3 N force acts on a point moving at 4 m/s, at 60° to the force. Find the power F⃗ · v⃗.",
+   "steps": [
+    "F⃗ · v⃗ = |F⃗| |v⃗| cos θ = 3 × 4 × cos 60°",
+    "= 12 × 0.5 = 6"
+   ],
+   "answer": "P = 6 W"
+  },
+  "try": "3 N * 4 m/s * cos(60 deg)"
+ },
+ "a⃗ · b⃗ = b⃗ · a⃗": {
+  "title": "The dot product commutes",
+  "about": "Swapping the two vectors in a dot product does not change it. So the order in a⃗ · b⃗ never matters, unlike the cross product.",
+  "assumptions": [
+   "Holds for any two vectors in any basis, since cos θ is the same either way"
+  ],
+  "vars": [
+   [
+    "a⃗",
+    "first vector",
+    ""
+   ],
+   [
+    "b⃗",
+    "second vector",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "a⃗ × b⃗ = −b⃗ × a⃗",
+    "the cross product does not commute"
+   ],
+   [
+    "a⃗ · (b⃗ + c⃗) = a⃗ · b⃗ + a⃗ · c⃗",
+    "it distributes over a sum"
+   ]
+  ],
+  "example": {
+   "problem": "Check a⃗ · b⃗ = b⃗ · a⃗ for a⃗ = x̂ + 2ŷ + 3ẑ and b⃗ = 4x̂ − 5ŷ + 6ẑ.",
+   "steps": [
+    "a⃗ · b⃗ = 1×4 + 2×(−5) + 3×6 = 4 − 10 + 18 = 12",
+    "b⃗ · a⃗ = 4×1 + (−5)×2 + 6×3 = 12"
+   ],
+   "answer": "a⃗ · b⃗ = b⃗ · a⃗ = 12"
+  },
+  "try": "dot([4 -5 6], [1 2 3])"
+ },
+ "a⃗ · b⃗ = a_{x}b_{x} + a_{y}b_{y} + a_{z}b_{z}": {
+  "title": "Dot product from components",
+  "about": "With both vectors on the same orthonormal basis, the dot product is the sum of the products of matching components. It is the quick way to compute one by hand.",
+  "assumptions": [
+   "Both vectors must be written on the same right-handed orthonormal basis; if they are on different frames, convert one with a rotation matrix first"
+  ],
+  "vars": [
+   [
+    "a_{x}, a_{y}, a_{z}",
+    "components of a⃗ on x̂, ŷ, ẑ",
+    ""
+   ],
+   [
+    "b_{x}, b_{y}, b_{z}",
+    "components of b⃗ on x̂, ŷ, ẑ",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "a⃗ · b⃗ = |a⃗| |b⃗| cos(θ)",
+    "the frame-free form"
+   ],
+   [
+    "^{a}R^{b}",
+    "rotation matrix to put both on one basis"
+   ]
+  ],
+  "example": {
+   "problem": "Find a⃗ · b⃗ for a⃗ = 2x̂ − ŷ + 3ẑ and b⃗ = 4x̂ − 2ẑ.",
+   "steps": [
+    "a⃗ · b⃗ = 2×4 + (−1)×0 + 3×(−2)",
+    "= 8 + 0 − 6 = 2"
+   ],
+   "answer": "a⃗ · b⃗ = 2"
+  },
+  "try": "dot([2 -1 3], [4 0 -2])"
+ },
+ "|v⃗| = √(v⃗ · v⃗)": {
+  "title": "Magnitude of a vector",
+  "about": "A vector dotted with itself is its length squared, since cos 0 = 1. The square root gives its magnitude, such as a speed from a velocity.",
+  "assumptions": [
+   "The basis must be orthonormal for the component sum to equal v⃗ · v⃗"
+  ],
+  "vars": [
+   [
+    "|v⃗|",
+    "magnitude (length) of v⃗",
+    ""
+   ],
+   [
+    "v⃗",
+    "any vector",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "v^{2} = |v⃗|^{2} = v⃗ · v⃗",
+    "magnitude squared"
+   ],
+   [
+    "v̂ = v⃗/|v⃗|",
+    "unit vector"
+   ]
+  ],
+  "example": {
+   "problem": "A point's velocity is v⃗ = 3n̂_{x} + 4n̂_{y} + 12n̂_{z} m/s. Find its speed.",
+   "steps": [
+    "v⃗ · v⃗ = 3^{2} + 4^{2} + 12^{2} = 9 + 16 + 144 = 169",
+    "|v⃗| = √169 = 13"
+   ],
+   "answer": "|v⃗| = 13 m/s"
+  },
+  "try": "sqrt(dot([3 4 12], [3 4 12]))"
+ },
+ "v^{2} = |v⃗|^{2} = v⃗ · v⃗": {
+  "title": "Speed squared",
+  "about": "v^{2} is shorthand for v⃗ · v⃗, the magnitude squared. It shows up whenever no square root is wanted, as in kinetic energy ½ m v^{2}.",
+  "assumptions": [
+   "v here is the magnitude, so v^{2} ≥ 0 always",
+   "Taking v⃗ · v⃗ avoids the square root and is simpler to differentiate"
+  ],
+  "vars": [
+   [
+    "v",
+    "speed, the magnitude of v⃗",
+    "m/s"
+   ],
+   [
+    "v⃗",
+    "velocity vector",
+    "m/s"
+   ]
+  ],
+  "related": [
+   [
+    "K = ½ m v^{2}",
+    "kinetic energy of a particle"
+   ],
+   [
+    "|v⃗| = √(v⃗ · v⃗)",
+    "the magnitude itself"
+   ]
+  ],
+  "example": {
+   "problem": "A 2 kg particle has v⃗ = 2n̂_{x} − 3n̂_{y} + 6n̂_{z} m/s. Find v^{2} and its kinetic energy.",
+   "steps": [
+    "v^{2} = 2^{2} + (−3)^{2} + 6^{2} = 4 + 9 + 36 = 49 m^{2}/s^{2}",
+    "K = ½ × 2 × 49 = 49 J"
+   ],
+   "answer": "v^{2} = 49 m^{2}/s^{2} (K = 49 J)"
+  },
+  "try": "dot([2 -3 6], [2 -3 6])"
+ },
+ "v̂ = v⃗/|v⃗|": {
+  "title": "Unit vector along a vector",
+  "about": "Dividing a vector by its own magnitude leaves a vector of length 1 that points the same way. Unit vectors give directions for axes, projections and line-of-action forces.",
+  "assumptions": [
+   "v⃗ must not be zero: a zero vector has no direction"
+  ],
+  "vars": [
+   [
+    "v̂",
+    "unit vector along v⃗",
+    ""
+   ],
+   [
+    "v⃗",
+    "any nonzero vector",
+    ""
+   ],
+   [
+    "|v⃗|",
+    "magnitude of v⃗",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "|v⃗| = √(v⃗ · v⃗)",
+    "the magnitude"
+   ],
+   [
+    "F⃗ = |F⃗| v̂",
+    "a force of known size along a cable"
+   ]
+  ],
+  "example": {
+   "problem": "Find the unit vector along v⃗ = 3x̂ + 4ẑ.",
+   "steps": [
+    "|v⃗| = √(9 + 16) = 5",
+    "v̂ = (3x̂ + 4ẑ)/5 = 0.6x̂ + 0.8ẑ"
+   ],
+   "answer": "v̂ = 0.6x̂ + 0.8ẑ"
+  },
+  "try": "[3 0 4] / norm([3 0 4])"
+ },
+ "θ = acos((a⃗ · b⃗)/(|a⃗| |b⃗|))": {
+  "title": "Angle between two vectors",
+  "about": "Rearranging the dot product gives the angle between two vectors from their components. acos returns 0 to π, which is exactly the range of that angle.",
+  "assumptions": [
+   "Neither vector may be zero",
+   "This gives the angle but not its sense; use the cross product for which way to turn"
+  ],
+  "vars": [
+   [
+    "θ",
+    "angle between a⃗ and b⃗ when drawn tail to tail, 0 ≤ θ ≤ π",
+    "rad"
+   ],
+   [
+    "a⃗",
+    "first vector",
+    ""
+   ],
+   [
+    "b⃗",
+    "second vector",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "a⃗ · b⃗ = |a⃗| |b⃗| cos(θ)",
+    "the dot product"
+   ],
+   [
+    "|a⃗ × b⃗| = |a⃗| |b⃗| sin(θ)",
+    "the cross product magnitude"
+   ]
+  ],
+  "example": {
+   "problem": "Find the angle between a⃗ = x̂ + ẑ and b⃗ = ŷ + ẑ.",
+   "steps": [
+    "a⃗ · b⃗ = 0 + 0 + 1 = 1",
+    "|a⃗| = |b⃗| = √2, so |a⃗||b⃗| = 2",
+    "θ = acos(1/2) = 60°"
+   ],
+   "answer": "θ = 60°"
+  },
+  "try": "acos(1 / (sqrt(2) sqrt(2))) to deg"
+ },
+ "(a⃗ · û) û": {
+  "title": "Projection: the part of a vector along a direction",
+  "about": "a⃗ · û is how much of a⃗ lies along the unit vector û; multiplying by û turns that scalar back into a vector. What is left, a⃗ − (a⃗ · û)û, is perpendicular to û.",
+  "assumptions": [
+   "û must be a unit vector; for any other b⃗ use (a⃗ · b⃗/(b⃗ · b⃗)) b⃗"
+  ],
+  "vars": [
+   [
+    "a⃗",
+    "first vector",
+    ""
+   ],
+   [
+    "û",
+    "unit vector giving the direction",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "a⃗ − (a⃗ · û) û",
+    "the part of a⃗ perpendicular to û"
+   ],
+   [
+    "v̂ = v⃗/|v⃗|",
+    "make û from any vector"
+   ]
+  ],
+  "example": {
+   "problem": "A force F⃗ = 10n̂_{x} + 5n̂_{y} N acts on a block that slides along û = 0.8n̂_{x} + 0.6n̂_{y}. Find the part of F⃗ along the slide.",
+   "steps": [
+    "F⃗ · û = 10×0.8 + 5×0.6 = 11 N",
+    "(F⃗ · û) û = 11(0.8n̂_{x} + 0.6n̂_{y}) = 8.8n̂_{x} + 6.6n̂_{y} N"
+   ],
+   "answer": "8.8n̂_{x} + 6.6n̂_{y} N (11 N along û)"
+  },
+  "try": "dot([10 5 0], [0.8 0.6 0]) [0.8 0.6 0]"
+ },
+ "a⃗ × b⃗ = |a⃗| |b⃗| sin(θ) û": {
+  "title": "Cross product from magnitudes and angle",
+  "about": "The cross product of two vectors is a vector perpendicular to both, of length |a⃗||b⃗| sin θ, the area of the parallelogram they span. Its direction û follows the right-hand rule from a⃗ to b⃗. Moments M⃗ = r⃗ × F⃗ and ω⃗ × r⃗ velocities are cross products.",
+  "assumptions": [
+   "θ is between 0 and π, so sin θ ≥ 0 and û carries the sign",
+   "Right-hand rule: curl the fingers from a⃗ toward b⃗, the thumb gives û",
+   "Parallel vectors give zero"
+  ],
+  "vars": [
+   [
+    "a⃗ × b⃗",
+    "cross (vector) product",
+    ""
+   ],
+   [
+    "a⃗",
+    "first vector",
+    ""
+   ],
+   [
+    "b⃗",
+    "second vector",
+    ""
+   ],
+   [
+    "θ",
+    "angle between a⃗ and b⃗ when drawn tail to tail, 0 ≤ θ ≤ π",
+    "rad"
+   ],
+   [
+    "û",
+    "unit vector ⊥ to a⃗ and b⃗ by the right-hand rule",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "M⃗ = r⃗ × F⃗",
+    "moment of a force"
+   ],
+   [
+    "a⃗ × b⃗ = det[x̂ ŷ ẑ; …]",
+    "from components"
+   ]
+  ],
+  "example": {
+   "problem": "A 50 N force acts at the end of a 0.3 m wrench, at 30° to the wrench. Find the size of the moment about the bolt.",
+   "steps": [
+    "|M⃗| = |r⃗| |F⃗| sin θ = 0.3 × 50 × sin 30°",
+    "= 15 × 0.5 = 7.5"
+   ],
+   "answer": "|M⃗| = 7.5 N·m"
+  },
+  "try": "0.3 m * 50 N * sin(30 deg)"
+ },
+ "a⃗ × b⃗ = −b⃗ × a⃗": {
+  "title": "The cross product is anticommutative",
+  "about": "Reversing the order of a cross product flips its direction. So the order must be kept: r⃗ × F⃗ is a moment, F⃗ × r⃗ is its negative.",
+  "assumptions": [
+   "Holds in any basis; the right-hand rule reverses when the order does"
+  ],
+  "vars": [
+   [
+    "a⃗",
+    "first vector",
+    ""
+   ],
+   [
+    "b⃗",
+    "second vector",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "a⃗ · b⃗ = b⃗ · a⃗",
+    "the dot product commutes"
+   ],
+   [
+    "^{A}ω⃗^{B} = −^{B}ω⃗^{A}",
+    "a similar sign flip"
+   ]
+  ],
+  "example": {
+   "problem": "With a⃗ = x̂ + 2ŷ + 3ẑ and b⃗ = 4x̂ + 5ŷ + 6ẑ, a⃗ × b⃗ = −3x̂ + 6ŷ − 3ẑ. Find b⃗ × a⃗.",
+   "steps": [
+    "b⃗ × a⃗ = −(a⃗ × b⃗)",
+    "= 3x̂ − 6ŷ + 3ẑ"
+   ],
+   "answer": "b⃗ × a⃗ = 3x̂ − 6ŷ + 3ẑ"
+  },
+  "try": "cross([4 5 6], [1 2 3])"
+ },
+ "a⃗ × b⃗ = (a_{y}b_{z} − a_{z}b_{y}) x̂ + (a_{z}b_{x} − a_{x}b_{z}) ŷ + (a_{x}b_{y} − a_{y}b_{x}) ẑ": {
+  "title": "Cross product from components",
+  "about": "Each component of a⃗ × b⃗ uses the other two components of the inputs: x from y and z, y from z and x, z from x and y, in that cyclic order. It is the expanded form of the determinant rule.",
+  "assumptions": [
+   "x̂, ŷ, ẑ must be a right-handed orthonormal basis, and both vectors on it"
+  ],
+  "vars": [
+   [
+    "a_{x}, a_{y}, a_{z}",
+    "components of a⃗",
+    ""
+   ],
+   [
+    "b_{x}, b_{y}, b_{z}",
+    "components of b⃗",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "a⃗ × b⃗ = det[x̂ ŷ ẑ; …]",
+    "the same as a determinant"
+   ],
+   [
+    "x̂ × ŷ = ẑ",
+    "the unit-vector products"
+   ]
+  ],
+  "example": {
+   "problem": "Find a⃗ × b⃗ for a⃗ = x̂ + 2ŷ + 3ẑ and b⃗ = 4x̂ + 5ŷ + 6ẑ.",
+   "steps": [
+    "x: 2×6 − 3×5 = −3",
+    "y: 3×4 − 1×6 = 6",
+    "z: 1×5 − 2×4 = −3"
+   ],
+   "answer": "a⃗ × b⃗ = −3x̂ + 6ŷ − 3ẑ"
+  },
+  "try": "cross([1 2 3], [4 5 6])"
+ },
+ "a⃗ × b⃗ = det[x̂ ŷ ẑ; a_{x} a_{y} a_{z}; b_{x} b_{y} b_{z}]": {
+  "title": "Cross product as a determinant",
+  "about": "Writing the unit vectors in the top row and the two vectors' components below, then expanding the determinant along the top row, gives the cross product. It is the easiest form to remember.",
+  "assumptions": [
+   "Right-handed orthonormal basis",
+   "Row order matters: swapping the a⃗ and b⃗ rows flips the sign"
+  ],
+  "vars": [
+   [
+    "x̂, ŷ, ẑ",
+    "right-handed unit vectors",
+    ""
+   ],
+   [
+    "a_{i}, b_{i}",
+    "components of a⃗ and b⃗",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "M⃗ = r⃗ × F⃗",
+    "moment of a force about a point"
+   ]
+  ],
+  "example": {
+   "problem": "A force F⃗ = 3ŷ − ẑ N acts at r⃗ = 2x̂ + ẑ m from O. Find its moment about O.",
+   "steps": [
+    "M⃗ = det[x̂ ŷ ẑ; 2 0 1; 0 3 −1]",
+    "x̂: 0×(−1) − 1×3 = −3",
+    "ŷ: −(2×(−1) − 1×0) = 2",
+    "ẑ: 2×3 − 0×0 = 6"
+   ],
+   "answer": "M⃗ = −3x̂ + 2ŷ + 6ẑ N·m"
+  },
+  "try": "cross([2 0 1], [0 3 -1])"
+ },
+ "x̂ × ŷ = ẑ,  ŷ × ẑ = x̂,  ẑ × x̂ = ŷ": {
+  "title": "Cross products of the unit vectors",
+  "about": "In a right-handed basis each unit vector crossed with the next, in cyclic order x → y → z → x, gives the third. Going backwards gives the negative, and any unit vector crossed with itself is zero.",
+  "assumptions": [
+   "The basis is right-handed; in a left-handed one every sign flips"
+  ],
+  "vars": [
+   [
+    "x̂, ŷ, ẑ",
+    "right-handed orthonormal unit vectors",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "ŷ × x̂ = −ẑ",
+    "reverse order, negative"
+   ],
+   [
+    "x̂ × x̂ = 0⃗",
+    "a vector with itself"
+   ]
+  ],
+  "example": {
+   "problem": "Find (2x̂ + ŷ) × ẑ.",
+   "steps": [
+    "2(x̂ × ẑ) + ŷ × ẑ",
+    "x̂ × ẑ = −ŷ (backwards in the cycle), ŷ × ẑ = x̂",
+    "= −2ŷ + x̂"
+   ],
+   "answer": "x̂ − 2ŷ"
+  },
+  "try": "cross([2 1 0], [0 0 1])"
+ },
+ "a⃗ × a⃗ = 0⃗,  a⃗ · (a⃗ × b⃗) = 0": {
+  "title": "A cross product with a repeated vector",
+  "about": "A vector crossed with itself is zero since sin 0 = 0. And a⃗ × b⃗ is perpendicular to a⃗, so dotting it with a⃗ gives zero. Both are quick checks on a hand calculation.",
+  "assumptions": [
+   "Holds for any vectors; also b⃗ · (a⃗ × b⃗) = 0"
+  ],
+  "vars": [
+   [
+    "a⃗",
+    "first vector",
+    ""
+   ],
+   [
+    "b⃗",
+    "second vector",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "a⃗ · b⃗ × c⃗",
+    "scalar triple product, zero when two vectors repeat"
+   ]
+  ],
+  "example": {
+   "problem": "Check a⃗ · (a⃗ × b⃗) = 0 for a⃗ = x̂ + 2ŷ + 3ẑ, b⃗ = 4x̂ + 5ŷ + 6ẑ.",
+   "steps": [
+    "a⃗ × b⃗ = −3x̂ + 6ŷ − 3ẑ",
+    "a⃗ · (a⃗ × b⃗) = 1×(−3) + 2×6 + 3×(−3) = −3 + 12 − 9 = 0"
+   ],
+   "answer": "a⃗ · (a⃗ × b⃗) = 0"
+  },
+  "try": "dot([1 2 3], cross([1 2 3], [4 5 6]))"
+ },
+ "a⃗ × (b⃗ × c⃗) = b⃗ (a⃗ · c⃗) − c⃗ (a⃗ · b⃗)": {
+  "title": "Vector triple product (BAC − CAB)",
+  "about": "A double cross product a⃗ × (b⃗ × c⃗) lies in the plane of b⃗ and c⃗ and can be written with dot products: b(a·c) minus c(a·b). In dynamics it turns the centripetal term ω⃗ × (ω⃗ × r⃗) into ω⃗(ω⃗ · r⃗) − ω^{2} r⃗.",
+  "assumptions": [
+   "The bracketed pair goes first: a⃗ × (b⃗ × c⃗) ≠ (a⃗ × b⃗) × c⃗ in general"
+  ],
+  "vars": [
+   [
+    "a⃗",
+    "first vector",
+    ""
+   ],
+   [
+    "b⃗",
+    "second vector",
+    ""
+   ],
+   [
+    "c⃗",
+    "third vector",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "(a⃗ × b⃗) × c⃗ = b⃗ (a⃗ · c⃗) − a⃗ (b⃗ · c⃗)",
+    "brackets on the other pair"
+   ],
+   [
+    "ω⃗ × (ω⃗ × r⃗)",
+    "centripetal acceleration"
+   ]
+  ],
+  "example": {
+   "problem": "A body spins at ω⃗ = 2ẑ rad/s about a fixed point O. Find ω⃗ × (ω⃗ × r⃗) for a point at r⃗ = 0.3x̂ + 0.4ẑ m.",
+   "steps": [
+    "ω⃗ · r⃗ = 2 × 0.4 = 0.8, ω⃗ · ω⃗ = 4",
+    "ω⃗(ω⃗ · r⃗) − r⃗(ω⃗ · ω⃗) = 1.6ẑ − (1.2x̂ + 1.6ẑ)",
+    "= −1.2x̂, pointing at the spin axis"
+   ],
+   "answer": "ω⃗ × (ω⃗ × r⃗) = −1.2x̂ m/s^{2}"
+  },
+  "try": "cross([0 0 2], cross([0 0 2], [0.3 0 0.4]))"
+ },
+ "(a⃗ × b⃗) × c⃗ = b⃗ (a⃗ · c⃗) − a⃗ (b⃗ · c⃗)": {
+  "title": "Vector triple product, first pair crossed",
+  "about": "With the brackets on the first pair, the result lies in the plane of a⃗ and b⃗. It follows from BAC − CAB with c⃗ moved out front, which flips the sign.",
+  "assumptions": [
+   "Cross products do not associate; mind where the brackets are"
+  ],
+  "vars": [
+   [
+    "a⃗",
+    "first vector",
+    ""
+   ],
+   [
+    "b⃗",
+    "second vector",
+    ""
+   ],
+   [
+    "c⃗",
+    "third vector",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "a⃗ × (b⃗ × c⃗) = b⃗ (a⃗ · c⃗) − c⃗ (a⃗ · b⃗)",
+    "brackets on the second pair"
+   ]
+  ],
+  "example": {
+   "problem": "Find (a⃗ × b⃗) × c⃗ for a⃗ = x̂, b⃗ = ŷ, c⃗ = x̂ + ŷ + ẑ.",
+   "steps": [
+    "a⃗ · c⃗ = 1, b⃗ · c⃗ = 1",
+    "b⃗(1) − a⃗(1) = ŷ − x̂",
+    "Check: a⃗ × b⃗ = ẑ and ẑ × (x̂ + ŷ + ẑ) = ŷ − x̂"
+   ],
+   "answer": "(a⃗ × b⃗) × c⃗ = −x̂ + ŷ"
+  },
+  "try": "cross(cross([1 0 0], [0 1 0]), [1 1 1])"
+ },
+ "a⃗ · b⃗ × c⃗ = a⃗ × b⃗ · c⃗": {
+  "title": "Scalar triple product: swap the dot and the cross",
+  "about": "In a scalar triple product the dot and the cross may trade places as long as the vectors stay in order. The cross is always done first, so no brackets are needed.",
+  "assumptions": [
+   "The result is a scalar; it is zero when the three vectors are coplanar"
+  ],
+  "vars": [
+   [
+    "a⃗",
+    "first vector",
+    ""
+   ],
+   [
+    "b⃗",
+    "second vector",
+    ""
+   ],
+   [
+    "c⃗",
+    "third vector",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "a⃗ · b⃗ × c⃗ = b⃗ · c⃗ × a⃗ = c⃗ · a⃗ × b⃗",
+    "cyclic shifts"
+   ],
+   [
+    "M_{λ} = λ̂ · r⃗ × F⃗",
+    "moment of a force about an axis"
+   ]
+  ],
+  "example": {
+   "problem": "Check the swap for a⃗ = 2x̂, b⃗ = 3ŷ, c⃗ = x̂ + ŷ + 4ẑ.",
+   "steps": [
+    "b⃗ × c⃗ = 12x̂ − 3ẑ, so a⃗ · b⃗ × c⃗ = 24",
+    "a⃗ × b⃗ = 6ẑ, so a⃗ × b⃗ · c⃗ = 6 × 4 = 24"
+   ],
+   "answer": "Both are 24"
+  },
+  "try": "dot([2 0 0], cross([0 3 0], [1 1 4]))"
+ },
+ "a⃗ · b⃗ × c⃗ = b⃗ · c⃗ × a⃗ = c⃗ · a⃗ × b⃗": {
+  "title": "Scalar triple product: cyclic order and box volume",
+  "about": "Shifting a⃗, b⃗, c⃗ round in cyclic order leaves the scalar triple product unchanged; it equals the determinant of their components. Its absolute value is the volume of the parallelepiped (box) the three vectors span.",
+  "assumptions": [
+   "Swapping any two vectors (anticyclic order) flips the sign",
+   "Zero means the three vectors lie in one plane"
+  ],
+  "vars": [
+   [
+    "a⃗",
+    "first vector",
+    ""
+   ],
+   [
+    "b⃗",
+    "second vector",
+    ""
+   ],
+   [
+    "c⃗",
+    "third vector",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "a⃗ · b⃗ × c⃗ = det[a; b; c]",
+    "rows of components"
+   ],
+   [
+    "a⃗ · b⃗ × c⃗ = a⃗ × b⃗ · c⃗",
+    "swap · and ×"
+   ]
+  ],
+  "example": {
+   "problem": "A parallelepiped has edges a⃗ = 2x̂, b⃗ = x̂ + 3ŷ, c⃗ = ŷ + 4ẑ m. Find its volume.",
+   "steps": [
+    "V = |a⃗ · b⃗ × c⃗| = |det[2 0 0; 1 3 0; 0 1 4]|",
+    "= 2 × (3×4 − 0×1) = 24"
+   ],
+   "answer": "V = 24 m^{3}"
+  },
+  "try": "det([2 0 0; 1 3 0; 0 1 4])"
+ },
+ "|a⃗ × b⃗|^{2} = |a⃗|^{2} |b⃗|^{2} − (a⃗ · b⃗)^{2}": {
+  "title": "Lagrange's identity",
+  "about": "The squared size of a cross product follows from magnitudes and the dot product alone, since sin^{2}θ = 1 − cos^{2}θ. It is handy when the cross product itself is not needed.",
+  "assumptions": [
+   "Any two vectors in three dimensions"
+  ],
+  "vars": [
+   [
+    "a⃗",
+    "first vector",
+    ""
+   ],
+   [
+    "b⃗",
+    "second vector",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "|a⃗ × b⃗| = |a⃗| |b⃗| sin(θ)",
+    "the cross product's size"
+   ],
+   [
+    "(a⃗ × b⃗) · (c⃗ × d⃗)",
+    "the general form"
+   ]
+  ],
+  "example": {
+   "problem": "|a⃗| = 3, |b⃗| = 2 and a⃗ · b⃗ = 2. Find |a⃗ × b⃗|^{2}.",
+   "steps": [
+    "|a⃗ × b⃗|^{2} = 3^{2} × 2^{2} − 2^{2}",
+    "= 36 − 4 = 32"
+   ],
+   "answer": "|a⃗ × b⃗|^{2} = 32 (|a⃗ × b⃗| ≈ 5.66)"
+  },
+  "try": "3^2 * 2^2 - 2^2"
+ },
+ "(a⃗ × b⃗) · (c⃗ × d⃗) = (a⃗ · c⃗)(b⃗ · d⃗) − (a⃗ · d⃗)(b⃗ · c⃗)": {
+  "title": "Dot product of two cross products (Binet–Cauchy)",
+  "about": "The dot of two cross products expands into four dot products. With c⃗ = a⃗ and d⃗ = b⃗ it becomes Lagrange's identity.",
+  "assumptions": [
+   "Any four vectors in three dimensions"
+  ],
+  "vars": [
+   [
+    "a⃗",
+    "first vector",
+    ""
+   ],
+   [
+    "b⃗",
+    "second vector",
+    ""
+   ],
+   [
+    "c⃗, d⃗",
+    "third and fourth vectors",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "|a⃗ × b⃗|^{2} = |a⃗|^{2} |b⃗|^{2} − (a⃗ · b⃗)^{2}",
+    "the case c⃗ = a⃗, d⃗ = b⃗"
+   ]
+  ],
+  "example": {
+   "problem": "Find (a⃗ × b⃗) · (c⃗ × d⃗) for a⃗ = x̂, b⃗ = ŷ, c⃗ = x̂ + ŷ, d⃗ = ŷ + ẑ.",
+   "steps": [
+    "a⃗ · c⃗ = 1, b⃗ · d⃗ = 1, a⃗ · d⃗ = 0, b⃗ · c⃗ = 1",
+    "1×1 − 0×1 = 1",
+    "Check: ẑ · (x̂ − ŷ + ẑ) = 1"
+   ],
+   "answer": "(a⃗ × b⃗) · (c⃗ × d⃗) = 1"
+  },
+  "try": "dot(cross([1 0 0], [0 1 0]), cross([1 1 0], [0 1 1]))"
+ },
+ "a⃗ × (b⃗ + c⃗) = a⃗ × b⃗ + a⃗ × c⃗": {
+  "title": "The cross product distributes over addition",
+  "about": "Crossing a vector with a sum is the sum of the separate cross products. So the moment of several forces at one point is the moment of their resultant.",
+  "assumptions": [
+   "Keep each product in the same order (a⃗ first)"
+  ],
+  "vars": [
+   [
+    "a⃗",
+    "first vector",
+    ""
+   ],
+   [
+    "b⃗",
+    "second vector",
+    ""
+   ],
+   [
+    "c⃗",
+    "third vector",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "a⃗ · (b⃗ + c⃗) = a⃗ · b⃗ + a⃗ · c⃗",
+    "the dot product distributes too"
+   ],
+   [
+    "M⃗ = r⃗ × ΣF⃗",
+    "Varignon's theorem"
+   ]
+  ],
+  "example": {
+   "problem": "Forces F⃗_{1} = 10x̂ N and F⃗_{2} = 20ẑ N act at r⃗ = 0.5ŷ m. Find their total moment about O.",
+   "steps": [
+    "r⃗ × F⃗_{1} = 0.5ŷ × 10x̂ = −5ẑ",
+    "r⃗ × F⃗_{2} = 0.5ŷ × 20ẑ = 10x̂",
+    "Sum: 10x̂ − 5ẑ, the same as r⃗ × (10x̂ + 20ẑ)"
+   ],
+   "answer": "M⃗ = 10x̂ − 5ẑ N·m"
+  },
+  "try": "cross([0 0.5 0], [10 0 20])"
+ },
+ "^{A}dv⃗/dt = v̇_{1} â_{1} + v̇_{2} â_{2} + v̇_{3} â_{3}": {
+  "title": "Derivative of a vector in a frame",
+  "about": "To differentiate a vector in frame A, write it on unit vectors fixed in A and differentiate only the scalar measure numbers, since â_{1}, â_{2}, â_{3} do not change in A. A vector's derivative depends on the frame it is taken in.",
+  "assumptions": [
+   "â_{1}, â_{2}, â_{3} must be fixed in A; if the vector is written on another frame's unit vectors, use the golden rule"
+  ],
+  "vars": [
+   [
+    "A",
+    "reference frame the derivative is taken in",
+    ""
+   ],
+   [
+    "v_{1}, v_{2}, v_{3}",
+    "measure numbers of v⃗ on â_{1}, â_{2}, â_{3}",
+    ""
+   ],
+   [
+    "â_{i}",
+    "unit vectors fixed in A",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "^{A}dv⃗/dt = ^{B}dv⃗/dt + ^{A}ω⃗^{B} × v⃗",
+    "golden rule, for vectors on another frame"
+   ]
+  ],
+  "example": {
+   "problem": "A point's position in N is r⃗ = 3t^{2} n̂_{1} + 4t n̂_{2} + 5 n̂_{3} m, with n̂_{i} fixed in N. Find ^{N}dr⃗/dt at t = 2 s.",
+   "steps": [
+    "Differentiate each measure number: 6t n̂_{1} + 4 n̂_{2} + 0 n̂_{3}",
+    "At t = 2 s: 12 n̂_{1} + 4 n̂_{2}"
+   ],
+   "answer": "^{N}dr⃗/dt = 12 n̂_{1} + 4 n̂_{2} m/s"
+  }
+ },
+ "^{A}d(a⃗ · b⃗)/dt = ^{A}da⃗/dt · b⃗ + a⃗ · ^{A}db⃗/dt": {
+  "title": "Product rule for a dot product",
+  "about": "The derivative of a dot product is the derivative of each vector dotted with the other. A scalar's derivative does not depend on the frame, but each vector derivative must be taken in the same frame A.",
+  "assumptions": [
+   "Both vector derivatives in the same frame (any frame gives the same scalar answer)"
+  ],
+  "vars": [
+   [
+    "A",
+    "reference frame the derivative is taken in",
+    ""
+   ],
+   [
+    "a⃗",
+    "first vector",
+    ""
+   ],
+   [
+    "b⃗",
+    "second vector",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "^{A}d(a⃗ × b⃗)/dt",
+    "product rule for a cross product"
+   ],
+   [
+    "r⃗ · ṙ⃗ = 0",
+    "for |r⃗| constant"
+   ]
+  ],
+  "example": {
+   "problem": "In A, a⃗ = t â_{1} + 2 â_{2} and b⃗ = 3 â_{1} + t^{2} â_{2}. Find d(a⃗ · b⃗)/dt at t = 1.",
+   "steps": [
+    "^{A}da⃗/dt · b⃗ = â_{1} · b⃗ = 3",
+    "a⃗ · ^{A}db⃗/dt = a⃗ · 2t â_{2} = 4t",
+    "Sum: 3 + 4t = 7 at t = 1 (check: a⃗ · b⃗ = 3t + 2t^{2})"
+   ],
+   "answer": "d(a⃗ · b⃗)/dt = 7"
+  }
+ },
+ "^{A}d(a⃗ × b⃗)/dt = ^{A}da⃗/dt × b⃗ + a⃗ × ^{A}db⃗/dt": {
+  "title": "Product rule for a cross product",
+  "about": "The derivative of a cross product is the derivative of each vector crossed with the other, keeping a⃗ on the left and b⃗ on the right. It is how dH⃗/dt = r⃗ × F⃗ follows from H⃗ = r⃗ × m v⃗.",
+  "assumptions": [
+   "Keep the order of each cross product; swapping flips the sign",
+   "Both derivatives in the same frame A"
+  ],
+  "vars": [
+   [
+    "A",
+    "reference frame the derivative is taken in",
+    ""
+   ],
+   [
+    "a⃗",
+    "first vector",
+    ""
+   ],
+   [
+    "b⃗",
+    "second vector",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "^{A}d(a⃗ · b⃗)/dt",
+    "product rule for a dot product"
+   ],
+   [
+    "a⃗ × b⃗ = −b⃗ × a⃗",
+    "why the order matters"
+   ]
+  ],
+  "example": {
+   "problem": "In A, a⃗ = t â_{1} and b⃗ = t â_{2}. Find ^{A}d(a⃗ × b⃗)/dt at t = 3.",
+   "steps": [
+    "^{A}da⃗/dt × b⃗ = â_{1} × t â_{2} = t â_{3}",
+    "a⃗ × ^{A}db⃗/dt = t â_{1} × â_{2} = t â_{3}",
+    "Sum: 2t â_{3} = 6 â_{3} at t = 3 (check: a⃗ × b⃗ = t^{2} â_{3})"
+   ],
+   "answer": "^{A}d(a⃗ × b⃗)/dt = 6 â_{3}"
+  }
+ },
+ "^{A}d(s a⃗)/dt = ṡ a⃗ + s ^{A}da⃗/dt": {
+  "title": "Product rule for a scalar times a vector",
+  "about": "A scalar s times a vector a⃗ differentiates like any product: ṡ a⃗ plus s times the vector's derivative in A. The scalar's derivative is the same in every frame.",
+  "assumptions": [
+   "s is a scalar function of time; a⃗'s derivative is taken in A"
+  ],
+  "vars": [
+   [
+    "A",
+    "reference frame the derivative is taken in",
+    ""
+   ],
+   [
+    "s",
+    "scalar function of time",
+    ""
+   ],
+   [
+    "a⃗",
+    "vector",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "^{A}dv⃗/dt = v̇_{1} â_{1} + …",
+    "differentiate on A's unit vectors"
+   ]
+  ],
+  "example": {
+   "problem": "In A, s = t^{2} and a⃗ = t â_{1} + â_{2}. Find ^{A}d(s a⃗)/dt at t = 1.",
+   "steps": [
+    "ṡ a⃗ = 2t(t â_{1} + â_{2})",
+    "s ^{A}da⃗/dt = t^{2} â_{1}",
+    "Sum: 3t^{2} â_{1} + 2t â_{2} = 3â_{1} + 2â_{2} at t = 1"
+   ],
+   "answer": "^{A}d(s a⃗)/dt = 3â_{1} + 2â_{2}"
+  }
+ },
+ "^{a}R^{b}_{ij} = â_{i} · b̂_{j}": {
+  "title": "Rotation matrix entries are dot products",
+  "about": "Each entry of the rotation matrix ^{a}R^{b} is the dot product (direction cosine) of one of A's unit vectors with one of B's. Rows go with â, columns with b̂, and multiplying B-components by it gives A-components.",
+  "assumptions": [
+   "Both bases are right-handed and orthonormal",
+   "Row i is â_{i}'s components on B; column j is b̂_{j}'s components on A"
+  ],
+  "vars": [
+   [
+    "^{a}R^{b}",
+    "rotation matrix taking B components to A components",
+    ""
+   ],
+   [
+    "â_{i}",
+    "unit vectors fixed in A",
+    ""
+   ],
+   [
+    "b̂_{j}",
+    "unit vectors fixed in B",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "^{b}R^{a} = (^{a}R^{b})^{T}",
+    "the other way"
+   ],
+   [
+    "R_{z}",
+    "turned θ about z"
+   ]
+  ],
+  "example": {
+   "problem": "B is turned 30° from A about â_{z} = b̂_{z}. Build ^{a}R^{b} and express v⃗ = 2b̂_{x} on A.",
+   "steps": [
+    "R_{11} = â_{x} · b̂_{x} = cos 30°, R_{12} = â_{x} · b̂_{y} = −sin 30°, R_{21} = sin 30°, R_{22} = cos 30°, R_{33} = 1",
+    "[v]_{a} = ^{a}R^{b} [2; 0; 0] = [2 cos 30°; 2 sin 30°; 0]"
+   ],
+   "answer": "v⃗ = 1.732â_{x} + â_{y}"
+  },
+  "try": "[cos(30 deg), -sin(30 deg), 0; sin(30 deg), cos(30 deg), 0; 0, 0, 1] [2; 0; 0]"
+ },
+ "^{b}R^{a} = (^{a}R^{b})^{−1} = (^{a}R^{b})^{T}": {
+  "title": "Inverse of a rotation matrix is its transpose",
+  "about": "A rotation matrix is orthogonal, so going back the other way only needs a transpose, not a full inverse. Its determinant is +1.",
+  "assumptions": [
+   "Both bases are right-handed and orthonormal",
+   "(^{a}R^{b})^{T} ^{a}R^{b} = identity is a useful check on a hand-built matrix"
+  ],
+  "vars": [
+   [
+    "^{a}R^{b}",
+    "rotation matrix B → A",
+    ""
+   ],
+   [
+    "^{b}R^{a}",
+    "rotation matrix A → B",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "^{a}R^{b}_{ij} = â_{i} · b̂_{j}",
+    "its entries"
+   ],
+   [
+    "det(R) = 1",
+    "a proper rotation"
+   ]
+  ],
+  "example": {
+   "problem": "B is turned 30° from A about the z axis. Express v⃗ = â_{x} + â_{y} on B.",
+   "steps": [
+    "^{b}R^{a} = (^{a}R^{b})^{T}",
+    "[v]_{b} = [cos 30° + sin 30°; −sin 30° + cos 30°; 0]"
+   ],
+   "answer": "v⃗ = 1.366b̂_{x} + 0.366b̂_{y}"
+  },
+  "try": "transpose([cos(30 deg), -sin(30 deg), 0; sin(30 deg), cos(30 deg), 0; 0, 0, 1]) [1; 1; 0]"
+ },
+ "^{a}R^{d} = ^{a}R^{b} ^{b}R^{c} ^{c}R^{d}": {
+  "title": "Chaining rotation matrices",
+  "about": "To get from D to A through intermediate frames, multiply the rotation matrices in order; the inner superscripts cancel like a chain. This is how a sequence of simple turns (body-fixed angles) builds one orientation.",
+  "assumptions": [
+   "The order matters: matrix products do not commute unless all turns share one axis"
+  ],
+  "vars": [
+   [
+    "^{a}R^{b}, ^{b}R^{c}, ^{c}R^{d}",
+    "rotation matrices of successive frames",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "R_{z}, R_{x}, R_{y}",
+    "the simple turns"
+   ],
+   [
+    "^{A}ω⃗^{D} = ^{A}ω⃗^{B} + ^{B}ω⃗^{C} + ^{C}ω⃗^{D}",
+    "angular velocities add the same way"
+   ]
+  ],
+  "example": {
+   "problem": "B is turned 30° from A about z, and C is turned 45° from B about the same z. Find ^{a}R^{c}.",
+   "steps": [
+    "^{a}R^{c} = R_{z}(30°) R_{z}(45°)",
+    "Turns about one axis add: R_{z}(75°)",
+    "cos 75° = 0.2588, sin 75° = 0.9659"
+   ],
+   "answer": "^{a}R^{c} = [0.2588, −0.9659, 0; 0.9659, 0.2588, 0; 0, 0, 1]"
+  },
+  "try": "[cos(30 deg), -sin(30 deg), 0; sin(30 deg), cos(30 deg), 0; 0, 0, 1] [cos(45 deg), -sin(45 deg), 0; sin(45 deg), cos(45 deg), 0; 0, 0, 1]"
+ },
+ "R_{z} = [cos θ, −sin θ, 0; sin θ, cos θ, 0; 0, 0, 1]": {
+  "title": "Rotation about z",
+  "about": "When B is turned θ from A about their shared z axis, R_{z} takes components on B to components on A. The z components pass through unchanged.",
+  "assumptions": [
+   "θ is positive by the right-hand rule about â_{z} = b̂_{z}",
+   "Columns are b̂_{x}, b̂_{y}, b̂_{z} written on A"
+  ],
+  "vars": [
+   [
+    "θ",
+    "angle B is turned from A about z",
+    "rad"
+   ]
+  ],
+  "related": [
+   [
+    "R_{x}",
+    "about x"
+   ],
+   [
+    "R_{y}",
+    "about y"
+   ],
+   [
+    "b̂_{x} = cos θ â_{x} + sin θ â_{y}",
+    "the first column"
+   ]
+  ],
+  "example": {
+   "problem": "A link B is turned 60° about z. A point sits at 2b̂_{x} + b̂_{y} m. Find its coordinates on A.",
+   "steps": [
+    "x_{a} = 2 cos 60° − 1 × sin 60° = 1 − 0.866 = 0.134",
+    "y_{a} = 2 sin 60° + 1 × cos 60° = 1.732 + 0.5 = 2.232",
+    "z_{a} = 0"
+   ],
+   "answer": "0.134â_{x} + 2.232â_{y} m"
+  },
+  "try": "[cos(60 deg), -sin(60 deg), 0; sin(60 deg), cos(60 deg), 0; 0, 0, 1] [2; 1; 0]"
+ },
+ "R_{x} = [1, 0, 0; 0, cos θ, −sin θ; 0, sin θ, cos θ]": {
+  "title": "Rotation about x",
+  "about": "When B is turned θ from A about their shared x axis, R_{x} takes B components to A components. The x components pass through unchanged.",
+  "assumptions": [
+   "θ is positive by the right-hand rule about â_{x} = b̂_{x}"
+  ],
+  "vars": [
+   [
+    "θ",
+    "angle B is turned from A about x",
+    "rad"
+   ]
+  ],
+  "related": [
+   [
+    "R_{z}",
+    "about z"
+   ],
+   [
+    "R_{y}",
+    "about y"
+   ]
+  ],
+  "example": {
+   "problem": "B is turned 30° about x from A. Express v⃗ = 4b̂_{y} on A.",
+   "steps": [
+    "Second column of R_{x}: b̂_{y} = cos θ â_{y} + sin θ â_{z}",
+    "v⃗ = 4 cos 30° â_{y} + 4 sin 30° â_{z}"
+   ],
+   "answer": "v⃗ = 3.464â_{y} + 2â_{z}"
+  },
+  "try": "[1, 0, 0; 0, cos(30 deg), -sin(30 deg); 0, sin(30 deg), cos(30 deg)] [0; 4; 0]"
+ },
+ "R_{y} = [cos θ, 0, sin θ; 0, 1, 0; −sin θ, 0, cos θ]": {
+  "title": "Rotation about y",
+  "about": "When B is turned θ from A about their shared y axis, R_{y} takes B components to A components. Note the sign pattern differs from R_{x} and R_{z}: +sin θ sits top right, because the cycle is z → x about y.",
+  "assumptions": [
+   "θ is positive by the right-hand rule about â_{y} = b̂_{y}"
+  ],
+  "vars": [
+   [
+    "θ",
+    "angle B is turned from A about y",
+    "rad"
+   ]
+  ],
+  "related": [
+   [
+    "R_{z}",
+    "about z"
+   ],
+   [
+    "R_{x}",
+    "about x"
+   ]
+  ],
+  "example": {
+   "problem": "B is turned 30° about y from A. Express v⃗ = 2b̂_{z} on A.",
+   "steps": [
+    "Third column of R_{y}: b̂_{z} = sin θ â_{x} + cos θ â_{z}",
+    "v⃗ = 2 sin 30° â_{x} + 2 cos 30° â_{z}"
+   ],
+   "answer": "v⃗ = â_{x} + 1.732â_{z}"
+  },
+  "try": "[cos(30 deg), 0, sin(30 deg); 0, 1, 0; -sin(30 deg), 0, cos(30 deg)] [0; 0; 2]"
+ },
+ "b̂_{x} = cos θ â_{x} + sin θ â_{y}": {
+  "title": "B's x unit vector on A, turned about z",
+  "about": "When B is turned θ about z, b̂_{x} has cos θ along â_{x} (adjacent) and sin θ along â_{y} (opposite), straight from SohCahToa. It is the first column of R_{z}.",
+  "assumptions": [
+   "θ measured from â_{x} toward â_{y} (right-hand rule about z)"
+  ],
+  "vars": [
+   [
+    "θ",
+    "angle from â_{x} to b̂_{x}",
+    "rad"
+   ]
+  ],
+  "related": [
+   [
+    "b̂_{y} = −sin θ â_{x} + cos θ â_{y}",
+    "the other unit vector"
+   ],
+   [
+    "R_{z}",
+    "the whole matrix"
+   ]
+  ],
+  "example": {
+   "problem": "A 2 m arm along b̂_{x} is turned 40° from â_{x}. Find its tip on A.",
+   "steps": [
+    "2b̂_{x} = 2 cos 40° â_{x} + 2 sin 40° â_{y}"
+   ],
+   "answer": "1.532â_{x} + 1.286â_{y} m"
+  },
+  "try": "[2 cos(40 deg), 2 sin(40 deg)]"
+ },
+ "b̂_{y} = −sin θ â_{x} + cos θ â_{y}": {
+  "title": "B's y unit vector on A, turned about z",
+  "about": "b̂_{y} is b̂_{x} turned a further 90°, so it leans back toward −â_{x} by sin θ. It is the second column of R_{z}.",
+  "assumptions": [
+   "θ measured from â_{x} toward â_{y} (right-hand rule about z)"
+  ],
+  "vars": [
+   [
+    "θ",
+    "angle B is turned from A about z",
+    "rad"
+   ]
+  ],
+  "related": [
+   [
+    "b̂_{x} = cos θ â_{x} + sin θ â_{y}",
+    "the other unit vector"
+   ],
+   [
+    "b̂_{z} = â_{z}",
+    "the shared axis"
+   ]
+  ],
+  "example": {
+   "problem": "B is turned 40° about z. Express v⃗ = 3b̂_{y} on A.",
+   "steps": [
+    "3b̂_{y} = −3 sin 40° â_{x} + 3 cos 40° â_{y}"
+   ],
+   "answer": "−1.928â_{x} + 2.298â_{y}"
+  },
+  "try": "[-3 sin(40 deg), 3 cos(40 deg)]"
+ },
+ "^{A}dv⃗/dt = ^{B}dv⃗/dt + ^{A}ω⃗^{B} × v⃗": {
+  "title": "Golden rule: derivatives in two frames",
+  "about": "A vector's derivative in A is its derivative in B plus B's angular velocity in A crossed with it. Use it when the vector is easy to write on B's unit vectors but the derivative is wanted in A, such as an inertial frame.",
+  "assumptions": [
+   "Holds for any vector and any two frames",
+   "If v⃗ is fixed in B, ^{B}dv⃗/dt = 0 and only ω⃗ × v⃗ is left"
+  ],
+  "vars": [
+   [
+    "A, B",
+    "two reference frames",
+    ""
+   ],
+   [
+    "^{A}ω⃗^{B}",
+    "angular velocity of B in A",
+    "rad/s"
+   ],
+   [
+    "v⃗",
+    "any vector",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "^{N}v⃗^{Q} = ^{N}v⃗^{B_{o}} + ^{N}ω⃗^{B} × ^{B_{o}}r⃗^{Q} + ^{B}v⃗^{Q}",
+    "applied to a position vector"
+   ]
+  ],
+  "example": {
+   "problem": "B spins in A at ^{A}ω⃗^{B} = 2b̂_{z} rad/s. A rod fixed in B is r⃗ = 3b̂_{x} m. Find ^{A}dr⃗/dt.",
+   "steps": [
+    "^{B}dr⃗/dt = 0 since r⃗ is fixed in B",
+    "^{A}ω⃗^{B} × r⃗ = 2b̂_{z} × 3b̂_{x} = 6b̂_{y}"
+   ],
+   "answer": "^{A}dr⃗/dt = 6b̂_{y} m/s"
+  },
+  "try": "cross([0 0 2], [3 0 0])"
+ },
+ "^{A}ω⃗^{B} = ±θ̇ λ̂": {
+  "title": "Simple angular velocity",
+  "about": "When B turns relative to A about one axis λ̂ fixed in both, its angular velocity is the turn rate θ̇ along that axis. The sign is + when θ grows by the right-hand rule about λ̂.",
+  "assumptions": [
+   "λ̂ stays fixed in both A and B (a hinge or a single-axis turn)",
+   "θ̇ in rad/s"
+  ],
+  "vars": [
+   [
+    "^{A}ω⃗^{B}",
+    "angular velocity of B in A",
+    "rad/s"
+   ],
+   [
+    "θ̇",
+    "rate of the turning angle",
+    "rad/s"
+   ],
+   [
+    "λ̂",
+    "unit vector along the shared axis",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "^{A}ω⃗^{D} = ^{A}ω⃗^{B} + ^{B}ω⃗^{C} + ^{C}ω⃗^{D}",
+    "add simple ones"
+   ],
+   [
+    "^{A}α⃗^{B} = ±θ̈ λ̂",
+    "its angular acceleration"
+   ]
+  ],
+  "example": {
+   "problem": "A wheel spins on a fixed axle n̂_{z} at 120 rpm. Find ^{N}ω⃗^{W}.",
+   "steps": [
+    "θ̇ = 120 rev/min × 2π rad/rev ÷ 60 s/min = 12.57 rad/s",
+    "^{N}ω⃗^{W} = 12.57 n̂_{z} rad/s"
+   ],
+   "answer": "^{N}ω⃗^{W} = 12.57 n̂_{z} rad/s"
+  },
+  "try": "120 rpm to rad/s"
+ },
+ "^{A}ω⃗^{D} = ^{A}ω⃗^{B} + ^{B}ω⃗^{C} + ^{C}ω⃗^{D}": {
+  "title": "Angular velocity addition theorem",
+  "about": "Angular velocities through a chain of frames add as vectors, each relative to the frame before it. It builds the angular velocity of a gimbal, robot arm or spinning top from simple single-axis spins.",
+  "assumptions": [
+   "Each term is relative to the previous frame in the chain",
+   "Angular accelerations do NOT simply add this way"
+  ],
+  "vars": [
+   [
+    "^{A}ω⃗^{B}",
+    "angular velocity of B in A",
+    "rad/s"
+   ]
+  ],
+  "related": [
+   [
+    "^{A}ω⃗^{B} = ±θ̇ λ̂",
+    "each simple term"
+   ],
+   [
+    "^{a}R^{d} = ^{a}R^{b} ^{b}R^{c} ^{c}R^{d}",
+    "orientations chain by product"
+   ]
+  ],
+  "example": {
+   "problem": "A gimbal has ^{A}ω⃗^{B} = 2ẑ, ^{B}ω⃗^{C} = 3ŷ and ^{C}ω⃗^{D} = 1x̂ rad/s (on the instantaneous axes). Find |^{A}ω⃗^{D}|.",
+   "steps": [
+    "^{A}ω⃗^{D} = 1x̂ + 3ŷ + 2ẑ rad/s",
+    "|^{A}ω⃗^{D}| = √(1 + 9 + 4) = √14"
+   ],
+   "answer": "|^{A}ω⃗^{D}| ≈ 3.742 rad/s"
+  },
+  "try": "norm([1 3 2])"
+ },
+ "^{A}ω⃗^{B} = −^{B}ω⃗^{A}": {
+  "title": "Angular velocity reversed",
+  "about": "B's angular velocity in A is the negative of A's angular velocity in B. Seen from the wheel, the car turns the other way.",
+  "assumptions": [
+   "Any two frames"
+  ],
+  "vars": [
+   [
+    "^{A}ω⃗^{B}",
+    "angular velocity of B in A",
+    "rad/s"
+   ],
+   [
+    "^{B}ω⃗^{A}",
+    "angular velocity of A in B",
+    "rad/s"
+   ]
+  ],
+  "related": [
+   [
+    "^{P}r⃗^{Q} = −^{Q}r⃗^{P}",
+    "positions reverse the same way"
+   ]
+  ],
+  "example": {
+   "problem": "A wheel W spins in the car C at ^{C}ω⃗^{W} = 10ŷ rad/s. Find ^{W}ω⃗^{C}.",
+   "steps": [
+    "^{W}ω⃗^{C} = −^{C}ω⃗^{W}"
+   ],
+   "answer": "^{W}ω⃗^{C} = −10ŷ rad/s"
+  }
+ },
+ "^{A}α⃗^{B} = ^{A}d(^{A}ω⃗^{B})/dt = ^{B}d(^{A}ω⃗^{B})/dt": {
+  "title": "Angular acceleration, in either frame",
+  "about": "B's angular acceleration in A is the derivative of ^{A}ω⃗^{B} in A. By the golden rule the derivative in B is the same, since ω⃗ × ω⃗ = 0, so pick whichever frame makes ω⃗ easiest to differentiate.",
+  "assumptions": [
+   "Only A and B are interchangeable here; a third frame adds a cross-product term"
+  ],
+  "vars": [
+   [
+    "^{A}α⃗^{B}",
+    "angular acceleration of B in A",
+    "rad/s^{2}"
+   ],
+   [
+    "^{A}ω⃗^{B}",
+    "angular velocity of B in A",
+    "rad/s"
+   ]
+  ],
+  "related": [
+   [
+    "^{A}dv⃗/dt = ^{B}dv⃗/dt + ^{A}ω⃗^{B} × v⃗",
+    "golden rule"
+   ],
+   [
+    "^{A}α⃗^{B} = θ̈ λ̂",
+    "for a fixed axis"
+   ]
+  ],
+  "example": {
+   "problem": "B spins in A with ^{A}ω⃗^{B} = 3t^{2} b̂_{z} rad/s. Find ^{A}α⃗^{B} at t = 2 s.",
+   "steps": [
+    "Differentiate in B: b̂_{z} is fixed in B, so α⃗ = 6t b̂_{z}",
+    "At t = 2 s: 12 b̂_{z}"
+   ],
+   "answer": "^{A}α⃗^{B} = 12 b̂_{z} rad/s^{2}"
+  }
+ },
+ "^{P}r⃗^{Q} = −^{Q}r⃗^{P}": {
+  "title": "Reversing a position vector",
+  "about": "^{P}r⃗^{Q} points from P to Q; reversing the points reverses the vector. Mitiguy writes the start point on the left superscript and the end on the right.",
+  "assumptions": [
+   "P and Q are points; no frame is needed for a position vector"
+  ],
+  "vars": [
+   [
+    "^{P}r⃗^{Q}",
+    "position vector from P to Q",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "^{Q_{1}}r⃗^{Q_{4}} = …",
+    "adding position vectors"
+   ],
+   [
+    "d = |^{P}r⃗^{Q}|",
+    "the distance"
+   ]
+  ],
+  "example": {
+   "problem": "^{P}r⃗^{Q} = 3x̂ − ŷ + 2ẑ m. Find ^{Q}r⃗^{P}.",
+   "steps": [
+    "^{Q}r⃗^{P} = −^{P}r⃗^{Q}"
+   ],
+   "answer": "^{Q}r⃗^{P} = −3x̂ + ŷ − 2ẑ m"
+  }
+ },
+ "^{Q_{1}}r⃗^{Q_{4}} = ^{Q_{3}}r⃗^{Q_{4}} + ^{Q_{2}}r⃗^{Q_{3}} + ^{Q_{1}}r⃗^{Q_{2}}": {
+  "title": "Adding position vectors",
+  "about": "To get from Q_{1} to Q_{4}, chain the steps through the points in between and add the vectors. Inner points match up like dominoes, which is a quick check on the order.",
+  "assumptions": [
+   "Points only; position vectors need no frame, though each step may be easiest on a different basis"
+  ],
+  "vars": [
+   [
+    "^{Q_{i}}r⃗^{Q_{j}}",
+    "position vector from Q_{i} to Q_{j}",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "^{P}r⃗^{Q} = −^{Q}r⃗^{P}",
+    "reverse a step"
+   ],
+   [
+    "d = |^{P}r⃗^{Q}|",
+    "distance"
+   ]
+  ],
+  "example": {
+   "problem": "A robot arm goes 1 m along x̂ from the base Q_{1} to Q_{2}, 2 m along ŷ to Q_{3} and 3 m along ẑ to the tool Q_{4}. Find ^{Q_{1}}r⃗^{Q_{4}}.",
+   "steps": [
+    "^{Q_{1}}r⃗^{Q_{4}} = 1x̂ + 2ŷ + 3ẑ m"
+   ],
+   "answer": "^{Q_{1}}r⃗^{Q_{4}} = x̂ + 2ŷ + 3ẑ m"
+  },
+  "try": "[1 0 0] + [0 2 0] + [0 0 3]"
+ },
+ "d = |^{P}r⃗^{Q}| = √(^{P}r⃗^{Q} · ^{P}r⃗^{Q})": {
+  "title": "Distance between two points",
+  "about": "The distance from P to Q is the magnitude of the position vector between them, the square root of the vector dotted with itself.",
+  "assumptions": [
+   "The basis must be orthonormal for the component sum of squares"
+  ],
+  "vars": [
+   [
+    "d",
+    "distance from P to Q",
+    "m"
+   ],
+   [
+    "^{P}r⃗^{Q}",
+    "position vector from P to Q",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "|v⃗| = √(v⃗ · v⃗)",
+    "magnitude of any vector"
+   ]
+  ],
+  "example": {
+   "problem": "^{P}r⃗^{Q} = 2x̂ − 3ŷ + 6ẑ m. How far apart are P and Q?",
+   "steps": [
+    "d = √(2^{2} + 3^{2} + 6^{2}) = √49"
+   ],
+   "answer": "d = 7 m"
+  },
+  "try": "norm([2 -3 6])"
+ },
+ "^{N}v⃗^{Q} = ^{N}d(^{N_{o}}r⃗^{Q})/dt": {
+  "title": "Velocity: derivative of position in N",
+  "about": "Q's velocity in frame N is the derivative, in N, of its position from a point N_{o} fixed in N. Velocity always names a frame because a vector's derivative depends on it.",
+  "assumptions": [
+   "N_{o} must be fixed in N (any such point gives the same answer)",
+   "The derivative is taken in N; use the golden rule if r⃗ is on another frame's unit vectors"
+  ],
+  "vars": [
+   [
+    "^{N}v⃗^{Q}",
+    "velocity of Q in N",
+    "m/s"
+   ],
+   [
+    "^{N_{o}}r⃗^{Q}",
+    "position of Q from N_{o}",
+    "m"
+   ],
+   [
+    "N_{o}",
+    "point fixed in N",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "^{N}a⃗^{Q} = ^{N}d(^{N}v⃗^{Q})/dt",
+    "acceleration"
+   ],
+   [
+    "v⃗ = ṙ r̂ + r θ̇ θ̂",
+    "in polar form"
+   ]
+  ],
+  "example": {
+   "problem": "A point moves in N with ^{N_{o}}r⃗^{Q} = 2t^{2} n̂_{x} + 3t n̂_{y} m. Find its velocity and speed at t = 2 s.",
+   "steps": [
+    "^{N}v⃗^{Q} = 4t n̂_{x} + 3 n̂_{y} = 8n̂_{x} + 3n̂_{y} m/s at t = 2",
+    "|v⃗| = √(64 + 9) = 8.544 m/s"
+   ],
+   "answer": "^{N}v⃗^{Q} = 8n̂_{x} + 3n̂_{y} m/s, speed ≈ 8.544 m/s"
+  },
+  "try": "norm([8 3 0])"
+ },
+ "^{N}a⃗^{Q} = ^{N}d(^{N}v⃗^{Q})/dt": {
+  "title": "Acceleration: derivative of velocity in N",
+  "about": "Q's acceleration in N is the derivative in N of its velocity in N. Both derivatives must be in the same frame; Newton's law F⃗ = m ^{N}a⃗ needs N to be inertial.",
+  "assumptions": [
+   "Both derivatives in the same frame N"
+  ],
+  "vars": [
+   [
+    "^{N}a⃗^{Q}",
+    "acceleration of Q in N",
+    "m/s^{2}"
+   ],
+   [
+    "^{N}v⃗^{Q}",
+    "velocity of Q in N",
+    "m/s"
+   ]
+  ],
+  "related": [
+   [
+    "^{N}v⃗^{Q} = ^{N}d(^{N_{o}}r⃗^{Q})/dt",
+    "velocity"
+   ],
+   [
+    "F⃗ = m ^{N}a⃗^{Q}",
+    "Newton's second law, N inertial"
+   ]
+  ],
+  "example": {
+   "problem": "A ball's velocity in N is ^{N}v⃗^{Q} = 10n̂_{x} + (20 − 9.8t) n̂_{y} m/s. Find its acceleration.",
+   "steps": [
+    "Differentiate each measure number: 0 n̂_{x} − 9.8 n̂_{y}"
+   ],
+   "answer": "^{N}a⃗^{Q} = −9.8n̂_{y} m/s^{2}"
+  }
+ },
+ "^{N}v⃗^{Q} = ^{N}v⃗^{B_{o}} + ^{N}ω⃗^{B} × ^{B_{o}}r⃗^{Q}": {
+  "title": "Velocity of two points on one rigid body",
+  "about": "For two points fixed on the same rigid body, the velocity of one is the other's velocity plus ω⃗ × r⃗ between them. It finds any point's velocity on a link, wheel or gear from one known point.",
+  "assumptions": [
+   "B_{o} and Q are both fixed on rigid body B",
+   "If Q moves on B, add ^{B}v⃗^{Q}"
+  ],
+  "vars": [
+   [
+    "^{N}v⃗^{Q}",
+    "velocity of Q in N",
+    "m/s"
+   ],
+   [
+    "^{N}v⃗^{B_{o}}",
+    "velocity of B_{o} in N",
+    "m/s"
+   ],
+   [
+    "^{N}ω⃗^{B}",
+    "angular velocity of body B in N",
+    "rad/s"
+   ],
+   [
+    "^{B_{o}}r⃗^{Q}",
+    "position of Q from B_{o}",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "^{N}a⃗^{Q} = ^{N}a⃗^{B_{o}} + ^{N}α⃗^{B} × r⃗ + ω⃗ × (ω⃗ × r⃗)",
+    "the acceleration version"
+   ],
+   [
+    "v = ω r",
+    "rolling, no slip"
+   ]
+  ],
+  "example": {
+   "problem": "A wheel of radius 0.4 m rolls without slipping: its centre B_{o} moves at 2n̂_{x} m/s and ^{N}ω⃗^{B} = −5n̂_{z} rad/s. Find the velocity of the top point Q, at 0.4n̂_{y} m from B_{o}.",
+   "steps": [
+    "ω⃗ × r⃗ = −5n̂_{z} × 0.4n̂_{y} = 2n̂_{x}",
+    "^{N}v⃗^{Q} = 2n̂_{x} + 2n̂_{x}"
+   ],
+   "answer": "^{N}v⃗^{Q} = 4n̂_{x} m/s"
+  },
+  "try": "[2 0 0] + cross([0 0 -5], [0 0.4 0])"
+ },
+ "^{N}a⃗^{Q} = ^{N}a⃗^{B_{o}} + ^{N}α⃗^{B} × ^{B_{o}}r⃗^{Q} + ^{N}ω⃗^{B} × (^{N}ω⃗^{B} × ^{B_{o}}r⃗^{Q})": {
+  "title": "Acceleration of two points on one rigid body",
+  "about": "For two points fixed on one rigid body, the acceleration of Q is B_{o}'s plus a tangential term α⃗ × r⃗ and a centripetal term ω⃗ × (ω⃗ × r⃗) pointing back toward B_{o}.",
+  "assumptions": [
+   "B_{o} and Q are both fixed on rigid body B",
+   "If Q moves on B, use the one-point-moving form with the Coriolis term"
+  ],
+  "vars": [
+   [
+    "^{N}a⃗^{Q}",
+    "acceleration of Q in N",
+    "m/s^{2}"
+   ],
+   [
+    "^{N}a⃗^{B_{o}}",
+    "acceleration of B_{o} in N",
+    "m/s^{2}"
+   ],
+   [
+    "^{N}α⃗^{B}",
+    "angular acceleration of B in N",
+    "rad/s^{2}"
+   ],
+   [
+    "^{N}ω⃗^{B}",
+    "angular velocity of body B in N",
+    "rad/s"
+   ],
+   [
+    "^{B_{o}}r⃗^{Q}",
+    "position of Q from B_{o}",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "^{N}v⃗^{Q} = ^{N}v⃗^{B_{o}} + ^{N}ω⃗^{B} × ^{B_{o}}r⃗^{Q}",
+    "the velocity version"
+   ],
+   [
+    "a_{n} = ω^{2} r",
+    "centripetal size"
+   ]
+  ],
+  "example": {
+   "problem": "A bar pinned at B_{o} turns with ω⃗ = 4n̂_{z} rad/s and α⃗ = 3n̂_{z} rad/s^{2}. Find the acceleration of its tip Q at 0.5b̂_{x} m (with b̂_{x} = n̂_{x} at this instant).",
+   "steps": [
+    "α⃗ × r⃗ = 3n̂_{z} × 0.5n̂_{x} = 1.5n̂_{y}",
+    "ω⃗ × (ω⃗ × r⃗) = −ω^{2} r⃗ = −16 × 0.5n̂_{x} = −8n̂_{x}",
+    "^{N}a⃗^{B_{o}} = 0 (pinned)"
+   ],
+   "answer": "^{N}a⃗^{Q} = −8n̂_{x} + 1.5n̂_{y} m/s^{2}"
+  },
+  "try": "cross([0 0 3], [0.5 0 0]) + cross([0 0 4], cross([0 0 4], [0.5 0 0]))"
+ },
+ "^{N}v⃗^{Q} = ^{N}v⃗^{B_{o}} + ^{N}ω⃗^{B} × ^{B_{o}}r⃗^{Q} + ^{B}v⃗^{Q}": {
+  "title": "Velocity of a point moving on a body",
+  "about": "When Q slides along a moving body B, its velocity in N is the velocity of the body point it is passing over, plus Q's own velocity relative to B.",
+  "assumptions": [
+   "B_{o} is fixed on B; Q moves relative to B",
+   "^{B}v⃗^{Q} is Q's velocity as seen by an observer riding on B"
+  ],
+  "vars": [
+   [
+    "^{N}v⃗^{Q}",
+    "velocity of Q in N",
+    "m/s"
+   ],
+   [
+    "^{N}v⃗^{B_{o}}",
+    "velocity of B_{o} in N",
+    "m/s"
+   ],
+   [
+    "^{N}ω⃗^{B}",
+    "angular velocity of body B in N",
+    "rad/s"
+   ],
+   [
+    "^{B_{o}}r⃗^{Q}",
+    "position of Q from B_{o}",
+    "m"
+   ],
+   [
+    "^{B}v⃗^{Q}",
+    "velocity of Q relative to B",
+    "m/s"
+   ]
+  ],
+  "related": [
+   [
+    "^{N}a⃗^{Q} = … + 2 ^{N}ω⃗^{B} × ^{B}v⃗^{Q} + ^{B}a⃗^{Q}",
+    "the acceleration version, with Coriolis"
+   ]
+  ],
+  "example": {
+   "problem": "A rod B turns about a fixed pin B_{o} at ω⃗ = 2n̂_{z} rad/s. A bead Q is 0.3 m out along it and sliding outward at 0.5 m/s. Find ^{N}v⃗^{Q} (rod along n̂_{x} at this instant).",
+   "steps": [
+    "^{N}v⃗^{B_{o}} = 0",
+    "ω⃗ × r⃗ = 2n̂_{z} × 0.3n̂_{x} = 0.6n̂_{y}",
+    "^{B}v⃗^{Q} = 0.5n̂_{x}"
+   ],
+   "answer": "^{N}v⃗^{Q} = 0.5n̂_{x} + 0.6n̂_{y} m/s"
+  },
+  "try": "cross([0 0 2], [0.3 0 0]) + [0.5 0 0]"
+ },
+ "^{N}a⃗^{Q} = ^{N}a⃗^{B_{o}} + ^{N}α⃗^{B} × r⃗ + ^{N}ω⃗^{B} × (^{N}ω⃗^{B} × r⃗) + 2 ^{N}ω⃗^{B} × ^{B}v⃗^{Q} + ^{B}a⃗^{Q}": {
+  "title": "Acceleration of a point moving on a body (Coriolis)",
+  "about": "For Q moving on a moving body B, the acceleration in N has five parts: B_{o}'s acceleration, tangential α⃗ × r⃗, centripetal ω⃗ × (ω⃗ × r⃗), the Coriolis term 2ω⃗ × ^{B}v⃗^{Q}, and Q's acceleration relative to B.",
+  "assumptions": [
+   "r⃗ = ^{B_{o}}r⃗^{Q} with B_{o} fixed on B",
+   "The Coriolis term vanishes only if Q is still on B or moves parallel to ω⃗"
+  ],
+  "vars": [
+   [
+    "^{N}a⃗^{Q}",
+    "acceleration of Q in N",
+    "m/s^{2}"
+   ],
+   [
+    "^{N}a⃗^{B_{o}}",
+    "acceleration of B_{o} in N",
+    "m/s^{2}"
+   ],
+   [
+    "^{N}α⃗^{B}",
+    "angular acceleration of B in N",
+    "rad/s^{2}"
+   ],
+   [
+    "^{N}ω⃗^{B}",
+    "angular velocity of body B in N",
+    "rad/s"
+   ],
+   [
+    "r⃗",
+    "position of Q from B_{o}",
+    "m"
+   ],
+   [
+    "^{B}v⃗^{Q}",
+    "velocity of Q relative to B",
+    "m/s"
+   ],
+   [
+    "^{B}a⃗^{Q}",
+    "acceleration of Q relative to B",
+    "m/s^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "^{N}v⃗^{Q} = ^{N}v⃗^{B_{o}} + ^{N}ω⃗^{B} × ^{B_{o}}r⃗^{Q} + ^{B}v⃗^{Q}",
+    "the velocity version"
+   ]
+  ],
+  "example": {
+   "problem": "The rod turns steadily at ω⃗ = 2n̂_{z} rad/s about fixed B_{o}; the bead is 0.3 m out, sliding outward at a steady 0.5 m/s (rod along n̂_{x} now). Find ^{N}a⃗^{Q}.",
+   "steps": [
+    "^{N}a⃗^{B_{o}} = 0, α⃗ = 0, ^{B}a⃗^{Q} = 0",
+    "ω⃗ × (ω⃗ × r⃗) = −4 × 0.3n̂_{x} = −1.2n̂_{x}",
+    "2ω⃗ × ^{B}v⃗^{Q} = 2 × 2n̂_{z} × 0.5n̂_{x} = 2n̂_{y}"
+   ],
+   "answer": "^{N}a⃗^{Q} = −1.2n̂_{x} + 2n̂_{y} m/s^{2}"
+  },
+  "try": "cross([0 0 2], cross([0 0 2], [0.3 0 0])) + 2 cross([0 0 2], [0.5 0 0])"
+ },
+ "v⃗ = ṙ r̂ + r θ̇ θ̂": {
+  "title": "Velocity in polar coordinates",
+  "about": "In polar coordinates the velocity has a radial part ṙ, from the distance changing, and a transverse part r θ̇, from the line turning. It follows from the golden rule with r̂ turning at θ̇.",
+  "assumptions": [
+   "Planar motion about a fixed origin",
+   "θ̇ in rad/s"
+  ],
+  "vars": [
+   [
+    "v⃗",
+    "velocity",
+    "m/s"
+   ],
+   [
+    "r",
+    "distance from the origin",
+    "m"
+   ],
+   [
+    "θ",
+    "polar angle",
+    "rad"
+   ],
+   [
+    "r̂",
+    "unit vector outward along r",
+    ""
+   ],
+   [
+    "θ̂",
+    "unit vector ⊥ r̂, toward increasing θ",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "a⃗ = (r̈ − r θ̇^{2}) r̂ + (r θ̈ + 2 ṙ θ̇) θ̂",
+    "acceleration in polar form"
+   ]
+  ],
+  "example": {
+   "problem": "A slider on a turning arm is at r = 2 m, moving out at ṙ = 0.5 m/s, while the arm turns at θ̇ = 3 rad/s. Find its speed.",
+   "steps": [
+    "v⃗ = 0.5 r̂ + 2 × 3 θ̂ = 0.5 r̂ + 6 θ̂ m/s",
+    "|v⃗| = √(0.25 + 36)"
+   ],
+   "answer": "|v⃗| ≈ 6.021 m/s"
+  },
+  "try": "sqrt(0.5^2 + (2*3)^2)"
+ },
+ "a⃗ = (r̈ − r θ̇^{2}) r̂ + (r θ̈ + 2 ṙ θ̇) θ̂": {
+  "title": "Acceleration in polar coordinates",
+  "about": "The radial part is r̈ less the centripetal r θ̇^{2}; the transverse part is r θ̈ plus the Coriolis 2 ṙ θ̇. Use it for anything on a turning arm or in orbit.",
+  "assumptions": [
+   "Planar motion about a fixed origin",
+   "Angles in radians"
+  ],
+  "vars": [
+   [
+    "a⃗",
+    "acceleration",
+    "m/s^{2}"
+   ],
+   [
+    "r",
+    "distance from the origin",
+    "m"
+   ],
+   [
+    "θ",
+    "polar angle",
+    "rad"
+   ],
+   [
+    "r̂",
+    "unit vector outward along r",
+    ""
+   ],
+   [
+    "θ̂",
+    "unit vector ⊥ r̂, toward increasing θ",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "v⃗ = ṙ r̂ + r θ̇ θ̂",
+    "velocity in polar form"
+   ]
+  ],
+  "example": {
+   "problem": "The slider is at r = 2 m with ṙ = 0.5 m/s, r̈ = 0, and the arm turns steadily at θ̇ = 3 rad/s (θ̈ = 0). Find a⃗.",
+   "steps": [
+    "a_{r} = 0 − 2 × 3^{2} = −18 m/s^{2}",
+    "a_{θ} = 2 × 0 + 2 × 0.5 × 3 = 3 m/s^{2}"
+   ],
+   "answer": "a⃗ = −18 r̂ + 3 θ̂ m/s^{2}"
+  },
+  "try": "[0 - 2*3^2, 2*0 + 2*0.5*3]"
+ },
+ "a⃗ = v̇ t̂ + (v^{2}/ρ) n̂": {
+  "title": "Acceleration along a path (tangential and normal)",
+  "about": "Along a curved path the acceleration splits into v̇ along the path, which changes the speed, and v^{2}/ρ toward the centre of curvature, which turns the velocity.",
+  "assumptions": [
+   "t̂ is along the velocity, n̂ points to the centre of curvature",
+   "ρ is the radius of curvature at that point"
+  ],
+  "vars": [
+   [
+    "a⃗",
+    "acceleration",
+    "m/s^{2}"
+   ],
+   [
+    "v",
+    "speed",
+    "m/s"
+   ],
+   [
+    "v̇",
+    "rate of change of speed",
+    "m/s^{2}"
+   ],
+   [
+    "ρ",
+    "radius of curvature",
+    "m"
+   ],
+   [
+    "t̂, n̂",
+    "unit tangent and normal",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "a_{n} = v^{2}/ρ = ω^{2} ρ",
+    "on a circle"
+   ],
+   [
+    "a⃗ = (r̈ − r θ̇^{2}) r̂ + …",
+    "polar form"
+   ]
+  ],
+  "example": {
+   "problem": "A car on a 50 m radius curve is at 20 m/s and braking at 3 m/s^{2}. Find its acceleration and its size.",
+   "steps": [
+    "a_{t} = −3 m/s^{2}",
+    "a_{n} = 20^{2}/50 = 8 m/s^{2}",
+    "|a⃗| = √(9 + 64)"
+   ],
+   "answer": "a⃗ = −3t̂ + 8n̂ m/s^{2}, |a⃗| ≈ 8.544 m/s^{2}"
+  },
+  "try": "sqrt((-3)^2 + (20^2/50)^2)"
+ },
+ "^{F}v⃗^{B_{A}} = ^{F}v⃗^{A_{B}}": {
+  "title": "Rolling without slip: the contact points move together",
+  "about": "When body B rolls on body A without slipping, B's point touching A and A's point touching B have the same velocity in any frame F. On fixed ground the wheel's contact point is momentarily at rest.",
+  "assumptions": [
+   "No slip at the contact; sliding allows tangential velocities to differ",
+   "B_{A} is the point of B touching A; A_{B} the point of A touching B"
+  ],
+  "vars": [
+   [
+    "^{F}v⃗^{B_{A}}",
+    "velocity of B's contact point in F",
+    "m/s"
+   ],
+   [
+    "^{F}v⃗^{A_{B}}",
+    "velocity of A's contact point in F",
+    "m/s"
+   ]
+  ],
+  "related": [
+   [
+    "a = α r",
+    "the centre of a rolling wheel"
+   ],
+   [
+    "^{N}v⃗^{Q} = ^{N}v⃗^{B_{o}} + ω⃗ × r⃗",
+    "find the rest of the wheel"
+   ]
+  ],
+  "example": {
+   "problem": "A 0.3 m radius wheel rolls on fixed ground with its centre at 6 m/s. Find its spin rate.",
+   "steps": [
+    "Contact point velocity = ground's = 0",
+    "0 = v_{centre} − ω r, so ω = 6/0.3"
+   ],
+   "answer": "ω = 20 rad/s (top point at 12 m/s)"
+  },
+  "try": "6 / 0.3"
+ },
+ "^{F}ω^{A} r_{A} = ± ^{F}ω^{B} r_{B}": {
+  "title": "Gear ratio from pitch radii",
+  "about": "Meshing gears share the speed of their contact point, so ω × r is equal for both. External gears turn opposite ways (−), a gear inside a ring gear the same way (+).",
+  "assumptions": [
+   "No slip at the pitch point",
+   "Both rates measured in the same frame F, usually the housing"
+  ],
+  "vars": [
+   [
+    "^{F}ω^{A}",
+    "angular speed of gear A in F",
+    "rad/s"
+   ],
+   [
+    "r_{A}",
+    "pitch radius of A",
+    "m"
+   ],
+   [
+    "^{F}ω^{B}",
+    "angular speed of gear B in F",
+    "rad/s"
+   ],
+   [
+    "r_{B}",
+    "pitch radius of B",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "ω_{A}/ω_{B} = N_{B}/N_{A}",
+    "by tooth counts"
+   ]
+  ],
+  "example": {
+   "problem": "A 40 mm pinion turns at 300 rpm and drives a 120 mm external gear. Find the gear's speed.",
+   "steps": [
+    "ω_{B} = ω_{A} r_{A}/r_{B} = 300 × 40/120",
+    "External mesh: opposite direction"
+   ],
+   "answer": "ω_{B} = 100 rpm, opposite way"
+  },
+  "try": "300 rpm * 40 mm / 120 mm to rpm"
+ },
+ "a = α r": {
+  "title": "Rolling wheel: centre acceleration",
+  "about": "A wheel rolling without slip on a straight, fixed surface has its centre accelerating at α r, from differentiating v = ω r.",
+  "assumptions": [
+   "No slip on a fixed, straight surface",
+   "α in rad/s^{2}"
+  ],
+  "vars": [
+   [
+    "a",
+    "acceleration of the wheel's centre",
+    "m/s^{2}"
+   ],
+   [
+    "α",
+    "angular acceleration",
+    "rad/s^{2}"
+   ],
+   [
+    "r",
+    "wheel radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "v = ω r",
+    "the velocity version"
+   ],
+   [
+    "^{F}v⃗^{B_{A}} = ^{F}v⃗^{A_{B}}",
+    "the rolling condition"
+   ]
+  ],
+  "example": {
+   "problem": "A 0.35 m radius wheel speeds up its spin at α = 4 rad/s^{2} while rolling. Find its centre's acceleration.",
+   "steps": [
+    "a = α r = 4 × 0.35"
+   ],
+   "answer": "a = 1.4 m/s^{2}"
+  },
+  "try": "4/s^2 * 0.35 m"
+ },
+ "m^{S} = Σ_{i=1}^{n} m^{Q_{i}}": {
+  "title": "Total mass of a system",
+  "about": "A system's mass is the sum of the masses of its particles or bodies.",
+  "assumptions": [
+   "Mass is constant (no mass entering or leaving)"
+  ],
+  "vars": [
+   [
+    "m^{S}",
+    "mass of system S",
+    "kg"
+   ],
+   [
+    "m^{Q_{i}}",
+    "mass of particle Q_{i}",
+    "kg"
+   ],
+   [
+    "n",
+    "number of particles",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "^{O}r⃗^{S_{cm}} = (1/m^{S}) Σ m^{Q_{i}} ^{O}r⃗^{Q_{i}}",
+    "mass centre"
+   ]
+  ],
+  "example": {
+   "problem": "A system has particles of 2 kg, 3 kg and 5 kg. Find its mass.",
+   "steps": [
+    "m^{S} = 2 + 3 + 5"
+   ],
+   "answer": "m^{S} = 10 kg"
+  },
+  "try": "2 kg + 3 kg + 5 kg"
+ },
+ "^{O}r⃗^{S_{cm}} = (1/m^{S}) Σ_{i=1}^{n} m^{Q_{i}} ^{O}r⃗^{Q_{i}}": {
+  "title": "Mass centre of a system",
+  "about": "The mass centre is the mass-weighted average of the particles' positions from any point O. For a continuous body the sum becomes an integral.",
+  "assumptions": [
+   "O may be any point; the mass centre found is the same"
+  ],
+  "vars": [
+   [
+    "^{O}r⃗^{S_{cm}}",
+    "position of the mass centre from O",
+    "m"
+   ],
+   [
+    "m^{S}",
+    "total mass",
+    "kg"
+   ],
+   [
+    "m^{Q_{i}}",
+    "mass of particle Q_{i}",
+    "kg"
+   ],
+   [
+    "^{O}r⃗^{Q_{i}}",
+    "position of Q_{i} from O",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "m^{S} = Σ m^{Q_{i}}",
+    "total mass"
+   ],
+   [
+    "m^{S} ^{N}v⃗^{S_{cm}} = Σ m^{Q_{i}} ^{N}v⃗^{Q_{i}}",
+    "its velocity"
+   ]
+  ],
+  "example": {
+   "problem": "Particles of 2 kg at (0, 0), 3 kg at (1, 0) and 5 kg at (0, 2) m. Find the mass centre.",
+   "steps": [
+    "m^{S} = 10 kg",
+    "x = (3 × 1)/10 = 0.3 m",
+    "y = (5 × 2)/10 = 1 m"
+   ],
+   "answer": "^{O}r⃗^{S_{cm}} = 0.3x̂ + 1ŷ m"
+  },
+  "try": "(2 [0 0] + 3 [1 0] + 5 [0 2]) / 10"
+ },
+ "m^{S} ^{N}v⃗^{S_{cm}} = Σ_{i=1}^{n} m^{Q_{i}} ^{N}v⃗^{Q_{i}}": {
+  "title": "Linear momentum and the mass centre's velocity",
+  "about": "The system's total linear momentum equals its mass times the mass centre's velocity. So the mass centre moves as if all the mass were there.",
+  "assumptions": [
+   "Constant masses; all velocities in the same frame N"
+  ],
+  "vars": [
+   [
+    "m^{S}",
+    "total mass",
+    "kg"
+   ],
+   [
+    "^{N}v⃗^{S_{cm}}",
+    "velocity of the mass centre in N",
+    "m/s"
+   ],
+   [
+    "m^{Q_{i}}",
+    "mass of particle Q_{i}",
+    "kg"
+   ],
+   [
+    "^{N}v⃗^{Q_{i}}",
+    "velocity of Q_{i} in N",
+    "m/s"
+   ]
+  ],
+  "related": [
+   [
+    "m^{S} ^{N}a⃗^{S_{cm}} = Σ m^{Q_{i}} ^{N}a⃗^{Q_{i}}",
+    "the acceleration version"
+   ]
+  ],
+  "example": {
+   "problem": "A 2 kg cart moves at 3 m/s and a 3 kg cart at −1 m/s along one track. Find the mass centre's velocity.",
+   "steps": [
+    "Σ m v = 2 × 3 + 3 × (−1) = 3 kg·m/s",
+    "v_{cm} = 3/5"
+   ],
+   "answer": "v_{cm} = 0.6 m/s"
+  },
+  "try": "(2 kg * 3 m/s + 3 kg * -1 m/s) / (5 kg)"
+ },
+ "m^{S} ^{N}a⃗^{S_{cm}} = Σ_{i=1}^{n} m^{Q_{i}} ^{N}a⃗^{Q_{i}}": {
+  "title": "Mass centre's acceleration",
+  "about": "The mass-weighted sum of the particles' accelerations is the total mass times the mass centre's acceleration. With Newton's law this gives ΣF⃗_{ext} = m^{S} ^{N}a⃗^{S_{cm}}.",
+  "assumptions": [
+   "Constant masses; N inertial when used with forces"
+  ],
+  "vars": [
+   [
+    "m^{S}",
+    "total mass",
+    "kg"
+   ],
+   [
+    "^{N}a⃗^{S_{cm}}",
+    "acceleration of the mass centre in N",
+    "m/s^{2}"
+   ],
+   [
+    "m^{Q_{i}}",
+    "mass of particle Q_{i}",
+    "kg"
+   ],
+   [
+    "^{N}a⃗^{Q_{i}}",
+    "acceleration of Q_{i} in N",
+    "m/s^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "ΣF⃗ = m^{S} ^{N}a⃗^{S_{cm}}",
+    "Newton's law for a system"
+   ]
+  ],
+  "example": {
+   "problem": "A 2 kg particle falls at −9.8ŷ m/s^{2} while a 3 kg particle accelerates at 4x̂ m/s^{2}. Find the mass centre's acceleration.",
+   "steps": [
+    "Σ m a⃗ = 2(−9.8ŷ) + 3(4x̂) = 12x̂ − 19.6ŷ",
+    "÷ 5 kg"
+   ],
+   "answer": "^{N}a⃗^{S_{cm}} = 2.4x̂ − 3.92ŷ m/s^{2}"
+  },
+  "try": "(2 [0 -9.8] + 3 [4 0]) / 5"
+ },
+ "I⃡^{Q∕O} = m^{Q} [1⃡ (^{O}r⃗^{Q} · ^{O}r⃗^{Q}) − ^{O}r⃗^{Q} ^{O}r⃗^{Q}]": {
+  "title": "Inertia dyadic of a particle",
+  "about": "A particle's inertia dyadic about O is its mass times (r^{2} 1⃡ − r⃗ r⃗). Its diagonal entries are moments of inertia and its off-diagonal entries products of inertia.",
+  "assumptions": [
+   "1⃡ is the unit dyadic (identity); r⃗ r⃗ is the outer product of the position with itself",
+   "Mitiguy's products include the minus sign: I_{xy} = −m x y"
+  ],
+  "vars": [
+   [
+    "I⃡^{Q∕O}",
+    "inertia dyadic of Q about O",
+    "kg·m^{2}"
+   ],
+   [
+    "m^{Q}",
+    "mass of Q",
+    "kg"
+   ],
+   [
+    "^{O}r⃗^{Q}",
+    "position of Q from O",
+    "m"
+   ],
+   [
+    "1⃡",
+    "unit dyadic",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "I⃡^{S∕O} = Σ I⃡^{Q_{i}∕O}",
+    "add particles"
+   ],
+   [
+    "I_{xx} = Σ m (y^{2} + z^{2})",
+    "the entries"
+   ]
+  ],
+  "example": {
+   "problem": "A 2 kg particle sits at r⃗ = x̂ + 2ŷ m from O. Find its inertia matrix about O.",
+   "steps": [
+    "r⃗ · r⃗ = 5 m^{2}",
+    "I_{xx} = 2(5 − 1) = 8, I_{yy} = 2(5 − 4) = 2, I_{zz} = 2 × 5 = 10",
+    "I_{xy} = −2 × 1 × 2 = −4, I_{xz} = I_{yz} = 0"
+   ],
+   "answer": "[I] = [8, −4, 0; −4, 2, 0; 0, 0, 10] kg·m^{2}"
+  },
+  "try": "2 (dot([1 2 0], [1 2 0]) identity(3) - [1; 2; 0] [1 2 0])"
+ },
+ "I⃡^{S∕O} = Σ_{i=1}^{n} I⃡^{Q_{i}∕O}": {
+  "title": "Inertia of a system: add the parts",
+  "about": "The inertia dyadic of a system about a point is the sum of its parts' dyadics about that same point. Shift each part to the common point first.",
+  "assumptions": [
+   "Every term must be about the same point O and on the same basis"
+  ],
+  "vars": [
+   [
+    "I⃡^{S∕O}",
+    "inertia dyadic of system S about O",
+    "kg·m^{2}"
+   ],
+   [
+    "I⃡^{Q_{i}∕O}",
+    "inertia dyadic of part Q_{i} about O",
+    "kg·m^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "I⃡^{S∕P} = I⃡^{S∕S_{cm}} + …",
+    "shift a part to O first"
+   ]
+  ],
+  "example": {
+   "problem": "1 kg particles sit at x̂ m and ŷ m from O. Find the system's moments of inertia about O.",
+   "steps": [
+    "First: I_{xx} = 0, I_{yy} = 1, I_{zz} = 1",
+    "Second: I_{xx} = 1, I_{yy} = 0, I_{zz} = 1",
+    "Products are zero (each has a zero coordinate)"
+   ],
+   "answer": "I_{xx} = I_{yy} = 1 kg·m^{2}, I_{zz} = 2 kg·m^{2}, products 0"
+  }
+ },
+ "I_{ûû}^{S∕O} = û · I⃡^{S∕O} · û": {
+  "title": "Moment of inertia about any axis",
+  "about": "Dotting the inertia dyadic with a unit vector on both sides gives the moment of inertia about the line through O along û. One dyadic thus holds the moment about every axis through O.",
+  "assumptions": [
+   "û must be a unit vector",
+   "The axis passes through O"
+  ],
+  "vars": [
+   [
+    "I_{ûû}^{S∕O}",
+    "moment of inertia about the û axis through O",
+    "kg·m^{2}"
+   ],
+   [
+    "û",
+    "unit vector giving the axis direction",
+    ""
+   ],
+   [
+    "I⃡^{S∕O}",
+    "inertia dyadic about O",
+    "kg·m^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "I_{ûû} = [u]^{T} [I] [u]",
+    "with matrices"
+   ],
+   [
+    "I_{ûv̂}^{S∕O} = û · I⃡^{S∕O} · v̂",
+    "product of inertia"
+   ]
+  ],
+  "example": {
+   "problem": "[I] = [4, −1, 0; −1, 2, 0; 0, 0, 5] kg·m^{2} about O. Find the moment about û = (x̂ + ŷ)/√2.",
+   "steps": [
+    "[u]^{T}[I][u] = (4 − 1 − 1 + 2)/2"
+   ],
+   "answer": "I_{ûû} = 2 kg·m^{2}"
+  },
+  "try": "dot([1 1 0], [4 -1 0; -1 2 0; 0 0 5] [1; 1; 0]) / 2"
+ },
+ "I_{ûv̂}^{S∕O} = û · I⃡^{S∕O} · v̂": {
+  "title": "Product of inertia for two directions",
+  "about": "Dotting the dyadic with two different, perpendicular unit vectors gives the product of inertia for that pair. A zero product for every pair means the axes are principal.",
+  "assumptions": [
+   "û and v̂ are perpendicular unit vectors"
+  ],
+  "vars": [
+   [
+    "I_{ûv̂}^{S∕O}",
+    "product of inertia for û, v̂ about O",
+    "kg·m^{2}"
+   ],
+   [
+    "û",
+    "unit vector giving the axis direction",
+    ""
+   ],
+   [
+    "v̂",
+    "second unit vector, ⊥ û",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "I_{ûû}^{S∕O} = û · I⃡^{S∕O} · û",
+    "moment of inertia"
+   ],
+   [
+    "det([I] − λ[1]) = 0",
+    "principal moments"
+   ]
+  ],
+  "example": {
+   "problem": "With [I] = [4, −1, 0; −1, 2, 0; 0, 0, 5] kg·m^{2}, find I_{ûv̂} for û = (x̂ + ŷ)/√2, v̂ = (x̂ − ŷ)/√2.",
+   "steps": [
+    "[I][v] = (5, −3, 0)/√2",
+    "[u]^{T}[I][v] = (5 − 3)/2"
+   ],
+   "answer": "I_{ûv̂} = 1 kg·m^{2}"
+  },
+  "try": "dot([1 1 0], [4 -1 0; -1 2 0; 0 0 5] [1; -1; 0]) / 2"
+ },
+ "I_{ûû}^{S∕O} = Σ_{i=1}^{n} m^{Q_{i}} d_{i}^{2}": {
+  "title": "Moment of inertia from distances to the axis",
+  "about": "The moment of inertia about an axis is each mass times its squared perpendicular distance from the axis, summed. d_{i} = |r⃗ × û| is that distance.",
+  "assumptions": [
+   "d_{i} is the perpendicular distance to the axis, not the distance to O"
+  ],
+  "vars": [
+   [
+    "I_{ûû}^{S∕O}",
+    "moment about the û axis through O",
+    "kg·m^{2}"
+   ],
+   [
+    "m^{Q_{i}}",
+    "mass of particle Q_{i}",
+    "kg"
+   ],
+   [
+    "d_{i}",
+    "distance of Q_{i} from the axis",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I = Ī + m d^{2}",
+    "parallel axis"
+   ],
+   [
+    "k = √(I/m)",
+    "radius of gyration"
+   ]
+  ],
+  "example": {
+   "problem": "A 2 kg mass is 1 m and a 3 kg mass is 2 m from a shaft. Find the moment of inertia about the shaft.",
+   "steps": [
+    "I = 2 × 1^{2} + 3 × 2^{2} = 2 + 12"
+   ],
+   "answer": "I = 14 kg·m^{2}"
+  },
+  "try": "2 kg * (1 m)^2 + 3 kg * (2 m)^2"
+ },
+ "I_{ûv̂}^{S∕O} = −Σ_{i=1}^{n} m^{Q_{i}} δ_{u_{i}} δ_{v_{i}}": {
+  "title": "Product of inertia from coordinates",
+  "about": "The product of inertia is minus the sum of each mass times its two coordinates along û and v̂. It is zero when the mass is balanced about the û–v̂ axes.",
+  "assumptions": [
+   "û ⊥ v̂",
+   "Mitiguy's sign: the minus sign is built into the product"
+  ],
+  "vars": [
+   [
+    "I_{ûv̂}^{S∕O}",
+    "product of inertia about O",
+    "kg·m^{2}"
+   ],
+   [
+    "m^{Q_{i}}",
+    "mass of particle Q_{i}",
+    "kg"
+   ],
+   [
+    "δ_{u_{i}}, δ_{v_{i}}",
+    "coordinates of Q_{i} along û and v̂",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xy} = −Σ m x y",
+    "on x, y axes"
+   ]
+  ],
+  "example": {
+   "problem": "Masses of 2 kg at (1, 2) m and 3 kg at (−1, 1) m. Find I_{xy} about O.",
+   "steps": [
+    "Σ m x y = 2 × 1 × 2 + 3 × (−1) × 1 = 4 − 3 = 1",
+    "I_{xy} = −1"
+   ],
+   "answer": "I_{xy} = −1 kg·m^{2}"
+  },
+  "try": "-(2*1*2 + 3*(-1)*1)"
+ },
+ "I⃡^{S∕P} = I⃡^{S∕S_{cm}} + m^{S} [1⃡ (^{P}r⃗^{S_{cm}} · ^{P}r⃗^{S_{cm}}) − ^{P}r⃗^{S_{cm}} ^{P}r⃗^{S_{cm}}]": {
+  "title": "Parallel axis theorem for the inertia dyadic",
+  "about": "The inertia dyadic about any point P is the one about the mass centre plus that of a particle of the whole mass placed at the mass centre. It shifts every moment and product at once.",
+  "assumptions": [
+   "One of the two points must be the mass centre; to go between two other points, go through S_{cm}"
+  ],
+  "vars": [
+   [
+    "I⃡^{S∕P}",
+    "inertia dyadic about P",
+    "kg·m^{2}"
+   ],
+   [
+    "I⃡^{S∕S_{cm}}",
+    "inertia dyadic about the mass centre",
+    "kg·m^{2}"
+   ],
+   [
+    "m^{S}",
+    "mass of S",
+    "kg"
+   ],
+   [
+    "^{P}r⃗^{S_{cm}}",
+    "position of the mass centre from P",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{ûû}^{S∕O} = I_{ûû}^{S∕S_{cm}} + m^{S} d^{2}",
+    "one moment"
+   ],
+   [
+    "I_{xy}^{S∕O} = I_{xy}^{S∕S_{cm}} − m x y",
+    "one product"
+   ]
+  ],
+  "example": {
+   "problem": "A 4 kg body has [I^{S∕S_{cm}}] = identity (1 kg·m^{2} each, no products). Its mass centre is at x̂ + ŷ m from P. Find [I^{S∕P}].",
+   "steps": [
+    "r⃗ · r⃗ = 2",
+    "m[2·1 − r⃗ r⃗]: I_{xx} = I_{yy} = 4(2 − 1) = 4, I_{zz} = 8, I_{xy} = −4",
+    "Add the mass-centre values"
+   ],
+   "answer": "[I^{S∕P}] = [5, −4, 0; −4, 5, 0; 0, 0, 9] kg·m^{2}"
+  },
+  "try": "identity(3) + 4 (dot([1 1 0], [1 1 0]) identity(3) - [1; 1; 0] [1 1 0])"
+ },
+ "I_{ûû}^{S∕O} = I_{ûû}^{S∕S_{cm}} + m^{S} d^{2}": {
+  "title": "Parallel axis theorem for one moment",
+  "about": "The moment about any axis is the moment about the parallel axis through the mass centre plus m d^{2}. The mass-centre axis always gives the smallest moment of its family.",
+  "assumptions": [
+   "The two axes are parallel and one passes through the mass centre",
+   "d is the perpendicular distance between them"
+  ],
+  "vars": [
+   [
+    "I_{ûû}^{S∕O}",
+    "moment about the axis through O",
+    "kg·m^{2}"
+   ],
+   [
+    "I_{ûû}^{S∕S_{cm}}",
+    "moment about the parallel axis through the mass centre",
+    "kg·m^{2}"
+   ],
+   [
+    "m^{S}",
+    "mass",
+    "kg"
+   ],
+   [
+    "d",
+    "distance between the axes",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I = Ī + m d^{2}",
+    "the short form"
+   ],
+   [
+    "I_{yy} = (1/12) m L^{2}",
+    "rod about its centre"
+   ]
+  ],
+  "example": {
+   "problem": "A 2 kg rod 1 m long. Find its moment about a perpendicular axis through one end.",
+   "steps": [
+    "Ī = (1/12) × 2 × 1^{2} = 0.1667",
+    "+ m d^{2} = 2 × 0.5^{2} = 0.5"
+   ],
+   "answer": "I ≈ 0.6667 kg·m^{2} (= m L^{2}/3)"
+  },
+  "try": "1/12 * 2 kg * (1 m)^2 + 2 kg * (0.5 m)^2"
+ },
+ "I_{xy}^{S∕O} = I_{xy}^{S∕S_{cm}} − m^{S} x_{cm} y_{cm}": {
+  "title": "Parallel axis theorem for a product",
+  "about": "Shifting a product of inertia adds minus the mass times the mass centre's two coordinates from O. Unlike a moment, the shift can be negative, so a product can grow or shrink.",
+  "assumptions": [
+   "x_{cm}, y_{cm} are the mass centre's coordinates measured from O",
+   "Mitiguy's sign: I_{xy} = −Σ m x y"
+  ],
+  "vars": [
+   [
+    "I_{xy}^{S∕O}",
+    "product of inertia about O",
+    "kg·m^{2}"
+   ],
+   [
+    "I_{xy}^{S∕S_{cm}}",
+    "product about the mass centre",
+    "kg·m^{2}"
+   ],
+   [
+    "m^{S}",
+    "mass",
+    "kg"
+   ],
+   [
+    "x_{cm}, y_{cm}",
+    "mass-centre coordinates from O",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{ûû}^{S∕O} = I_{ûû}^{S∕S_{cm}} + m^{S} d^{2}",
+    "a moment"
+   ]
+  ],
+  "example": {
+   "problem": "A 3 kg symmetric plate (I_{xy} = 0 about its centre) has its mass centre at (0.2, 0.1) m from O. Find I_{xy} about O.",
+   "steps": [
+    "I_{xy}^{S∕O} = 0 − 3 × 0.2 × 0.1"
+   ],
+   "answer": "I_{xy}^{S∕O} = −0.06 kg·m^{2}"
+  },
+  "try": "-(3 kg * 0.2 m * 0.1 m)"
+ },
+ "[I] = [I_{xx}, I_{xy}, I_{xz}; I_{xy}, I_{yy}, I_{yz}; I_{xz}, I_{yz}, I_{zz}]": {
+  "title": "Inertia matrix",
+  "about": "Writing the dyadic on three unit vectors gives a symmetric 3 × 3 matrix: moments on the diagonal, products off it. It depends on the point and the axes chosen.",
+  "assumptions": [
+   "Symmetric: I_{xy} = I_{yx} and so on",
+   "Mitiguy's products carry the minus sign, so the matrix is entered as is"
+  ],
+  "vars": [
+   [
+    "I_{xx}, I_{yy}, I_{zz}",
+    "moments of inertia about the axes",
+    "kg·m^{2}"
+   ],
+   [
+    "I_{xy}, I_{xz}, I_{yz}",
+    "products of inertia",
+    "kg·m^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xx} = Σ m (y^{2} + z^{2})",
+    "a moment"
+   ],
+   [
+    "I_{xy} = −Σ m x y",
+    "a product"
+   ],
+   [
+    "det([I] − λ [1]) = 0",
+    "principal moments"
+   ]
+  ],
+  "example": {
+   "problem": "A 1 kg particle is at (1, 1, 0) m from O. Write [I] about O.",
+   "steps": [
+    "I_{xx} = 1(1 + 0) = 1, I_{yy} = 1, I_{zz} = 1(1 + 1) = 2",
+    "I_{xy} = −1 × 1 × 1 = −1, I_{xz} = I_{yz} = 0"
+   ],
+   "answer": "[I] = [1, −1, 0; −1, 1, 0; 0, 0, 2] kg·m^{2}"
+  }
+ },
+ "I_{xx} = Σ m (y^{2} + z^{2})": {
+  "title": "Moment of inertia about x",
+  "about": "The moment about the x axis uses each mass's squared distance from that axis, y^{2} + z^{2}. The x coordinate plays no part.",
+  "assumptions": [
+   "Coordinates measured from the point the axis goes through"
+  ],
+  "vars": [
+   [
+    "I_{xx}",
+    "moment of inertia about x",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "each mass",
+    "kg"
+   ],
+   [
+    "y, z",
+    "its coordinates",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xy} = −Σ m x y",
+    "product"
+   ],
+   [
+    "I = ∫ (y^{2} + z^{2}) dm",
+    "for a continuous body"
+   ]
+  ],
+  "example": {
+   "problem": "Masses of 2 kg at (1, 2, 2) m and 1 kg at (0, 1, 0) m. Find I_{xx}.",
+   "steps": [
+    "2(2^{2} + 2^{2}) + 1(1^{2} + 0) = 16 + 1"
+   ],
+   "answer": "I_{xx} = 17 kg·m^{2}"
+  },
+  "try": "2*(2^2 + 2^2) + 1*(1^2 + 0^2)"
+ },
+ "I_{xy} = −Σ m x y": {
+  "title": "Product of inertia, Mitiguy's sign",
+  "about": "Mitiguy defines the product of inertia with a minus sign, so it can be entered straight into the inertia matrix. Some books drop the sign and put it in the matrix instead; check which a source uses.",
+  "assumptions": [
+   "Coordinates from the point the axes go through",
+   "Zero when the body is symmetric about the x–z or y–z plane"
+  ],
+  "vars": [
+   [
+    "I_{xy}",
+    "product of inertia",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "each mass",
+    "kg"
+   ],
+   [
+    "x, y",
+    "its coordinates",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xy}^{S∕O} = I_{xy}^{S∕S_{cm}} − m x_{cm} y_{cm}",
+    "shift a product"
+   ]
+  ],
+  "example": {
+   "problem": "Masses of 2 kg at (1, 2, 2) m and 1 kg at (3, 1, 0) m. Find I_{xy}.",
+   "steps": [
+    "Σ m x y = 2 × 1 × 2 + 1 × 3 × 1 = 7",
+    "I_{xy} = −7"
+   ],
+   "answer": "I_{xy} = −7 kg·m^{2}"
+  },
+  "try": "-(2*1*2 + 1*3*1)"
+ },
+ "I_{ûû} = [u]^{T} [I] [u]": {
+  "title": "Moment about any direction, with matrices",
+  "about": "The moment of inertia about any axis through the point is the quadratic form of the unit vector's components with the inertia matrix.",
+  "assumptions": [
+   "[u] is a unit column, on the same axes as [I]"
+  ],
+  "vars": [
+   [
+    "I_{ûû}",
+    "moment about the û axis",
+    "kg·m^{2}"
+   ],
+   [
+    "[u]",
+    "components of û",
+    ""
+   ],
+   [
+    "[I]",
+    "inertia matrix",
+    "kg·m^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "I_{ûû}^{S∕O} = û · I⃡^{S∕O} · û",
+    "the dyadic form"
+   ]
+  ],
+  "example": {
+   "problem": "[I] = [3, −1, 0; −1, 3, 0; 0, 0, 4] kg·m^{2}. Find the moment about û = (x̂ + ŷ)/√2.",
+   "steps": [
+    "[I][u] = (2, 2, 0)/√2",
+    "[u]^{T}[I][u] = (2 + 2)/2"
+   ],
+   "answer": "I_{ûû} = 2 kg·m^{2}"
+  },
+  "try": "dot([1 1 0], [3 -1 0; -1 3 0; 0 0 4] [1; 1; 0]) / 2"
+ },
+ "det([I] − λ [1]) = 0": {
+  "title": "Principal moments of inertia",
+  "about": "The principal moments are the eigenvalues of the inertia matrix, the roots of this cubic. Their eigenvectors are the principal axes, about which every product of inertia is zero.",
+  "assumptions": [
+   "[I] is symmetric, so the λ are real and the axes perpendicular",
+   "The largest and smallest λ are the most and least moment about any axis through the point"
+  ],
+  "vars": [
+   [
+    "λ",
+    "principal moment of inertia",
+    "kg·m^{2}"
+   ],
+   [
+    "[I]",
+    "inertia matrix",
+    "kg·m^{2}"
+   ],
+   [
+    "[1]",
+    "3 × 3 identity",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "I_{ûû} = [u]^{T} [I] [u]",
+    "moment about any axis"
+   ],
+   [
+    "I_{xy} = I_{xz} = I_{yz} = 0",
+    "on principal axes"
+   ]
+  ],
+  "example": {
+   "problem": "Find the principal moments of [I] = [3, −1, 0; −1, 3, 0; 0, 0, 4] kg·m^{2}.",
+   "steps": [
+    "z decouples: λ = 4",
+    "x–y block: (3 − λ)^{2} − 1 = 0, so λ = 2 or 4"
+   ],
+   "answer": "λ = 2, 4, 4 kg·m^{2}"
+  },
+  "try": "eigvals([3 -1 0; -1 3 0; 0 0 4])"
+ },
+ "I_{zz} = I_{xx} + I_{yy}": {
+  "title": "Perpendicular axis theorem",
+  "about": "For a flat body lying in the x–y plane, the moment about the normal z axis is the sum of the two in-plane moments, since z = 0 everywhere.",
+  "assumptions": [
+   "The body is thin and flat in the x–y plane (a lamina or a planar wire)",
+   "All three axes meet at one point"
+  ],
+  "vars": [
+   [
+    "I_{zz}",
+    "moment about the normal axis",
+    "kg·m^{2}"
+   ],
+   [
+    "I_{xx}, I_{yy}",
+    "moments about the in-plane axes",
+    "kg·m^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "I_{zz} = m r^{2}",
+    "hoop: I_{xx} = I_{yy} = ½ m r^{2}"
+   ]
+  ],
+  "example": {
+   "problem": "A 2 kg thin plate is 0.3 m by 0.2 m. With I_{xx} = m b^{2}/12 and I_{yy} = m a^{2}/12, find I_{zz} about its centre.",
+   "steps": [
+    "I_{xx} = 2 × 0.2^{2}/12 = 0.00667",
+    "I_{yy} = 2 × 0.3^{2}/12 = 0.015",
+    "Sum"
+   ],
+   "answer": "I_{zz} ≈ 0.02167 kg·m^{2}"
+  },
+  "try": "2 kg * ((0.3 m)^2 + (0.2 m)^2) / 12"
+ },
+ "k = √(I/m)": {
+  "title": "Radius of gyration",
+  "about": "The radius of gyration is the distance at which all the mass, as one particle, would have the same moment of inertia. It compares how spread out bodies of different mass are.",
+  "assumptions": [
+   "k goes with the axis I is taken about"
+  ],
+  "vars": [
+   [
+    "k",
+    "radius of gyration",
+    "m"
+   ],
+   [
+    "I",
+    "moment of inertia about the axis",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass",
+    "kg"
+   ]
+  ],
+  "related": [
+   [
+    "I = m k^{2}",
+    "the same, rearranged"
+   ]
+  ],
+  "example": {
+   "problem": "A flywheel of 8 kg has I = 0.5 kg·m^{2}. Find its radius of gyration.",
+   "steps": [
+    "k = √(0.5/8) = √0.0625"
+   ],
+   "answer": "k = 0.25 m"
+  },
+  "try": "sqrt(0.5 kg m^2 / 8 kg)"
+ },
+ "I_{xy} = I_{xz} = I_{yz} = 0": {
+  "title": "Products of inertia vanish on symmetry axes",
+  "about": "For every body in the tables, the axes drawn through the mass centre are principal, so all products of inertia are zero. A plane of symmetry makes the products with its normal vanish.",
+  "assumptions": [
+   "Axes through the mass centre, as drawn in each figure",
+   "Off those axes, or at another point, products appear; use the shift theorem"
+  ],
+  "vars": [
+   [
+    "I_{xy}, I_{xz}, I_{yz}",
+    "products of inertia",
+    "kg·m^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xy} = −Σ m x y",
+    "the definition"
+   ],
+   [
+    "I_{xy}^{S∕O} = I_{xy}^{S∕S_{cm}} − m x_{cm} y_{cm}",
+    "shift a product"
+   ]
+  ],
+  "example": {
+   "problem": "Two 1 kg masses sit at (1, 1, 0) and (1, −1, 0) m, symmetric about the x–z plane. Find I_{xy}.",
+   "steps": [
+    "I_{xy} = −(1 × 1 × 1 + 1 × 1 × (−1))",
+    "The two terms cancel"
+   ],
+   "answer": "I_{xy} = 0"
+  },
+  "try": "-(1*1*1 + 1*1*(-1))"
+ },
+ "I = Ī + m d^{2}": {
+  "title": "Parallel axis theorem",
+  "about": "The moment about any axis is the moment about the parallel axis through the mass centre (Ī) plus mass times the squared distance between them. Use it to move a table value to a pin or a joint.",
+  "assumptions": [
+   "Ī must be about the mass centre",
+   "The axes are parallel, d apart"
+  ],
+  "vars": [
+   [
+    "I",
+    "moment about the new axis",
+    "kg·m^{2}"
+   ],
+   [
+    "Ī",
+    "moment about the parallel axis through the mass centre",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass",
+    "kg"
+   ],
+   [
+    "d",
+    "distance between the axes",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{ûû}^{S∕O} = I_{ûû}^{S∕S_{cm}} + m^{S} d^{2}",
+    "Mitiguy's form"
+   ],
+   [
+    "k = √(I/m)",
+    "radius of gyration"
+   ]
+  ],
+  "example": {
+   "problem": "A 4 kg disk of radius 0.2 m swings about a pin at its rim, axis normal to the disk. Find I.",
+   "steps": [
+    "Ī = ½ × 4 × 0.2^{2} = 0.08",
+    "+ m d^{2} = 4 × 0.2^{2} = 0.16"
+   ],
+   "answer": "I = 0.24 kg·m^{2}"
+  },
+  "try": "1/2 * 4 kg * (0.2 m)^2 + 4 kg * (0.2 m)^2"
+ },
+ "I_{xx} = 0": {
+  "title": "Thin rod: moment about its own axis",
+  "about": "All of an ideal thin rod's mass lies on its x axis, so its moment about that axis is zero. A real rod of radius r has ½ m r^{2}, usually negligible.",
+  "assumptions": [
+   "x runs along the rod",
+   "The rod is thin: radius ≪ length"
+  ],
+  "vars": [
+   [
+    "I_{xx}",
+    "moment about the rod's own axis",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass",
+    "kg"
+   ],
+   [
+    "L",
+    "length",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{yy} = I_{zz} = (1/12) m L^{2}",
+    "about a transverse axis"
+   ],
+   [
+    "½ m r^{2}",
+    "solid cylinder about its axis"
+   ]
+  ],
+  "example": {
+   "problem": "A 2 kg rod has radius 5 mm. How big is I_{xx} if not taken as zero?",
+   "steps": [
+    "I_{xx} = ½ m r^{2} = ½ × 2 × 0.005^{2}"
+   ],
+   "answer": "I_{xx} = 2.5 × 10^{−5} kg·m^{2}, ≈ 0"
+  },
+  "try": "1/2 * 2 kg * (5 mm)^2 to kg m^2"
+ },
+ "I_{yy} = I_{zz} = (1/12) m L^{2}": {
+  "title": "Thin rod about a transverse axis through its centre",
+  "about": "A uniform thin rod has moment m L^{2}/12 about any axis through its centre, perpendicular to the rod. About an end it is m L^{2}/3.",
+  "assumptions": [
+   "Uniform and thin",
+   "Axis through the mass centre, ⊥ the rod"
+  ],
+  "vars": [
+   [
+    "I_{yy}, I_{zz}",
+    "moments about transverse axes",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass",
+    "kg"
+   ],
+   [
+    "L",
+    "length",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I = Ī + m d^{2}",
+    "about the end: m L^{2}/3"
+   ],
+   [
+    "I_{xx} = 0",
+    "about its own axis"
+   ]
+  ],
+  "example": {
+   "problem": "A 3 kg rod 1.2 m long spins about its centre. Find I.",
+   "steps": [
+    "I = 3 × 1.2^{2}/12 = 4.32/12"
+   ],
+   "answer": "I = 0.36 kg·m^{2}"
+  },
+  "try": "1/12 * 3 kg * (1.2 m)^2"
+ },
+ "L = 2 r θ": {
+  "title": "Length of a circular arc",
+  "about": "An arc of radius r spanning a half-angle θ either side of its symmetry axis is 2rθ long.",
+  "assumptions": [
+   "θ in radians, measured from the symmetry axis to each end"
+  ],
+  "vars": [
+   [
+    "L",
+    "arc length",
+    "m"
+   ],
+   [
+    "r",
+    "radius of the arc",
+    "m"
+   ],
+   [
+    "θ",
+    "half-angle of the arc",
+    "rad"
+   ]
+  ],
+  "related": [
+   [
+    "y_{cm} = r sin(θ)/θ",
+    "its mass centre"
+   ],
+   [
+    "L = π r",
+    "semicircle, θ = π/2"
+   ]
+  ],
+  "example": {
+   "problem": "A wire arc has radius 0.5 m and half-angle 60°. Find its length.",
+   "steps": [
+    "θ = π/3 rad",
+    "L = 2 × 0.5 × π/3"
+   ],
+   "answer": "L ≈ 1.047 m"
+  },
+  "try": "2 * 0.5 m * pi/3"
+ },
+ "y_{cm} = r sin(θ)/θ": {
+  "title": "Mass centre of a circular arc",
+  "about": "A uniform wire arc's mass centre lies on its symmetry axis at r sin θ/θ from the centre of the circle, inside the arc.",
+  "assumptions": [
+   "Uniform wire; θ is the half-angle in radians",
+   "Measured from the circle's centre along the symmetry axis (y)"
+  ],
+  "vars": [
+   [
+    "y_{cm}",
+    "distance of the mass centre from the circle's centre",
+    "m"
+   ],
+   [
+    "r",
+    "radius of the arc",
+    "m"
+   ],
+   [
+    "θ",
+    "half-angle of the arc",
+    "rad"
+   ]
+  ],
+  "related": [
+   [
+    "y_{cm} = 2r/π",
+    "semicircle"
+   ],
+   [
+    "L = 2 r θ",
+    "its length"
+   ]
+  ],
+  "example": {
+   "problem": "A wire arc has radius 0.5 m and half-angle 60°. Find its mass centre.",
+   "steps": [
+    "θ = π/3 = 1.0472, sin θ = 0.8660",
+    "y_{cm} = 0.5 × 0.8660/1.0472"
+   ],
+   "answer": "y_{cm} ≈ 0.4135 m"
+  },
+  "try": "0.5 m * sin(60 deg) / (pi/3)"
+ },
+ "I_{xx} = (1/2) m r^{2} [1 + sin(2θ)/(2θ) − 2 sin^{2}(θ)/θ^{2}]": {
+  "title": "Circular arc: moment about x through its mass centre",
+  "about": "The arc's moment about the x axis through its mass centre (the axis across the symmetry line). The last term is the parallel-axis shift from the circle's centre.",
+  "assumptions": [
+   "Uniform thin wire; θ is the half-angle in radians",
+   "y is the symmetry axis, x ⊥ it in the plane, z normal; all through the mass centre"
+  ],
+  "vars": [
+   [
+    "I_{xx}",
+    "moment about x through the mass centre",
+    "kg·m^{2}"
+   ],
+   [
+    "r",
+    "radius of the arc",
+    "m"
+   ],
+   [
+    "θ",
+    "half-angle of the arc",
+    "rad"
+   ],
+   [
+    "m",
+    "mass",
+    "kg"
+   ]
+  ],
+  "related": [
+   [
+    "I_{yy} = (1/2) m r^{2} [1 − sin(2θ)/(2θ)]",
+    "about the symmetry axis"
+   ],
+   [
+    "I_{zz} = I_{xx} + I_{yy}",
+    "normal axis"
+   ]
+  ],
+  "example": {
+   "problem": "A 1 kg wire arc of radius 0.5 m and half-angle 60°. Find I_{xx}.",
+   "steps": [
+    "θ = π/3: sin 2θ/(2θ) = 0.8660/2.0944 = 0.4135",
+    "2 sin^{2}θ/θ^{2} = 2 × 0.75/1.0966 = 1.3678",
+    "I_{xx} = 0.5 × 1 × 0.25 × (1 + 0.4135 − 1.3678) = 0.125 × 0.04566"
+   ],
+   "answer": "I_{xx} ≈ 0.005708 kg·m^{2}"
+  },
+  "try": "1/2 * 1 kg * (0.5 m)^2 * (1 + sin(120 deg)/(2pi/3) - 2 sin(60 deg)^2/(pi/3)^2)"
+ },
+ "I_{yy} = (1/2) m r^{2} [1 − sin(2θ)/(2θ)]": {
+  "title": "Circular arc: moment about its symmetry axis",
+  "about": "The arc's moment about its symmetry axis y. No shift term is needed since the mass centre lies on that axis.",
+  "assumptions": [
+   "Uniform thin wire; θ is the half-angle in radians"
+  ],
+  "vars": [
+   [
+    "I_{yy}",
+    "moment about the symmetry axis",
+    "kg·m^{2}"
+   ],
+   [
+    "r",
+    "radius of the arc",
+    "m"
+   ],
+   [
+    "θ",
+    "half-angle of the arc",
+    "rad"
+   ],
+   [
+    "m",
+    "mass",
+    "kg"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xx} = (1/2) m r^{2} […]",
+    "across the symmetry axis"
+   ],
+   [
+    "I_{yy} = (1/2) m r^{2}",
+    "semicircle"
+   ]
+  ],
+  "example": {
+   "problem": "A 1 kg wire arc of radius 0.5 m and half-angle 60°. Find I_{yy}.",
+   "steps": [
+    "sin 2θ/(2θ) = 0.4135",
+    "I_{yy} = 0.125 × (1 − 0.4135)"
+   ],
+   "answer": "I_{yy} ≈ 0.07331 kg·m^{2}"
+  },
+  "try": "1/2 * 1 kg * (0.5 m)^2 * (1 - sin(120 deg)/(2pi/3))"
+ },
+ "I_{zz} = m r^{2} [1 − sin^{2}(θ)/θ^{2}]": {
+  "title": "Circular arc: moment about the normal axis",
+  "about": "The arc's moment about the axis normal to its plane through its mass centre: m r^{2} about the circle's centre, less m y_{cm}^{2} for the shift.",
+  "assumptions": [
+   "Uniform thin wire; θ is the half-angle in radians",
+   "Equals I_{xx} + I_{yy} (perpendicular axis theorem)"
+  ],
+  "vars": [
+   [
+    "I_{zz}",
+    "moment about the normal axis through the mass centre",
+    "kg·m^{2}"
+   ],
+   [
+    "r",
+    "radius of the arc",
+    "m"
+   ],
+   [
+    "θ",
+    "half-angle of the arc",
+    "rad"
+   ],
+   [
+    "m",
+    "mass",
+    "kg"
+   ]
+  ],
+  "related": [
+   [
+    "I_{zz} = I_{xx} + I_{yy}",
+    "perpendicular axis"
+   ],
+   [
+    "y_{cm} = r sin(θ)/θ",
+    "the shift distance"
+   ]
+  ],
+  "example": {
+   "problem": "A 1 kg wire arc of radius 0.5 m and half-angle 60°. Find I_{zz}.",
+   "steps": [
+    "sin^{2}θ/θ^{2} = 0.75/1.0966 = 0.6839",
+    "I_{zz} = 1 × 0.25 × (1 − 0.6839)",
+    "Check: 0.005708 + 0.07331 = 0.07902"
+   ],
+   "answer": "I_{zz} ≈ 0.07902 kg·m^{2}"
+  },
+  "try": "1 kg * (0.5 m)^2 * (1 - sin(60 deg)^2/(pi/3)^2)"
+ },
+ "L = π r": {
+  "title": "Length of a semicircular wire",
+  "about": "Half a circle of radius r is π r long, the arc with half-angle θ = π/2.",
+  "assumptions": [
+   "Thin wire"
+  ],
+  "vars": [
+   [
+    "L",
+    "length",
+    "m"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "L = 2 r θ",
+    "any arc"
+   ],
+   [
+    "y_{cm} = 2r/π",
+    "its mass centre"
+   ]
+  ],
+  "example": {
+   "problem": "A semicircular wire has radius 0.25 m. Find its length.",
+   "steps": [
+    "L = π × 0.25"
+   ],
+   "answer": "L ≈ 0.7854 m"
+  },
+  "try": "pi * 0.25 m"
+ },
+ "y_{cm} = 2r/π": {
+  "title": "Mass centre of a semicircular wire",
+  "about": "A uniform semicircular wire has its mass centre on the symmetry axis at 2r/π ≈ 0.637r from the centre. (A solid half disk is at 4r/(3π), closer in.)",
+  "assumptions": [
+   "Uniform thin wire, not a solid half disk"
+  ],
+  "vars": [
+   [
+    "y_{cm}",
+    "distance of the mass centre from the circle's centre",
+    "m"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "y_{cm} = r sin(θ)/θ",
+    "any arc; θ = π/2 gives this"
+   ]
+  ],
+  "example": {
+   "problem": "A semicircular wire has radius 0.25 m. Find its mass centre.",
+   "steps": [
+    "y_{cm} = 2 × 0.25/π"
+   ],
+   "answer": "y_{cm} ≈ 0.1592 m"
+  },
+  "try": "2 * 0.25 m / pi"
+ },
+ "I_{xx} = (1/2) m r^{2} (1 − 8/π^{2})": {
+  "title": "Semicircular wire: moment about x through its mass centre",
+  "about": "The moment about the axis across the symmetry line, through the mass centre. It is ½ m r^{2} about the circle's centre less m(2r/π)^{2}.",
+  "assumptions": [
+   "Uniform thin wire",
+   "Axes through the mass centre, y along the symmetry axis"
+  ],
+  "vars": [
+   [
+    "I_{xx}",
+    "moment about x through the mass centre",
+    "kg·m^{2}"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ],
+   [
+    "m",
+    "mass",
+    "kg"
+   ]
+  ],
+  "related": [
+   [
+    "I_{yy} = (1/2) m r^{2}",
+    "about the symmetry axis"
+   ],
+   [
+    "I_{zz} = m r^{2} (1 − 4/π^{2})",
+    "normal axis"
+   ]
+  ],
+  "example": {
+   "problem": "A 0.5 kg semicircular wire has radius 0.25 m. Find I_{xx}.",
+   "steps": [
+    "8/π^{2} = 0.8106",
+    "I_{xx} = 0.5 × 0.5 × 0.0625 × 0.1894"
+   ],
+   "answer": "I_{xx} ≈ 0.00296 kg·m^{2}"
+  },
+  "try": "1/2 * 0.5 kg * (0.25 m)^2 * (1 - 8/pi^2)"
+ },
+ "I_{yy} = (1/2) m r^{2}": {
+  "title": "Semicircular wire: moment about its symmetry axis",
+  "about": "About its symmetry axis the semicircle has the same ½ m r^{2} as a full hoop about a diameter, because each half of the hoop contributes equally.",
+  "assumptions": [
+   "Uniform thin wire"
+  ],
+  "vars": [
+   [
+    "I_{yy}",
+    "moment about the symmetry axis",
+    "kg·m^{2}"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ],
+   [
+    "m",
+    "mass",
+    "kg"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xx} = I_{yy} = (1/2) m r^{2}",
+    "a full hoop about a diameter"
+   ]
+  ],
+  "example": {
+   "problem": "A 0.5 kg semicircular wire has radius 0.25 m. Find I_{yy}.",
+   "steps": [
+    "I_{yy} = 0.5 × 0.5 × 0.25^{2}"
+   ],
+   "answer": "I_{yy} = 0.015625 kg·m^{2}"
+  },
+  "try": "1/2 * 0.5 kg * (0.25 m)^2"
+ },
+ "I_{zz} = m r^{2} (1 − 4/π^{2})": {
+  "title": "Semicircular wire: moment about the normal axis",
+  "about": "About the normal axis through its mass centre: m r^{2} about the circle's centre less m(2r/π)^{2}.",
+  "assumptions": [
+   "Uniform thin wire",
+   "Equals I_{xx} + I_{yy}"
+  ],
+  "vars": [
+   [
+    "I_{zz}",
+    "moment about the normal axis through the mass centre",
+    "kg·m^{2}"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ],
+   [
+    "m",
+    "mass",
+    "kg"
+   ]
+  ],
+  "related": [
+   [
+    "I_{zz} = I_{xx} + I_{yy}",
+    "perpendicular axis"
+   ],
+   [
+    "y_{cm} = 2r/π",
+    "the shift distance"
+   ]
+  ],
+  "example": {
+   "problem": "A 0.5 kg semicircular wire has radius 0.25 m. Find I_{zz}.",
+   "steps": [
+    "4/π^{2} = 0.4053",
+    "I_{zz} = 0.5 × 0.0625 × 0.5947",
+    "Check: 0.00296 + 0.015625 = 0.01858"
+   ],
+   "answer": "I_{zz} ≈ 0.01858 kg·m^{2}"
+  },
+  "try": "0.5 kg * (0.25 m)^2 * (1 - 4/pi^2)"
+ },
+ "L = 2π r": {
+  "title": "Length of a circular hoop",
+  "about": "A full circle of radius r is 2π r long, which with a wire's mass per length gives its mass.",
+  "assumptions": [
+   "Thin wire"
+  ],
+  "vars": [
+   [
+    "L",
+    "circumference",
+    "m"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{zz} = m r^{2}",
+    "its moment about the axis"
+   ]
+  ],
+  "example": {
+   "problem": "A hoop of radius 0.3 m is bent from wire. Find the length of wire needed.",
+   "steps": [
+    "L = 2π × 0.3"
+   ],
+   "answer": "L ≈ 1.885 m"
+  },
+  "try": "2 pi * 0.3 m"
+ },
+ "I_{xx} = I_{yy} = (1/2) m r^{2}": {
+  "title": "Thin hoop about a diameter",
+  "about": "A thin hoop's moment about any diameter is half its moment about its axis, by symmetry and the perpendicular axis theorem.",
+  "assumptions": [
+   "Uniform thin ring; x and y are diameters through the centre"
+  ],
+  "vars": [
+   [
+    "I_{xx}, I_{yy}",
+    "moments about diameters",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass",
+    "kg"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{zz} = m r^{2}",
+    "about the axis"
+   ],
+   [
+    "I_{zz} = I_{xx} + I_{yy}",
+    "perpendicular axis"
+   ]
+  ],
+  "example": {
+   "problem": "A 0.4 kg hoop of radius 0.3 m spins about a diameter. Find I.",
+   "steps": [
+    "I = ½ × 0.4 × 0.3^{2}"
+   ],
+   "answer": "I = 0.018 kg·m^{2}"
+  },
+  "try": "1/2 * 0.4 kg * (0.3 m)^2"
+ },
+ "I_{zz} = m r^{2}": {
+  "title": "Thin hoop about its axis",
+  "about": "Every bit of a thin hoop is the same distance r from its axis, so its moment is simply m r^{2}, the most any body of that mass and radius can have.",
+  "assumptions": [
+   "Uniform thin ring; z is normal to its plane through the centre"
+  ],
+  "vars": [
+   [
+    "I_{zz}",
+    "moment about the hoop's axis",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass",
+    "kg"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xx} = I_{yy} = (1/2) m r^{2}",
+    "about a diameter"
+   ],
+   [
+    "I = ½ m r^{2}",
+    "a solid disk, for comparison"
+   ]
+  ],
+  "example": {
+   "problem": "A 0.4 kg hoop of radius 0.3 m spins about its axis. Find I.",
+   "steps": [
+    "I = 0.4 × 0.3^{2}"
+   ],
+   "answer": "I = 0.036 kg·m^{2}"
+  },
+  "try": "0.4 kg * (0.3 m)^2"
+ }
+}

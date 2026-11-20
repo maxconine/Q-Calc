@@ -1,0 +1,4001 @@
+{
+ "A = θ r^{2}": {
+  "title": "Area of a circular sector",
+  "about": "A sector of radius r that spans ±θ either side of its symmetry axis (total angle 2θ) has area θr^{2}. Multiply by the areal density to get the mass that goes into the inertia formulas.",
+  "assumptions": [
+   "θ is the half-angle, in radians; the full opening is 2θ",
+   "θ = π gives the whole disk, πr^{2}; θ = π/2 gives the half disk"
+  ],
+  "vars": [
+   [
+    "A",
+    "area of the sector",
+    "m^{2}"
+   ],
+   [
+    "θ",
+    "half-angle of the sector",
+    "rad"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "y_{cm} = 2r sin(θ)/(3θ)",
+    "where its mass centre sits"
+   ],
+   [
+    "A = (1/2) π r^{2}",
+    "semicircular sector, θ = π/2"
+   ]
+  ],
+  "example": {
+   "problem": "A 60° pie slice (half-angle θ = 30° = π/6) is cut from a disk of radius 0.3 m. Find its area.",
+   "steps": [
+    "θ = π/6 = 0.5236 rad",
+    "A = θ r^{2} = 0.5236 × (0.3 m)^{2} = 0.04712 m^{2}"
+   ],
+   "answer": "A ≈ 0.04712 m^{2}"
+  },
+  "try": "pi/6 * (0.3 m)^2"
+ },
+ "y_{cm} = 2r sin(θ)/(3θ)": {
+  "title": "Mass centre of a circular sector",
+  "about": "The mass centre of a uniform sector lies on its symmetry axis, a distance 2r sin(θ)/(3θ) from the apex (the circle's centre). You need it to move inertia from the apex to the mass centre.",
+  "assumptions": [
+   "θ is the half-angle in radians",
+   "Uniform density (for a plate or shell: uniform mass per area)",
+   "As θ → 0 it tends to 2r/3, the centroid of a thin triangle"
+  ],
+  "vars": [
+   [
+    "y_{cm}",
+    "distance from the apex to the mass centre, along the symmetry axis",
+    "m"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ],
+   [
+    "θ",
+    "half-angle",
+    "rad"
+   ]
+  ],
+  "related": [
+   [
+    "A = θ r^{2}",
+    "area of the sector"
+   ],
+   [
+    "y_{cm} = 4r/(3π)",
+    "half disk, θ = π/2"
+   ],
+   [
+    "y_{cm} = r sin(θ)/θ",
+    "thin arc of the same angle"
+   ]
+  ],
+  "example": {
+   "problem": "Where is the mass centre of a 60° pie slice (θ = π/6) of radius 0.3 m?",
+   "steps": [
+    "sin(π/6) = 0.5",
+    "y_{cm} = 2(0.3 m)(0.5)/(3 × 0.5236) = 0.191 m"
+   ],
+   "answer": "y_{cm} ≈ 0.191 m from the apex"
+  },
+  "try": "2 * 0.3 m * sin(30 deg) / (3 * pi/6)"
+ },
+ "I_{xx} = (1/4) m r^{2} [1 + sin(2θ)/(2θ) − 16 sin^{2}(θ)/(9θ^{2})]": {
+  "title": "Sector: moment of inertia across its symmetry axis",
+  "about": "The moment of inertia of a uniform sector about the x axis through its mass centre, perpendicular to the symmetry axis y and in the plane. The last term is the parallel-axis correction from the apex to the mass centre.",
+  "assumptions": [
+   "θ is the half-angle in radians",
+   "Axes pass through the mass centre B_{cm}, as drawn; for a parallel axis at distance d add m d^{2}",
+   "Thin flat plate: thickness ignored",
+   "About the apex instead, drop the last term: (1/4) m r^{2} [1 + sin(2θ)/(2θ)]"
+  ],
+  "vars": [
+   [
+    "I_{xx}",
+    "moment of inertia about x through B_{cm}",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ],
+   [
+    "θ",
+    "half-angle",
+    "rad"
+   ]
+  ],
+  "related": [
+   [
+    "I_{yy} = (1/4) m r^{2} [1 − sin(2θ)/(2θ)]",
+    "about the symmetry axis"
+   ],
+   [
+    "I_{zz} = I_{xx} + I_{yy}",
+    "normal to the plate"
+   ],
+   [
+    "y_{cm} = 2r sin(θ)/(3θ)",
+    "mass centre from the apex"
+   ]
+  ],
+  "example": {
+   "problem": "A 2 kg quarter-disk plate (θ = π/4) has radius 0.3 m. Find I_{xx} about its mass centre.",
+   "steps": [
+    "sin(2θ)/(2θ) = sin(π/2)/(π/2) = 0.6366",
+    "16 sin^{2}(θ)/(9θ^{2}) = 16(0.5)/(9 × 0.6169) = 1.441",
+    "(1/4) m r^{2} = 0.25 × 2 × 0.09 = 0.045 kg·m^{2}",
+    "I_{xx} = 0.045 × (1 + 0.6366 − 1.441) = 0.008802 kg·m^{2}"
+   ],
+   "answer": "I_{xx} ≈ 0.008802 kg·m^{2}"
+  },
+  "try": "(1/4) * 2 kg * (0.3 m)^2 * (1 + sin(90 deg)/(pi/2) - 16 (sin(45 deg))^2/(9 (pi/4)^2))"
+ },
+ "I_{yy} = (1/4) m r^{2} [1 − sin(2θ)/(2θ)]": {
+  "title": "Sector: moment of inertia about its symmetry axis",
+  "about": "The moment of inertia of a uniform sector about its symmetry axis y. That axis runs through the apex and the mass centre alike, so no parallel-axis term appears.",
+  "assumptions": [
+   "θ is the half-angle in radians",
+   "Thin flat plate",
+   "θ = π gives the full disk, (1/4) m r^{2}"
+  ],
+  "vars": [
+   [
+    "I_{yy}",
+    "moment of inertia about the symmetry axis",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ],
+   [
+    "θ",
+    "half-angle",
+    "rad"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xx} = (1/4) m r^{2} [1 + sin(2θ)/(2θ) − 16 sin^{2}(θ)/(9θ^{2})]",
+    "across the symmetry axis, at B_{cm}"
+   ],
+   [
+    "I_{zz} = I_{xx} + I_{yy}",
+    "normal to the plate"
+   ]
+  ],
+  "example": {
+   "problem": "A 2 kg quarter-disk plate (θ = π/4) has radius 0.3 m. Find I_{yy} about its symmetry axis.",
+   "steps": [
+    "sin(2θ)/(2θ) = 1/(π/2) = 0.6366",
+    "I_{yy} = 0.25 × 2 kg × (0.3 m)^{2} × (1 − 0.6366) = 0.01635 kg·m^{2}"
+   ],
+   "answer": "I_{yy} ≈ 0.01635 kg·m^{2}"
+  },
+  "try": "(1/4) * 2 kg * (0.3 m)^2 * (1 - sin(90 deg)/(pi/2))"
+ },
+ "A = (1/2) π r^{2}": {
+  "title": "Area of a half disk",
+  "about": "A semicircular plate (half disk) of radius r has half the area of the full disk. It is the sector with half-angle θ = π/2.",
+  "assumptions": [
+   "Flat, thin plate",
+   "Mass m = ρ_{A} A for areal density ρ_{A}"
+  ],
+  "vars": [
+   [
+    "A",
+    "area of the half disk",
+    "m^{2}"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "y_{cm} = 4r/(3π)",
+    "mass centre from the flat edge"
+   ],
+   [
+    "A = θ r^{2}",
+    "any sector, half-angle θ"
+   ]
+  ],
+  "example": {
+   "problem": "Find the area of a half disk of radius 0.25 m.",
+   "steps": [
+    "A = (1/2) π (0.25 m)^{2} = 0.09817 m^{2}"
+   ],
+   "answer": "A ≈ 0.09817 m^{2}"
+  },
+  "try": "(1/2) * pi * (0.25 m)^2"
+ },
+ "y_{cm} = 4r/(3π)": {
+  "title": "Mass centre of a half disk",
+  "about": "The mass centre of a uniform half disk lies on its symmetry axis at 4r/(3π) ≈ 0.424 r from the flat edge (the centre of the full circle).",
+  "assumptions": [
+   "Uniform density (for a plate or shell: uniform mass per area)",
+   "Measured from the straight edge, along the symmetry axis"
+  ],
+  "vars": [
+   [
+    "y_{cm}",
+    "distance from the flat edge to the mass centre",
+    "m"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "y_{cm} = 2r sin(θ)/(3θ)",
+    "general sector; θ = π/2 gives this"
+   ],
+   [
+    "y_{cm} = 2r/π",
+    "thin semicircular wire"
+   ],
+   [
+    "y_{cm} = 3r/8",
+    "solid half sphere"
+   ]
+  ],
+  "example": {
+   "problem": "How far from its flat edge is the mass centre of a half disk of radius 0.25 m?",
+   "steps": [
+    "y_{cm} = 4(0.25 m)/(3π) = 1/(3π) m = 0.1061 m"
+   ],
+   "answer": "y_{cm} ≈ 0.1061 m"
+  },
+  "try": "4 * 0.25 m / (3 pi)"
+ },
+ "I_{xx} = (1/4) m r^{2} (1 − 64/(9π^{2}))": {
+  "title": "Half disk: inertia about the axis parallel to the flat edge",
+  "about": "The moment of inertia of a uniform half disk about the x axis through its mass centre, parallel to the flat edge. It is (1/4) m r^{2} about the edge, less m y_{cm}^{2} to move to the mass centre.",
+  "assumptions": [
+   "Axes pass through the mass centre B_{cm}, as drawn; for a parallel axis at distance d add m d^{2}",
+   "Thin plate",
+   "About the flat edge itself: (1/4) m r^{2}"
+  ],
+  "vars": [
+   [
+    "I_{xx}",
+    "moment of inertia about x through B_{cm}",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "y_{cm} = 4r/(3π)",
+    "the shift used"
+   ],
+   [
+    "I_{yy} = (1/4) m r^{2}",
+    "about the symmetry axis"
+   ],
+   [
+    "I^{B∕O} = I^{B∕B_{cm}} + m d^{2}",
+    "parallel-axis theorem: shift to an axis a distance d away"
+   ]
+  ],
+  "example": {
+   "problem": "A 3 kg half-disk plate has radius 0.25 m. Find I_{xx} about its mass centre.",
+   "steps": [
+    "1 − 64/(9π^{2}) = 0.2795",
+    "I_{xx} = 0.25 × 3 × 0.0625 × 0.2795 = 0.0131 kg·m^{2}"
+   ],
+   "answer": "I_{xx} ≈ 0.0131 kg·m^{2}"
+  },
+  "try": "(1/4) * 3 kg * (0.25 m)^2 * (1 - 64/(9 pi^2))"
+ },
+ "I_{yy} = (1/4) m r^{2}": {
+  "title": "Half disk: inertia about its symmetry axis",
+  "about": "The moment of inertia of a uniform half disk about its symmetry axis y, which is perpendicular to the flat edge. It is the same (1/4) m r^{2} as a full disk, since each half contributes equally.",
+  "assumptions": [
+   "Thin plate",
+   "The y axis passes through the mass centre and the edge's midpoint alike"
+  ],
+  "vars": [
+   [
+    "I_{yy}",
+    "moment of inertia about the symmetry axis",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xx} = (1/4) m r^{2} (1 − 64/(9π^{2}))",
+    "parallel to the edge, at B_{cm}"
+   ],
+   [
+    "I_{zz} = (1/2) m r^{2} (1 − 32/(9π^{2}))",
+    "normal to the plate"
+   ]
+  ],
+  "example": {
+   "problem": "A 3 kg half-disk plate has radius 0.25 m. Find I_{yy}.",
+   "steps": [
+    "I_{yy} = 0.25 × 3 kg × (0.25 m)^{2} = 0.04688 kg·m^{2}"
+   ],
+   "answer": "I_{yy} ≈ 0.04688 kg·m^{2}"
+  },
+  "try": "(1/4) * 3 kg * (0.25 m)^2"
+ },
+ "I_{zz} = (1/2) m r^{2} (1 − 32/(9π^{2}))": {
+  "title": "Half disk: inertia normal to the plate",
+  "about": "The moment of inertia of a uniform half disk about the z axis through its mass centre, normal to the plate. It equals I_{xx} + I_{yy}.",
+  "assumptions": [
+   "Axes pass through the mass centre B_{cm}, as drawn; for a parallel axis at distance d add m d^{2}",
+   "Thin plate",
+   "About the centre of the flat edge: (1/2) m r^{2}"
+  ],
+  "vars": [
+   [
+    "I_{zz}",
+    "moment of inertia normal to the plate through B_{cm}",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{zz} = I_{xx} + I_{yy}",
+    "perpendicular-axis theorem for a flat body in the xy plane"
+   ],
+   [
+    "y_{cm} = 4r/(3π)",
+    "mass centre from the flat edge"
+   ],
+   [
+    "I^{B∕O} = I^{B∕B_{cm}} + m d^{2}",
+    "parallel-axis theorem: shift to an axis a distance d away"
+   ]
+  ],
+  "example": {
+   "problem": "A 3 kg half-disk plate has radius 0.25 m. Find I_{zz} about its mass centre.",
+   "steps": [
+    "1 − 32/(9π^{2}) = 0.6397",
+    "I_{zz} = 0.5 × 3 × 0.0625 × 0.6397 = 0.05998 kg·m^{2}",
+    "Check: I_{xx} + I_{yy} = 0.0131 + 0.04688 = 0.05998"
+   ],
+   "answer": "I_{zz} ≈ 0.05998 kg·m^{2}"
+  },
+  "try": "(1/2) * 3 kg * (0.25 m)^2 * (1 - 32/(9 pi^2))"
+ },
+ "A = π r^{2}": {
+  "title": "Area of a disk",
+  "about": "The area of a circular disk of radius r. For a thin plate, mass = areal density × A.",
+  "assumptions": [
+   "Flat, thin plate of uniform thickness"
+  ],
+  "vars": [
+   [
+    "A",
+    "area",
+    "m^{2}"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{zz} = (1/2) m r^{2}",
+    "about the axle"
+   ],
+   [
+    "I_{xx} = I_{yy} = (1/4) m r^{2}",
+    "about a diameter"
+   ]
+  ],
+  "example": {
+   "problem": "A steel disk 1.5 mm thick (ρ = 7850 kg/m^{3}) has radius 0.15 m. Find its area and mass.",
+   "steps": [
+    "A = π (0.15 m)^{2} = 0.07069 m^{2}",
+    "m = ρ t A = 7850 × 0.0015 × 0.07069 = 0.8323 kg"
+   ],
+   "answer": "A ≈ 0.07069 m^{2} (m ≈ 0.8323 kg)"
+  },
+  "try": "pi * (0.15 m)^2"
+ },
+ "I_{xx} = I_{yy} = (1/4) m r^{2}": {
+  "title": "Thin disk: inertia about a diameter",
+  "about": "A thin uniform disk has moment of inertia (1/4) m r^{2} about any diameter. It is half the polar value by the perpendicular-axis theorem and symmetry.",
+  "assumptions": [
+   "Thin: for a disk of thickness h use the cylinder, (1/12) m (3r^{2} + h^{2})",
+   "Axes through the centre, in the plane of the disk"
+  ],
+  "vars": [
+   [
+    "I_{xx}, I_{yy}",
+    "moment of inertia about a diameter",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{zz} = (1/2) m r^{2}",
+    "about the axle"
+   ],
+   [
+    "I_{zz} = I_{xx} + I_{yy}",
+    "perpendicular-axis theorem for a flat body in the xy plane"
+   ],
+   [
+    "I_{xx} = I_{yy} = (1/12) m (3r^{2} + h^{2})",
+    "thick disk (solid cylinder)"
+   ]
+  ],
+  "example": {
+   "problem": "A 4 kg thin disk of radius 0.15 m wobbles about a diameter. Find I_{xx}.",
+   "steps": [
+    "I_{xx} = (1/4)(4 kg)(0.15 m)^{2} = 0.0225 kg·m^{2}"
+   ],
+   "answer": "I_{xx} = 0.0225 kg·m^{2}"
+  },
+  "try": "(1/4) * 4 kg * (0.15 m)^2"
+ },
+ "I_{zz} = (1/2) m r^{2}": {
+  "title": "Disk or solid cylinder: inertia about its axis",
+  "about": "A uniform disk or solid cylinder has moment of inertia (1/2) m r^{2} about its central axis, whatever its length. It is the inertia of a flywheel, pulley or wheel spinning on its axle.",
+  "assumptions": [
+   "Uniform density; a rim-heavy wheel is nearer m r^{2}",
+   "About the axis of symmetry through the centre"
+  ],
+  "vars": [
+   [
+    "I_{zz}",
+    "moment of inertia about the axle",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xx} = I_{yy} = (1/4) m r^{2}",
+    "thin disk about a diameter"
+   ],
+   [
+    "I_{zz} = m r^{2}",
+    "thin hoop or thin-walled tube"
+   ],
+   [
+    "K = (1/2) I ω^{2}",
+    "spin kinetic energy"
+   ]
+  ],
+  "example": {
+   "problem": "A 4 kg disk of radius 0.15 m spins at 300 rpm. Find I_{zz} and its kinetic energy.",
+   "steps": [
+    "I_{zz} = (1/2)(4)(0.15)^{2} = 0.045 kg·m^{2}",
+    "ω = 300 × 2π/60 = 31.42 rad/s",
+    "K = (1/2)(0.045)(31.42)^{2} = 22.21 J"
+   ],
+   "answer": "I_{zz} = 0.045 kg·m^{2} (K ≈ 22.21 J)"
+  },
+  "try": "(1/2) * 4 kg * (0.15 m)^2"
+ },
+ "x^{2} + y^{2} = r^{2}": {
+  "title": "Edge of a disk",
+  "about": "A point Q = x b̂_{x} + y b̂_{y} lies on the rim of the disk when its coordinates satisfy x^{2} + y^{2} = r^{2}. Points inside have x^{2} + y^{2} < r^{2}.",
+  "assumptions": [
+   "x, y measured from the disk's centre on body axes b̂_{x}, b̂_{y} in the plane of the disk"
+  ],
+  "vars": [
+   [
+    "x, y",
+    "coordinates of Q from the centre",
+    "m"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "x = r cos(φ), y = r sin(φ)",
+    "the rim in terms of the angle φ"
+   ],
+   [
+    "x^{2}/a^{2} + y^{2}/b^{2} = 1",
+    "ellipse"
+   ]
+  ],
+  "example": {
+   "problem": "A rim point of a disk of radius 0.2 m has x = 0.12 m. Find y.",
+   "steps": [
+    "y = √(r^{2} − x^{2}) = √(0.04 − 0.0144) m",
+    "y = √0.0256 m = 0.16 m"
+   ],
+   "answer": "y = ±0.16 m"
+  },
+  "try": "sqrt((0.2 m)^2 - (0.12 m)^2)"
+ },
+ "A = π a b": {
+  "title": "Area of an ellipse",
+  "about": "A flat ellipse with semi-axes a (along x) and b (along y) has area πab. With a = b = r it is the disk, πr^{2}.",
+  "assumptions": [
+   "a and b are semi-axes (half the full widths)"
+  ],
+  "vars": [
+   [
+    "A",
+    "area",
+    "m^{2}"
+   ],
+   [
+    "a",
+    "semi-axis along x",
+    "m"
+   ],
+   [
+    "b",
+    "semi-axis along y",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xx} = (1/4) m b^{2}",
+    "about the x axis"
+   ],
+   [
+    "I_{yy} = (1/4) m a^{2}",
+    "about the y axis"
+   ]
+  ],
+  "example": {
+   "problem": "An elliptical plate is 0.6 m by 0.4 m overall. Find its area.",
+   "steps": [
+    "a = 0.3 m, b = 0.2 m",
+    "A = π(0.3)(0.2) = 0.1885 m^{2}"
+   ],
+   "answer": "A ≈ 0.1885 m^{2}"
+  },
+  "try": "pi * 0.3 m * 0.2 m"
+ },
+ "I_{xx} = (1/4) m b^{2}": {
+  "title": "Elliptical plate: inertia about the x axis",
+  "about": "A thin uniform elliptical plate has moment of inertia (1/4) m b^{2} about its x axis (the a axis). Only the spread in y, set by b, counts.",
+  "assumptions": [
+   "Thin plate; axes through the centre",
+   "x lies along semi-axis a, y along b"
+  ],
+  "vars": [
+   [
+    "I_{xx}",
+    "moment of inertia about x",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "b",
+    "semi-axis along y",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{yy} = (1/4) m a^{2}",
+    "about y"
+   ],
+   [
+    "I_{zz} = I_{xx} + I_{yy}",
+    "normal to the plate"
+   ],
+   [
+    "I_{xx} = I_{yy} = (1/4) m r^{2}",
+    "disk, a = b = r"
+   ]
+  ],
+  "example": {
+   "problem": "A 1.5 kg elliptical plate has a = 0.3 m and b = 0.2 m. Find I_{xx}.",
+   "steps": [
+    "I_{xx} = (1/4)(1.5 kg)(0.2 m)^{2} = 0.015 kg·m^{2}"
+   ],
+   "answer": "I_{xx} = 0.015 kg·m^{2}"
+  },
+  "try": "(1/4) * 1.5 kg * (0.2 m)^2"
+ },
+ "I_{yy} = (1/4) m a^{2}": {
+  "title": "Elliptical plate: inertia about the y axis",
+  "about": "A thin uniform elliptical plate has moment of inertia (1/4) m a^{2} about its y axis (the b axis). Only the spread in x, set by a, counts.",
+  "assumptions": [
+   "Thin plate; axes through the centre",
+   "x lies along semi-axis a, y along b"
+  ],
+  "vars": [
+   [
+    "I_{yy}",
+    "moment of inertia about y",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "a",
+    "semi-axis along x",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xx} = (1/4) m b^{2}",
+    "about x"
+   ],
+   [
+    "I_{zz} = I_{xx} + I_{yy}",
+    "normal to the plate"
+   ]
+  ],
+  "example": {
+   "problem": "A 1.5 kg elliptical plate has a = 0.3 m and b = 0.2 m. Find I_{yy} and I_{zz}.",
+   "steps": [
+    "I_{yy} = (1/4)(1.5)(0.3)^{2} = 0.03375 kg·m^{2}",
+    "I_{zz} = 0.015 + 0.03375 = 0.04875 kg·m^{2}"
+   ],
+   "answer": "I_{yy} ≈ 0.03375 kg·m^{2}"
+  },
+  "try": "(1/4) * 1.5 kg * (0.3 m)^2"
+ },
+ "A = a b": {
+  "title": "Area of a rectangular plate",
+  "about": "A rectangle of width a (along x) and height b (along y) has area ab.",
+  "assumptions": [
+   "a and b are full side lengths"
+  ],
+  "vars": [
+   [
+    "A",
+    "area",
+    "m^{2}"
+   ],
+   [
+    "a",
+    "side along x",
+    "m"
+   ],
+   [
+    "b",
+    "side along y",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xx} = (1/12) m b^{2}",
+    "about x"
+   ],
+   [
+    "I_{yy} = (1/12) m a^{2}",
+    "about y"
+   ]
+  ],
+  "example": {
+   "problem": "A 3 mm aluminium sheet (ρ = 2700 kg/m^{3}) is 0.4 m by 0.3 m. Find its area and mass.",
+   "steps": [
+    "A = 0.4 × 0.3 = 0.12 m^{2}",
+    "m = ρ t A = 2700 × 0.003 × 0.12 = 0.972 kg"
+   ],
+   "answer": "A = 0.12 m^{2} (m ≈ 0.972 kg)"
+  },
+  "try": "0.4 m * 0.3 m"
+ },
+ "I_{xx} = (1/12) m b^{2}": {
+  "title": "Rectangular plate: inertia about the x axis",
+  "about": "A thin uniform rectangular plate has moment of inertia (1/12) m b^{2} about the x axis through its centre, where b is the side across that axis. It is the slender-rod result, since the width a along the axis does not matter.",
+  "assumptions": [
+   "Thin plate; axes through the mass centre, parallel to the sides",
+   "About an edge instead: (1/3) m b^{2}"
+  ],
+  "vars": [
+   [
+    "I_{xx}",
+    "moment of inertia about x",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "b",
+    "side along y (across the x axis)",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{yy} = (1/12) m a^{2}",
+    "about y"
+   ],
+   [
+    "I_{zz} = I_{xx} + I_{yy}",
+    "= (1/12) m (a^{2} + b^{2})"
+   ],
+   [
+    "I_{xx} = (1/12) m (b^{2} + c^{2})",
+    "solid box of thickness c"
+   ]
+  ],
+  "example": {
+   "problem": "A 2 kg plate is 0.4 m along x and 0.3 m along y. Find I_{xx}.",
+   "steps": [
+    "I_{xx} = (1/12)(2 kg)(0.3 m)^{2} = 0.015 kg·m^{2}"
+   ],
+   "answer": "I_{xx} = 0.015 kg·m^{2}"
+  },
+  "try": "(1/12) * 2 kg * (0.3 m)^2"
+ },
+ "I_{yy} = (1/12) m a^{2}": {
+  "title": "Rectangular plate: inertia about the y axis",
+  "about": "A thin uniform rectangular plate has moment of inertia (1/12) m a^{2} about the y axis through its centre, where a is the side across that axis.",
+  "assumptions": [
+   "Thin plate; axes through the mass centre, parallel to the sides",
+   "A door hinged along its edge: (1/3) m a^{2}"
+  ],
+  "vars": [
+   [
+    "I_{yy}",
+    "moment of inertia about y",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "a",
+    "side along x (across the y axis)",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xx} = (1/12) m b^{2}",
+    "about x"
+   ],
+   [
+    "I_{zz} = I_{xx} + I_{yy}",
+    "normal to the plate"
+   ],
+   [
+    "I^{B∕O} = I^{B∕B_{cm}} + m d^{2}",
+    "parallel-axis theorem: shift to an axis a distance d away"
+   ]
+  ],
+  "example": {
+   "problem": "A 2 kg plate is 0.4 m along x and 0.3 m along y. Find I_{yy}, and I_{zz}.",
+   "steps": [
+    "I_{yy} = (1/12)(2)(0.4)^{2} = 0.02667 kg·m^{2}",
+    "I_{zz} = 0.015 + 0.02667 = 0.04167 kg·m^{2}"
+   ],
+   "answer": "I_{yy} ≈ 0.02667 kg·m^{2}"
+  },
+  "try": "(1/12) * 2 kg * (0.4 m)^2"
+ },
+ "V = π r^{2} h": {
+  "title": "Volume of a solid cylinder",
+  "about": "A solid circular cylinder of radius r and length h has volume πr^{2}h. Multiply by density for its mass.",
+  "assumptions": [
+   "Right circular cylinder, flat ends"
+  ],
+  "vars": [
+   [
+    "V",
+    "volume",
+    "m^{3}"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ],
+   [
+    "h",
+    "length along the axis",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{zz} = (1/2) m r^{2}",
+    "about the axis"
+   ],
+   [
+    "I_{xx} = I_{yy} = (1/12) m (3r^{2} + h^{2})",
+    "about a transverse axis"
+   ]
+  ],
+  "example": {
+   "problem": "A steel bar (ρ = 7850 kg/m^{3}) is 0.4 m long and 0.1 m in diameter. Find its volume and mass.",
+   "steps": [
+    "V = π (0.05 m)^{2} (0.4 m) = 0.003142 m^{3}",
+    "m = 7850 × 0.003142 = 24.66 kg"
+   ],
+   "answer": "V ≈ 0.003142 m^{3} (m ≈ 24.66 kg)"
+  },
+  "try": "pi * (0.05 m)^2 * 0.4 m to m^3"
+ },
+ "I_{xx} = I_{yy} = (1/12) m (3r^{2} + h^{2})": {
+  "title": "Solid cylinder: inertia about a transverse axis",
+  "about": "A uniform solid cylinder has moment of inertia (1/12) m (3r^{2} + h^{2}) about any axis through its mass centre perpendicular to its length. It spans from the thin disk (h → 0) to the slender rod (r → 0).",
+  "assumptions": [
+   "Axes through the mass centre, perpendicular to the cylinder's axis z",
+   "About an end face's diameter add m (h/2)^{2}"
+  ],
+  "vars": [
+   [
+    "I_{xx}, I_{yy}",
+    "moment of inertia about a transverse axis through B_{cm}",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ],
+   [
+    "h",
+    "length",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{zz} = (1/2) m r^{2}",
+    "about the axis"
+   ],
+   [
+    "I_{yy} = I_{zz} = (1/12) m L^{2}",
+    "slender rod limit"
+   ],
+   [
+    "I^{B∕O} = I^{B∕B_{cm}} + m d^{2}",
+    "parallel-axis theorem: shift to an axis a distance d away"
+   ]
+  ],
+  "example": {
+   "problem": "A 5 kg solid cylinder has radius 0.05 m and length 0.4 m. Find I_{xx} about its mass centre.",
+   "steps": [
+    "3r^{2} + h^{2} = 3(0.0025) + 0.16 = 0.1675 m^{2}",
+    "I_{xx} = (5/12)(0.1675) = 0.06979 kg·m^{2}"
+   ],
+   "answer": "I_{xx} ≈ 0.06979 kg·m^{2}"
+  },
+  "try": "(1/12) * 5 kg * (3 (0.05 m)^2 + (0.4 m)^2)"
+ },
+ "V = π (r_{o}^{2} − r_{i}^{2}) h": {
+  "title": "Volume of a thick-walled tube",
+  "about": "A tube of outer radius r_{o}, inner radius r_{i} and length h has the volume of the outer cylinder minus the hole.",
+  "assumptions": [
+   "Concentric circular bore, flat ends"
+  ],
+  "vars": [
+   [
+    "V",
+    "volume of material",
+    "m^{3}"
+   ],
+   [
+    "r_{o}",
+    "outer radius",
+    "m"
+   ],
+   [
+    "r_{i}",
+    "inner radius",
+    "m"
+   ],
+   [
+    "h",
+    "length",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{zz} = (1/2) m (r_{o}^{2} + r_{i}^{2})",
+    "about the axis"
+   ],
+   [
+    "V = π r^{2} h",
+    "solid cylinder"
+   ]
+  ],
+  "example": {
+   "problem": "A tube is 0.3 m long with r_{o} = 60 mm and r_{i} = 40 mm. Find the volume of material.",
+   "steps": [
+    "r_{o}^{2} − r_{i}^{2} = 0.0036 − 0.0016 = 0.002 m^{2}",
+    "V = π(0.002)(0.3) = 0.001885 m^{3}"
+   ],
+   "answer": "V ≈ 0.001885 m^{3}"
+  },
+  "try": "pi * ((60 mm)^2 - (40 mm)^2) * 0.3 m to m^3"
+ },
+ "I_{xx} = I_{yy} = (1/12) m [3(r_{o}^{2} + r_{i}^{2}) + h^{2}]": {
+  "title": "Thick tube: inertia about a transverse axis",
+  "about": "A uniform thick-walled tube has moment of inertia (1/12) m [3(r_{o}^{2} + r_{i}^{2}) + h^{2}] about a transverse axis through its mass centre. r_{i} = 0 gives the solid cylinder.",
+  "assumptions": [
+   "Axes through the mass centre, perpendicular to the tube's axis z",
+   "m is the mass of the material present (the hole removed)"
+  ],
+  "vars": [
+   [
+    "I_{xx}, I_{yy}",
+    "moment of inertia about a transverse axis through B_{cm}",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "r_{o}",
+    "outer radius",
+    "m"
+   ],
+   [
+    "r_{i}",
+    "inner radius",
+    "m"
+   ],
+   [
+    "h",
+    "length",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{zz} = (1/2) m (r_{o}^{2} + r_{i}^{2})",
+    "about the axis"
+   ],
+   [
+    "I_{xx} = I_{yy} = (1/12) m (3r^{2} + h^{2})",
+    "solid cylinder"
+   ]
+  ],
+  "example": {
+   "problem": "A 3 kg tube is 0.3 m long with r_{o} = 0.06 m and r_{i} = 0.04 m. Find I_{xx} about its mass centre.",
+   "steps": [
+    "3(r_{o}^{2} + r_{i}^{2}) = 3(0.0036 + 0.0016) = 0.0156 m^{2}",
+    "I_{xx} = (3/12)(0.0156 + 0.09) = 0.0264 kg·m^{2}"
+   ],
+   "answer": "I_{xx} ≈ 0.0264 kg·m^{2}"
+  },
+  "try": "(1/12) * 3 kg * (3 ((0.06 m)^2 + (0.04 m)^2) + (0.3 m)^2)"
+ },
+ "I_{zz} = (1/2) m (r_{o}^{2} + r_{i}^{2})": {
+  "title": "Thick tube: inertia about its axis",
+  "about": "A uniform thick-walled tube, ring or hub has moment of inertia (1/2) m (r_{o}^{2} + r_{i}^{2}) about its axis. Note the plus sign: m already accounts for the hole.",
+  "assumptions": [
+   "m is the mass of the material present",
+   "r_{i} = 0 gives (1/2) m r^{2}; r_{i} → r_{o} gives the thin tube m r^{2}"
+  ],
+  "vars": [
+   [
+    "I_{zz}",
+    "moment of inertia about the axis",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "r_{o}",
+    "outer radius",
+    "m"
+   ],
+   [
+    "r_{i}",
+    "inner radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{zz} = (1/2) m r^{2}",
+    "solid cylinder"
+   ],
+   [
+    "I_{zz} = m r^{2}",
+    "thin-walled tube"
+   ],
+   [
+    "V = π (r_{o}^{2} − r_{i}^{2}) h",
+    "volume of material"
+   ]
+  ],
+  "example": {
+   "problem": "A 3 kg steel ring has r_{o} = 0.06 m and r_{i} = 0.04 m. Find its inertia about its axis.",
+   "steps": [
+    "I_{zz} = (1/2)(3 kg)(0.0036 + 0.0016) m^{2} = 0.0078 kg·m^{2}"
+   ],
+   "answer": "I_{zz} = 0.0078 kg·m^{2}"
+  },
+  "try": "(1/2) * 3 kg * ((0.06 m)^2 + (0.04 m)^2)"
+ },
+ "A = 2π r h": {
+  "title": "Area of a thin-walled tube",
+  "about": "The lateral (side) surface of a cylinder of radius r and length h has area 2πrh. For a thin-walled tube, mass = areal density × A.",
+  "assumptions": [
+   "Side wall only; end caps not included (add 2πr^{2} for both)",
+   "Wall thickness t ≪ r; then V ≈ 2πrht"
+  ],
+  "vars": [
+   [
+    "A",
+    "lateral surface area",
+    "m^{2}"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ],
+   [
+    "h",
+    "length",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{zz} = m r^{2}",
+    "about the axis"
+   ],
+   [
+    "I_{xx} = I_{yy} = (1/12) m (6r^{2} + h^{2})",
+    "about a transverse axis"
+   ]
+  ],
+  "example": {
+   "problem": "A sheet-metal duct has radius 0.1 m and length 0.5 m. Find its wall area.",
+   "steps": [
+    "A = 2π(0.1 m)(0.5 m) = 0.3142 m^{2}"
+   ],
+   "answer": "A ≈ 0.3142 m^{2}"
+  },
+  "try": "2 pi * 0.1 m * 0.5 m"
+ },
+ "I_{xx} = I_{yy} = (1/12) m (6r^{2} + h^{2})": {
+  "title": "Thin-walled tube: inertia about a transverse axis",
+  "about": "A thin-walled open tube has moment of inertia (1/12) m (6r^{2} + h^{2}) about a transverse axis through its mass centre. The 6r^{2} (vs 3r^{2} for a solid cylinder) reflects all the mass sitting at radius r.",
+  "assumptions": [
+   "Wall thickness ≪ r; no end caps",
+   "Axes through the mass centre, perpendicular to the axis z"
+  ],
+  "vars": [
+   [
+    "I_{xx}, I_{yy}",
+    "moment of inertia about a transverse axis through B_{cm}",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ],
+   [
+    "h",
+    "length",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{zz} = m r^{2}",
+    "about the axis"
+   ],
+   [
+    "I_{xx} = I_{yy} = (1/12) m (3r^{2} + h^{2})",
+    "solid cylinder"
+   ],
+   [
+    "I^{B∕O} = I^{B∕B_{cm}} + m d^{2}",
+    "parallel-axis theorem: shift to an axis a distance d away"
+   ]
+  ],
+  "example": {
+   "problem": "A 2 kg thin-walled tube has radius 0.1 m and length 0.5 m. Find I_{xx} about its mass centre.",
+   "steps": [
+    "6r^{2} + h^{2} = 0.06 + 0.25 = 0.31 m^{2}",
+    "I_{xx} = (2/12)(0.31) = 0.05167 kg·m^{2}"
+   ],
+   "answer": "I_{xx} ≈ 0.05167 kg·m^{2}"
+  },
+  "try": "(1/12) * 2 kg * (6 (0.1 m)^2 + (0.5 m)^2)"
+ },
+ "V = (1/3) π r^{2} h": {
+  "title": "Volume of a solid cone",
+  "about": "A solid right-circular cone of base radius r and height h has a third of the volume of the cylinder that encloses it.",
+  "assumptions": [
+   "Right circular cone (apex over the base centre)"
+  ],
+  "vars": [
+   [
+    "V",
+    "volume",
+    "m^{3}"
+   ],
+   [
+    "r",
+    "base radius",
+    "m"
+   ],
+   [
+    "h",
+    "height",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "y_{cm} = h/4",
+    "mass centre above the base"
+   ],
+   [
+    "V = π r^{2} h",
+    "enclosing cylinder"
+   ]
+  ],
+  "example": {
+   "problem": "Find the volume of a cone 0.3 m tall with a base radius of 0.1 m.",
+   "steps": [
+    "V = (1/3)π(0.1)^{2}(0.3) = 0.003142 m^{3}"
+   ],
+   "answer": "V ≈ 0.003142 m^{3}"
+  },
+  "try": "(1/3) * pi * (0.1 m)^2 * 0.3 m to m^3"
+ },
+ "y_{cm} = h/4": {
+  "title": "Mass centre of a solid cone",
+  "about": "The mass centre of a uniform solid cone is on its axis, a quarter of the height above the base (three quarters down from the apex). Most of the volume is near the base.",
+  "assumptions": [
+   "Uniform density (for a plate or shell: uniform mass per area)",
+   "Measured from the base along the axis y"
+  ],
+  "vars": [
+   [
+    "y_{cm}",
+    "height of the mass centre above the base",
+    "m"
+   ],
+   [
+    "h",
+    "height of the cone",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "y_{cm} = h/3",
+    "thin-walled cone, no base"
+   ],
+   [
+    "V = (1/3) π r^{2} h",
+    "volume"
+   ]
+  ],
+  "example": {
+   "problem": "Where is the mass centre of a solid cone 0.3 m tall?",
+   "steps": [
+    "y_{cm} = h/4 = 0.3 m/4 = 0.075 m"
+   ],
+   "answer": "y_{cm} = 0.075 m above the base"
+  },
+  "try": "0.3 m / 4"
+ },
+ "I_{xx} = I_{zz} = (3/80) m (4r^{2} + h^{2})": {
+  "title": "Solid cone: inertia about a transverse axis",
+  "about": "A uniform solid cone has moment of inertia (3/80) m (4r^{2} + h^{2}) about any axis through its mass centre perpendicular to its axis y.",
+  "assumptions": [
+   "Axes pass through the mass centre B_{cm}, as drawn; for a parallel axis at distance d add m d^{2} (the mass centre is h/4 above the base)",
+   "About the apex: (3/20) m (r^{2} + 4h^{2}); about a base diameter: (1/20) m (3r^{2} + 2h^{2})"
+  ],
+  "vars": [
+   [
+    "I_{xx}, I_{zz}",
+    "moment of inertia about a transverse axis through B_{cm}",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "r",
+    "base radius",
+    "m"
+   ],
+   [
+    "h",
+    "height",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{yy} = (3/10) m r^{2}",
+    "about the cone's axis"
+   ],
+   [
+    "y_{cm} = h/4",
+    "mass centre"
+   ],
+   [
+    "I^{B∕O} = I^{B∕B_{cm}} + m d^{2}",
+    "parallel-axis theorem: shift to an axis a distance d away"
+   ]
+  ],
+  "example": {
+   "problem": "A 2 kg solid cone has base radius 0.1 m and height 0.3 m. Find I_{xx} about its mass centre.",
+   "steps": [
+    "4r^{2} + h^{2} = 0.04 + 0.09 = 0.13 m^{2}",
+    "I_{xx} = (3/80)(2)(0.13) = 0.00975 kg·m^{2}"
+   ],
+   "answer": "I_{xx} ≈ 0.00975 kg·m^{2}"
+  },
+  "try": "(3/80) * 2 kg * (4 (0.1 m)^2 + (0.3 m)^2)"
+ },
+ "I_{yy} = (3/10) m r^{2}": {
+  "title": "Solid cone: inertia about its axis",
+  "about": "A uniform solid cone has moment of inertia (3/10) m r^{2} about its axis of symmetry, less than a cylinder's (1/2) m r^{2} because the mass tapers toward the axis.",
+  "assumptions": [
+   "Uniform density; any height",
+   "y is the cone's axis, through apex and base centre"
+  ],
+  "vars": [
+   [
+    "I_{yy}",
+    "moment of inertia about the cone's axis",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "r",
+    "base radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xx} = I_{zz} = (3/80) m (4r^{2} + h^{2})",
+    "transverse, at B_{cm}"
+   ],
+   [
+    "I_{zz} = (1/2) m r^{2}",
+    "solid cylinder"
+   ]
+  ],
+  "example": {
+   "problem": "A 2 kg solid cone with base radius 0.1 m spins on its axis like a top. Find I_{yy}.",
+   "steps": [
+    "I_{yy} = (3/10)(2 kg)(0.1 m)^{2} = 0.006 kg·m^{2}"
+   ],
+   "answer": "I_{yy} = 0.006 kg·m^{2}"
+  },
+  "try": "(3/10) * 2 kg * (0.1 m)^2"
+ },
+ "A = π r √(r^{2} + h^{2})": {
+  "title": "Lateral area of a cone",
+  "about": "The slanted surface of a cone of base radius r and height h has area π r s, where s = √(r^{2} + h^{2}) is the slant length. It is the area of a thin conical shell (a funnel or lampshade) with no base.",
+  "assumptions": [
+   "Side surface only; add πr^{2} for a closed base",
+   "Thin wall: mass = areal density × A"
+  ],
+  "vars": [
+   [
+    "A",
+    "lateral surface area",
+    "m^{2}"
+   ],
+   [
+    "r",
+    "base radius",
+    "m"
+   ],
+   [
+    "h",
+    "height",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "y_{cm} = h/3",
+    "mass centre of the shell"
+   ],
+   [
+    "I_{xx} = I_{zz} = m (r^{2}/4 + h^{2}/18)",
+    "transverse inertia"
+   ]
+  ],
+  "example": {
+   "problem": "A sheet-metal hopper is a cone with base radius 0.3 m and height 0.4 m. Find its wall area.",
+   "steps": [
+    "Slant length s = √(0.09 + 0.16) = 0.5 m",
+    "A = π(0.3)(0.5) = 0.4712 m^{2}"
+   ],
+   "answer": "A ≈ 0.4712 m^{2}"
+  },
+  "try": "pi * 0.3 m * sqrt((0.3 m)^2 + (0.4 m)^2)"
+ },
+ "y_{cm} = h/3": {
+  "title": "Mass centre of a thin-walled cone",
+  "about": "The mass centre of a uniform conical shell (no base) is on its axis, a third of the height above the base. It sits higher than the solid cone's h/4 because the shell has no mass filling the base.",
+  "assumptions": [
+   "Uniform thin wall, no base",
+   "The same h/3 holds for the area centroid of a triangle"
+  ],
+  "vars": [
+   [
+    "y_{cm}",
+    "height of the mass centre above the base",
+    "m"
+   ],
+   [
+    "h",
+    "height of the cone",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "y_{cm} = h/4",
+    "solid cone"
+   ],
+   [
+    "A = π r √(r^{2} + h^{2})",
+    "lateral area"
+   ]
+  ],
+  "example": {
+   "problem": "Where is the mass centre of a lampshade cone 0.4 m tall?",
+   "steps": [
+    "y_{cm} = 0.4 m/3 = 0.1333 m"
+   ],
+   "answer": "y_{cm} ≈ 0.1333 m above the base"
+  },
+  "try": "0.4 m / 3"
+ },
+ "I_{xx} = I_{zz} = m (r^{2}/4 + h^{2}/18)": {
+  "title": "Thin-walled cone: inertia about a transverse axis",
+  "about": "A uniform conical shell without a base has moment of inertia m (r^{2}/4 + h^{2}/18) about an axis through its mass centre perpendicular to its axis.",
+  "assumptions": [
+   "Axes pass through the mass centre B_{cm}, as drawn; for a parallel axis at distance d add m d^{2} (h/3 above the base)",
+   "Thin wall, no base"
+  ],
+  "vars": [
+   [
+    "I_{xx}, I_{zz}",
+    "moment of inertia about a transverse axis through B_{cm}",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "r",
+    "base radius",
+    "m"
+   ],
+   [
+    "h",
+    "height",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{yy} = (1/2) m r^{2}",
+    "about the cone's axis"
+   ],
+   [
+    "y_{cm} = h/3",
+    "mass centre"
+   ],
+   [
+    "I^{B∕O} = I^{B∕B_{cm}} + m d^{2}",
+    "parallel-axis theorem: shift to an axis a distance d away"
+   ]
+  ],
+  "example": {
+   "problem": "A 1.2 kg conical shell has base radius 0.3 m and height 0.4 m. Find I_{xx} about its mass centre.",
+   "steps": [
+    "r^{2}/4 = 0.0225, h^{2}/18 = 0.008889",
+    "I_{xx} = 1.2 × (0.03139) = 0.03767 kg·m^{2}"
+   ],
+   "answer": "I_{xx} ≈ 0.03767 kg·m^{2}"
+  },
+  "try": "1.2 kg * ((0.3 m)^2/4 + (0.4 m)^2/18)"
+ },
+ "V = (1/2) π r^{2} a": {
+  "title": "Volume of a solid paraboloid",
+  "about": "A solid paraboloid of revolution with flat-face radius r and length a has half the volume of the cylinder that encloses it.",
+  "assumptions": [
+   "Surface is a parabola revolved about the x axis; the flat face is at Bₒ, the vertex a away"
+  ],
+  "vars": [
+   [
+    "V",
+    "volume",
+    "m^{3}"
+   ],
+   [
+    "r",
+    "radius of the flat face",
+    "m"
+   ],
+   [
+    "a",
+    "length from the flat face to the vertex",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "x_{cm} = a/3",
+    "mass centre from the flat face"
+   ],
+   [
+    "V = (1/3) π r^{2} h",
+    "cone of the same size, for comparison"
+   ]
+  ],
+  "example": {
+   "problem": "A paraboloidal nose piece has r = 0.1 m and a = 0.2 m. Find its volume.",
+   "steps": [
+    "V = (1/2)π(0.01)(0.2) = 0.003142 m^{3}"
+   ],
+   "answer": "V ≈ 0.003142 m^{3}"
+  },
+  "try": "(1/2) * pi * (0.1 m)^2 * 0.2 m to m^3"
+ },
+ "x_{cm} = a/3": {
+  "title": "Mass centre of a solid paraboloid",
+  "about": "The mass centre of a uniform solid paraboloid lies on its axis, a third of its length from the flat face Bₒ (two thirds from the vertex).",
+  "assumptions": [
+   "Uniform density (for a plate or shell: uniform mass per area)",
+   "Measured along x from the flat face Bₒ"
+  ],
+  "vars": [
+   [
+    "x_{cm}",
+    "distance from the flat face to the mass centre",
+    "m"
+   ],
+   [
+    "a",
+    "length from flat face to vertex",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "V = (1/2) π r^{2} a",
+    "volume"
+   ],
+   [
+    "y_{cm} = h/4",
+    "solid cone, for comparison"
+   ]
+  ],
+  "example": {
+   "problem": "Where is the mass centre of a solid paraboloid 0.2 m long?",
+   "steps": [
+    "x_{cm} = 0.2 m/3 = 0.0667 m from the flat face"
+   ],
+   "answer": "x_{cm} ≈ 0.0667 m from Bₒ"
+  },
+  "try": "0.2 m / 3"
+ },
+ "I_{xx} = (1/3) m r^{2}": {
+  "title": "Solid paraboloid: inertia about its axis",
+  "about": "A uniform solid paraboloid has moment of inertia (1/3) m r^{2} about its axis of symmetry x. That axis runs through both Bₒ and the mass centre, so the value is the same at either.",
+  "assumptions": [
+   "Uniform density",
+   "r is the radius of the flat face"
+  ],
+  "vars": [
+   [
+    "I_{xx}",
+    "moment of inertia about the axis",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "r",
+    "radius of the flat face",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{yy} = I_{zz} = (1/18) m (a^{2} + 3r^{2})",
+    "transverse, at B_{cm}"
+   ],
+   [
+    "I_{yy} = (3/10) m r^{2}",
+    "solid cone's axis"
+   ]
+  ],
+  "example": {
+   "problem": "A 3 kg solid paraboloid has a flat-face radius of 0.1 m. Find I_{xx}.",
+   "steps": [
+    "I_{xx} = (1/3)(3 kg)(0.1 m)^{2} = 0.01 kg·m^{2}"
+   ],
+   "answer": "I_{xx} = 0.01 kg·m^{2}"
+  },
+  "try": "(1/3) * 3 kg * (0.1 m)^2"
+ },
+ "I_{yy} = I_{zz} = (1/18) m (a^{2} + 3r^{2})": {
+  "title": "Solid paraboloid: transverse inertia at the mass centre",
+  "about": "A uniform solid paraboloid has moment of inertia (1/18) m (a^{2} + 3r^{2}) about any axis through its mass centre perpendicular to its axis x.",
+  "assumptions": [
+   "Axes through the mass centre, a/3 from the flat face",
+   "About Bₒ instead add m (a/3)^{2}, giving (1/6) m (a^{2} + r^{2})"
+  ],
+  "vars": [
+   [
+    "I_{yy}, I_{zz}",
+    "moment of inertia about a transverse axis through B_{cm}",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "a",
+    "length",
+    "m"
+   ],
+   [
+    "r",
+    "radius of the flat face",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{yy} = I_{zz} = (1/6) m (a^{2} + r^{2})",
+    "about Bₒ"
+   ],
+   [
+    "x_{cm} = a/3",
+    "the shift"
+   ],
+   [
+    "I^{B∕O} = I^{B∕B_{cm}} + m d^{2}",
+    "parallel-axis theorem: shift to an axis a distance d away"
+   ]
+  ],
+  "example": {
+   "problem": "A 3 kg solid paraboloid has a = 0.2 m and r = 0.1 m. Find I_{yy} about its mass centre.",
+   "steps": [
+    "a^{2} + 3r^{2} = 0.04 + 0.03 = 0.07 m^{2}",
+    "I_{yy} = (3/18)(0.07) = 0.01167 kg·m^{2}"
+   ],
+   "answer": "I_{yy} ≈ 0.01167 kg·m^{2}"
+  },
+  "try": "(1/18) * 3 kg * ((0.2 m)^2 + 3 (0.1 m)^2)"
+ },
+ "I_{yy} = I_{zz} = (1/6) m (a^{2} + r^{2})": {
+  "title": "Solid paraboloid: transverse inertia at the flat face",
+  "about": "A uniform solid paraboloid has moment of inertia (1/6) m (a^{2} + r^{2}) about a diameter of its flat face (an axis through Bₒ perpendicular to x). Use it when the body pivots about its base.",
+  "assumptions": [
+   "Axes through Bₒ, the centre of the flat face",
+   "Equals the mass-centre value plus m (a/3)^{2}"
+  ],
+  "vars": [
+   [
+    "I_{yy}, I_{zz}",
+    "moment of inertia about a transverse axis through Bₒ",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "a",
+    "length",
+    "m"
+   ],
+   [
+    "r",
+    "radius of the flat face",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{yy} = I_{zz} = (1/18) m (a^{2} + 3r^{2})",
+    "at the mass centre"
+   ],
+   [
+    "I^{B∕O} = I^{B∕B_{cm}} + m d^{2}",
+    "parallel-axis theorem: shift to an axis a distance d away"
+   ]
+  ],
+  "example": {
+   "problem": "A 3 kg solid paraboloid (a = 0.2 m, r = 0.1 m) pivots about a diameter of its flat face. Find I_{yy} there.",
+   "steps": [
+    "I_{yy} = (3/6)(0.04 + 0.01) = 0.025 kg·m^{2}",
+    "Check: 0.01167 + 3(0.2/3)^{2} = 0.025"
+   ],
+   "answer": "I_{yy} = 0.025 kg·m^{2}"
+  },
+  "try": "(1/6) * 3 kg * ((0.2 m)^2 + (0.1 m)^2)"
+ },
+ "V = (4/3) π r^{3}": {
+  "title": "Volume of a sphere",
+  "about": "A solid sphere of radius r has volume (4/3)πr^{3}.",
+  "assumptions": [
+   "r is the radius, not the diameter"
+  ],
+  "vars": [
+   [
+    "V",
+    "volume",
+    "m^{3}"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xx} = I_{yy} = I_{zz} = (2/5) m r^{2}",
+    "inertia about any diameter"
+   ],
+   [
+    "A = 4π r^{2}",
+    "surface area"
+   ]
+  ],
+  "example": {
+   "problem": "A steel ball bearing is 20 mm in diameter (ρ = 7850 kg/m^{3}). Find its volume and mass.",
+   "steps": [
+    "V = (4/3)π(0.01 m)^{3} = 4.189 × 10^{−6} m^{3}",
+    "m = 7850 × 4.189 × 10^{−6} = 0.03288 kg"
+   ],
+   "answer": "V ≈ 4.189 × 10^{−6} m^{3} (m ≈ 32.88 g)"
+  },
+  "try": "(4/3) * pi * (10 mm)^3 to m^3"
+ },
+ "I_{xx} = I_{yy} = I_{zz} = (2/5) m r^{2}": {
+  "title": "Solid sphere: inertia about any diameter",
+  "about": "A uniform solid sphere has moment of inertia (2/5) m r^{2} about every axis through its centre. A solid half sphere has the same value about axes through Bₒ, the centre of its flat face.",
+  "assumptions": [
+   "Uniform density (Earth, being denser at the core, is about 0.33 m r^{2})",
+   "About the centre; for a sphere rolling, about the contact point use (7/5) m r^{2}"
+  ],
+  "vars": [
+   [
+    "I",
+    "moment of inertia about any diameter",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I = (2/3) m r^{2}",
+    "thin hollow sphere"
+   ],
+   [
+    "V = (4/3) π r^{3}",
+    "volume"
+   ],
+   [
+    "I^{B∕O} = I^{B∕B_{cm}} + m d^{2}",
+    "parallel-axis theorem: shift to an axis a distance d away"
+   ]
+  ],
+  "example": {
+   "problem": "A 7.26 kg shot put has radius 0.11 m. Find its moment of inertia about a diameter.",
+   "steps": [
+    "I = (2/5)(7.26 kg)(0.11 m)^{2} = 0.03514 kg·m^{2}"
+   ],
+   "answer": "I ≈ 0.03514 kg·m^{2}"
+  },
+  "try": "(2/5) * 7.26 kg * (0.11 m)^2"
+ },
+ "A = 4π r^{2}": {
+  "title": "Surface area of a sphere",
+  "about": "A sphere of radius r has surface area 4πr^{2}. For a thin hollow sphere, mass = areal density × A.",
+  "assumptions": [
+   "Thin shell: wall thickness ≪ r"
+  ],
+  "vars": [
+   [
+    "A",
+    "surface area",
+    "m^{2}"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I = (2/3) m r^{2}",
+    "thin hollow sphere"
+   ],
+   [
+    "V = (4/3) π r^{3}",
+    "volume"
+   ]
+  ],
+  "example": {
+   "problem": "A basketball has radius 0.12 m. Find its surface area.",
+   "steps": [
+    "A = 4π(0.12 m)^{2} = 0.181 m^{2}"
+   ],
+   "answer": "A ≈ 0.181 m^{2}"
+  },
+  "try": "4 pi (0.12 m)^2"
+ },
+ "I_{xx} = I_{yy} = I_{zz} = (2/3) m r^{2}": {
+  "title": "Thin hollow sphere: inertia about any diameter",
+  "about": "A thin uniform spherical shell has moment of inertia (2/3) m r^{2} about every axis through its centre. It is larger than the solid sphere's (2/5) m r^{2} because all the mass is at radius r.",
+  "assumptions": [
+   "Wall thickness ≪ r; for a thick shell use (2/5) m (r_{o}^{5} − r_{i}^{5})/(r_{o}^{3} − r_{i}^{3})"
+  ],
+  "vars": [
+   [
+    "I",
+    "moment of inertia about any diameter",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I = (2/5) m r^{2}",
+    "solid sphere"
+   ],
+   [
+    "A = 4π r^{2}",
+    "surface area"
+   ]
+  ],
+  "example": {
+   "problem": "A 0.6 kg basketball (radius 0.12 m) is modelled as a thin shell. Find its moment of inertia.",
+   "steps": [
+    "I = (2/3)(0.6 kg)(0.12 m)^{2} = 0.00576 kg·m^{2}"
+   ],
+   "answer": "I = 0.00576 kg·m^{2}"
+  },
+  "try": "(2/3) * 0.6 kg * (0.12 m)^2"
+ },
+ "V = (2/3) π r^{3}": {
+  "title": "Volume of a solid half sphere",
+  "about": "A solid hemisphere of radius r has half the volume of the sphere, (2/3)πr^{3}.",
+  "assumptions": [
+   "Cut through the centre"
+  ],
+  "vars": [
+   [
+    "V",
+    "volume",
+    "m^{3}"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "y_{cm} = 3r/8",
+    "mass centre above the flat face"
+   ],
+   [
+    "V = (4/3) π r^{3}",
+    "whole sphere"
+   ]
+  ],
+  "example": {
+   "problem": "Find the volume of a hemispherical dome of radius 0.1 m.",
+   "steps": [
+    "V = (2/3)π(0.1)^{3} = 0.002094 m^{3}"
+   ],
+   "answer": "V ≈ 0.002094 m^{3}"
+  },
+  "try": "(2/3) * pi * (0.1 m)^3 to m^3"
+ },
+ "y_{cm} = 3r/8": {
+  "title": "Mass centre of a solid half sphere",
+  "about": "The mass centre of a uniform solid hemisphere lies on its axis of symmetry, 3r/8 above Bₒ, the centre of its flat face.",
+  "assumptions": [
+   "Uniform density (for a plate or shell: uniform mass per area)",
+   "Measured along y from Bₒ",
+   "A thin hemispherical shell has it at r/2 instead"
+  ],
+  "vars": [
+   [
+    "y_{cm}",
+    "height of the mass centre above Bₒ",
+    "m"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "y_{cm} = 4r/(3π)",
+    "half disk"
+   ],
+   [
+    "I_{xx} = I_{zz} = (83/320) m r^{2}",
+    "transverse inertia at B_{cm}"
+   ]
+  ],
+  "example": {
+   "problem": "Where is the mass centre of a solid hemisphere of radius 0.1 m?",
+   "steps": [
+    "y_{cm} = 3(0.1 m)/8 = 0.0375 m"
+   ],
+   "answer": "y_{cm} = 0.0375 m above Bₒ"
+  },
+  "try": "3 * 0.1 m / 8"
+ },
+ "I_{xx} = I_{zz} = (83/320) m r^{2}": {
+  "title": "Solid half sphere: transverse inertia at the mass centre",
+  "about": "A uniform solid hemisphere has moment of inertia (83/320) m r^{2} about an axis through its mass centre parallel to its flat face. It is (2/5) m r^{2} about Bₒ, less m (3r/8)^{2}.",
+  "assumptions": [
+   "Axes through the mass centre, 3r/8 above Bₒ",
+   "About Bₒ: (2/5) m r^{2}"
+  ],
+  "vars": [
+   [
+    "I_{xx}, I_{zz}",
+    "moment of inertia about a transverse axis through B_{cm}",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "y_{cm} = 3r/8",
+    "the shift"
+   ],
+   [
+    "I_{yy} = (2/5) m r^{2}",
+    "about the symmetry axis"
+   ],
+   [
+    "I^{B∕O} = I^{B∕B_{cm}} + m d^{2}",
+    "parallel-axis theorem: shift to an axis a distance d away"
+   ]
+  ],
+  "example": {
+   "problem": "A 4 kg solid hemisphere has radius 0.1 m. Find I_{xx} about its mass centre.",
+   "steps": [
+    "(2/5) − (3/8)^{2} = 0.4 − 0.140625 = 83/320 = 0.2594",
+    "I_{xx} = 0.2594 × 4 × 0.01 = 0.01038 kg·m^{2}"
+   ],
+   "answer": "I_{xx} ≈ 0.01038 kg·m^{2}"
+  },
+  "try": "(83/320) * 4 kg * (0.1 m)^2"
+ },
+ "I_{yy} = (2/5) m r^{2}": {
+  "title": "Solid half sphere: inertia about its symmetry axis",
+  "about": "A uniform solid hemisphere has moment of inertia (2/5) m r^{2} about its symmetry axis y, the same as a full sphere, since each half contributes equally.",
+  "assumptions": [
+   "y is the axis through Bₒ and the mass centre, normal to the flat face"
+  ],
+  "vars": [
+   [
+    "I_{yy}",
+    "moment of inertia about the symmetry axis",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xx} = I_{zz} = (83/320) m r^{2}",
+    "transverse, at B_{cm}"
+   ],
+   [
+    "I = (2/5) m r^{2}",
+    "full solid sphere"
+   ]
+  ],
+  "example": {
+   "problem": "A 4 kg solid hemisphere of radius 0.1 m spins about its symmetry axis. Find I_{yy}.",
+   "steps": [
+    "I_{yy} = (2/5)(4 kg)(0.1 m)^{2} = 0.016 kg·m^{2}"
+   ],
+   "answer": "I_{yy} = 0.016 kg·m^{2}"
+  },
+  "try": "(2/5) * 4 kg * (0.1 m)^2"
+ },
+ "V = (4/3) π a b c": {
+  "title": "Volume of an ellipsoid",
+  "about": "A solid ellipsoid with semi-axes a, b and c (along x, y and z) has volume (4/3)πabc. With a = b = c = r it is the sphere.",
+  "assumptions": [
+   "a, b, c are semi-axes (half the full widths)"
+  ],
+  "vars": [
+   [
+    "V",
+    "volume",
+    "m^{3}"
+   ],
+   [
+    "a, b, c",
+    "semi-axes along x, y, z",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "x^{2}/a^{2} + y^{2}/b^{2} + z^{2}/c^{2} = 1",
+    "the surface"
+   ],
+   [
+    "I_{xx} = (1/5) m (b^{2} + c^{2})",
+    "inertia"
+   ]
+  ],
+  "example": {
+   "problem": "An ellipsoid has semi-axes 0.3 m, 0.2 m and 0.1 m. Find its volume.",
+   "steps": [
+    "V = (4/3)π(0.3)(0.2)(0.1) = 0.02513 m^{3}"
+   ],
+   "answer": "V ≈ 0.02513 m^{3}"
+  },
+  "try": "(4/3) * pi * 0.3 m * 0.2 m * 0.1 m to m^3"
+ },
+ "I_{xx} = (1/5) m (b^{2} + c^{2})": {
+  "title": "Solid ellipsoid: inertia about the x axis",
+  "about": "A uniform solid ellipsoid has moment of inertia (1/5) m (b^{2} + c^{2}) about its x axis. Only the semi-axes across that axis (b along y, c along z) count; a lies along it.",
+  "assumptions": [
+   "Axes are the ellipsoid's principal axes through its centre",
+   "a = b = c = r gives the sphere, (2/5) m r^{2}"
+  ],
+  "vars": [
+   [
+    "I_{xx}",
+    "moment of inertia about the x axis",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "b",
+    "semi-axis along y",
+    "m"
+   ],
+   [
+    "c",
+    "semi-axis along z",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{yy}, I_{zz}",
+    "the other two, by the same pattern"
+   ],
+   [
+    "I = (1/3) m (…)",
+    "thin-walled ellipsoid"
+   ],
+   [
+    "V = (4/3) π a b c",
+    "volume"
+   ]
+  ],
+  "example": {
+   "problem": "A 5 kg solid ellipsoid has a = 0.3 m, b = 0.2 m, c = 0.1 m. Find I_{xx}.",
+   "steps": [
+    "b^{2} + c^{2} = 0.04 + 0.01 = 0.05 m^{2}",
+    "I_{xx} = (1/5)(5 kg)(0.05) = 0.05 kg·m^{2}"
+   ],
+   "answer": "I_{xx} = 0.05 kg·m^{2}"
+  },
+  "try": "(1/5) * 5 kg * ((0.2 m)^2 + (0.1 m)^2)"
+ },
+ "I_{yy} = (1/5) m (a^{2} + c^{2})": {
+  "title": "Solid ellipsoid: inertia about the y axis",
+  "about": "A uniform solid ellipsoid has moment of inertia (1/5) m (a^{2} + c^{2}) about its y axis. Only the semi-axes across that axis (a along x, c along z) count; b lies along it.",
+  "assumptions": [
+   "Axes are the ellipsoid's principal axes through its centre",
+   "a = b = c = r gives the sphere, (2/5) m r^{2}"
+  ],
+  "vars": [
+   [
+    "I_{yy}",
+    "moment of inertia about the y axis",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "a",
+    "semi-axis along x",
+    "m"
+   ],
+   [
+    "c",
+    "semi-axis along z",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xx}, I_{zz}",
+    "the other two, by the same pattern"
+   ],
+   [
+    "I = (1/3) m (…)",
+    "thin-walled ellipsoid"
+   ],
+   [
+    "V = (4/3) π a b c",
+    "volume"
+   ]
+  ],
+  "example": {
+   "problem": "A 5 kg solid ellipsoid has a = 0.3 m, b = 0.2 m, c = 0.1 m. Find I_{yy}.",
+   "steps": [
+    "a^{2} + c^{2} = 0.09 + 0.01 = 0.1 m^{2}",
+    "I_{yy} = (1/5)(5 kg)(0.1) = 0.1 kg·m^{2}"
+   ],
+   "answer": "I_{yy} = 0.1 kg·m^{2}"
+  },
+  "try": "(1/5) * 5 kg * ((0.3 m)^2 + (0.1 m)^2)"
+ },
+ "I_{zz} = (1/5) m (a^{2} + b^{2})": {
+  "title": "Solid ellipsoid: inertia about the z axis",
+  "about": "A uniform solid ellipsoid has moment of inertia (1/5) m (a^{2} + b^{2}) about its z axis. Only the semi-axes across that axis (a along x, b along y) count; c lies along it.",
+  "assumptions": [
+   "Axes are the ellipsoid's principal axes through its centre",
+   "a = b = c = r gives the sphere, (2/5) m r^{2}"
+  ],
+  "vars": [
+   [
+    "I_{zz}",
+    "moment of inertia about the z axis",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "a",
+    "semi-axis along x",
+    "m"
+   ],
+   [
+    "b",
+    "semi-axis along y",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xx}, I_{yy}",
+    "the other two, by the same pattern"
+   ],
+   [
+    "I = (1/3) m (…)",
+    "thin-walled ellipsoid"
+   ],
+   [
+    "V = (4/3) π a b c",
+    "volume"
+   ]
+  ],
+  "example": {
+   "problem": "A 5 kg solid ellipsoid has a = 0.3 m, b = 0.2 m, c = 0.1 m. Find I_{zz}.",
+   "steps": [
+    "a^{2} + b^{2} = 0.09 + 0.04 = 0.13 m^{2}",
+    "I_{zz} = (1/5)(5 kg)(0.13) = 0.13 kg·m^{2}"
+   ],
+   "answer": "I_{zz} = 0.13 kg·m^{2}"
+  },
+  "try": "(1/5) * 5 kg * ((0.3 m)^2 + (0.2 m)^2)"
+ },
+ "x^{2}/a^{2} + y^{2}/b^{2} + z^{2}/c^{2} = 1": {
+  "title": "Surface of an ellipsoid",
+  "about": "A point Q at (x, y, z) from the centre lies on the ellipsoid's surface when x^{2}/a^{2} + y^{2}/b^{2} + z^{2}/c^{2} = 1; less than 1 means inside. It defines both the solid and the thin-walled ellipsoid.",
+  "assumptions": [
+   "x, y, z measured along the principal axes from the centre",
+   "a, b, c are semi-axes"
+  ],
+  "vars": [
+   [
+    "x, y, z",
+    "coordinates of Q",
+    "m"
+   ],
+   [
+    "a, b, c",
+    "semi-axes",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "V = (4/3) π a b c",
+    "volume"
+   ],
+   [
+    "x^{2} + y^{2} = r^{2}",
+    "circle, the 2D sphere case"
+   ]
+  ],
+  "example": {
+   "problem": "On an ellipsoid with a = 0.3 m, b = 0.2 m, c = 0.1 m, a surface point has x = 0.15 m and y = 0.1 m. Find z.",
+   "steps": [
+    "x^{2}/a^{2} = 0.25, y^{2}/b^{2} = 0.25",
+    "z^{2}/c^{2} = 1 − 0.5 = 0.5",
+    "z = 0.1 √0.5 = 0.07071 m"
+   ],
+   "answer": "z ≈ ±0.07071 m"
+  },
+  "try": "0.1 m * sqrt(1 - 0.15^2/0.3^2 - 0.1^2/0.2^2)"
+ },
+ "A ≈ 4π [((ab)^{p} + (ac)^{p} + (bc)^{p})/3]^{1/p}": {
+  "title": "Surface area of an ellipsoid (Thomsen's approximation)",
+  "about": "An ellipsoid's surface area has no elementary closed form; Knud Thomsen's formula with p = 1.6075 gives it to within about 1.06%. It is exact for a sphere.",
+  "assumptions": [
+   "Approximate; worst error about 1.06% for very flat or very long ellipsoids",
+   "a, b, c are semi-axes"
+  ],
+  "vars": [
+   [
+    "A",
+    "surface area",
+    "m^{2}"
+   ],
+   [
+    "a, b, c",
+    "semi-axes",
+    "m"
+   ],
+   [
+    "p",
+    "fitted exponent, 1.6075",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "p = 1.6075",
+    "the exponent"
+   ],
+   [
+    "A = 4π r^{2}",
+    "sphere, a = b = c = r"
+   ]
+  ],
+  "example": {
+   "problem": "Estimate the surface area of an ellipsoid with semi-axes 3 m, 2 m and 1 m.",
+   "steps": [
+    "(ab)^{p} = 6^{1.6075} = 17.82, (ac)^{p} = 3^{1.6075} = 5.848, (bc)^{p} = 2^{1.6075} = 3.047",
+    "Mean = 8.905; to the 1/p power: 3.897",
+    "A ≈ 4π × 3.897 = 48.97 m^{2}"
+   ],
+   "answer": "A ≈ 48.97 m^{2}"
+  },
+  "try": "4 * pi * ((6^1.6075 + 3^1.6075 + 2^1.6075)/3)^(1/1.6075)"
+ },
+ "p = 1.6075": {
+  "title": "Thomsen's exponent for ellipsoid area",
+  "about": "The exponent p = 1.6075 in Thomsen's ellipsoid surface-area formula is chosen to minimise the worst-case error (about 1.06%). p = 1.6 is a common rounder alternative with error up to about 1.2%.",
+  "assumptions": [
+   "Empirical fit, not exact; any p gives the exact sphere"
+  ],
+  "vars": [
+   [
+    "p",
+    "exponent in the area formula",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "A ≈ 4π [((ab)^{p} + (ac)^{p} + (bc)^{p})/3]^{1/p}",
+    "the area formula it belongs to"
+   ]
+  ],
+  "example": {
+   "problem": "Check the formula on a sphere of radius 1 m, where the exact area is 4π.",
+   "steps": [
+    "(ab)^{p} = (ac)^{p} = (bc)^{p} = 1",
+    "[(1 + 1 + 1)/3]^{1/p} = 1, whatever p is",
+    "A = 4π = 12.57 m^{2}"
+   ],
+   "answer": "A = 4π ≈ 12.57 m^{2}"
+  },
+  "try": "4 * pi * ((1 + 1 + 1)/3)^(1/1.6075)"
+ },
+ "I_{xx} = (1/3) m (b^{2} + c^{2})": {
+  "title": "Thin-walled ellipsoid: inertia about the x axis",
+  "about": "A thin uniform ellipsoidal shell has moment of inertia (1/3) m (b^{2} + c^{2}) about its x axis. a = b = c = r gives the hollow sphere, (2/3) m r^{2}.",
+  "assumptions": [
+   "Thin shell whose thickness varies as the gap between two similar ellipsoids (a homoeoid); for a shell of even thickness it is close but not exact",
+   "Axes are the principal axes through the centre"
+  ],
+  "vars": [
+   [
+    "I_{xx}",
+    "moment of inertia about the x axis",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "b",
+    "semi-axis along y",
+    "m"
+   ],
+   [
+    "c",
+    "semi-axis along z",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xx} = (1/5) m (b^{2} + c^{2})",
+    "solid ellipsoid"
+   ],
+   [
+    "I = (2/3) m r^{2}",
+    "thin hollow sphere"
+   ]
+  ],
+  "example": {
+   "problem": "A 0.8 kg thin ellipsoidal shell has a = 0.3 m, b = 0.2 m, c = 0.1 m. Find I_{xx}.",
+   "steps": [
+    "b^{2} + c^{2} = 0.05 m^{2}",
+    "I_{xx} = (1/3)(0.8 kg)(0.05) = 0.01333 kg·m^{2}"
+   ],
+   "answer": "I_{xx} ≈ 0.01333 kg·m^{2}"
+  },
+  "try": "(1/3) * 0.8 kg * ((0.2 m)^2 + (0.1 m)^2)"
+ },
+ "I_{yy} = (1/3) m (a^{2} + c^{2})": {
+  "title": "Thin-walled ellipsoid: inertia about the y axis",
+  "about": "A thin uniform ellipsoidal shell has moment of inertia (1/3) m (a^{2} + c^{2}) about its y axis. a = b = c = r gives the hollow sphere, (2/3) m r^{2}.",
+  "assumptions": [
+   "Thin shell whose thickness varies as the gap between two similar ellipsoids (a homoeoid); for a shell of even thickness it is close but not exact",
+   "Axes are the principal axes through the centre"
+  ],
+  "vars": [
+   [
+    "I_{yy}",
+    "moment of inertia about the y axis",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "a",
+    "semi-axis along x",
+    "m"
+   ],
+   [
+    "c",
+    "semi-axis along z",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{yy} = (1/5) m (a^{2} + c^{2})",
+    "solid ellipsoid"
+   ],
+   [
+    "I = (2/3) m r^{2}",
+    "thin hollow sphere"
+   ]
+  ],
+  "example": {
+   "problem": "A 0.8 kg thin ellipsoidal shell has a = 0.3 m, b = 0.2 m, c = 0.1 m. Find I_{yy}.",
+   "steps": [
+    "a^{2} + c^{2} = 0.1 m^{2}",
+    "I_{yy} = (1/3)(0.8 kg)(0.1) = 0.02667 kg·m^{2}"
+   ],
+   "answer": "I_{yy} ≈ 0.02667 kg·m^{2}"
+  },
+  "try": "(1/3) * 0.8 kg * ((0.3 m)^2 + (0.1 m)^2)"
+ },
+ "I_{zz} = (1/3) m (a^{2} + b^{2})": {
+  "title": "Thin-walled ellipsoid: inertia about the z axis",
+  "about": "A thin uniform ellipsoidal shell has moment of inertia (1/3) m (a^{2} + b^{2}) about its z axis. a = b = c = r gives the hollow sphere, (2/3) m r^{2}.",
+  "assumptions": [
+   "Thin shell whose thickness varies as the gap between two similar ellipsoids (a homoeoid); for a shell of even thickness it is close but not exact",
+   "Axes are the principal axes through the centre"
+  ],
+  "vars": [
+   [
+    "I_{zz}",
+    "moment of inertia about the z axis",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "a",
+    "semi-axis along x",
+    "m"
+   ],
+   [
+    "b",
+    "semi-axis along y",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{zz} = (1/5) m (a^{2} + b^{2})",
+    "solid ellipsoid"
+   ],
+   [
+    "I = (2/3) m r^{2}",
+    "thin hollow sphere"
+   ]
+  ],
+  "example": {
+   "problem": "A 0.8 kg thin ellipsoidal shell has a = 0.3 m, b = 0.2 m, c = 0.1 m. Find I_{zz}.",
+   "steps": [
+    "a^{2} + b^{2} = 0.13 m^{2}",
+    "I_{zz} = (1/3)(0.8 kg)(0.13) = 0.03467 kg·m^{2}"
+   ],
+   "answer": "I_{zz} ≈ 0.03467 kg·m^{2}"
+  },
+  "try": "(1/3) * 0.8 kg * ((0.3 m)^2 + (0.2 m)^2)"
+ },
+ "V = a b c": {
+  "title": "Volume of a box",
+  "about": "A rectangular block with side lengths a, b and c (along x, y and z) has volume abc.",
+  "assumptions": [
+   "a, b, c are full side lengths"
+  ],
+  "vars": [
+   [
+    "V",
+    "volume",
+    "m^{3}"
+   ],
+   [
+    "a, b, c",
+    "side lengths along x, y, z",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xx} = (1/12) m (b^{2} + c^{2})",
+    "inertia about x"
+   ]
+  ],
+  "example": {
+   "problem": "A concrete block (ρ = 2400 kg/m^{3}) is 0.4 m × 0.3 m × 0.2 m. Find its volume and mass.",
+   "steps": [
+    "V = 0.4 × 0.3 × 0.2 = 0.024 m^{3}",
+    "m = 2400 × 0.024 = 57.6 kg"
+   ],
+   "answer": "V = 0.024 m^{3} (m = 57.6 kg)"
+  },
+  "try": "0.4 m * 0.3 m * 0.2 m to m^3"
+ },
+ "I_{xx} = (1/12) m (b^{2} + c^{2})": {
+  "title": "Solid box: inertia about the x axis",
+  "about": "A uniform rectangular block has moment of inertia (1/12) m (b^{2} + c^{2}) about the x axis through its mass centre. Only the two sides across the axis (b along y, c along z) count.",
+  "assumptions": [
+   "Axes pass through the mass centre B_{cm}, as drawn; for a parallel axis at distance d add m d^{2}, parallel to the edges",
+   "One side → 0 gives the thin plate"
+  ],
+  "vars": [
+   [
+    "I_{xx}",
+    "moment of inertia about x through B_{cm}",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "b",
+    "side along y",
+    "m"
+   ],
+   [
+    "c",
+    "side along z",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xx} = (1/12) m b^{2}",
+    "thin plate"
+   ],
+   [
+    "I_{xx} = m (b^{2} + c^{2})",
+    "8 particles at the corners (±a, ±b, ±c)"
+   ],
+   [
+    "I^{B∕O} = I^{B∕B_{cm}} + m d^{2}",
+    "parallel-axis theorem: shift to an axis a distance d away"
+   ]
+  ],
+  "example": {
+   "problem": "A 6 kg block is 0.4 m (x) × 0.3 m (y) × 0.2 m (z). Find I_{xx} about its mass centre.",
+   "steps": [
+    "b^{2} + c^{2} = 0.09 + 0.04 = 0.13 m^{2}",
+    "I_{xx} = (6/12)(0.13) = 0.065 kg·m^{2}"
+   ],
+   "answer": "I_{xx} = 0.065 kg·m^{2}"
+  },
+  "try": "(1/12) * 6 kg * ((0.3 m)^2 + (0.2 m)^2)"
+ },
+ "I_{yy} = (1/12) m (a^{2} + c^{2})": {
+  "title": "Solid box: inertia about the y axis",
+  "about": "A uniform rectangular block has moment of inertia (1/12) m (a^{2} + c^{2}) about the y axis through its mass centre. Only the two sides across the axis (a along x, c along z) count.",
+  "assumptions": [
+   "Axes pass through the mass centre B_{cm}, as drawn; for a parallel axis at distance d add m d^{2}, parallel to the edges",
+   "One side → 0 gives the thin plate"
+  ],
+  "vars": [
+   [
+    "I_{yy}",
+    "moment of inertia about y through B_{cm}",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "a",
+    "side along x",
+    "m"
+   ],
+   [
+    "c",
+    "side along z",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xx} = (1/12) m b^{2}",
+    "thin plate"
+   ],
+   [
+    "I_{xx} = m (b^{2} + c^{2})",
+    "8 particles at the corners (±a, ±b, ±c)"
+   ],
+   [
+    "I^{B∕O} = I^{B∕B_{cm}} + m d^{2}",
+    "parallel-axis theorem: shift to an axis a distance d away"
+   ]
+  ],
+  "example": {
+   "problem": "A 6 kg block is 0.4 m (x) × 0.3 m (y) × 0.2 m (z). Find I_{yy} about its mass centre.",
+   "steps": [
+    "a^{2} + c^{2} = 0.16 + 0.04 = 0.2 m^{2}",
+    "I_{yy} = (6/12)(0.2) = 0.1 kg·m^{2}"
+   ],
+   "answer": "I_{yy} = 0.1 kg·m^{2}"
+  },
+  "try": "(1/12) * 6 kg * ((0.4 m)^2 + (0.2 m)^2)"
+ },
+ "I_{zz} = (1/12) m (a^{2} + b^{2})": {
+  "title": "Solid box: inertia about the z axis",
+  "about": "A uniform rectangular block has moment of inertia (1/12) m (a^{2} + b^{2}) about the z axis through its mass centre. Only the two sides across the axis (a along x, b along y) count.",
+  "assumptions": [
+   "Axes pass through the mass centre B_{cm}, as drawn; for a parallel axis at distance d add m d^{2}, parallel to the edges",
+   "One side → 0 gives the thin plate"
+  ],
+  "vars": [
+   [
+    "I_{zz}",
+    "moment of inertia about z through B_{cm}",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "a",
+    "side along x",
+    "m"
+   ],
+   [
+    "b",
+    "side along y",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xx} = (1/12) m b^{2}",
+    "thin plate"
+   ],
+   [
+    "I_{xx} = m (b^{2} + c^{2})",
+    "8 particles at the corners (±a, ±b, ±c)"
+   ],
+   [
+    "I^{B∕O} = I^{B∕B_{cm}} + m d^{2}",
+    "parallel-axis theorem: shift to an axis a distance d away"
+   ]
+  ],
+  "example": {
+   "problem": "A 6 kg block is 0.4 m (x) × 0.3 m (y) × 0.2 m (z). Find I_{zz} about its mass centre.",
+   "steps": [
+    "a^{2} + b^{2} = 0.16 + 0.09 = 0.25 m^{2}",
+    "I_{zz} = (6/12)(0.25) = 0.125 kg·m^{2}"
+   ],
+   "answer": "I_{zz} = 0.125 kg·m^{2}"
+  },
+  "try": "(1/12) * 6 kg * ((0.4 m)^2 + (0.3 m)^2)"
+ },
+ "m_{i} = m/8": {
+  "title": "Mass of each corner particle",
+  "about": "Eight equal particles at the corners (±a, ±b, ±c) of a box share the total mass m equally, so each carries m/8. It models a frame whose mass is lumped at its joints.",
+  "assumptions": [
+   "Point masses; the rods joining them are massless",
+   "Here a, b, c are half the box's side lengths"
+  ],
+  "vars": [
+   [
+    "m_{i}",
+    "mass of one particle",
+    "kg"
+   ],
+   [
+    "m",
+    "total mass of all eight",
+    "kg"
+   ]
+  ],
+  "related": [
+   [
+    "I_{xx} = m (b^{2} + c^{2})",
+    "inertia of the set"
+   ]
+  ],
+  "example": {
+   "problem": "A 4 kg lumped-mass frame has its mass at its 8 corners. Find each corner mass.",
+   "steps": [
+    "m_{i} = 4 kg/8 = 0.5 kg"
+   ],
+   "answer": "m_{i} = 0.5 kg"
+  },
+  "try": "4 kg / 8"
+ },
+ "I_{xx} = m (b^{2} + c^{2})": {
+  "title": "Eight corner particles: inertia about the x axis",
+  "about": "Eight equal particles at (±a, ±b, ±c) have moment of inertia m (b^{2} + c^{2}) about the x axis through the centre: each of the eight m/8 masses sits b^{2} + c^{2} from that axis squared. Products of inertia vanish by symmetry.",
+  "assumptions": [
+   "m is the total mass; each particle is m/8",
+   "a, b, c are half the box's side lengths (the coordinates of the corners), not full sides",
+   "Compare the solid box (1/12) m (…) with full side lengths: lumping mass at the corners raises the inertia"
+  ],
+  "vars": [
+   [
+    "I_{xx}",
+    "moment of inertia about x",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "total mass",
+    "kg"
+   ],
+   [
+    "b",
+    "corner coordinate along y",
+    "m"
+   ],
+   [
+    "c",
+    "corner coordinate along z",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "m_{i} = m/8",
+    "each particle"
+   ],
+   [
+    "I_{xx} = (1/12) m (b^{2} + c^{2})",
+    "solid box of full sides"
+   ],
+   [
+    "I = Σ m_{i} r_{i}^{2}",
+    "definition for particles"
+   ]
+  ],
+  "example": {
+   "problem": "A 4 kg set of 8 particles sits at (±0.2, ±0.15, ±0.1) m. Find I_{xx}.",
+   "steps": [
+    "Each particle: (m/8)(b^{2} + c^{2}); eight of them give m(b^{2} + c^{2})",
+    "I_{xx} = 4 kg × (0.0225 + 0.01) m^{2} = 0.13 kg·m^{2}"
+   ],
+   "answer": "I_{xx} = 0.13 kg·m^{2}"
+  },
+  "try": "4 kg * ((0.15 m)^2 + (0.1 m)^2)"
+ },
+ "I_{yy} = m (a^{2} + c^{2})": {
+  "title": "Eight corner particles: inertia about the y axis",
+  "about": "Eight equal particles at (±a, ±b, ±c) have moment of inertia m (a^{2} + c^{2}) about the y axis through the centre: each of the eight m/8 masses sits a^{2} + c^{2} from that axis squared. Products of inertia vanish by symmetry.",
+  "assumptions": [
+   "m is the total mass; each particle is m/8",
+   "a, b, c are half the box's side lengths (the coordinates of the corners), not full sides",
+   "Compare the solid box (1/12) m (…) with full side lengths: lumping mass at the corners raises the inertia"
+  ],
+  "vars": [
+   [
+    "I_{yy}",
+    "moment of inertia about y",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "total mass",
+    "kg"
+   ],
+   [
+    "a",
+    "corner coordinate along x",
+    "m"
+   ],
+   [
+    "c",
+    "corner coordinate along z",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "m_{i} = m/8",
+    "each particle"
+   ],
+   [
+    "I_{yy} = (1/12) m (a^{2} + c^{2})",
+    "solid box of full sides"
+   ],
+   [
+    "I = Σ m_{i} r_{i}^{2}",
+    "definition for particles"
+   ]
+  ],
+  "example": {
+   "problem": "A 4 kg set of 8 particles sits at (±0.2, ±0.15, ±0.1) m. Find I_{yy}.",
+   "steps": [
+    "Each particle: (m/8)(a^{2} + c^{2}); eight of them give m(a^{2} + c^{2})",
+    "I_{yy} = 4 kg × (0.04 + 0.01) m^{2} = 0.2 kg·m^{2}"
+   ],
+   "answer": "I_{yy} = 0.2 kg·m^{2}"
+  },
+  "try": "4 kg * ((0.2 m)^2 + (0.1 m)^2)"
+ },
+ "I_{zz} = m (a^{2} + b^{2})": {
+  "title": "Eight corner particles: inertia about the z axis",
+  "about": "Eight equal particles at (±a, ±b, ±c) have moment of inertia m (a^{2} + b^{2}) about the z axis through the centre: each of the eight m/8 masses sits a^{2} + b^{2} from that axis squared. Products of inertia vanish by symmetry.",
+  "assumptions": [
+   "m is the total mass; each particle is m/8",
+   "a, b, c are half the box's side lengths (the coordinates of the corners), not full sides",
+   "Compare the solid box (1/12) m (…) with full side lengths: lumping mass at the corners raises the inertia"
+  ],
+  "vars": [
+   [
+    "I_{zz}",
+    "moment of inertia about z",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "total mass",
+    "kg"
+   ],
+   [
+    "a",
+    "corner coordinate along x",
+    "m"
+   ],
+   [
+    "b",
+    "corner coordinate along y",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "m_{i} = m/8",
+    "each particle"
+   ],
+   [
+    "I_{zz} = (1/12) m (a^{2} + b^{2})",
+    "solid box of full sides"
+   ],
+   [
+    "I = Σ m_{i} r_{i}^{2}",
+    "definition for particles"
+   ]
+  ],
+  "example": {
+   "problem": "A 4 kg set of 8 particles sits at (±0.2, ±0.15, ±0.1) m. Find I_{zz}.",
+   "steps": [
+    "Each particle: (m/8)(a^{2} + b^{2}); eight of them give m(a^{2} + b^{2})",
+    "I_{zz} = 4 kg × (0.04 + 0.0225) m^{2} = 0.25 kg·m^{2}"
+   ],
+   "answer": "I_{zz} = 0.25 kg·m^{2}"
+  },
+  "try": "4 kg * ((0.2 m)^2 + (0.15 m)^2)"
+ },
+ "A = (1/2) |p⃗ × q⃗|": {
+  "title": "Area of a triangle from two edge vectors",
+  "about": "A triangle with vertices O, P and Q has area half the magnitude of p⃗ × q⃗, where p⃗ and q⃗ run from O to P and Q. It works for any triangle in 3D.",
+  "assumptions": [
+   "p⃗ and q⃗ start at the same vertex O"
+  ],
+  "vars": [
+   [
+    "A",
+    "area",
+    "m^{2}"
+   ],
+   [
+    "p⃗",
+    "position of vertex P from O",
+    "m"
+   ],
+   [
+    "q⃗",
+    "position of vertex Q from O",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "^{O}r⃗^{B_{cm}} = (p⃗ + q⃗)/3",
+    "centroid"
+   ],
+   [
+    "V = (1/6) p⃗ × q⃗ · r⃗",
+    "tetrahedron volume"
+   ]
+  ],
+  "example": {
+   "problem": "A triangle has p⃗ = 3 n̂_{x} m and q⃗ = (1 n̂_{x} + 2 n̂_{y}) m. Find its area.",
+   "steps": [
+    "p⃗ × q⃗ = (3·2 − 0·1) n̂_{z} = 6 n̂_{z} m^{2}",
+    "A = (1/2)(6) = 3 m^{2}"
+   ],
+   "answer": "A = 3 m^{2}"
+  },
+  "try": "(1/2) * abs(3*2 - 0*1)"
+ },
+ "^{O}r⃗^{B_{cm}} = (p⃗ + q⃗)/3": {
+  "title": "Mass centre of a triangular plate",
+  "about": "The mass centre of a uniform triangular plate is the average of its three vertices. With O at the origin, it is (p⃗ + q⃗)/3 from O.",
+  "assumptions": [
+   "Uniform density (for a plate or shell: uniform mass per area)",
+   "Same point as the intersection of the medians"
+  ],
+  "vars": [
+   [
+    "^{O}r⃗^{B_{cm}}",
+    "position of the mass centre from O",
+    "m"
+   ],
+   [
+    "p⃗",
+    "position of vertex P from O",
+    "m"
+   ],
+   [
+    "q⃗",
+    "position of vertex Q from O",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "A = (1/2) |p⃗ × q⃗|",
+    "area"
+   ],
+   [
+    "^{O}r⃗^{B_{cm}} = (p⃗ + q⃗ + r⃗)/4",
+    "tetrahedron"
+   ]
+  ],
+  "example": {
+   "problem": "A triangular plate has p⃗ = 3 n̂_{x} m and q⃗ = (1 n̂_{x} + 2 n̂_{y}) m. Where is its mass centre?",
+   "steps": [
+    "p⃗ + q⃗ = 4 n̂_{x} + 2 n̂_{y} m",
+    "^{O}r⃗^{B_{cm}} = (4/3) n̂_{x} + (2/3) n̂_{y} = 1.333 n̂_{x} + 0.6667 n̂_{y} m"
+   ],
+   "answer": "^{O}r⃗^{B_{cm}} ≈ 1.333 n̂_{x} + 0.6667 n̂_{y} m"
+  }
+ },
+ "I⃡^{B∕O} = (m/6) [1⃡ (p⃗ · p⃗ + q⃗ · q⃗ + p⃗ · q⃗) − (p⃗ p⃗ + p⃗ q⃗/2 + q⃗ p⃗/2 + q⃗ q⃗)]": {
+  "title": "Inertia dyadic of a triangular plate about a vertex",
+  "about": "The full inertia dyadic of a uniform triangular plate about its vertex O, from the two edge vectors p⃗ and q⃗. Its diagonal entries are the moments of inertia and its off-diagonal entries the (negative) products of inertia, in any basis.",
+  "assumptions": [
+   "Thin uniform plate, any shape of triangle, in any orientation",
+   "About the vertex O; shift to the mass centre with the parallel-axis theorem",
+   "1⃡ is the unit dyadic; p⃗ q⃗ is a dyad (outer product), whose n̂_{i} n̂_{j} component is p_{i} q_{j}"
+  ],
+  "vars": [
+   [
+    "I⃡^{B∕O}",
+    "inertia dyadic of plate B about O",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "p⃗",
+    "position of vertex P from O",
+    "m"
+   ],
+   [
+    "q⃗",
+    "position of vertex Q from O",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I⃡^{B∕O} = (m/6) [d 1⃡ − (p⃗ p⃗_{sum} + q⃗ q⃗_{sum})]",
+    "the same, compact"
+   ],
+   [
+    "^{O}r⃗^{B_{cm}} = (p⃗ + q⃗)/3",
+    "mass centre"
+   ]
+  ],
+  "example": {
+   "problem": "A 1.2 kg right-triangle plate has p⃗ = 0.3 n̂_{x} m and q⃗ = 0.4 n̂_{y} m. Find I_{xx}, I_{yy}, I_{zz} and I_{xy} about O.",
+   "steps": [
+    "p⃗·p⃗ + q⃗·q⃗ + p⃗·q⃗ = 0.09 + 0.16 + 0 = 0.25 m^{2}",
+    "I_{xx} = (m/6)(0.25 − p_{x}^{2}) = 0.2(0.16) = 0.032 kg·m^{2}",
+    "I_{yy} = 0.2(0.25 − q_{y}^{2}) = 0.2(0.09) = 0.018 kg·m^{2}",
+    "I_{zz} = 0.2(0.25) = 0.05 kg·m^{2}",
+    "I_{xy} = −0.2(p_{x} q_{y}/2) = −0.2(0.06) = −0.012 kg·m^{2}"
+   ],
+   "answer": "I_{xx} = 0.032, I_{yy} = 0.018, I_{zz} = 0.05, I_{xy} = −0.012 kg·m^{2}"
+  }
+ },
+ "I⃡^{B∕O} = (m/6) [d 1⃡ − (p⃗ p⃗_{sum} + q⃗ q⃗_{sum})]": {
+  "title": "Inertia dyadic of a triangle, compact form",
+  "about": "The triangle's inertia dyadic about vertex O written with the helper vectors p⃗_{sum}, q⃗_{sum} and the scalar d. It is the same dyadic as the long form, set out so it is quick to compute by hand or in code.",
+  "assumptions": [
+   "Thin uniform triangular plate, about vertex O",
+   "1⃡ is the unit dyadic; p⃗ q⃗ is a dyad (outer product), whose n̂_{i} n̂_{j} component is p_{i} q_{j}"
+  ],
+  "vars": [
+   [
+    "I⃡^{B∕O}",
+    "inertia dyadic about O",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "d",
+    "p⃗ · p⃗_{sum} + q⃗ · q⃗_{sum}",
+    "m^{2}"
+   ],
+   [
+    "p⃗_{sum}, q⃗_{sum}",
+    "p⃗ + q⃗/2 and q⃗ + p⃗/2",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "p⃗_{sum} = p⃗ + q⃗/2,  q⃗_{sum} = q⃗ + p⃗/2",
+    "helper vectors"
+   ],
+   [
+    "d = p⃗ · p⃗_{sum} + q⃗ · q⃗_{sum}",
+    "helper scalar"
+   ]
+  ],
+  "example": {
+   "problem": "A 1.2 kg plate has p⃗ = 0.3 n̂_{x} m and q⃗ = 0.4 n̂_{y} m. Find I_{xx} about O with the compact form.",
+   "steps": [
+    "p⃗_{sum} = 0.3 n̂_{x} + 0.2 n̂_{y}, q⃗_{sum} = 0.15 n̂_{x} + 0.4 n̂_{y}",
+    "d = 0.09 + 0.16 = 0.25 m^{2}",
+    "n̂_{x}n̂_{x} part of p⃗ p⃗_{sum} + q⃗ q⃗_{sum} = 0.3(0.3) + 0(0.15) = 0.09",
+    "I_{xx} = (1.2/6)(0.25 − 0.09) = 0.032 kg·m^{2}"
+   ],
+   "answer": "I_{xx} = 0.032 kg·m^{2}"
+  },
+  "try": "(1.2 kg / 6) * (0.25 m^2 - 0.09 m^2)"
+ },
+ "p⃗_{sum} = p⃗ + q⃗/2,  q⃗_{sum} = q⃗ + p⃗/2": {
+  "title": "Helper vectors for the triangle's inertia",
+  "about": "Shorthand vectors that fold the cross terms p⃗ q⃗/2 and q⃗ p⃗/2 into two dyads, so I⃡^{B∕O} = (m/6)[d 1⃡ − (p⃗ p⃗_{sum} + q⃗ q⃗_{sum})].",
+  "assumptions": [
+   "p⃗ and q⃗ are edge vectors from vertex O"
+  ],
+  "vars": [
+   [
+    "p⃗_{sum}",
+    "p⃗ plus half of q⃗",
+    "m"
+   ],
+   [
+    "q⃗_{sum}",
+    "q⃗ plus half of p⃗",
+    "m"
+   ],
+   [
+    "p⃗",
+    "position of vertex P from O",
+    "m"
+   ],
+   [
+    "q⃗",
+    "position of vertex Q from O",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "d = p⃗ · p⃗_{sum} + q⃗ · q⃗_{sum}",
+    "helper scalar"
+   ],
+   [
+    "I⃡^{B∕O} = (m/6) [d 1⃡ − (p⃗ p⃗_{sum} + q⃗ q⃗_{sum})]",
+    "where they are used"
+   ]
+  ],
+  "example": {
+   "problem": "With p⃗ = 0.3 n̂_{x} m and q⃗ = 0.4 n̂_{y} m, find p⃗_{sum} and q⃗_{sum}.",
+   "steps": [
+    "p⃗_{sum} = 0.3 n̂_{x} + (0.4/2) n̂_{y} = 0.3 n̂_{x} + 0.2 n̂_{y} m",
+    "q⃗_{sum} = 0.4 n̂_{y} + (0.3/2) n̂_{x} = 0.15 n̂_{x} + 0.4 n̂_{y} m"
+   ],
+   "answer": "p⃗_{sum} = 0.3 n̂_{x} + 0.2 n̂_{y} m, q⃗_{sum} = 0.15 n̂_{x} + 0.4 n̂_{y} m"
+  }
+ },
+ "d = p⃗ · p⃗_{sum} + q⃗ · q⃗_{sum}": {
+  "title": "Helper scalar for the triangle's inertia",
+  "about": "The scalar d equals p⃗ · p⃗ + q⃗ · q⃗ + p⃗ · q⃗. In the triangle's inertia dyadic it multiplies the unit dyadic, and (m/6) d is the polar moment of inertia about O, normal to the plate.",
+  "assumptions": [
+   "p⃗ and q⃗ are edge vectors from vertex O"
+  ],
+  "vars": [
+   [
+    "d",
+    "helper scalar",
+    "m^{2}"
+   ],
+   [
+    "p⃗",
+    "position of vertex P from O",
+    "m"
+   ],
+   [
+    "q⃗",
+    "position of vertex Q from O",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "p⃗_{sum} = p⃗ + q⃗/2,  q⃗_{sum} = q⃗ + p⃗/2",
+    "helper vectors"
+   ],
+   [
+    "I⃡^{B∕O} = (m/6) [d 1⃡ − (p⃗ p⃗_{sum} + q⃗ q⃗_{sum})]",
+    "where it is used"
+   ]
+  ],
+  "example": {
+   "problem": "With p⃗ = 3 n̂_{x} m and q⃗ = (1 n̂_{x} + 2 n̂_{y}) m, find d.",
+   "steps": [
+    "p⃗·p⃗ = 9, q⃗·q⃗ = 5, p⃗·q⃗ = 3",
+    "d = 9 + 5 + 3 = 17 m^{2}"
+   ],
+   "answer": "d = 17 m^{2}"
+  },
+  "try": "3^2 + (1^2 + 2^2) + 3*1"
+ },
+ "V = (1/6) p⃗ × q⃗ · r⃗": {
+  "title": "Volume of a tetrahedron from edge vectors",
+  "about": "A tetrahedron with vertices O, P, Q and R has volume a sixth of the scalar triple product of its edge vectors from O. It equals A h/3, base area times height over three.",
+  "assumptions": [
+   "The sign depends on the order of p⃗, q⃗, r⃗; take the magnitude",
+   "The edge vectors all start at O"
+  ],
+  "vars": [
+   [
+    "V",
+    "volume",
+    "m^{3}"
+   ],
+   [
+    "p⃗",
+    "position of vertex P from O",
+    "m"
+   ],
+   [
+    "q⃗",
+    "position of vertex Q from O",
+    "m"
+   ],
+   [
+    "r⃗",
+    "position of vertex R from O",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "h = r⃗ · (p⃗ × q⃗)/(|p⃗ × q⃗|)",
+    "height above face O P Q"
+   ],
+   [
+    "A = (1/2) |p⃗ × q⃗|",
+    "area of the base"
+   ]
+  ],
+  "example": {
+   "problem": "A tetrahedron has p⃗ = 0.3 n̂_{x}, q⃗ = 0.2 n̂_{y}, r⃗ = 0.4 n̂_{z} m. Find its volume.",
+   "steps": [
+    "p⃗ × q⃗ = 0.06 n̂_{z} m^{2}",
+    "(p⃗ × q⃗) · r⃗ = 0.06 × 0.4 = 0.024 m^{3}",
+    "V = 0.024/6 = 0.004 m^{3}"
+   ],
+   "answer": "V = 0.004 m^{3}"
+  },
+  "try": "(1/6) * 0.3 m * 0.2 m * 0.4 m to m^3"
+ },
+ "h = r⃗ · (p⃗ × q⃗)/(|p⃗ × q⃗|)": {
+  "title": "Height of a tetrahedron above its base",
+  "about": "The height of vertex R above the base face O P Q is the component of r⃗ along the unit normal (p⃗ × q⃗)/|p⃗ × q⃗|.",
+  "assumptions": [
+   "Signed: negative when R is on the other side of the face from the normal p⃗ × q⃗"
+  ],
+  "vars": [
+   [
+    "h",
+    "height of R above face O P Q",
+    "m"
+   ],
+   [
+    "p⃗",
+    "position of vertex P from O",
+    "m"
+   ],
+   [
+    "q⃗",
+    "position of vertex Q from O",
+    "m"
+   ],
+   [
+    "r⃗",
+    "position of vertex R from O",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "V = (1/6) p⃗ × q⃗ · r⃗",
+    "= A h/3"
+   ],
+   [
+    "A = (1/2) |p⃗ × q⃗|",
+    "area of the base"
+   ]
+  ],
+  "example": {
+   "problem": "With p⃗ = 0.3 n̂_{x}, q⃗ = 0.2 n̂_{y} and r⃗ = (0.1 n̂_{x} + 0.1 n̂_{y} + 0.4 n̂_{z}) m, find the height of R.",
+   "steps": [
+    "p⃗ × q⃗ = 0.06 n̂_{z}, so the unit normal is n̂_{z}",
+    "h = r⃗ · n̂_{z} = 0.4 m"
+   ],
+   "answer": "h = 0.4 m"
+  },
+  "try": "(0.4 * 0.06)/0.06"
+ },
+ "^{O}r⃗^{B_{cm}} = (p⃗ + q⃗ + r⃗)/4": {
+  "title": "Mass centre of a solid tetrahedron",
+  "about": "The mass centre of a uniform solid tetrahedron is the average of its four vertices; with O at the origin it is (p⃗ + q⃗ + r⃗)/4.",
+  "assumptions": [
+   "Uniform density (for a plate or shell: uniform mass per area)",
+   "It lies a quarter of the way up from each face toward the opposite vertex"
+  ],
+  "vars": [
+   [
+    "^{O}r⃗^{B_{cm}}",
+    "position of the mass centre from O",
+    "m"
+   ],
+   [
+    "p⃗",
+    "position of vertex P from O",
+    "m"
+   ],
+   [
+    "q⃗",
+    "position of vertex Q from O",
+    "m"
+   ],
+   [
+    "r⃗",
+    "position of vertex R from O",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "^{O}r⃗^{B_{cm}} = (p⃗ + q⃗)/3",
+    "triangle"
+   ],
+   [
+    "V = (1/6) p⃗ × q⃗ · r⃗",
+    "volume"
+   ]
+  ],
+  "example": {
+   "problem": "A tetrahedron has p⃗ = 0.3 n̂_{x}, q⃗ = 0.2 n̂_{y}, r⃗ = 0.4 n̂_{z} m. Where is its mass centre?",
+   "steps": [
+    "(p⃗ + q⃗ + r⃗)/4 = (0.3 n̂_{x} + 0.2 n̂_{y} + 0.4 n̂_{z})/4"
+   ],
+   "answer": "^{O}r⃗^{B_{cm}} = 0.075 n̂_{x} + 0.05 n̂_{y} + 0.1 n̂_{z} m"
+  }
+ },
+ "I⃡^{B∕O} = (m/10) [1⃡ (p⃗ · p⃗ + q⃗ · q⃗ + r⃗ · r⃗ + p⃗ · q⃗ + p⃗ · r⃗ + q⃗ · r⃗) − (p⃗ p⃗ + q⃗ q⃗ + r⃗ r⃗ + (p⃗ q⃗ + q⃗ p⃗ + p⃗ r⃗ + r⃗ p⃗ + q⃗ r⃗ + r⃗ q⃗)/2)]": {
+  "title": "Inertia dyadic of a solid tetrahedron about a vertex",
+  "about": "The full inertia dyadic of a uniform solid tetrahedron about its vertex O, from its three edge vectors. Any solid with flat faces can be cut into tetrahedra and their dyadics added, which is how CAD software finds inertia.",
+  "assumptions": [
+   "Uniform solid, any tetrahedron",
+   "About vertex O; shift to the mass centre with the parallel-axis theorem",
+   "1⃡ is the unit dyadic; p⃗ q⃗ is a dyad (outer product), whose n̂_{i} n̂_{j} component is p_{i} q_{j}"
+  ],
+  "vars": [
+   [
+    "I⃡^{B∕O}",
+    "inertia dyadic of B about O",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "p⃗",
+    "position of vertex P from O",
+    "m"
+   ],
+   [
+    "q⃗",
+    "position of vertex Q from O",
+    "m"
+   ],
+   [
+    "r⃗",
+    "position of vertex R from O",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I⃡^{B∕O} = (m/10) [d 1⃡ − (p⃗ p⃗_{sum} + q⃗ q⃗_{sum} + r⃗ r⃗_{sum})]",
+    "the same, compact"
+   ],
+   [
+    "^{O}r⃗^{B_{cm}} = (p⃗ + q⃗ + r⃗)/4",
+    "mass centre"
+   ]
+  ],
+  "example": {
+   "problem": "A 2.4 kg tetrahedron has p⃗ = 0.3 n̂_{x}, q⃗ = 0.2 n̂_{y}, r⃗ = 0.4 n̂_{z} m. Find I_{xx} and I_{xy} about O.",
+   "steps": [
+    "Dot-product sum = 0.09 + 0.04 + 0.16 + 0 + 0 + 0 = 0.29 m^{2}",
+    "n̂_{x}n̂_{x} part of the dyads: p_{x}^{2} = 0.09",
+    "I_{xx} = (2.4/10)(0.29 − 0.09) = 0.048 kg·m^{2}",
+    "n̂_{x}n̂_{y} part: p_{x} q_{y}/2 = 0.03, so I_{xy} = −0.24(0.03) = −0.0072 kg·m^{2}"
+   ],
+   "answer": "I_{xx} = 0.048 kg·m^{2}, I_{xy} = −0.0072 kg·m^{2}"
+  }
+ },
+ "I⃡^{B∕O} = (m/10) [d 1⃡ − (p⃗ p⃗_{sum} + q⃗ q⃗_{sum} + r⃗ r⃗_{sum})]": {
+  "title": "Inertia dyadic of a tetrahedron, compact form",
+  "about": "The tetrahedron's inertia dyadic about vertex O written with helper vectors p⃗_{sum}, q⃗_{sum}, r⃗_{sum} and the scalar d. It equals the long form but takes fewer steps.",
+  "assumptions": [
+   "Uniform solid tetrahedron, about vertex O",
+   "1⃡ is the unit dyadic; p⃗ q⃗ is a dyad (outer product), whose n̂_{i} n̂_{j} component is p_{i} q_{j}"
+  ],
+  "vars": [
+   [
+    "I⃡^{B∕O}",
+    "inertia dyadic about O",
+    "kg·m^{2}"
+   ],
+   [
+    "m",
+    "mass of the body",
+    "kg"
+   ],
+   [
+    "d",
+    "p⃗ · p⃗_{sum} + q⃗ · q⃗_{sum} + r⃗ · r⃗_{sum}",
+    "m^{2}"
+   ],
+   [
+    "p⃗_{sum}, q⃗_{sum}, r⃗_{sum}",
+    "each vector plus half the other two",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "p⃗_{sum} = p⃗ + (q⃗ + r⃗)/2,  q⃗_{sum} = q⃗ + (p⃗ + r⃗)/2,  r⃗_{sum} = r⃗ + (p⃗ + q⃗)/2",
+    "helper vectors"
+   ],
+   [
+    "d = p⃗ · p⃗_{sum} + q⃗ · q⃗_{sum} + r⃗ · r⃗_{sum}",
+    "helper scalar"
+   ]
+  ],
+  "example": {
+   "problem": "A 2.4 kg tetrahedron has p⃗ = 0.3 n̂_{x}, q⃗ = 0.2 n̂_{y}, r⃗ = 0.4 n̂_{z} m. Find I_{zz} about O.",
+   "steps": [
+    "d = 0.09 + 0.04 + 0.16 = 0.29 m^{2}",
+    "n̂_{z}n̂_{z} part of the dyads: r_{z} (r⃗_{sum})_{z} = 0.4 × 0.4 = 0.16",
+    "I_{zz} = (2.4/10)(0.29 − 0.16) = 0.0312 kg·m^{2}"
+   ],
+   "answer": "I_{zz} = 0.0312 kg·m^{2}"
+  },
+  "try": "(2.4 kg / 10) * (0.29 m^2 - 0.16 m^2)"
+ },
+ "p⃗_{sum} = p⃗ + (q⃗ + r⃗)/2,  q⃗_{sum} = q⃗ + (p⃗ + r⃗)/2,  r⃗_{sum} = r⃗ + (p⃗ + q⃗)/2": {
+  "title": "Helper vectors for the tetrahedron's inertia",
+  "about": "Each helper vector is one edge vector plus half the other two. They fold the six cross dyads into three, so I⃡^{B∕O} = (m/10)[d 1⃡ − (p⃗ p⃗_{sum} + q⃗ q⃗_{sum} + r⃗ r⃗_{sum})].",
+  "assumptions": [
+   "p⃗, q⃗, r⃗ are edge vectors from vertex O"
+  ],
+  "vars": [
+   [
+    "p⃗_{sum}, q⃗_{sum}, r⃗_{sum}",
+    "helper vectors",
+    "m"
+   ],
+   [
+    "p⃗",
+    "position of vertex P from O",
+    "m"
+   ],
+   [
+    "q⃗",
+    "position of vertex Q from O",
+    "m"
+   ],
+   [
+    "r⃗",
+    "position of vertex R from O",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "d = p⃗ · p⃗_{sum} + q⃗ · q⃗_{sum} + r⃗ · r⃗_{sum}",
+    "helper scalar"
+   ]
+  ],
+  "example": {
+   "problem": "With p⃗ = 0.3 n̂_{x}, q⃗ = 0.2 n̂_{y}, r⃗ = 0.4 n̂_{z} m, find p⃗_{sum}.",
+   "steps": [
+    "(q⃗ + r⃗)/2 = 0.1 n̂_{y} + 0.2 n̂_{z}",
+    "p⃗_{sum} = 0.3 n̂_{x} + 0.1 n̂_{y} + 0.2 n̂_{z} m"
+   ],
+   "answer": "p⃗_{sum} = 0.3 n̂_{x} + 0.1 n̂_{y} + 0.2 n̂_{z} m"
+  }
+ },
+ "d = p⃗ · p⃗_{sum} + q⃗ · q⃗_{sum} + r⃗ · r⃗_{sum}": {
+  "title": "Helper scalar for the tetrahedron's inertia",
+  "about": "The scalar d equals the sum of all six dot products p⃗·p⃗ + q⃗·q⃗ + r⃗·r⃗ + p⃗·q⃗ + p⃗·r⃗ + q⃗·r⃗. It multiplies the unit dyadic in the tetrahedron's inertia.",
+  "assumptions": [
+   "p⃗, q⃗, r⃗ are edge vectors from vertex O"
+  ],
+  "vars": [
+   [
+    "d",
+    "helper scalar",
+    "m^{2}"
+   ],
+   [
+    "p⃗",
+    "position of vertex P from O",
+    "m"
+   ],
+   [
+    "q⃗",
+    "position of vertex Q from O",
+    "m"
+   ],
+   [
+    "r⃗",
+    "position of vertex R from O",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "I⃡^{B∕O} = (m/10) [d 1⃡ − (p⃗ p⃗_{sum} + q⃗ q⃗_{sum} + r⃗ r⃗_{sum})]",
+    "where it is used"
+   ]
+  ],
+  "example": {
+   "problem": "With p⃗ = (1, 0, 0), q⃗ = (1, 1, 0) and r⃗ = (0, 1, 1) m, find d.",
+   "steps": [
+    "p⃗·p⃗ = 1, q⃗·q⃗ = 2, r⃗·r⃗ = 2",
+    "p⃗·q⃗ = 1, p⃗·r⃗ = 0, q⃗·r⃗ = 1",
+    "d = 1 + 2 + 2 + 1 + 0 + 1 = 7 m^{2}"
+   ],
+   "answer": "d = 7 m^{2}"
+  },
+  "try": "1 + 2 + 2 + 1 + 0 + 1"
+ },
+ "^{N}L⃗^{Q} = m^{Q} ^{N}v⃗^{Q}": {
+  "title": "Linear momentum of a particle",
+  "about": "A particle's linear (translational) momentum in frame N is its mass times its velocity in N. Newton's second law says its rate of change in N is the resultant force: F⃗ = ^{N}d^{N}L⃗/dt.",
+  "assumptions": [
+   "N should be a Newtonian (inertial) frame for F⃗ = d L⃗/dt to hold",
+   "Non-relativistic speeds"
+  ],
+  "vars": [
+   [
+    "^{N}L⃗^{Q}",
+    "momentum of Q in N",
+    "kg·m/s"
+   ],
+   [
+    "m^{Q}",
+    "mass of Q",
+    "kg"
+   ],
+   [
+    "^{N}v⃗^{Q}",
+    "velocity of Q in N",
+    "m/s"
+   ]
+  ],
+  "related": [
+   [
+    "^{N}L⃗^{S} = m^{S} ^{N}v⃗^{S_{cm}}",
+    "a system"
+   ],
+   [
+    "∫ F⃗ dt = ΔL⃗",
+    "impulse"
+   ]
+  ],
+  "example": {
+   "problem": "A 0.145 kg baseball leaves the bat at 40 m/s. Find the size of its momentum.",
+   "steps": [
+    "L = m v = 0.145 kg × 40 m/s = 5.8 kg·m/s"
+   ],
+   "answer": "|^{N}L⃗^{Q}| = 5.8 kg·m/s"
+  },
+  "try": "0.145 kg * 40 m/s"
+ },
+ "^{N}L⃗^{S} = Σ_{i=1}^{n} m^{Q_{i}} ^{N}v⃗^{Q_{i}} = m^{S} ^{N}v⃗^{S_{cm}}": {
+  "title": "Linear momentum of a system",
+  "about": "The momentum of a set of particles (or a body) is the sum of their momenta, which equals the total mass times the velocity of the mass centre. So a system's momentum only depends on how its mass centre moves.",
+  "assumptions": [
+   "Holds for any system of constant total mass, rigid or not",
+   "N is the frame the velocities are measured in"
+  ],
+  "vars": [
+   [
+    "^{N}L⃗^{S}",
+    "momentum of system S in N",
+    "kg·m/s"
+   ],
+   [
+    "m^{Q_{i}}",
+    "mass of particle i",
+    "kg"
+   ],
+   [
+    "^{N}v⃗^{Q_{i}}",
+    "velocity of particle i",
+    "m/s"
+   ],
+   [
+    "m^{S}",
+    "total mass",
+    "kg"
+   ],
+   [
+    "^{N}v⃗^{S_{cm}}",
+    "velocity of the mass centre",
+    "m/s"
+   ]
+  ],
+  "related": [
+   [
+    "^{N}L⃗^{Q} = m^{Q} ^{N}v⃗^{Q}",
+    "one particle"
+   ],
+   [
+    "F⃗^{S} = m^{S} ^{N}a⃗^{S_{cm}}",
+    "Newton's law for a system"
+   ]
+  ],
+  "example": {
+   "problem": "A 2 kg cart moves at 3 n̂_{x} m/s and a 1 kg cart at −1.5 n̂_{x} m/s. Find the total momentum and the mass-centre velocity.",
+   "steps": [
+    "L = 2(3) + 1(−1.5) = 4.5 kg·m/s",
+    "v_{cm} = L/m^{S} = 4.5/3 = 1.5 m/s"
+   ],
+   "answer": "^{N}L⃗^{S} = 4.5 n̂_{x} kg·m/s (v_{cm} = 1.5 m/s)"
+  },
+  "try": "2 kg * 3 m/s + 1 kg * (-1.5 m/s)"
+ },
+ "^{N}H⃗^{Q∕P} = ^{P}r⃗^{Q} × ^{N}L⃗^{Q}": {
+  "title": "Angular momentum of a particle about a point",
+  "about": "A particle's angular momentum about point P in frame N is the moment of its linear momentum: the position from P to Q crossed with m ^{N}v⃗^{Q}.",
+  "assumptions": [
+   "Order matters: r⃗ × L⃗, with r⃗ from P to Q",
+   "Mitiguy defines it with Q's velocity in N, whatever P is doing"
+  ],
+  "vars": [
+   [
+    "^{N}H⃗^{Q∕P}",
+    "angular momentum of Q about P in N",
+    "kg·m^{2}/s"
+   ],
+   [
+    "^{P}r⃗^{Q}",
+    "position of Q from P",
+    "m"
+   ],
+   [
+    "^{N}L⃗^{Q}",
+    "momentum of Q in N",
+    "kg·m/s"
+   ]
+  ],
+  "related": [
+   [
+    "^{N}L⃗^{Q} = m^{Q} ^{N}v⃗^{Q}",
+    "linear momentum"
+   ],
+   [
+    "^{N}H⃗^{S∕P} = ^{N}H⃗^{S∕O} + ^{P}r⃗^{O} × ^{N}L⃗^{S}",
+    "shift to another point"
+   ]
+  ],
+  "example": {
+   "problem": "A 2 kg puck at ^{P}r⃗^{Q} = 0.5 n̂_{x} m moves at 3 n̂_{y} m/s. Find its angular momentum about P.",
+   "steps": [
+    "^{N}L⃗^{Q} = 6 n̂_{y} kg·m/s",
+    "H⃗ = 0.5 n̂_{x} × 6 n̂_{y} = 3 n̂_{z} kg·m^{2}/s"
+   ],
+   "answer": "^{N}H⃗^{Q∕P} = 3 n̂_{z} kg·m^{2}/s"
+  },
+  "try": "0.5 m * 2 kg * 3 m/s"
+ },
+ "^{N}H⃗^{B∕B_{p}} = I⃡^{B∕B_{p}} · ^{N}ω⃗^{B} + ^{B_{p}}r⃗^{B_{cm}} × m^{B} ^{N}v⃗^{B_{p}}": {
+  "title": "Angular momentum of a rigid body about a body point",
+  "about": "A rigid body's angular momentum in N about a point B_{p} fixed on it is its inertia dyadic about B_{p} dotted with its angular velocity, plus a term from B_{p}'s own velocity. Take B_{p} as the mass centre, or a point at rest in N, and the second term drops.",
+  "assumptions": [
+   "B_{p} is a point of body B",
+   "I⃡^{B∕B_{p}} is about B_{p}, not the mass centre, unless B_{p} is the mass centre",
+   "In 3D, H⃗ is generally not parallel to ω⃗ unless ω⃗ lies along a principal axis"
+  ],
+  "vars": [
+   [
+    "^{N}H⃗^{B∕B_{p}}",
+    "angular momentum of B about B_{p} in N",
+    "kg·m^{2}/s"
+   ],
+   [
+    "I⃡^{B∕B_{p}}",
+    "inertia dyadic of B about B_{p}",
+    "kg·m^{2}"
+   ],
+   [
+    "^{N}ω⃗^{B}",
+    "angular velocity of B in N",
+    "rad/s"
+   ],
+   [
+    "^{B_{p}}r⃗^{B_{cm}}",
+    "position of the mass centre from B_{p}",
+    "m"
+   ],
+   [
+    "m^{B}",
+    "mass of B",
+    "kg"
+   ],
+   [
+    "^{N}v⃗^{B_{p}}",
+    "velocity of B_{p} in N",
+    "m/s"
+   ]
+  ],
+  "related": [
+   [
+    "^{N}H⃗^{B∕B_{p}} = I_{zz}^{B∕B_{p}} ^{N}ω⃗^{B} + …",
+    "planar version"
+   ],
+   [
+    "^{N}H⃗^{B∕P} = ^{N}H⃗^{B∕B_{p}} + ^{P}r⃗^{B_{p}} × ^{N}L⃗^{B}",
+    "shift to any point"
+   ]
+  ],
+  "example": {
+   "problem": "A box spins about its mass centre with ^{N}ω⃗^{B} = 2 b̂_{x} + 3 b̂_{z} rad/s; its principal inertias there are I_{xx} = 0.1, I_{yy} = 0.2, I_{zz} = 0.3 kg·m^{2}. Find ^{N}H⃗^{B∕B_{cm}}.",
+   "steps": [
+    "B_{p} = B_{cm}, so the second term is 0",
+    "H⃗ = I_{xx}ω_{x} b̂_{x} + I_{yy}ω_{y} b̂_{y} + I_{zz}ω_{z} b̂_{z}",
+    "H⃗ = 0.1(2) b̂_{x} + 0.3(3) b̂_{z}"
+   ],
+   "answer": "^{N}H⃗^{B∕B_{cm}} = 0.2 b̂_{x} + 0.9 b̂_{z} kg·m^{2}/s (not parallel to ω⃗)"
+  }
+ },
+ "^{N}H⃗^{B∕B_{p}} = I_{zz}^{B∕B_{p}} ^{N}ω⃗^{B} + ^{B_{p}}r⃗^{B_{cm}} × m^{B} ^{N}v⃗^{B_{p}}": {
+  "title": "Angular momentum in planar motion",
+  "about": "For a body turning about a fixed direction b̂_{z} (planar motion, with b̂_{z} a principal axis), the inertia dyadic reduces to the scalar I_{zz}^{B∕B_{p}}. The second term accounts for B_{p} moving and is zero if B_{p} is the mass centre or at rest in N.",
+  "assumptions": [
+   "^{N}ω⃗^{B} = ω_{z} b̂_{z}",
+   "b̂_{z} is a principal axis of B at B_{p} (I_{xz} = I_{yz} = 0)",
+   "I_{zz}^{B∕B_{p}} is about B_{p}"
+  ],
+  "vars": [
+   [
+    "^{N}H⃗^{B∕B_{p}}",
+    "angular momentum about B_{p}",
+    "kg·m^{2}/s"
+   ],
+   [
+    "I_{zz}^{B∕B_{p}}",
+    "moment of inertia about the b̂_{z} axis through B_{p}",
+    "kg·m^{2}"
+   ],
+   [
+    "^{N}ω⃗^{B}",
+    "angular velocity",
+    "rad/s"
+   ],
+   [
+    "^{B_{p}}r⃗^{B_{cm}}",
+    "mass centre from B_{p}",
+    "m"
+   ],
+   [
+    "m^{B}",
+    "mass",
+    "kg"
+   ],
+   [
+    "^{N}v⃗^{B_{p}}",
+    "velocity of B_{p}",
+    "m/s"
+   ]
+  ],
+  "related": [
+   [
+    "^{N}H⃗^{B∕B_{p}} = I⃡^{B∕B_{p}} · ^{N}ω⃗^{B} + …",
+    "general 3D form"
+   ],
+   [
+    "I = (1/3) m L^{2}",
+    "rod about its end"
+   ]
+  ],
+  "example": {
+   "problem": "A 2 kg rod, 1.2 m long, lies along b̂_{y} from its end B_{p}. B_{p} moves at 3 n̂_{x} m/s and ω⃗ = 5 n̂_{z} rad/s. Find ^{N}H⃗^{B∕B_{p}}.",
+   "steps": [
+    "I_{zz}^{B∕B_{p}} = (1/3)(2)(1.2)^{2} = 0.96 kg·m^{2}, so the first term is 4.8 n̂_{z}",
+    "^{B_{p}}r⃗^{B_{cm}} × m v⃗ = 0.6 n̂_{y} × 2(3 n̂_{x}) = −3.6 n̂_{z}",
+    "H⃗ = (4.8 − 3.6) n̂_{z} = 1.2 n̂_{z} kg·m^{2}/s",
+    "Check: v_{cm} = 3 − 5(0.6) = 0, so H⃗ = I_{cm} ω = 0.24 × 5 = 1.2 ✓"
+   ],
+   "answer": "^{N}H⃗^{B∕B_{p}} = 1.2 n̂_{z} kg·m^{2}/s"
+  },
+  "try": "(1/3) * 2 kg * (1.2 m)^2 * 5 / s - 0.6 m * 2 kg * 3 m/s"
+ },
+ "^{N}H⃗^{S∕P} = ^{N}H⃗^{S∕O} + ^{P}r⃗^{O} × ^{N}L⃗^{S}": {
+  "title": "Shifting angular momentum to another point",
+  "about": "Angular momentum about a new point P equals that about O plus the moment, about P, of the system's linear momentum placed at O. It is the momentum version of the moment-shift rule M⃗^{P} = M⃗^{O} + r⃗ × F⃗.",
+  "assumptions": [
+   "Any system S and any two points O and P",
+   "Velocities are all in the same frame N"
+  ],
+  "vars": [
+   [
+    "^{N}H⃗^{S∕P}",
+    "angular momentum about P",
+    "kg·m^{2}/s"
+   ],
+   [
+    "^{N}H⃗^{S∕O}",
+    "angular momentum about O",
+    "kg·m^{2}/s"
+   ],
+   [
+    "^{P}r⃗^{O}",
+    "position of O from P",
+    "m"
+   ],
+   [
+    "^{N}L⃗^{S}",
+    "linear momentum of S",
+    "kg·m/s"
+   ]
+  ],
+  "related": [
+   [
+    "^{N}H⃗^{B∕P} = ^{N}H⃗^{B∕B_{p}} + ^{P}r⃗^{B_{p}} × ^{N}L⃗^{B}",
+    "rigid-body version"
+   ],
+   [
+    "M⃗^{S∕P} = M⃗^{S∕O} + ^{P}r⃗^{O} × F⃗^{S}",
+    "the same shift for moments"
+   ]
+  ],
+  "example": {
+   "problem": "A system has ^{N}H⃗^{S∕O} = 2 n̂_{z} kg·m^{2}/s and ^{N}L⃗^{S} = 4 n̂_{x} kg·m/s. P is at 0.5 n̂_{y} m from O, so ^{P}r⃗^{O} = −0.5 n̂_{y} m. Find ^{N}H⃗^{S∕P}.",
+   "steps": [
+    "^{P}r⃗^{O} × L⃗ = −0.5 n̂_{y} × 4 n̂_{x} = 2 n̂_{z}",
+    "H⃗^{S∕P} = 2 n̂_{z} + 2 n̂_{z}"
+   ],
+   "answer": "^{N}H⃗^{S∕P} = 4 n̂_{z} kg·m^{2}/s"
+  },
+  "try": "2 + 0.5*4"
+ },
+ "^{N}H⃗^{B∕P} = ^{N}H⃗^{B∕B_{p}} + ^{P}r⃗^{B_{p}} × ^{N}L⃗^{B}": {
+  "title": "Shifting a rigid body's angular momentum",
+  "about": "A rigid body's angular momentum about any point P is that about a body point B_{p} plus the moment about P of its linear momentum placed at B_{p}. With B_{p} the mass centre, H⃗ about the mass centre is I⃡ · ω⃗, which makes this the usual route to H⃗ about a contact point or pivot.",
+  "assumptions": [
+   "Holds for B_{p} the mass centre (the common choice); for another body point use L⃗ located at the mass centre or the full form",
+   "All velocities in N"
+  ],
+  "vars": [
+   [
+    "^{N}H⃗^{B∕P}",
+    "angular momentum about P",
+    "kg·m^{2}/s"
+   ],
+   [
+    "^{N}H⃗^{B∕B_{p}}",
+    "angular momentum about B_{p}",
+    "kg·m^{2}/s"
+   ],
+   [
+    "^{P}r⃗^{B_{p}}",
+    "position of B_{p} from P",
+    "m"
+   ],
+   [
+    "^{N}L⃗^{B}",
+    "linear momentum m^{B} ^{N}v⃗^{B_{cm}}",
+    "kg·m/s"
+   ]
+  ],
+  "related": [
+   [
+    "^{N}H⃗^{S∕P} = ^{N}H⃗^{S∕O} + ^{P}r⃗^{O} × ^{N}L⃗^{S}",
+    "general system"
+   ],
+   [
+    "I_{zz} = (1/2) m r^{2}",
+    "disk"
+   ]
+  ],
+  "example": {
+   "problem": "A 3 kg disk of radius 0.2 m rolls at 2 n̂_{x} m/s, so ω⃗ = −10 n̂_{z} rad/s. Find its angular momentum about the contact point P.",
+   "steps": [
+    "About the centre: H⃗ = (1/2)(3)(0.04)(−10) n̂_{z} = −0.6 n̂_{z}",
+    "L⃗ = 6 n̂_{x}; ^{P}r⃗^{B_{cm}} = 0.2 n̂_{y}; 0.2 n̂_{y} × 6 n̂_{x} = −1.2 n̂_{z}",
+    "H⃗^{B∕P} = −0.6 − 1.2 = −1.8 n̂_{z} kg·m^{2}/s, the same as (3/2) m r^{2} ω"
+   ],
+   "answer": "^{N}H⃗^{B∕P} = −1.8 n̂_{z} kg·m^{2}/s"
+  },
+  "try": "-(1/2)*3*0.2^2*10 - 0.2*3*2"
+ },
+ "∫ F⃗ dt = ΔL⃗": {
+  "title": "Impulse–momentum principle",
+  "about": "The impulse of the resultant force over a time interval equals the change in linear momentum in a Newtonian frame. It handles collisions and short, sharp forces without knowing the force at every instant.",
+  "assumptions": [
+   "N must be a Newtonian frame",
+   "F⃗ is the resultant external force on the system",
+   "Constant mass"
+  ],
+  "vars": [
+   [
+    "F⃗",
+    "resultant external force",
+    "N"
+   ],
+   [
+    "t",
+    "time",
+    "s"
+   ],
+   [
+    "ΔL⃗",
+    "change in linear momentum",
+    "kg·m/s"
+   ]
+  ],
+  "related": [
+   [
+    "^{N}L⃗^{S} = m^{S} ^{N}v⃗^{S_{cm}}",
+    "momentum of a system"
+   ],
+   [
+    "∫ M⃗^{S∕O} dt = ΔH⃗^{S∕O}",
+    "angular impulse"
+   ],
+   [
+    "F_{avg} = ΔL/Δt",
+    "average force"
+   ]
+  ],
+  "example": {
+   "problem": "A 0.057 kg tennis ball arrives at 30 m/s and leaves along the same line at 40 m/s after 5 ms on the racket. Find the impulse and the average force.",
+   "steps": [
+    "ΔL = 0.057(40 − (−30)) = 3.99 kg·m/s",
+    "F_{avg} = 3.99/0.005 = 798 N"
+   ],
+   "answer": "∫ F dt = 3.99 N·s (F_{avg} = 798 N)"
+  },
+  "try": "0.057 kg * (40 m/s + 30 m/s)"
+ },
+ "∫ M⃗^{S∕O} dt = ΔH⃗^{S∕O}": {
+  "title": "Angular impulse–momentum principle",
+  "about": "The time integral of the resultant moment about O equals the change in angular momentum about O. It holds when O is fixed in a Newtonian frame or is the system's mass centre.",
+  "assumptions": [
+   "O fixed in the Newtonian frame N, or O is the mass centre",
+   "Only external moments count; internal ones cancel",
+   "If the moment is zero, angular momentum about O is conserved"
+  ],
+  "vars": [
+   [
+    "M⃗^{S∕O}",
+    "resultant moment about O",
+    "N·m"
+   ],
+   [
+    "t",
+    "time",
+    "s"
+   ],
+   [
+    "ΔH⃗^{S∕O}",
+    "change in angular momentum about O",
+    "kg·m^{2}/s"
+   ]
+  ],
+  "related": [
+   [
+    "∫ F⃗ dt = ΔL⃗",
+    "linear impulse"
+   ],
+   [
+    "^{N}H⃗^{B∕B_{p}} = I_{zz}^{B∕B_{p}} ^{N}ω⃗^{B} + …",
+    "angular momentum of a body"
+   ]
+  ],
+  "example": {
+   "problem": "A flywheel with I = 0.5 kg·m^{2} about its fixed axle starts at rest. A motor applies 2 N·m for 3 s. Find its final spin rate.",
+   "steps": [
+    "∫ M dt = 2 × 3 = 6 N·m·s",
+    "ΔH = I ω, so ω = 6/0.5 = 12 rad/s"
+   ],
+   "answer": "ω = 12 rad/s"
+  },
+  "try": "2 * 3 / 0.5"
+ }
+}

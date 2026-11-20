@@ -92,6 +92,9 @@ pub const EXPLANATION_FILES: [(&str, &str); 13] = [
     ("circuits-1", include_str!("explanations/circuits-1.json")),
     ("circuits-2", include_str!("explanations/circuits-2.json")),
     ("science", include_str!("explanations/science.json")),
+    ("dynamics-1", include_str!("explanations/dynamics-1.json")),
+    ("dynamics-2", include_str!("explanations/dynamics-2.json")),
+    ("dynamics-3", include_str!("explanations/dynamics-3.json")),
 ];
 
 /// Every explanation, by key; a key in two files takes the later one.

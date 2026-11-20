@@ -1,4 +1,4 @@
-import json, re, math, sys
+import json, re, math, sys, unicodedata
 def plain(s):
     # raised and lowered text as it would be typed: e^{−at} → e^(−at), a_{k} → a_k
     prev=None
@@ -1105,17 +1105,328 @@ numerical=SH('numerical methods','Numerical Methods','numerical methods',
     I('|x − x_{a}|/|x|',note='relative error'),
     I('|x − x_{a}|',note='absolute error'))))
 
+# ---- the dynamics sheet's little pictures: each body drawn in Typst beside its volume, with its axes, so the
+# formulas under it say which axis is which. black is the ink colour (it follows light and dark); the shading is a
+# see-through grey, which reads in both
+GREY='rgb(128, 128, 128, 70)'
+def proj(x,y,z,k=0.42):
+    "oblique: z comes toward the reader, down and to the left"
+    return (x-k*z*0.866, y-k*z*0.5)
+def ell(cx,cy,rx,ry,a0=0,a1=360,n=48,tilt=0):
+    out=[]
+    for i in range(n+1):
+        t=math.radians(a0+(a1-a0)*i/n)
+        x,y=rx*math.cos(t),ry*math.sin(t)
+        c,s=math.cos(math.radians(tilt)),math.sin(math.radians(tilt))
+        out.append((cx+x*c-y*s,cy+x*s+y*c))
+    return out
+class Pic:
+    "a picture in points, y up; its box fits what's drawn, whatever the origin"
+    SCALE=1.25
+    def __init__(s,*_,**__): s.ops=[]; s.box=[]
+    def at(s,p): return (p[0]*s.SCALE,p[1]*s.SCALE)
+    def grow(s,p,dx=0,dy=0):
+        x,y=s.at(p); s.box+=[(x-dx,y-dy),(x+dx,y+dy)]
+    def stroke(s,w,dash): return '(paint: black, thickness: %gpt%s)'%(w,', dash: "%s"'%dash if dash else '')
+    def path(s,pts,closed=False,fill=None,w=0.7,dash=None,stroke=True,holes=()):
+        for q in list(pts)+[q for h in holes for q in h]: s.grow(q,w,w)
+        opts=(['fill: '+fill] if fill else [])+(['fill-rule: "even-odd"'] if holes else [])+['stroke: '+(s.stroke(w,dash) if stroke else 'none')]
+        def draw(T):
+            parts=['curve.move(%s)'%T(pts[0])]+['curve.line(%s)'%T(q) for q in pts[1:]]
+            if closed: parts.append('curve.close()')
+            for h in holes: parts+=['curve.move(%s)'%T(h[0])]+['curve.line(%s)'%T(q) for q in h[1:]]+['curve.close()']
+            return 'place(top + left, curve(%s, %s))'%(', '.join(opts),', '.join(parts))
+        s.ops.append(draw)
+    def line(s,a,b,w=0.7,dash=None): s.path([a,b],w=w,dash=dash)
+    def arrow(s,a,b,w=0.7,head=3.2,both=False):
+        head/=s.SCALE
+        dx,dy=b[0]-a[0],b[1]-a[1]; L=math.hypot(dx,dy); ux,uy=dx/L,dy/L
+        def tip(p,ux,uy):
+            s.path([p,(p[0]-ux*head-uy*head*.42,p[1]-uy*head+ux*head*.42),(p[0]-ux*head+uy*head*.42,p[1]-uy*head-ux*head*.42)],closed=True,fill='black',stroke=False)
+        a2=(a[0]+ux*head*.8,a[1]+uy*head*.8) if both else a
+        s.line(a2,(b[0]-ux*head*.8,b[1]-uy*head*.8),w)
+        tip(b,ux,uy)
+        if both: tip(a,-ux,-uy)
+    def label(s,p,m,size=7):
+        # roughly the label's own size, so the box holds it
+        wide=len(re.sub(r'hat\(|\)|_|"|arrow\(','',m))*size*0.3+size*0.3
+        s.grow(p,wide,size*0.55)
+        s.ops.append(lambda T,P=p: 'place(center + horizon, dx: %s, dy: %s, text(size: %gpt, $%s$))'%(*T(P,True),size,m))
+    def dim(s,a,b,m,off=(0,0)):
+        "a measure: arrows both ways, its label beside the middle"
+        s.arrow(a,b,w=0.45,head=2.4,both=True)
+        s.label(((a[0]+b[0])/2+off[0],(a[1]+b[1])/2+off[1]),m,6.5)
+    def dot(s,p,r=1.4):
+        s.grow(p,r,r)
+        s.ops.append(lambda T,P=p: 'place(center + horizon, dx: %s, dy: %s, circle(radius: %gpt, fill: black, stroke: none))'%(*T(P,True),r))
+    def cm(s,p): s.dot(p,1.8)
+    def axes(s,p,L=13,z=True,which='xyz'):
+        if 'x' in which: s.arrow(p,(p[0]+L,p[1])); s.label((p[0]+L+5,p[1]+0.5),'hat(b)_x',6.5)
+        if 'y' in which: s.arrow(p,(p[0],p[1]+L)); s.label((p[0]+0.5,p[1]+L+5),'hat(b)_y',6.5)
+        if z and 'z' in which:
+            e=proj(0,0,L*2.1); s.arrow(p,(p[0]+e[0],p[1]+e[1])); s.label((p[0]+e[0]-5,p[1]+e[1]-3),'hat(b)_z',6.5)
+    def typst(s):
+        pad=2; x0=min(x for x,_ in s.box)-pad; x1=max(x for x,_ in s.box)+pad
+        y0=min(y for _,y in s.box)-pad; y1=max(y for _,y in s.box)+pad
+        w,h=x1-x0,y1-y0
+        def T(p,pair=False):
+            x,y=s.at(p); x,y=x-x0,y1-y
+            # a pair: from the box's centre, for what's placed by its own centre
+            return ('%.1fpt'%(x-w/2),'%.1fpt'%(y-h/2)) if pair else '(%.1fpt, %.1fpt)'%(x,y)
+        return '#box(width: %.1fpt, height: %.1fpt, baseline: %.1fpt, {\n%s\n})'%(w,h,h/2-3.3,'\n'.join(op(T) for op in s.ops))
+
+def pic_rod():
+    p=Pic(120,44,oy=26); p.path([(-48,-1.4),(48,-1.4),(48,1.4),(-48,1.4)],closed=True,fill=GREY,w=0.6)
+    p.axes((0,0),z=True); p.cm((0,0)); p.dim((-48,-11),(48,-11),'L',(0,-5)); return p
+def pic_arc(fill=False,sector=False):
+    r=40; th=50; p=Pic(120,78,oy=66); O=(0,-44)
+    a0,a1=90-th,90+th; arc=ell(O[0],O[1],r,r,a0,a1)
+    if sector: p.path([O]+arc,closed=True,fill=GREY,w=0.8)
+    else:
+        p.path(arc,w=1.6)
+        for e in (arc[0],arc[-1]): p.line(O,e,w=0.4,dash='dashed')
+    yc=(2*r*math.sin(math.radians(th))/(3*math.radians(th))) if sector else r*math.sin(math.radians(th))/math.radians(th)
+    p.line(O,(0,O[1]+r),w=0.4,dash='dotted')
+    c=(0,O[1]+yc); p.axes(c,L=11); p.cm(c)
+    p.path(ell(O[0],O[1],10,10,90,a1),w=0.4); p.label((O[0]-7,O[1]+15),'θ',6.5)
+    p.path(ell(O[0],O[1],10,10,a0,90),w=0.4); p.label((O[0]+7,O[1]+15),'θ',6.5)
+    e=arc[0]; p.label(((O[0]+e[0])/2+5,(O[1]+e[1])/2-4),'r',6.5)
+    return p
+def pic_semi(fill=False):
+    r=36; p=Pic(110,58,oy=48); O=(0,-36)
+    arc=ell(O[0],O[1],r,r,0,180)
+    if fill: p.path(arc,closed=True,fill=GREY,w=0.8)
+    else: p.path(arc,w=1.6); p.line((-r,O[1]),(r,O[1]),w=0.4,dash='dashed')
+    c=(0,O[1]+(4*r/(3*math.pi) if fill else 2*r/math.pi)); p.axes(c,L=11); p.cm(c)
+    p.line(O,(-r*0.6,O[1]+r*0.8),w=0.4); p.label((-r*0.3-5,O[1]+r*0.4-2),'r',6.5)
+    return p
+def pic_circle(fill=False,a=30,b=30):
+    p=Pic(2*a+40,2*b+16); pts=ell(0,0,a,b)
+    if fill: p.path(pts,closed=True,fill=GREY,w=0.8)
+    else: p.path(pts,closed=True,w=1.6)
+    p.axes((0,0),L=12); p.cm((0,0))
+    if a==b: p.line((0,0),(a*0.7,b*0.7),w=0.4); p.label((a*0.45+4,b*0.45-3),'r',6.5)
+    else:
+        p.line((0,0),(-a,0),w=0.4,dash='dotted'); p.label((-a/2,3.5),'a',6.5)
+        p.line((0,0),(0,-b),w=0.4,dash='dotted'); p.label((3.5,-b/2),'b',6.5)
+    return p
+def pic_plate(a=56,b=36):
+    p=Pic(a+44,b+22,oy=b/2+12)
+    p.path([(-a/2,-b/2),(a/2,-b/2),(a/2,b/2),(-a/2,b/2)],closed=True,fill=GREY,w=0.8)
+    p.axes((0,0),L=12); p.cm((0,0)); p.label((0,-b/2-5),'a',6.5); p.label((a/2+5,-b/4),'b',6.5); return p
+def cyl_outline(p,r,h,inner=None,fill=GREY,shell=False):
+    f=proj(0,0,h/2); bk=proj(0,0,-h/2)
+    # the side: the two tangent lines, perpendicular to the axis's slant
+    d=(f[0]-bk[0],f[1]-bk[1]); L=math.hypot(*d); n=(-d[1]/L*r,d[0]/L*r)
+    ang=math.degrees(math.atan2(n[1],n[0]))
+    side=ell(bk[0],bk[1],r,r,ang,ang+180,24)+ell(f[0],f[1],r,r,ang+180,ang,24)
+    p.path(side,closed=True,fill=GREY if shell or inner else 'rgb(128, 128, 128, 40)',w=0.8)
+    if shell: p.path(ell(bk[0],bk[1],r,r,ang+180,ang+360,24),w=0.4,dash='dashed')
+    front=ell(f[0],f[1],r,r)
+    if inner: p.path(front,closed=True,fill=GREY,w=0.8,holes=[ell(f[0],f[1],inner,inner)])
+    elif shell: p.path(front,closed=True,w=0.8)
+    else: p.path(front,closed=True,fill=GREY,w=0.8)
+    return f
+def pic_cyl(kind='solid'):
+    r=24; h=64; p=Pic(122,82,ox=66,oy=40)
+    f=cyl_outline(p,r,h,inner=14 if kind=='thick' else None,shell=kind=='thin')
+    p.axes((0,0),L=12,z=False); e=proj(0,0,h/2+22); p.arrow((0,0),e); p.label((e[0]-5,e[1]-3),'hat(b)_z',6.5)
+    p.cm((0,0))
+    if kind=='thick':
+        p.line(f,(f[0]+14*0.7,f[1]+14*0.7),w=0.4); p.label((f[0]+4,f[1]+11),'r_i',6)
+        p.line(f,(f[0]+r*0.97,f[1]-r*0.26),w=0.4); p.label((f[0]+r+4,f[1]-r*0.3),'r_o',6)
+    else: p.line(f,(f[0]+r*0.97,f[1]-r*0.26),w=0.4); p.label((f[0]+r*0.5,f[1]-r*0.13-4),'r',6.5)
+    t=proj(r*0.0,-r,0); a=(f[0]+t[0],f[1]+t[1]); b=(a[0]-proj(0,0,h)[0],a[1]-proj(0,0,h)[1])
+    p.label(((a[0]+b[0])/2+4,(a[1]+b[1])/2-6),'h',6.5)
+    return p
+def pic_cone(thin=False):
+    r=30; h=60; p=Pic(110,84,oy=50); base=-h/4 if not thin else -h/3; ry=8
+    apex=(0,base+h)
+    if thin: p.path(ell(0,base,r,ry,0,180),w=0.5,dash='dashed'); p.path(ell(0,base,r,ry,180,360)+[(r,base),apex,(-r,base)],w=0.8)
+    else: p.path([(-r,base),apex,(r,base)]+ell(0,base,r,ry,360,180),closed=True,fill=GREY,w=0.8); p.path(ell(0,base,r,ry,0,180),w=0.4,dash='dashed')
+    p.axes((0,0),L=12); p.cm((0,0)); p.line((0,base),(r,base),w=0.4); p.label((r*0.55,base-ry-4),'r',6.5)
+    p.dim((-r-7,base),(-r-7,base+h),'h',(-4.5,0))
+    return p
+def pic_sphere(fill=True,a=30,b=30,c=10):
+    p=Pic(2*a+38,2*b+14);
+    p.path(ell(0,0,a,b),closed=True,fill=GREY if fill else None,w=0.8 if fill else 1.4)
+    p.path(ell(0,0,a,c,180,360),w=0.5); p.path(ell(0,0,a,c,0,180),w=0.4,dash='dashed')
+    p.axes((0,0),L=12); p.cm((0,0))
+    if a==b: p.line((0,0),(-a*0.68,b*0.73),w=0.4); p.label((-a*0.34-4,b*0.37+3),'r',6.5)
+    return p
+def pic_ellipsoid(fill=True):
+    a,b,c=34,24,9; p=Pic(2*a+40,2*b+22,oy=b+10)
+    p.path(ell(0,0,a,b),closed=True,fill=GREY if fill else None,w=0.8 if fill else 1.4)
+    p.path(ell(0,0,a,c,180,360),w=0.5); p.path(ell(0,0,a,c,0,180),w=0.4,dash='dashed')
+    p.axes((0,0),L=11); p.cm((0,0))
+    p.dim((0,-b-5),(a,-b-5),'a',(0,-4)); p.dim((a+6,0),(a+6,b),'b',(4,0)); p.label((a-6,-c+1),'c',6)
+    return p
+def pic_hemi():
+    r=34; p=Pic(100,64,oy=46); B=(0,-36)
+    p.path(ell(B[0],B[1],r,r,0,180)+ell(B[0],B[1],r,9,180,360),closed=True,fill=GREY,w=0.8)
+    p.path(ell(B[0],B[1],r,9,0,180),w=0.4,dash='dashed')
+    c=(0,B[1]+3*r/8); p.axes(c,L=11); p.cm(c); p.dot(B); p.label((B[0]+8,B[1]-4),'B_o',6)
+    p.line(B,(r*0.6,B[1]+r*0.8),w=0.4); p.label((r*0.42+4,B[1]+r*0.55),'r',6.5)
+    return p
+def pic_parab():
+    r=26; a=64; p=Pic(112,70,ox=26);
+    prof=[(a*(1-(t/r)**2),t) for t in [r*i/24 for i in range(-24,25)]]
+    p.path(prof,closed=True,fill=GREY,w=0.8)
+    p.path(ell(0,0,7,r,90,270),w=0.8)
+    c=(a/3,0); p.axes(c,L=12); p.cm(c); p.dot((0,0)); p.label((-14,0),'B_o',6)
+    p.label((-12,r*0.6),'r',6.5); p.dim((0,-r-5),(a,-r-5),'a',(0,-4)); return p
+def pic_box(particles=False):
+    a,b,c=60,30,40; p=Pic(116,82,ox=58,oy=40)
+    def P(x,y,z): return proj(x,y,z)
+    xs,ys,zs=(-a/2,a/2),(-b/2,b/2),(-c/2,c/2)
+    V={(i,j,k):P(xs[i],ys[j],zs[k]) for i in (0,1) for j in (0,1) for k in (0,1)}
+    if not particles:
+        for face in [[(0,0,1),(1,0,1),(1,1,1),(0,1,1)],[(1,0,1),(1,0,0),(1,1,0),(1,1,1)],[(0,1,1),(1,1,1),(1,1,0),(0,1,0)]]:
+            p.path([V[q] for q in face],closed=True,fill=GREY,w=0.8)
+    else:
+        edges=[(u,v) for u in V for v in V if u<v and sum(x!=y for x,y in zip(u,v))==1]
+        for u,v in edges: p.line(V[u],V[v],w=0.5)
+        for q in V.values(): p.dot(q,2.2)
+    p.axes((0,0),L=12); p.cm((0,0))
+    lab=('2a','2b','2c') if particles else ('a','b','c')
+    p.label(((V[0,0,1][0]+V[1,0,1][0])/2,V[0,0,1][1]-5),lab[0],6.5)
+    p.label((V[1,0,1][0]+5,(V[1,0,1][1]+V[1,1,1][1])/2),lab[1],6.5)
+    m=((V[1,0,1][0]+V[1,0,0][0])/2,(V[1,0,1][1]+V[1,0,0][1])/2); p.label((m[0]+5,m[1]-3),lab[2],6.5)
+    return p
+def pic_triangle():
+    p=Pic(110,70,ox=12,oy=56); O=(0,0); P_=(56,-48); Q=(88,8)
+    p.path([O,P_,Q],closed=True,fill=GREY,w=0.5)
+    p.arrow(O,P_,w=0.9); p.arrow(O,Q,w=0.9); p.dot(O)
+    c=((P_[0]+Q[0])/3,(P_[1]+Q[1])/3); p.cm(c)
+    p.label((-5,3),'O',6.5); p.label((P_[0]+5,P_[1]-2),'P',6.5); p.label((Q[0]+4,Q[1]+4),'Q',6.5)
+    p.label((P_[0]/2-6,P_[1]/2-4),'arrow(p)',7); p.label((Q[0]/2,Q[1]/2+7),'arrow(q)',7); return p
+def pic_tetra():
+    p=Pic(110,82,ox=12,oy=58); O=(0,0); P_=(52,-50); Q=(88,0); R=(60,20)
+    p.path([O,P_,Q],closed=True,fill=GREY,w=0.4); p.path([P_,Q,R],closed=True,fill=GREY,w=0.4)
+    p.line(O,R,w=0.4);
+    for e,n,off in [(P_,'p',(-7,-4)),(Q,'q',(2,-6)),(R,'r',(-6,5))]:
+        p.arrow(O,e,w=0.9); p.label((e[0]/2+off[0],e[1]/2+off[1]),'arrow(%s)'%n,7)
+    p.dot(O); p.label((-5,3),'O',6.5); p.label((P_[0]+5,P_[1]-2),'P',6.5); p.label((Q[0]+5,Q[1]),'Q',6.5); p.label((R[0]+2,R[1]+5),'R',6.5)
+    return p
+
+def Pc(pic,show,note=None):
+    "a body's picture, then its volume (or the first of its formulas): the volume is what a click copies"
+    d=I(show,note=note); d['pic']=pic.typst(); return d
+def U(name,value):
+    "a constant: its name in words, its value as a value with its unit"
+    d=L(name,value); d['unit']=True; return d
+def W(text):
+    "a line of words: drawn in the app's font, copied as it is"
+    return {'show':text,'copy':text,'words':True}
+def body_group(title,pic,first,*rows,note=None):
+    return G(title,Pc(pic,first,note),*rows)
+
+# Mitiguy's notation: ^{N}v⃗^{Q} is Q's velocity in N, I⃡ an inertia dyadic, B∕O (a division slash) "B about O"
 dynamics=SH('dynamics','Statics and Dynamics','statics and dynamics',
- S('Statics',
-  G('Equilibrium',
-    I('Σ F = 0'),
-    I('Σ M = 0',note='about any point'),
-    I('M = F d',note='moment'),
-    I('f ≤ μ N',note='friction')),
-  G('Centroids',
-    I('x̄ = (Σ A_{i} x_{i})/(Σ A_{i})',note='composite area'),
-    I('I = Ī + A d^{2}',note='parallel axis'))),
+ S('Vectors',
+  G('Dot and cross products',
+    I('a⃗ · b⃗ = |a⃗| |b⃗| cos(θ)',note='dot product'),
+    I('a⃗ · b⃗ = b⃗ · a⃗'),
+    I('a⃗ · b⃗ = a_{x}b_{x} + a_{y}b_{y} + a_{z}b_{z}'),
+    I('|v⃗| = √(v⃗ · v⃗)',note='magnitude'),
+    I('v^{2} = |v⃗|^{2} = v⃗ · v⃗',note='magnitude squared'),
+    I('v̂ = v⃗/|v⃗|',note='unit vector'),
+    I('θ = acos((a⃗ · b⃗)/(|a⃗| |b⃗|))',note='angle between'),
+    I('(a⃗ · û) û',note='part of a⃗ along û'),
+    I('a⃗ × b⃗ = |a⃗| |b⃗| sin(θ) û',note='cross product, û ⊥ both'),
+    I('a⃗ × b⃗ = −b⃗ × a⃗'),
+    I('a⃗ × b⃗ = (a_{y}b_{z} − a_{z}b_{y}) x̂ + (a_{z}b_{x} − a_{x}b_{z}) ŷ + (a_{x}b_{y} − a_{y}b_{x}) ẑ'),
+    I('a⃗ × b⃗ = det[x̂ ŷ ẑ; a_{x} a_{y} a_{z}; b_{x} b_{y} b_{z}]'),
+    I('x̂ × ŷ = ẑ,  ŷ × ẑ = x̂,  ẑ × x̂ = ŷ',note='right-handed'),
+    I('a⃗ × a⃗ = 0⃗,  a⃗ · (a⃗ × b⃗) = 0')),
+  G('Triple products and more',
+    I('a⃗ × (b⃗ × c⃗) = b⃗ (a⃗ · c⃗) − c⃗ (a⃗ · b⃗)',note='triple cross: BAC − CAB'),
+    I('(a⃗ × b⃗) × c⃗ = b⃗ (a⃗ · c⃗) − a⃗ (b⃗ · c⃗)'),
+    I('a⃗ · b⃗ × c⃗ = a⃗ × b⃗ · c⃗',note='scalar triple: swap · and ×'),
+    I('a⃗ · b⃗ × c⃗ = b⃗ · c⃗ × a⃗ = c⃗ · a⃗ × b⃗',note='cyclic; the box volume'),
+    I('|a⃗ × b⃗|^{2} = |a⃗|^{2} |b⃗|^{2} − (a⃗ · b⃗)^{2}',note='Lagrange'),
+    I('(a⃗ × b⃗) · (c⃗ × d⃗) = (a⃗ · c⃗)(b⃗ · d⃗) − (a⃗ · d⃗)(b⃗ · c⃗)'),
+    I('a⃗ × (b⃗ + c⃗) = a⃗ × b⃗ + a⃗ × c⃗')),
+  G('Derivatives',
+    I('^{A}dv⃗/dt = v̇_{1} â_{1} + v̇_{2} â_{2} + v̇_{3} â_{3}',note='â₁, â₂, â₃ fixed in A'),
+    I('^{A}d(a⃗ · b⃗)/dt = ^{A}da⃗/dt · b⃗ + a⃗ · ^{A}db⃗/dt'),
+    I('^{A}d(a⃗ × b⃗)/dt = ^{A}da⃗/dt × b⃗ + a⃗ × ^{A}db⃗/dt',note='keep the order'),
+    I('^{A}d(s a⃗)/dt = ṡ a⃗ + s ^{A}da⃗/dt')),
+  wide=True),
+ S('Rotation matrices',
+  G('Rotation table',
+    I('^{a}R^{b}_{ij} = â_{i} · b̂_{j}',note='rows â, columns b̂'),
+    I('^{b}R^{a} = (^{a}R^{b})^{−1} = (^{a}R^{b})^{T}',note='orthogonal'),
+    I('^{a}R^{d} = ^{a}R^{b} ^{b}R^{c} ^{c}R^{d}',note='chain them')),
+  G('B turned θ about one axis of A',
+    I('R_{z} = [cos θ, −sin θ, 0; sin θ, cos θ, 0; 0, 0, 1]',note='â_{z} = b̂_{z}'),
+    I('R_{x} = [1, 0, 0; 0, cos θ, −sin θ; 0, sin θ, cos θ]',note='â_{x} = b̂_{x}'),
+    I('R_{y} = [cos θ, 0, sin θ; 0, 1, 0; −sin θ, 0, cos θ]',note='â_{y} = b̂_{y}'),
+    I('b̂_{x} = cos θ â_{x} + sin θ â_{y}',note='about z (SohCahToa)'),
+    I('b̂_{y} = −sin θ â_{x} + cos θ â_{y}')),
+  wide=True),
+ S('Angular velocity and acceleration',
+  G('Angular velocity',
+    I('^{A}dv⃗/dt = ^{B}dv⃗/dt + ^{A}ω⃗^{B} × v⃗',note='golden rule'),
+    I('^{A}ω⃗^{B} = ±θ̇ λ̂',note='λ̂ fixed in both A and B'),
+    I('^{A}ω⃗^{D} = ^{A}ω⃗^{B} + ^{B}ω⃗^{C} + ^{C}ω⃗^{D}',note='addition theorem'),
+    I('^{A}ω⃗^{B} = −^{B}ω⃗^{A}')),
+  G('Angular acceleration',
+    I('^{A}α⃗^{B} = ^{A}d(^{A}ω⃗^{B})/dt = ^{B}d(^{A}ω⃗^{B})/dt',note='either frame')),
+  wide=True),
+ S('Position, velocity and acceleration',
+  G('Position and distance',
+    I('^{P}r⃗^{Q} = −^{Q}r⃗^{P}',note='negation'),
+    I('^{Q_{1}}r⃗^{Q_{4}} = ^{Q_{3}}r⃗^{Q_{4}} + ^{Q_{2}}r⃗^{Q_{3}} + ^{Q_{1}}r⃗^{Q_{2}}',note='addition'),
+    I('d = |^{P}r⃗^{Q}| = √(^{P}r⃗^{Q} · ^{P}r⃗^{Q})',note='distance P to Q')),
+  G('Velocity and acceleration in N',
+    I('^{N}v⃗^{Q} = ^{N}d(^{N_{o}}r⃗^{Q})/dt'),
+    I('^{N}a⃗^{Q} = ^{N}d(^{N}v⃗^{Q})/dt'),
+    I('^{N}v⃗^{Q} = ^{N}v⃗^{B_{o}} + ^{N}ω⃗^{B} × ^{B_{o}}r⃗^{Q}',note='Bₒ and Q fixed on B'),
+    I('^{N}a⃗^{Q} = ^{N}a⃗^{B_{o}} + ^{N}α⃗^{B} × ^{B_{o}}r⃗^{Q} + ^{N}ω⃗^{B} × (^{N}ω⃗^{B} × ^{B_{o}}r⃗^{Q})',note='Bₒ and Q fixed on B'),
+    I('^{N}v⃗^{Q} = ^{N}v⃗^{B_{o}} + ^{N}ω⃗^{B} × ^{B_{o}}r⃗^{Q} + ^{B}v⃗^{Q}',note='Q moving on B'),
+    I('^{N}a⃗^{Q} = ^{N}a⃗^{B_{o}} + ^{N}α⃗^{B} × r⃗ + ^{N}ω⃗^{B} × (^{N}ω⃗^{B} × r⃗) + 2 ^{N}ω⃗^{B} × ^{B}v⃗^{Q} + ^{B}a⃗^{Q}',note='Q moving on B; 2ω × v is Coriolis')),
+  G('Polar and path coordinates',
+    I('v⃗ = ṙ r̂ + r θ̇ θ̂',note='polar'),
+    I('a⃗ = (r̈ − r θ̇^{2}) r̂ + (r θ̈ + 2 ṙ θ̇) θ̂',note='polar'),
+    I('a⃗ = v̇ t̂ + (v^{2}/ρ) n̂',note='along a path, radius ρ')),
+  wide=True),
+ S('Constraints',
+  G('Rolling and gears',
+    I('^{F}v⃗^{B_{A}} = ^{F}v⃗^{A_{B}}',note='rolling: the touching points'),
+    I('^{F}ω^{A} r_{A} = ± ^{F}ω^{B} r_{B}',note='gears A and B'),
+    I('v = ω r',note='disk rolling, no slip'),
+    I('a = α r',note='its centre, no slip')),
+  G('Mass and centre of mass',
+    I('m^{S} = Σ_{i=1}^{n} m^{Q_{i}}'),
+    I('^{O}r⃗^{S_{cm}} = (1/m^{S}) Σ_{i=1}^{n} m^{Q_{i}} ^{O}r⃗^{Q_{i}}'),
+    I('m^{S} ^{N}v⃗^{S_{cm}} = Σ_{i=1}^{n} m^{Q_{i}} ^{N}v⃗^{Q_{i}}'),
+    I('m^{S} ^{N}a⃗^{S_{cm}} = Σ_{i=1}^{n} m^{Q_{i}} ^{N}a⃗^{Q_{i}}'))),
+ S('Inertia dyadics',
+  G('Moments and products',
+    I('I⃡^{Q∕O} = m^{Q} [1⃡ (^{O}r⃗^{Q} · ^{O}r⃗^{Q}) − ^{O}r⃗^{Q} ^{O}r⃗^{Q}]',note='particle Q about O'),
+    I('I⃡^{S∕O} = Σ_{i=1}^{n} I⃡^{Q_{i}∕O}',note='a system: add them'),
+    I('I_{ûû}^{S∕O} = û · I⃡^{S∕O} · û',note='moment, û a unit vector'),
+    I('I_{ûv̂}^{S∕O} = û · I⃡^{S∕O} · v̂',note='product, û ⊥ v̂'),
+    I('I_{ûû}^{S∕O} = Σ_{i=1}^{n} m^{Q_{i}} d_{i}^{2}',note='d_{i} = |^{O}r⃗^{Q_{i}} × û|'),
+    I('I_{ûv̂}^{S∕O} = −Σ_{i=1}^{n} m^{Q_{i}} δ_{u_{i}} δ_{v_{i}}',note='δ_{u_{i}} = ^{O}r⃗^{Q_{i}} · û')),
+  G('Shift (parallel axis) theorems',
+    I('I⃡^{S∕P} = I⃡^{S∕S_{cm}} + m^{S} [1⃡ (^{P}r⃗^{S_{cm}} · ^{P}r⃗^{S_{cm}}) − ^{P}r⃗^{S_{cm}} ^{P}r⃗^{S_{cm}}]',note='dyadic'),
+    I('I_{ûû}^{S∕O} = I_{ûû}^{S∕S_{cm}} + m^{S} d^{2}',note='d = |^{O}r⃗^{S_{cm}} × û|'),
+    I('I_{xy}^{S∕O} = I_{xy}^{S∕S_{cm}} − m^{S} x_{cm} y_{cm}',note='product; x, y of the mass centre from O')),
+  G('As a matrix',
+    I('[I] = [I_{xx}, I_{xy}, I_{xz}; I_{xy}, I_{yy}, I_{yz}; I_{xz}, I_{yz}, I_{zz}]',note='on the axes b̂x, b̂y, b̂z'),
+    I('I_{xx} = Σ m (y^{2} + z^{2})'),
+    I('I_{xy} = −Σ m x y',note="Mitiguy's sign"),
+    I('I_{ûû} = [u]^{T} [I] [u]',note='any direction û'),
+    I('det([I] − λ [1]) = 0',note='principal moments λ'),
+    I('I_{zz} = I_{xx} + I_{yy}',note='flat body in x-y (perpendicular axis)'),
+    I('k = √(I/m)',note='radius of gyration')),
+  wide=True),
  S('Moments of inertia',
+  G('Every body below',
+    I('I_{xy} = I_{xz} = I_{yz} = 0',note='about the mass centre, on the axes drawn'),
+    I('I = Ī + m d^{2}',note='parallel axis')),
   G('About the centre, unless it says',
     H('Body','I'),
     L('Solid sphere','(2/5) m r^{2}'),
@@ -1125,6 +1436,200 @@ dynamics=SH('dynamics','Statics and Dynamics','statics and dynamics',
     L('Rod','m L^{2}/12'),
     L('Rod, about one end','m L^{2}/3')),
   wide=True,leads=[180]),
+ S('Inertia of rods and wires',
+  body_group('Line or thin rod',pic_rod(),'I_{xx} = 0',I('I_{yy} = I_{zz} = (1/12) m L^{2}')),
+  body_group('Circular arc',pic_arc(),'L = 2 r θ',
+    I('y_{cm} = r sin(θ)/θ',note='from the centre'),
+    I('I_{xx} = (1/2) m r^{2} [1 + sin(2θ)/(2θ) − 2 sin^{2}(θ)/θ^{2}]'),
+    I('I_{yy} = (1/2) m r^{2} [1 − sin(2θ)/(2θ)]'),
+    I('I_{zz} = m r^{2} [1 − sin^{2}(θ)/θ^{2}]',note='= I_{xx} + I_{yy}')),
+  body_group('Semicircle',pic_semi(),'L = π r',
+    I('y_{cm} = 2r/π',note='from the centre'),
+    I('I_{xx} = (1/2) m r^{2} (1 − 8/π^{2})'),
+    I('I_{yy} = (1/2) m r^{2}'),
+    I('I_{zz} = m r^{2} (1 − 4/π^{2})',note='= I_{xx} + I_{yy}')),
+  body_group('Circle or thin hoop',pic_circle(),'L = 2π r',
+    I('I_{xx} = I_{yy} = (1/2) m r^{2}'),
+    I('I_{zz} = m r^{2}'))),
+ S('Inertia of flat plates',
+  body_group('Circular sector',pic_arc(sector=True),'A = θ r^{2}',
+    I('y_{cm} = 2r sin(θ)/(3θ)',note='from the apex'),
+    I('I_{xx} = (1/4) m r^{2} [1 + sin(2θ)/(2θ) − 16 sin^{2}(θ)/(9θ^{2})]'),
+    I('I_{yy} = (1/4) m r^{2} [1 − sin(2θ)/(2θ)]'),
+    I('I_{zz} = I_{xx} + I_{yy}')),
+  body_group('Semicircular sector',pic_semi(fill=True),'A = (1/2) π r^{2}',
+    I('y_{cm} = 4r/(3π)',note='from the flat edge'),
+    I('I_{xx} = (1/4) m r^{2} (1 − 64/(9π^{2}))'),
+    I('I_{yy} = (1/4) m r^{2}'),
+    I('I_{zz} = (1/2) m r^{2} (1 − 32/(9π^{2}))')),
+  body_group('Thin solid disk',pic_circle(fill=True),'A = π r^{2}',
+    I('I_{xx} = I_{yy} = (1/4) m r^{2}'),
+    I('I_{zz} = (1/2) m r^{2}'),
+    I('x^{2} + y^{2} = r^{2}',note='Q = x b̂_{x} + y b̂_{y}')),
+  body_group('Ellipse',pic_circle(fill=True,a=36,b=24),'A = π a b',
+    I('I_{xx} = (1/4) m b^{2}'),
+    I('I_{yy} = (1/4) m a^{2}'),
+    I('I_{zz} = I_{xx} + I_{yy}'),
+    I('x^{2}/a^{2} + y^{2}/b^{2} = 1',note='edge point Q')),
+  body_group('Thin rectangular plate',pic_plate(),'A = a b',
+    I('I_{xx} = (1/12) m b^{2}'),
+    I('I_{yy} = (1/12) m a^{2}'),
+    I('I_{zz} = I_{xx} + I_{yy}'))),
+ S('Inertia of cylinders and cones',
+  body_group('Solid cylinder',pic_cyl(),'V = π r^{2} h',
+    I('I_{xx} = I_{yy} = (1/12) m (3r^{2} + h^{2})'),
+    I('I_{zz} = (1/2) m r^{2}')),
+  body_group('Thick cylindrical shell',pic_cyl('thick'),'V = π (r_{o}^{2} − r_{i}^{2}) h',
+    I('I_{xx} = I_{yy} = (1/12) m [3(r_{o}^{2} + r_{i}^{2}) + h^{2}]'),
+    I('I_{zz} = (1/2) m (r_{o}^{2} + r_{i}^{2})')),
+  body_group('Thin cylindrical shell',pic_cyl('thin'),'A = 2π r h',
+    I('I_{xx} = I_{yy} = (1/12) m (6r^{2} + h^{2})'),
+    I('I_{zz} = m r^{2}')),
+  body_group('Solid right-circular cone',pic_cone(),'V = (1/3) π r^{2} h',
+    I('y_{cm} = h/4',note='from the base'),
+    I('I_{xx} = I_{zz} = (3/80) m (4r^{2} + h^{2})'),
+    I('I_{yy} = (3/10) m r^{2}')),
+  body_group('Thin-walled cone (no base)',pic_cone(thin=True),'A = π r √(r^{2} + h^{2})',
+    I('y_{cm} = h/3',note='from the base'),
+    I('I_{xx} = I_{zz} = m (r^{2}/4 + h^{2}/18)'),
+    I('I_{yy} = (1/2) m r^{2}')),
+  body_group('Solid paraboloid of revolution',pic_parab(),'V = (1/2) π r^{2} a',
+    I('x_{cm} = a/3',note='from the flat face, Bₒ'),
+    I('I_{xx} = (1/3) m r^{2}',note='about the mass centre or Bₒ'),
+    I('I_{yy} = I_{zz} = (1/18) m (a^{2} + 3r^{2})',note='about the mass centre'),
+    I('I_{yy} = I_{zz} = (1/6) m (a^{2} + r^{2})',note='about Bₒ'))),
+ S('Inertia of spheres and ellipsoids',
+  body_group('Solid sphere',pic_sphere(),'V = (4/3) π r^{3}',
+    I('I_{xx} = I_{yy} = I_{zz} = (2/5) m r^{2}')),
+  body_group('Thin hollow sphere',pic_sphere(fill=False),'A = 4π r^{2}',
+    I('I_{xx} = I_{yy} = I_{zz} = (2/3) m r^{2}')),
+  body_group('Solid half sphere',pic_hemi(),'V = (2/3) π r^{3}',
+    I('y_{cm} = 3r/8',note='above Bₒ'),
+    I('I_{xx} = I_{yy} = I_{zz} = (2/5) m r^{2}',note='about Bₒ'),
+    I('I_{xx} = I_{zz} = (83/320) m r^{2}',note='about the mass centre'),
+    I('I_{yy} = (2/5) m r^{2}',note='about the mass centre')),
+  body_group('Solid ellipsoid',pic_ellipsoid(),'V = (4/3) π a b c',
+    I('I_{xx} = (1/5) m (b^{2} + c^{2})'),
+    I('I_{yy} = (1/5) m (a^{2} + c^{2})'),
+    I('I_{zz} = (1/5) m (a^{2} + b^{2})'),
+    I('x^{2}/a^{2} + y^{2}/b^{2} + z^{2}/c^{2} = 1',note='surface point Q')),
+  body_group('Thin-walled ellipsoid',pic_ellipsoid(fill=False),'A ≈ 4π [((ab)^{p} + (ac)^{p} + (bc)^{p})/3]^{1/p}',
+    I('p = 1.6075'),
+    I('I_{xx} = (1/3) m (b^{2} + c^{2})'),
+    I('I_{yy} = (1/3) m (a^{2} + c^{2})'),
+    I('I_{zz} = (1/3) m (a^{2} + b^{2})'),
+    I('x^{2}/a^{2} + y^{2}/b^{2} + z^{2}/c^{2} = 1',note='surface point Q'))),
+ S('Inertia of boxes',
+  body_group('Solid box',pic_box(),'V = a b c',
+    I('I_{xx} = (1/12) m (b^{2} + c^{2})'),
+    I('I_{yy} = (1/12) m (a^{2} + c^{2})'),
+    I('I_{zz} = (1/12) m (a^{2} + b^{2})')),
+  body_group('Box of 8 particles',pic_box(particles=True),'m_{i} = m/8',
+    I('I_{xx} = m (b^{2} + c^{2})',note='at (±a, ±b, ±c)'),
+    I('I_{yy} = m (a^{2} + c^{2})'),
+    I('I_{zz} = m (a^{2} + b^{2})'))),
+ S('Inertia of a triangle and a tetrahedron',
+  body_group('Triangle O P Q',pic_triangle(),'A = (1/2) |p⃗ × q⃗|',
+    I('^{O}r⃗^{B_{cm}} = (p⃗ + q⃗)/3'),
+    I('I⃡^{B∕O} = (m/6) [1⃡ (p⃗ · p⃗ + q⃗ · q⃗ + p⃗ · q⃗) − (p⃗ p⃗ + p⃗ q⃗/2 + q⃗ p⃗/2 + q⃗ q⃗)]'),
+    I('I⃡^{B∕O} = (m/6) [d 1⃡ − (p⃗ p⃗_{sum} + q⃗ q⃗_{sum})]'),
+    I('p⃗_{sum} = p⃗ + q⃗/2,  q⃗_{sum} = q⃗ + p⃗/2'),
+    I('d = p⃗ · p⃗_{sum} + q⃗ · q⃗_{sum}')),
+  G('Tetrahedron O P Q R',Pc(pic_tetra(),'V = (1/6) p⃗ × q⃗ · r⃗',note='= A h/3'),
+    I('h = r⃗ · (p⃗ × q⃗)/(|p⃗ × q⃗|)',note='height above O P Q'),
+    I('^{O}r⃗^{B_{cm}} = (p⃗ + q⃗ + r⃗)/4'),
+    I('I⃡^{B∕O} = (m/10) [1⃡ (p⃗ · p⃗ + q⃗ · q⃗ + r⃗ · r⃗ + p⃗ · q⃗ + p⃗ · r⃗ + q⃗ · r⃗) − (p⃗ p⃗ + q⃗ q⃗ + r⃗ r⃗ + (p⃗ q⃗ + q⃗ p⃗ + p⃗ r⃗ + r⃗ p⃗ + q⃗ r⃗ + r⃗ q⃗)/2)]'),
+    I('I⃡^{B∕O} = (m/10) [d 1⃡ − (p⃗ p⃗_{sum} + q⃗ q⃗_{sum} + r⃗ r⃗_{sum})]'),
+    I('p⃗_{sum} = p⃗ + (q⃗ + r⃗)/2,  q⃗_{sum} = q⃗ + (p⃗ + r⃗)/2,  r⃗_{sum} = r⃗ + (p⃗ + q⃗)/2'),
+    I('d = p⃗ · p⃗_{sum} + q⃗ · q⃗_{sum} + r⃗ · r⃗_{sum}')),
+  wide=True),
+ S('Momentum',
+  G('Translational momentum',
+    I('^{N}L⃗^{Q} = m^{Q} ^{N}v⃗^{Q}',note='particle'),
+    I('^{N}L⃗^{S} = Σ_{i=1}^{n} m^{Q_{i}} ^{N}v⃗^{Q_{i}} = m^{S} ^{N}v⃗^{S_{cm}}',note='system')),
+  G('Angular momentum',
+    I('^{N}H⃗^{Q∕P} = ^{P}r⃗^{Q} × ^{N}L⃗^{Q}',note='particle Q about P'),
+    I('^{N}H⃗^{B∕B_{p}} = I⃡^{B∕B_{p}} · ^{N}ω⃗^{B} + ^{B_{p}}r⃗^{B_{cm}} × m^{B} ^{N}v⃗^{B_{p}}',note='last term 0 if Bₚ is the mass centre or still'),
+    I('^{N}H⃗^{B∕B_{p}} = I_{zz}^{B∕B_{p}} ^{N}ω⃗^{B} + ^{B_{p}}r⃗^{B_{cm}} × m^{B} ^{N}v⃗^{B_{p}}',note='ω⃗ = ω_{z} b̂_{z}'),
+    I('^{N}H⃗^{S∕P} = ^{N}H⃗^{S∕O} + ^{P}r⃗^{O} × ^{N}L⃗^{S}',note='shift'),
+    I('^{N}H⃗^{B∕P} = ^{N}H⃗^{B∕B_{p}} + ^{P}r⃗^{B_{p}} × ^{N}L⃗^{B}',note='shift, rigid body')),
+  G('Impulse',
+    I('∫ F⃗ dt = ΔL⃗',note='impulse-momentum'),
+    I('∫ M⃗^{S∕O} dt = ΔH⃗^{S∕O}',note='O fixed, or the mass centre')),
+  wide=True),
+ S('Kinetic energy',
+  G('In N',
+    I('^{N}K^{Q} = (1/2) m^{Q} ^{N}v⃗^{Q} · ^{N}v⃗^{Q}',note='particle'),
+    I('^{N}K^{B} = (1/2) m^{B} ^{N}v⃗^{B_{p}} · ^{N}v⃗^{B_{p}} + (1/2) ^{N}ω⃗^{B} · I⃡^{B∕B_{p}} · ^{N}ω⃗^{B} + m^{B} ^{N}v⃗^{B_{p}} · (^{N}ω⃗^{B} × ^{B_{p}}r⃗^{B_{cm}})',note='last term 0 at the mass centre'),
+    I('^{N}K^{B} = (1/2) ^{N}v⃗^{B_{p}} · ^{N}L⃗^{B} + (1/2) ^{N}ω⃗^{B} · ^{N}H⃗^{B∕B_{p}}',note='Bₚ the mass centre, or fixed in B and N'),
+    I('^{N}K^{B} = (1/2) m^{B} ^{N}v⃗^{B_{p}} · ^{N}v⃗^{B_{p}} + (1/2) I_{kk}^{B∕B_{p}} (^{N}ω^{B})^{2}',note='simple 2D, Bₚ as above')),
+  wide=True),
+ S('Forces and moments',
+  G('Forces',
+    I('F⃗^{Q} = Σ_{i=1}^{n} F⃗^{Q∕P_{i}}',note='resultant on point Q'),
+    I('F⃗^{S} = Σ_{i=1}^{n} F⃗^{Q_{i}}',note='resultant on a system'),
+    I('F⃗^{P∕Q} = −F⃗^{Q∕P}',note='action and reaction'),
+    I('F⃗^{S} = (F⃗^{S})_{external}',note='internal forces cancel')),
+  G('Moments and torques',
+    I('M⃗^{F⃗∕O} = ^{O}r⃗^{Q} × F⃗',note='force F⃗ at Q, about O'),
+    I('M⃗^{S∕O} = Σ_{i=1}^{n} ^{O}r⃗^{Q_{i}} × F⃗^{Q_{i}}',note='a set of forces'),
+    I('M⃗^{S∕O} = (M⃗^{S∕O})_{external}',note='internal moments cancel'),
+    I('M⃗^{S∕P} = M⃗^{S∕O} + ^{P}r⃗^{O} × F⃗^{S}',note='shift'),
+    I('M⃗ = T⃗',note='a couple: the same about any point')),
+  G('Equivalent set',
+    I('F⃗^{B_{p}} = F⃗^{S}',note='one force at Bₚ'),
+    I('T⃗^{B} = M⃗^{S∕B_{p}}',note='plus one couple')),
+  wide=True),
+ S('Power, work and energy',
+  G('In N',
+    I('^{N}P = F⃗^{Q} · ^{N}v⃗^{Q}',note='a force on Q'),
+    I('^{N}P^{S} = Σ_{i=1}^{ν} F⃗^{Q_{i}} · ^{N}v⃗^{Q_{i}}',note='a set of forces'),
+    I('^{N}P = T⃗^{B} · ^{N}ω⃗^{B}',note='a torque on B'),
+    I('^{N}W^{S} = ∫ ^{N}P^{S} dt',note='work'),
+    I('^{N}U^{S} = −^{N}W^{S}',note='if W depends on configuration only'),
+    I('U = m g h',note='gravity, near the ground'),
+    I('U = −(G m_{1} m_{2})/r',note='gravity'),
+    I('U = (1/2) k x^{2}',note='spring')),
+  wide=True),
+ S('Equations of motion',
+  G('Newton and Euler (N Newtonian)',
+    I('F⃗^{Q} = m^{Q} ^{N}a⃗^{Q}',note='particle'),
+    I('F⃗^{S} = m^{S} ^{N}a⃗^{S_{cm}}',note='system'),
+    I('M⃗^{S∕O} = ^{N}d(^{N}H⃗^{S∕S_{cm}})/dt + ^{O}r⃗^{S_{cm}} × ^{N}d(^{N}L⃗^{S})/dt',note='angular momentum principle'),
+    I('M⃗_{z}^{B∕P} = I_{zz}^{B∕B_{cm}} ^{N}α⃗^{B} + ^{P}r⃗^{B_{cm}} × m^{B} ^{N}a⃗^{B_{cm}}',note="Euler 2D, any P"),
+    I('M⃗_{z}^{B∕B_{p}} = I_{zz}^{B∕B_{p}} ^{N}α⃗^{B} + ^{B_{p}}r⃗^{B_{cm}} × m^{B} ^{N}a⃗^{B_{p}}',note='Euler 2D, Bₚ on B'),
+    I('M⃗^{B∕B_{p}} = I⃡^{B∕B_{p}} · ^{N}α⃗^{B} + ^{N}ω⃗^{B} × (I⃡^{B∕B_{p}} · ^{N}ω⃗^{B}) + ^{B_{p}}r⃗^{B_{cm}} × m^{B} ^{N}a⃗^{B_{p}}',note='Euler 3D'),
+    I('M_{1} = I_{1} ω̇_{1} − (I_{2} − I_{3}) ω_{2} ω_{3}',note='principal axes; and cyclic'),
+    I('Σ M_{O} = I_{O} α',note='2D, O fixed or the mass centre')),
+  G('Energy and momentum',
+    I('^{N}P^{S} = d(^{N}K^{S})/dt',note='power: rate of K'),
+    I('W̃ = ΔK + ΔU',note='work of the forces not in U'),
+    I('^{N}K^{S} + ^{N}U^{S} = constant',note='mechanical energy'),
+    I('F⃗^{S} · û = m^{S} ^{N}a⃗^{S_{cm}} · û',note="D'Alembert: one direction û"),
+    I('−∂U/∂q_{r} = d(∂K/∂q̇_{r})/dt − ∂K/∂q_{r}',note="Lagrange (2nd kind)")),
+  wide=True),
+ S('Solving a problem',
+  G('Free-body diagram and road-map',
+    W('Pick a system S that answers the question; draw its FBD'),
+    W('Draw only external forces on S: contact and distance (gravity)'),
+    W('Replace a messy set of forces with one force at a point and a couple'),
+    W('Name points, unit vectors and force and torque measures as needed'),
+    W('Use action and reaction to cut down the unknowns'),
+    W('Motion limited along û at Q: there is a force on Q along û'),
+    W('Rotation limited about û: there is a torque on B about û'),
+    W('Road-map: variable, translate or rotate, û, S, FBD, about point'),
+    W('Then add constraint equations and their derivatives (linkages, rolling)'),
+    W('Momentum is conserved along û if no external force (or moment) acts there')),
+  wide=True),
+ S('Statics',
+  G('Equilibrium',
+    I('Σ F = 0'),
+    I('Σ M = 0',note='about any point'),
+    I('M = F d',note='moment'),
+    I('f ≤ μ N',note='friction')),
+  G('Centroids',
+    I('x̄ = (Σ A_{i} x_{i})/(Σ A_{i})',note='composite area'),
+    I('I = Ī + A d^{2}',note='parallel axis'))),
  S('Motion',
   G('Particles',
     I('a = v dv/ds'),
@@ -1145,8 +1650,36 @@ dynamics=SH('dynamics','Statics and Dynamics','statics and dynamics',
     I('c_{c} = 2√(k m)',note='critical damping'),
     I('ζ = c/c_{c}',note='damping ratio'),
     I('ω_{d} = ω_{n} √(1 − ζ^{2})',note='damped frequency'),
-    I('δ = ln(x_{1}/x_{2})',note='logarithmic decrement')),
-  wide=True))
+    I('δ = ln(x_{1}/x_{2})',note='logarithmic decrement'),
+    I('ω_{n} = √(g/L)',note='simple pendulum'),
+    I('ω_{n} = √(m g d/I_{O})',note='physical pendulum, pivot O')),
+  wide=True),
+ S('Constants',
+  G('Mitiguy, p. 306',
+    H('Quantity','Value'),
+    U('Standard g','9.80665 m/s^{2}'),
+    U('G','6.67 × 10^{−11} N m^{2}/kg^{2}'),
+    U('Speed of light','299792458 m/s'),
+    U('Mass of the Earth','5.9742 × 10^{24} kg'),
+    U('Mass of the Moon','7.34 × 10^{22} kg'),
+    U('Earth to Moon','384400 km'),
+    U('Earth to Sun (mean)','149597870 km'),
+    U('Perihelion, aphelion','147085800, 152104980 km'),
+    U('Earth radius (equatorial)','6378 km'),
+    U('Earth diameters','12712.02 polar, 12756.28 equatorial km'),
+    U('Earth surface area','5.10 × 10^{8} km^{2}'),
+    U('Earth volume','1.0832 × 10^{12} km^{3}'),
+    U('Earth density','5.515 g/cm^{3}'),
+    U('Earth escape velocity','11.18 km/s'),
+    U('Earth orbital velocity','107244 km/hr'),
+    U('Earth axial tilt','23.45°'),
+    U('Sidereal day','23 hr 56.1 min'),
+    U('Sidereal year','365.2422 days'),
+    U('Geosynchronous radius','4.2108 × 10^{7} m')),
+  G('Little g and radius',
+    H('Body','g (m/s²)','Radius (km)'),
+    *[L(n,g,r) for n,g,r in [('Sun','274.0','695500'),('Jupiter','20.9','71492'),('Neptune','10.7','24764'),('Saturn','10.4','60268'),('Earth','9.8','6378'),('Venus','8.9','6051'),('Uranus','8.4','25559'),('Mars','3.7','3397'),('Mercury','3.7','2439'),('Moon','1.6','1737'),('Pluto','0.8','1151')]]),
+  wide=True,leads=[180,90]))
 
 heat=SH('heat transfer','Heat Transfer','heat transfer',
  S('Modes',
@@ -1278,7 +1811,7 @@ index=SH('formulas','Formulas','all the formula sheets',
     row('ct transform table','CT Fourier transforms'),row('dt transform table','DT Fourier transforms'),row('laplace','Laplace transforms'),row('z transform','Z transforms')),
   G('Math',row('identities','trig, logs, algebra, sums'),row('calculus','derivatives and integrals'),row('unit circle','exact trig values'),row('taylor series','Maclaurin series'),row('precalculus','quadratics, conics, sequences'),row('differential equations','ODEs and PDEs'),row('numerical methods','roots, integrals, RK4'),
     row('linear algebra','matrices, vectors, eigenvalues'),row('vector calculus','operators and theorems'),row('geometry','area, volume, triangles')),
-  G('Science and engineering',row('physics','mechanics, E&M, quantum'),row('chemistry','gases, equilibrium, kinetics'),row('biology','genetics, enzymes, populations'),row('continuum mechanics','stress, beams, torsion, fluids'),row('electrical engineering','AC, transistors, logic'),row('dynamics','statics, inertia, vibrations'),row('heat transfer','conduction, convection'),row('astronomy','orbits, stars, distance'),row('statistics','probability, distributions'),row('computer science','algorithms, bits, systems'),row('machine learning','models, losses, scoring'),row('finance','interest, loans, returns'),
+  G('Science and engineering',row('physics','mechanics, E&M, quantum'),row('chemistry','gases, equilibrium, kinetics'),row('biology','genetics, enzymes, populations'),row('continuum mechanics','stress, beams, torsion, fluids'),row('electrical engineering','AC, transistors, logic'),row('dynamics','vectors, inertia, Euler, energy'),row('heat transfer','conduction, convection'),row('astronomy','orbits, stars, distance'),row('statistics','probability, distributions'),row('computer science','algorithms, bits, systems'),row('machine learning','models, losses, scoring'),row('finance','interest, loans, returns'),
     row('constants','physical constants'),row('conversions','units and metric prefixes'),row('periodic','periodic table')),
   leads=[140]))
 native.append(index)
@@ -1330,6 +1863,12 @@ def circle_figure():
 UPRIGHT={'Cs','Si','Ry','PV','FV','NPV','PMT','ROI','MSE','TP','FP','FN','TN','Nu','Bi','Pr','CPI','RTT','hit','real','miss','and','mW','BW','SR','GBW','SNR','dBm','LSB','PF','OS','to','GS','DS','BE','ox','ov','ph','FS','ref','clk','cq','su','dc','pk','cm','dB','pH','pOH','pK','HA','OH','vap','tot','sp','eV','mV','kJ','mol','RF','CO','HR','SV','MAP','TPR','BMI','app','cat','out','max','cr','lat','CV','CS','along','for','Re','Im','Var','KE','PE','CT','DT','out','in','th','oc','sc','rms','dB','Ptr','FS'}
 OPS={'sin','cos','tan','sinh','cosh','ln','log','exp','lim','det','tr','cot','sec','csc','arcsin','arccos','arctan'}
 OVERRIDE={
+ # the dynamics sheet's matrices
+ 'a⃗ × b⃗ = det[x̂ ŷ ẑ; a_{x} a_{y} a_{z}; b_{x} b_{y} b_{z}]':'arrow(a) times arrow(b) = det mat(hat(x), hat(y), hat(z); a_x, a_y, a_z; b_x, b_y, b_z)',
+ 'R_{z} = [cos θ, −sin θ, 0; sin θ, cos θ, 0; 0, 0, 1]':'R_z = mat(cos θ, -sin θ, 0; sin θ, cos θ, 0; 0, 0, 1)',
+ 'R_{x} = [1, 0, 0; 0, cos θ, −sin θ; 0, sin θ, cos θ]':'R_x = mat(1, 0, 0; 0, cos θ, -sin θ; 0, sin θ, cos θ)',
+ 'R_{y} = [cos θ, 0, sin θ; 0, 1, 0; −sin θ, 0, cos θ]':'R_y = mat(cos θ, 0, sin θ; 0, 1, 0; -sin θ, 0, cos θ)',
+ '[I] = [I_{xx}, I_{xy}, I_{xz}; I_{xy}, I_{yy}, I_{yz}; I_{xz}, I_{yz}, I_{zz}]':'[I] = mat(I_(x\\x), I_(x\\y), I_(x\\z); I_(x\\y), I_(y\\y), I_(y\\z); I_(x\\z), I_(y\\z), I_(z\\z))',
  'M(^{12}C)':'M(""^12 "C")',
  'a^{1/n} = ^{n}√a':'a^(1/n) = root(n, a)',
  '|x − x_{a}|/|x|':'(|x - x_a|)/(|x|)',
@@ -1396,12 +1935,21 @@ def fractions(s):
         new=side(left)+'⁄'+side(right)
         s=s[:a]+new+s[b:]
         i=a+len(new)-len(right)-1-len(left)-3+len(left)+1 if False else a+1+len(left)
+# a mark over a letter, as Typst draws it; I⃡ (a double arrow) is a dyadic, which Mitiguy draws with two arrows
+ACCENTS={'\u20d7':'arrow','\u0302':'hat','\u0307':'dot','\u0308':'dot.double','\u0303':'tilde','\u20e1':'dyad'}
+def accents(s):
+    "r̂, θ̇, v⃗ and the rest as tokens walk knows; a ^{N} with nothing before it is written ahead of what follows"
+    s=''.join(unicodedata.normalize('NFD',c) if any(m in unicodedata.normalize('NFD',c)[1:] for m in ACCENTS) else c for c in s)
+    s=re.sub('(\\w)(['+''.join(ACCENTS)+'])',lambda m:'⟪%s:%s⟫'%(ACCENTS[m.group(2)],m.group(1)),s)
+    # after an opening bar too (|^{P}r⃗^{Q}|), though not a closing one (|x|^{2})
+    return re.sub(r'(^|[\s(=+−×·,\[]|(?:^|(?<=[\s=(]))\|)\^\{',r'\1⟪pre⟫^{',s)
 def body(s):
     "typst maths for what a row shows"
     if s in OVERRIDE: return OVERRIDE[s]
     s=s.replace('ŷ','⟪yhat⟫').replace('ṁ','⟪mdot⟫').replace('Q̇','⟪Qdot⟫').replace('Ẇ','⟪Wdot⟫').replace('Ī','⟪Ibar⟫').replace('′','\'')
     s=s.replace('x̄','⟪xbar⟫').replace('f′','f\'').replace('0⁺','0^{+}').replace('<N>','⟪angle⟫').replace('…','⟪dots⟫')
     s=s.replace('F.S.','⟪FS⟫')
+    s=accents(s)
     # (1/T) ahead of something is a plain coefficient: the fraction bar is bracket enough
     # only when a space follows: (π/j)[…] keeps its brackets, or the fraction would take the […] too
     s=re.sub(r'(?<![\w√)\]}])\(([^()\s]+/[^()\s]+)\)(?=\s|$)',r'\1',s)
@@ -1437,6 +1985,12 @@ def walk(s):
             out.append(c+'('+walk(s[i+2:j])+')'); i=j+1; continue
         if c=='⟪':
             j=s.index('⟫',i); w=s[i+1:j]
+            if ':' in w:
+                mark,letter=w.split(':',1)
+                out.append('arrow(arrow(%s))'%walk(letter) if mark=='dyad' else '%s(%s)'%(mark,walk(letter))); i=j+1; continue
+            if w=='pre':
+                last=next((t for t in reversed(out) if t.strip()),'')
+                out.append(('#h(0.15em)' if last[-1:].isalnum() or last[-1:]==')' else '')+'""'); i=j+1; continue
             out.append({'xbar':'overline(x)','angle':'angle.l N angle.r','dots':'dots','FS':'"F.S."','mdot':'dot(m)','Qdot':'dot(Q)','Wdot':'dot(W)','Ibar':'overline(I)','yhat':'hat(y)'}[w]); i=j+1; continue
         if c=='√':
             if s[i+1:i+2]=='(':
@@ -1618,11 +2172,21 @@ for sh in native:
             for it in g['items']:
                 if it.get('figure'):
                     it['figure'],it['spots']=circle_figure(); continue
+                if it.pop('words',False):
+                    it['typst']=['"'+it['show']+'"']; continue
+                pic=it.pop('pic',None)
+                if pic:
+                    it['typst']=[pic+' quad '+body(it['show'])]
+                    if it.get('note'):
+                        d=note_doc(it['note'])
+                        if 'math' in d: it['noteTypst']=d['math']
+                    continue
                 # the formulas page is words, not maths
                 if it.get('open'): it['typst']=['"'+x+'"' for x in it['lead']+[it['show']]]
                 else: it['typst']=[body(x) for x in it.get('lead',[])+[it['show']]]
                 # a row's name is words too
                 if it.get('leadCopy',['x'])[0]=='': it['typst'][0]='"'+it['lead'][0]+'"'
+                if it.pop('unit',False): it['typst'][-1]=unit_body(it['show'])
                 if it.get('note'):
                     d=note_doc(it['note'])
                     if 'math' in d: it['noteTypst']=d['math']
