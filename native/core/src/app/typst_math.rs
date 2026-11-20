@@ -1393,7 +1393,9 @@ fn read_symbol(s: &[char], i: usize, to: usize) -> Piece {
     let rest = sl(s, i, to);
     if let Some(m) = caps(lazy!(r"^[⁻⁺]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+"), &rest) {
         let raised: Vec<char> = jsre::group(&m, 0).chars().collect();
-        if raised.len() > 1 {
+        // native only: one raised digit too, unless it's ¹ ² ³: the math font has those (Latin-1) but not
+        // ⁰ ⁴–⁹, so `2.1875 × 10⁵` lost its 5
+        if raised.len() > 1 || !matches!(raised[0], '¹' | '²' | '³') {
             let plain: String = raised
                 .iter()
                 .map(|&c| match "⁻⁺⁰¹²³⁴⁵⁶⁷⁸⁹".chars().position(|d| d == c) {

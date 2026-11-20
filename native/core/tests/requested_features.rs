@@ -601,3 +601,13 @@ fn ans_after_a_conversion_to_a_compound_unit() {
     assert_eq!(after(&q, true, "ans/2").0, "2880 lb·in");
 }
 
+// 2026-11-11: the preview showed `2.1875 × 10⁵` as `2.1875 × 10`: the math font has ¹ ² ³ but not ⁴–⁹ or ⁰
+#[test]
+fn preview_keeps_a_single_raised_digit() {
+    use qcalc_core::app::typst_math::to_typst_math;
+    assert_eq!(to_typst_math("2.1875 × 10⁵"), "2.1875 times 10 ^(5)");
+    assert_eq!(to_typst_math("5 × 10⁰"), "5 times 10 ^(0)");
+    assert_eq!(to_typst_math("x⁴"), "x ^(4)");
+    assert_eq!(to_typst_math("1.5 × 10⁻¹²"), "1.5 times 10 ^(-12)");
+}
+
