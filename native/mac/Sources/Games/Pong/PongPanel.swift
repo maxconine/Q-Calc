@@ -113,6 +113,8 @@ struct PongGameView: View {
     @EnvironmentObject private var shell: GameShellModel
     @Environment(\.gameColors) private var colors
     @Environment(\.gameStage) private var stage
+    // the hud the last score announcement was made from
+    @State private var spokenHud = PongModel.Hud()
 
     init(props: GameProps?, solo: PongSkill?, onEnd: ((String?) -> Void)? = nil) {
         self.props = props
@@ -146,6 +148,17 @@ struct PongGameView: View {
             }
             return true
         }
+        // the score is drawn, not read: each point (and the end) is spoken as it lands
+        .onChange(of: hud) { next in
+            let old = spokenHud
+            spokenHud = next
+            guard NSWorkspace.shared.isVoiceOverEnabled, next.started, next.score != old.score || (next.phase == .over) != (old.phase == .over) else { return }
+            let flip = { (s: (Int, Int)) in role == .host ? s : (s.1, s.0) }
+            let (mine, theirs) = flip(next.score), (wasMine, wasTheirs) = flip(old.score)
+            let scorer: Bool? = mine > wasMine ? true : theirs > wasTheirs ? false : nil
+            let won = next.phase == .over ? next.winner.map { $0 == role } : nil
+            BarModel.announce(GameSpeech.pongScore(mine: mine, theirs: theirs, peer: peer, scorer: scorer, won: won), high: won != nil)
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in model.release() }
         .onDisappear {
             model.release()
@@ -166,11 +179,15 @@ struct PongGameView: View {
 
     @ViewBuilder private func court(_ hud: PongModel.Hud) -> some View {
         let text = banner(hud)
+        let role = model.role
         TimelineView(.animation) { _ in
             let _ = model.frame()
             PongCourt(view: model.view, mine: model.role, colors: colors)
                 .accessibilityElement()
                 .accessibilityLabel("court")
+                .accessibilityValue(GameSpeech.pongScore(mine: role == .host ? hud.score.0 : hud.score.1,
+                                                         theirs: role == .host ? hud.score.1 : hud.score.0,
+                                                         peer: peer, scorer: nil, won: nil))
         }
         .aspectRatio(geo.courtW / geo.courtH, contentMode: .fit)
         .background(RoundedRectangle(cornerRadius: GameMetrics.radiusS).fill(colors.court.color))

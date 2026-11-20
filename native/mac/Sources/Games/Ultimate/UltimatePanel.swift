@@ -173,6 +173,7 @@ struct UltimateGameView: View {
                           onHover: { c in cursor = c; aiming = true }, onLeave: { aiming = false }, onPick: { model.play($0) })
                 .accessibilityElement(children: .contain)
                 .accessibilityLabel("board")
+                .accessibilityValue(spoken(v))
             PongNote("\(myTurn && zone == nil ? "1–9 pick a board" : "1–9 or arrows pick a cell") · ↵ play · \(solo.map { s in "\(skills.first { $0.1 == s }!.0) · " } ?? "")esc leaves")
         }
         .onAppear {
@@ -189,6 +190,7 @@ struct UltimateGameView: View {
             if let (dr, dc) = step[key.key] {
                 cursor = G.atGrid((G.gridRow(cursor) + dr + 9) % 9, (G.gridCol(cursor) + dc + 9) % 9)
                 aiming = true
+                speakCursor(state)
             } else if let n {
                 if let zone = state.forced.map(Int.init) ?? picked {
                     cursor = zone * 9 + n
@@ -197,6 +199,7 @@ struct UltimateGameView: View {
                     cursor = n * 9 + G.centre
                 }
                 aiming = true
+                speakCursor(state)
             } else if key.key == "Backspace" {
                 picked = nil
             } else if key.key == "Enter" || key.key == " " {
@@ -212,6 +215,30 @@ struct UltimateGameView: View {
             return true
         }
         .onDisappear { model.stop() }
+    }
+
+    /// The board for VoiceOver: each small board's marks and outcome, then where the next move goes.
+    private func spoken(_ v: UtView) -> String {
+        let role = model.role
+        let cells = v.cells.map { $0.map { $0 == role } }
+        let boards = v.boards.map { m -> GameSpeech.UtOwner? in
+            switch m {
+            case nil: return nil
+            case .draw?: return .draw
+            case .host?: return role == .host ? .mine : .theirs
+            case .guest?: return role == .guest ? .mine : .theirs
+            }
+        }
+        let board = GameSpeech.utBoard(cells, boards: boards, mine: "you", theirs: peer)
+        let next = GameSpeech.utNext(v.forced.map(Int.init), over: v.over)
+        return next.isEmpty ? board : "\(board). \(next)"
+    }
+
+    /// The cell the keys just moved to, spoken as connect 4 speaks its held column.
+    private func speakCursor(_ v: UtView) {
+        guard NSWorkspace.shared.isVoiceOverEnabled else { return }
+        let mark = cursor < v.cells.count ? v.cells[cursor].map { $0 == model.role ? "you" : peer } : nil
+        BarModel.announce(GameSpeech.utCell(cursor, mark: mark, playable: model.game.canPlay(cell: UInt32(cursor), who: model.role)))
     }
 
     private func status(_ v: UtView, myTurn: Bool) -> String {
