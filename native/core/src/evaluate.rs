@@ -420,7 +420,8 @@ pub fn evaluate_line(text: &str, options: &EvaluateOptions) -> LineResult {
 /// One `;` part's definitions: `x=3` or several split at top-level commas, `x=3, y=2`. A comma starts a new one
 /// only before `name =`, so a value keeps its own commas (`x = 1,000`, `x = max(1, 2)`).
 fn part_definitions(part: &str) -> Option<Vec<(String, String)>> {
-    static STARTS: Lazy = Lazy::new(|| js(r"^\s*[A-Za-z][A-Za-z0-9]*\s*=(?!=)", ""));
+    static STARTS: Lazy =
+        Lazy::new(|| js(r"^\s*[A-Za-z][A-Za-z0-9]*\s*(?:\([^()]*\)\s*)?=(?!=)", ""));
     let mut pieces: Vec<String> = Vec::new();
     let (mut depth, mut start) = (0_i32, 0);
     let cut = |piece: &str, pieces: &mut Vec<String>| match pieces.last_mut() {
@@ -442,11 +443,20 @@ fn part_definitions(part: &str) -> Option<Vec<(String, String)>> {
         }
     }
     cut(&part[start..], &mut pieces);
-    pieces.iter().map(|p| parse_assignment(p.trim())).collect()
+    pieces
+        .iter()
+        .map(|p| {
+            // native only: `f(2); f(x) = x^3` defines a function for the line too, named with its parameters
+            parse_function_def(p.trim())
+                .map(|(name, params, body)| (format!("{name}({})", params.join(", ")), body))
+                .or_else(|| parse_assignment(p.trim()))
+        })
+        .collect()
 }
 
 /// `x^2 + y; x=5; y=2` (or `; x=5, y=2`): the expression and the definitions after it. None unless everything
-/// after the first semicolon defines a letter.
+/// after the first semicolon defines a letter
+/// or a function (`f(2); f(x) = x^3`, the function named `f(x)` here).
 pub fn split_line_definitions(text: &str) -> Option<(&str, Vec<(String, String)>)> {
     if !text.contains(';') {
         return None;
@@ -485,6 +495,10 @@ fn line_with_definitions(text: &str, options: &EvaluateOptions) -> Option<LineRe
     let (head, definitions) = split_line_definitions(text)?;
     let mut scoped = options.clone();
     for (name, value) in definitions {
+        if let Some((f, params, body)) = parse_function_def(&format!("{name} = {value}")) {
+            scoped.functions.insert(f, UserFunction { params, body });
+            continue;
+        }
         let line = evaluate_sheet(&[value], &scoped).pop()?;
         match (&line.quantity, &line.value) {
             (Some(quantity), _) => {

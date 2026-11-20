@@ -1,6 +1,8 @@
 //! Carrying on from the last answer (`src/lib/chain.ts`): an operator typed first continues from `ans`, like
 //! pressing × after = on a calculator, and the tape writes the answer out.
 
+use std::borrow::Cow;
+
 use serde::{Deserialize, Serialize};
 
 use crate::app::answer::answer_among;
@@ -88,11 +90,38 @@ pub fn ans_written_out(expr: &str, plain: &str) -> String {
     }
     let among = answer_among(plain, jsre::test(&ALONE, expr));
     // a replacement string, as JS reads one: `$$`, `$&`, `` $` `` and `$'` are patterns (a `$` answer can hold them)
+    static NUMBER: Lazy = Lazy::new(|| js(r"^(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$", "i"));
+    let number = jsre::test(&NUMBER, jstr::trim(&among));
     jsre::replace_all(&ANS, expr, |c| {
         let m = c.get(0).map_or(0..0, |m| m.range());
+        // native only: a number against a number reads as one (`3 ans` was `3 4`); it keeps a bracket, `3 (4)`
+        let before = expr[..m.start].trim_end().chars().last();
+        let after = expr[m.end..].trim_start().chars().next();
+        let glued = before.is_some_and(|b| b.is_ascii_alphanumeric() || b == '.' || b == ')')
+            || after.is_some_and(|a| a.is_ascii_digit() || a == '.' || a == '(');
+        if number && glued {
+            return format!("({})", jstr::trim(&among));
+        }
         jstr::expand_replacement(&among, expr, m.start, m.end)
     })
     .into_owned()
+}
+
+/// native only: `2ans` is 2·ans, as `2x` is 2·x; the word gets its space so every reader of `ans` sees it. A name
+/// that runs on into it (`x2ans`) is left alone. A constant or a letter before it (`pi ans`, `x ans`) gets a `*`,
+/// since the engine reads `ans` after a name as a call.
+pub fn spaced_ans(q: &str) -> Cow<'_, str> {
+    static GLUED: Lazy = Lazy::new(|| js(r"(?<![A-Za-z_\d.])(\d+(?:\.\d+)?|\.\d+)(ans)\b", "i"));
+    static AFTER_NAME: Lazy =
+        Lazy::new(|| js(r"(?<![A-Za-z_\d.])(pi|tau|phi|e|[A-Za-z])\s+(ans)\b", "i"));
+    if !q.to_ascii_lowercase().contains("ans") {
+        return Cow::Borrowed(q);
+    }
+    let spaced = jsre::replace_all(&GLUED, q, |c| format!("{} {}", jsre::group(c, 1), jsre::group(c, 2)));
+    Cow::Owned(
+        jsre::replace_all(&AFTER_NAME, &spaced, |c| format!("{}*{}", jsre::group(c, 1), jsre::group(c, 2)))
+            .into_owned(),
+    )
 }
 
 /// native only: whether a line uses `ans` by name.

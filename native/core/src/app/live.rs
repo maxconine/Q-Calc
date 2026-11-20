@@ -272,7 +272,8 @@ fn names_of(options: &EvaluateOptions) -> Names {
 
 /// One keystroke: everything the bar shows for `req.text`. See the module docs for the contract.
 pub fn live(req: &LiveRequest) -> LiveAnswer {
-    let q = req.text.as_str();
+    let spaced = crate::app::chain::spaced_ans(&req.text);
+    let q = spaced.as_ref();
     let o = &req.options;
     let sig_figs = o.sig_figs.unwrap_or(f64::from(DEFAULT_SIG_FIGS));
     let graph_cmd = is_graph_command(q);
