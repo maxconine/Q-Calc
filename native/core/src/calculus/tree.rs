@@ -162,11 +162,24 @@ pub fn size_up_to(t: &T, limit: usize) -> usize {
 
 /// `math.derivative(tree, variable, {simplify: false})`.
 pub fn derivative(tree: &T, var: &str) -> DR {
+    // a call with nothing in it (`sqrt(` half typed, its grey paren closing it) has no derivative: the later
+    // passes read every call's first argument
+    if has_empty_call(tree) {
+        return Err(DerivError);
+    }
     let d = Deriv { var }.derive(tree)?;
     if size_up_to(&d, MAX_DERIVATIVE_NODES) >= MAX_DERIVATIVE_NODES {
         return Err(DerivError);
     }
     Ok(d)
+}
+
+fn has_empty_call(n: &T) -> bool {
+    match &**n {
+        N::Call(_, a) if a.is_empty() => true,
+        N::Op(_, a) | N::Call(_, a) => a.iter().any(has_empty_call),
+        _ => false,
+    }
 }
 
 impl Deriv<'_> {

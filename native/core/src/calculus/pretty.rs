@@ -188,6 +188,12 @@ fn operator(n: &T, o: Op, args: &[T]) -> Printed {
             let mut s = String::new();
             for (i, (neg, t)) in terms.iter().enumerate() {
                 let body = wrap(&pretty(t), PRODUCT);
+                // a term whose minus sits past its first factor (`x·(-π)·sin x/180`) prints with it in front:
+                // read it as the sign, not `+ -πx sin(x)/180`
+                let (neg, body) = match body.strip_prefix('-') {
+                    Some(rest) => (!*neg, rest.to_string()),
+                    None => (*neg, body),
+                };
                 s.push_str(&match (i, neg) {
                     (0, true) => format!("-{body}"),
                     (0, false) => body,
