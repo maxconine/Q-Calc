@@ -25,6 +25,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusDrop: StatusDrop?
     private var settingsWindow: SettingsWindowController?
     private var settingsObserver: NSObjectProtocol?
+    // Calculate with Q Calc / Open in Q Calc in the Services menu (Services.swift); NSApp holds it weakly
+    private var services: ServiceProvider?
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.prohibited)
@@ -66,6 +68,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                let i = tabs.tabViewItems.firstIndex(where: { $0.label == "Messages" }) { tabs.selectedTabViewItemIndex = i }
         }
         overlay?.preload()
+        services = ServiceProvider(engine: engine, logic: model.logic) { [weak self] text in
+            guard let overlay = self?.overlay else { return }
+            overlay.show(from: "service")
+            DispatchQueue.main.async { overlay.model.setField?(text) }
+        }
+        NSApp.servicesProvider = services
         Analytics.shared.start(logic: model.logic)
         // the engine's first call pays for its lazy tables; do it now, off the main thread
         engine.submit(.forms, { $0.evaluate(lines: ["1+1"], options: defaultEvalOptions()) }) { _ in

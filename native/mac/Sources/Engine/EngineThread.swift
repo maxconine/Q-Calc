@@ -10,7 +10,7 @@ import QCalcCore
 // overwrite a newer one. Long work (closed forms, graphs) goes through QCalcCore's async calls with a CancelToken
 // instead, cancelled when the line changes.
 final class EngineThread {
-    enum Lane: Hashable { case live, forms, graph, commit, misc, selection }
+    enum Lane: Hashable { case live, forms, graph, commit, misc, selection, service }
 
     private struct Job {
         let generation: Int
@@ -89,6 +89,28 @@ final class EngineThread {
         return out!
     }
 
+    /// Like `sync`, on its own lane and giving up after `timeout` seconds (nil): for callers on the main thread that
+    /// must answer in place, like the Services menu's Calculate. A job still running when it gives up finishes and is
+    /// dropped.
+    func wait<T>(_ lane: Lane, timeout: TimeInterval, _ work: @escaping (Engine) -> T) -> T? {
+        let box = WaitBox<T>()
+        lock.lock()
+        let generation = (newest[lane] ?? 0) + 1
+        newest[lane] = generation
+        if waiting[lane] == nil { order.append(lane) }
+        waiting[lane] = Job(generation: generation) { engine in
+            box.value = work(engine)
+            box.done.signal()
+        }
+        lock.signal()
+        lock.unlock()
+        guard box.done.wait(timeout: .now() + timeout) == .success else {
+            cancel(lane)
+            return nil
+        }
+        return box.value
+    }
+
     private func isNewest(_ lane: Lane, _ generation: Int) -> Bool {
         lock.lock()
         defer { lock.unlock() }
@@ -107,4 +129,9 @@ final class EngineThread {
             autoreleasepool { job.work(engine) }
         }
     }
+}
+
+private final class WaitBox<T> {
+    var value: T?
+    let done = DispatchSemaphore(value: 0)
 }
