@@ -4,6 +4,8 @@
 //! - different currencies in one sum, answered in the first: `$5 + €3`, `£10 - $2 to yen`
 //! - a currency on its own, as one of it: `usd to eur`
 //! - the other dollars and a code written first: `C$20`, `A$5`, `NZ$`, `HK$`, `S$`, `R$`, `₩5000`, `CHF 20`
+//! - an amount below zero written any way: `$-5 in eur`, `-5 usd in eur`
+//! - more than one currency asked for: `10 eur in usd and gbp` (`$12.50, £8.00`)
 
 use super::currency::{
     Currency, CurrencyRates, Money, convert_currency, currency_word, parse_money,
@@ -199,12 +201,70 @@ pub fn answer(expr: &str, rates: Option<&CurrencyRates>, sig_figs: f64) -> Optio
         if !left.chars().any(|c| c.is_ascii_digit()) {
             return rate_line(currency_word(left, true)?, to, rates);
         }
-        let (n, from) = worth(left, rates)?;
+        let (n, from) = signed_worth(left, rates)?;
         let n = convert_currency(n, from, to, Some(rates))?;
         return amount(n, Some(to), sig_figs);
     }
+    // `10 eur in usd and gbp`, `$5 to eur, gbp, yen`: each, side by side
+    if let Some(m) = caps(&TO, &s)
+        && let Some(targets) = several(g(&m, 2))
+    {
+        let (n, from) = signed_worth(g(&m, 1), rates)?;
+        let shown = targets
+            .into_iter()
+            .map(|to| {
+                let v = convert_currency(n, from, to, Some(rates))?;
+                amount(v, Some(to), sig_figs).map(|a| a.display)
+            })
+            .collect::<Option<Vec<_>>>()?;
+        return Some(PhraseAnswer {
+            display: shown.join(", "),
+            n: None,
+        });
+    }
+    if let Some((n, c)) = negative(&s, rates) {
+        return amount(n, Some(c), sig_figs);
+    }
     let (n, c) = mixed_sum(&s, rates)?;
     amount(n, Some(c), sig_figs)
+}
+
+/// `-5 usd`, `$-5`, `-€3`: an amount below zero, which the web reads only as `-$5`.
+fn negative(s: &str, rates: &CurrencyRates) -> Option<(f64, Currency)> {
+    static SYMBOL_MINUS: Lazy =
+        Lazy::new(|| js_re(r"^((?:[a-z]{1,2})?[$€£¥₹₩])\s*-\s*(\d.*)$", ""));
+    let t = s.trim();
+    let positive = if let Some(rest) = t.strip_prefix('-') {
+        rest.trim().to_string()
+    } else {
+        let m = caps(&SYMBOL_MINUS, t)?;
+        format!("{}{}", g(&m, 1), g(&m, 2))
+    };
+    if positive.starts_with('-') {
+        return None;
+    }
+    let (n, c) = worth(&positive, rates)?;
+    Some((-n, c))
+}
+
+/// What the line is worth, below zero too.
+fn signed_worth(s: &str, rates: &CurrencyRates) -> Option<(f64, Currency)> {
+    worth(s, rates).or_else(|| negative(s, rates))
+}
+
+/// `usd and gbp`, `usd, gbp & yen`: two or more currencies; None for one.
+fn several(s: &str) -> Option<Vec<Currency>> {
+    static SEP: Lazy =
+        Lazy::new(|| js_re(r"\s*(?:,\s*(?:and\s+)?|\s+and\s+|\s*&\s*|\s*/\s*)\s*", ""));
+    let joined = crate::jsre::replace_all(&SEP, s, |_| "\u{1}".into());
+    let parts: Vec<&str> = joined.split('\u{1}').collect();
+    if parts.len() < 2 || parts.len() > 8 {
+        return None;
+    }
+    parts
+        .iter()
+        .map(|p| currency_word(p.trim(), true))
+        .collect()
 }
 
 #[cfg(test)]

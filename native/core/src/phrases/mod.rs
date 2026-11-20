@@ -480,7 +480,8 @@ pub fn answer_phrase(expr: &str, options: &PhraseOptions<'_>) -> Option<PhraseAn
 }
 
 /// Native only: what answers once the web's phrases answered nothing: currency lines it leaves blank
-/// ([`native_money`]) and a clock time read in another zone (`3pm est in pst`, [`time::zone_convert`]).
+/// ([`native_money`]), a clock time read in another zone (`3pm est in pst`, [`time::zone_convert`]) and phrases
+/// about now (`now`, `week number`, `unix time`, [`time::native_time`]).
 pub fn native_answer(
     expr: &str,
     rates: Option<&CurrencyRates>,
@@ -488,8 +489,10 @@ pub fn native_answer(
     now_ms: f64,
     tz: &TimeZone,
 ) -> Option<PhraseAnswer> {
+    let s = normalize(expr);
     native_money::answer(expr, rates, sig_figs)
-        .or_else(|| time::zone_convert(&normalize(expr), now_ms, tz))
+        .or_else(|| time::zone_convert(&s, now_ms, tz))
+        .or_else(|| time::native_time(&s, now_ms, tz))
 }
 
 /// `answerPhrase`, with the TS's throws kept apart.

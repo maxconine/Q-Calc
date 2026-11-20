@@ -399,7 +399,7 @@ fn city_time(s: &str, now: f64) -> Option<PhraseAnswer> {
 pub fn zone_convert(s: &str, now: f64, here: &TimeZone) -> Option<PhraseAnswer> {
     static BOTH: Lazy = Lazy::new(|| js_re(r"^(.+?)\s+(?:in|to|into|as)\s+(.+?)(?:\s+time)?$", ""));
     static FROM: Lazy = Lazy::new(|| js_re(r"^(.+?)(?:\s+time)?$", ""));
-    let place = |t: &str| super::time_zone(zone(js_trim(t))?);
+    let place = |t: &str| any_zone(t);
     // `3pm est` / `9am london time` / `3pm`: the clock and the zone after it, if any
     let said = |t: &str| -> Option<(f64, Option<TimeZone>)> {
         let t = js_trim(t);
@@ -445,6 +445,157 @@ pub fn zone_convert(s: &str, now: f64, here: &TimeZone) -> Option<PhraseAnswer> 
         std::cmp::Ordering::Equal => shown,
     };
     Some(PhraseAnswer::shown(shown))
+}
+
+/// Native only: `utc+5:30`, `gmt-8`, `utc+5` as a fixed offset from UTC.
+fn offset_zone(key: &str) -> Option<TimeZone> {
+    static RE: Lazy = Lazy::new(|| js_re(r"^(?:utc|gmt)\s*([+-])\s*(\d{1,2})(?::?(\d{2}))?$", ""));
+    let m = caps(&RE, js_trim(key))?;
+    let h: i32 = g(&m, 2).parse().ok()?;
+    let min: i32 = m.get(3).map_or(Some(0), |x| x.as_str().parse().ok())?;
+    if h > 14 || min > 59 {
+        return None;
+    }
+    let secs = (h * 3600 + min * 60) * if g(&m, 1) == "-" { -1 } else { 1 };
+    Some(TimeZone::fixed(jiff::tz::Offset::from_seconds(secs).ok()?))
+}
+
+/// A named zone or a fixed offset.
+fn any_zone(key: &str) -> Option<TimeZone> {
+    zone(js_trim(key))
+        .and_then(super::time_zone)
+        .or_else(|| offset_zone(key))
+}
+
+/// Native only: an ISO date (`2027-01-01`) inside a phrase, written as the phrases read one (`january 1 2027`).
+fn iso_dates(s: &str) -> Option<String> {
+    static RE: Lazy = Lazy::new(|| js_re(r"\b(\d{4})-(\d{1,2})-(\d{1,2})\b", ""));
+    let mut any = false;
+    let out = jsre::replace_all(&RE, s, |m| {
+        let mon: usize = g(m, 2).parse().unwrap_or(0);
+        let d: u32 = g(m, 3).parse().unwrap_or(0);
+        match (mon, d) {
+            (1..=12, 1..=31) => {
+                any = true;
+                format!("{} {d} {}", MONTHS[mon - 1], g(m, 1))
+            }
+            _ => g(m, 0).to_string(),
+        }
+    })
+    .into_owned();
+    any.then_some(out)
+}
+
+/// Native only: phrases about now the web leaves blank, tried after it answered nothing (`s` normalized).
+/// - `now` / `date and time`: today and the clock; `time` / `what time is it`: the clock; `date` / `what day is
+///   it`: today
+/// - `what day is july 4 2027` / `what day of the week is christmas`: the date with its weekday
+/// - `week number` (ISO 8601, `week 48`), `week number of july 4 2027`
+/// - `unix time` / `unix timestamp` / `epoch time`: seconds since 1970
+/// - `time in utc+5:30` / `time in gmt-8`, and the dates of the web's phrases written ISO-style (`days until
+///   2027-01-01`)
+pub fn native_time(s: &str, now: f64, tz: &TimeZone) -> Option<PhraseAnswer> {
+    static NOW: Lazy = Lazy::new(|| {
+        js_re(
+            r"^(?:(?:right )?now|(?:the )?(?:current )?date and time|(?:the )?(?:current )?time and date|(?:the )?date and time now)$",
+            "",
+        )
+    });
+    static CLOCK: Lazy = Lazy::new(|| {
+        js_re(
+            r"^(?:(?:the )?(?:current )?time(?: now)?|what time is it(?: now)?|the time is|time is it)$",
+            "",
+        )
+    });
+    static TODAY: Lazy = Lazy::new(|| {
+        js_re(
+            r"^(?:(?:the |today's |todays |current |today )?date|what day is (?:it|today)(?: today)?|what's today|which day is it|day today|what is today)$",
+            "",
+        )
+    });
+    static WHAT_DAY: Lazy = Lazy::new(|| {
+        js_re(
+            r"^(?:what|which) (?:day(?: of the week)?|weekday|date) (?:is|was|will be|falls on|does) (.+?)(?: fall on| be| on)?$",
+            "",
+        )
+    });
+    static WEEK: Lazy = Lazy::new(|| {
+        js_re(
+            r"^(?:(?:the |current |iso )?week (?:number|no\.?|#)|week of (?:the )?year|what week is it|which week is it)(?:\s+(?:of|for|on)\s+(.+))?$",
+            "",
+        )
+    });
+    static UNIX: Lazy = Lazy::new(|| {
+        js_re(
+            r"^(?:(?:current |the )?(?:unix|epoch|posix)(?: time(?:stamp)?| seconds)?|(?:current )?timestamp|seconds since (?:the )?(?:epoch|1970))(?: now)?$",
+            "",
+        )
+    });
+    static IN_ZONE: Lazy = Lazy::new(|| {
+        js_re(
+            r"^(?:(?:the )?(?:current )?time|what time is it|what time) (?:is it )?in (.+)$",
+            "",
+        )
+    });
+    if now.is_nan() {
+        return None;
+    }
+    let s = js_trim(s);
+    let today = day_of(tz, now);
+    let f = local_fields(tz, now);
+    let clock = format_clock(f.hours * 60.0 + f.minutes);
+    if jsre::test(&NOW, s) {
+        return Some(PhraseAnswer::shown(format!(
+            "{}, {clock}",
+            format_date(tz, today)
+        )));
+    }
+    if jsre::test(&CLOCK, s) {
+        return Some(PhraseAnswer::shown(clock));
+    }
+    if jsre::test(&TODAY, s) {
+        return Some(PhraseAnswer::shown(format_date(tz, today)));
+    }
+    if jsre::test(&UNIX, s) {
+        let secs = (now / 1000.0).floor();
+        return Some(PhraseAnswer {
+            display: jsnum::to_string(secs),
+            n: Some(secs),
+        });
+    }
+    let iso = iso_dates(s);
+    let s = iso.as_deref().unwrap_or(s);
+    if let Some(m) = caps(&WEEK, s) {
+        let day = match m.get(1) {
+            Some(d) => parse_day(tz, d.as_str(), today, Roll::Year).ok()??,
+            None => today,
+        };
+        if !(day.y.is_finite() && day.m.is_finite() && day.d.is_finite()) {
+            return None;
+        }
+        let date = jiff::civil::Date::new(day.y as i16, day.m as i8 + 1, day.d as i8).ok()?;
+        let week = date.iso_week_date().week();
+        return Some(PhraseAnswer {
+            display: format!("week {week}"),
+            n: Some(f64::from(week)),
+        });
+    }
+    if let Some(m) = caps(&WHAT_DAY, s) {
+        let day = parse_day(tz, g(&m, 1), today, Roll::Year).ok()??;
+        return Some(PhraseAnswer::shown(format_date(tz, day)));
+    }
+    if let Some(m) = caps(&IN_ZONE, s) {
+        let there = offset_zone(g(&m, 1))?;
+        let at = jiff::Timestamp::from_millisecond(now as i64)
+            .ok()?
+            .to_zoned(there);
+        return Some(PhraseAnswer::shown(format_clock(
+            at.hour() as f64 * 60.0 + at.minute() as f64,
+        )));
+    }
+    // `days until 2027-01-01`: the web's own phrase, with the date written as it reads one
+    iso.as_deref()
+        .and_then(|t| answer_time_phrase(t, now, tz).ok().flatten())
 }
 
 // `10:30` or `9:05` as a time of day, which parseClock leaves alone because on its own it could be a duration
