@@ -1009,9 +1009,10 @@ private struct HelpSheet: View {
 
     private func key(_ action: String) -> String { KeyActions.title(KeyActions.chord(action, in: settings.keybinds)) }
 
+    /// the shortcut first (none when no shortcut works), and no row for a key cleared in Settings › Keybinds
     private var left: [(String, String)] {
-        [
-            ((settings.activeHotKey ?? settings.hotKey).title, "show / hide"),
+        TourRules.keyRows(hotkey: TourRules.hotkeyTitle(active: settings.activeHotKey?.title, chosen: settings.hotKey.title,
+                                                        failed: settings.hotKeyFailed), rows: [
             ("↵", "save"), ("↑", "history"),
             ([key("copyAnswer"), key("copyLine")].filter { !$0.isEmpty }.joined(separator: " "), "copy answer / line"),
             ("⌥↑ ⌥↓", "unit prefix"),
@@ -1021,8 +1022,11 @@ private struct HelpSheet: View {
             // native only: the matrix grid and a matrix answer's row operations
             ([key("matrixGrid"), key("matrixSteps")].filter { !$0.isEmpty }.joined(separator: " "), "matrix grid / steps"),
             ("esc", "hide"),
-        ]
+        ])
     }
+
+    /// whether `left` leads with the shortcut, which the wide layout moves to the head of the next column
+    private var leadsWithHotkey: Bool { left.first?.1 == "show / hide" }
 
     /// the web's things to type with the Mac app's own (messages, sharing, konami) before `?` (core `nativeCheats`)
     private var right: [(String, String)] {
@@ -1061,9 +1065,10 @@ private struct HelpSheet: View {
     private var threeColumns: some View {
         let half = (right.count + 1) / 2
         // the hotkey's long chord would widen the keys' column, so it heads the next
+        let lead = leadsWithHotkey ? 1 : 0
         return HStack(alignment: .top, spacing: 0) {
-            column(Array(left.dropFirst()), keyWidth: 64)
-            column(Array(left.prefix(1)) + right.prefix(half), keyWidth: 96)
+            column(Array(left.dropFirst(lead)), keyWidth: 64)
+            column(Array(left.prefix(lead)) + right.prefix(half), keyWidth: 96)
             column(Array(right.dropFirst(half)), keyWidth: 96)
         }
         .padding(.vertical, 8)

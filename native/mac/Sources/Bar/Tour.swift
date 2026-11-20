@@ -23,7 +23,31 @@ struct TourLineShown: Equatable {
 }
 
 extension BarModel {
-    private var hotkeyTitle: String { (settings.activeHotKey ?? settings.hotKey).title }
+    /// none when no shortcut works, so the walkthrough doesn't teach one that does nothing
+    private var hotkeyTitle: String {
+        TourRules.hotkeyTitle(active: settings.activeHotKey?.title, chosen: settings.hotKey.title, failed: settings.hotKeyFailed)
+    }
+
+    /// The bar's command for a line. `skip` is one only while the walkthrough's basics are left (QuickCalc.tsx), so
+    /// with nothing running it is an ordinary line and doesn't say `skipped`.
+    func barCommand(_ text: String) -> BarCommand? {
+        let command = BarCommand.of(text, sheets: sheets)
+        if command == .skip, !tourBasicsLeft() { return nil }
+        return command
+    }
+
+    func tourBit(_ id: String) -> Int { (logic.call("lib/tour", "tourBit", [id]) as? NSNumber)?.intValue ?? 0 }
+
+    /// a copy does the walkthrough's copy step and teaches the ⌘C hint; finishing the basics says so (the page's
+    /// copy flash). It had never been marked, so the walkthrough stayed on `⌘C copies the answer` for good.
+    func tourAfterCopy() {
+        let before = tourBasicsLeft()
+        markTour(tourBit("copy") | TourRules.copyHintBit)
+        guard before, !tourBasicsLeft(), let done = logic.string("lib/tour", "TOUR_DONE_HINT", []) else { return }
+        replay = nil
+        hint = done
+        refreshTour()
+    }
 
     // ---- the stored state
 
@@ -143,8 +167,8 @@ extension BarModel {
         }
         // an open after the first is the shortcut learned; once the basics are done each open brings one extra
         if ((o["opens"] as? NSNumber)?.intValue ?? 0) >= 2 || replay != nil,
-           let bit = logic.call("lib/tour", "tourBit", ["hotkey"]) as? NSNumber {
-            markTour(bit.intValue)
+           case let bit = tourBit("hotkey"), bit != 0 {
+            markTour(bit)
         }
         if touringNow(), !settings.hotKeyFailed,
            let extra = logic.call("lib/tour", "tourExtra", [tourDone, hotkeyTitle]) as? [String: Any],
@@ -253,7 +277,8 @@ extension BarModel {
 
     /// after a save: the commit's hint (unless the tour has the line), the count, and which tour steps it used
     func onboardingAfterCommit(expr: String, facts: [String: Any], solve: Bool, graph: Bool) -> String? {
-        let next = tourBasicsLeft() ? nil : logic.call("lib/onboarding", "pickHint", [hints, facts, "commit"]) as? [String: Any]
+        let basicsLeft = tourBasicsLeft()
+        let next = basicsLeft ? nil : logic.call("lib/onboarding", "pickHint", [hints, facts, "commit"]) as? [String: Any]
         var o = onboardingState()
         o = logic.call("lib/onboarding", "recordCommit", [o]) as? [String: Any] ?? o
         o["hints"] = ((o["hints"] as? NSNumber)?.intValue ?? 0) | ((next?["bit"] as? NSNumber)?.intValue ?? 0)
@@ -261,10 +286,13 @@ extension BarModel {
         let used: [String: Any] = ["expr": expr, "unit": (facts["unit"] as? Bool) == true, "chained": (facts["chained"] as? Bool) == true,
                                    "solve": solve, "graph": graph]
         if let bits = logic.call("lib/tour", "tourUsed", [used]) as? NSNumber { markTour(bits.intValue) }
-        if replay != nil, tourStepNow() == nil, let done = logic.string("lib/tour", "TOUR_DONE_HINT", []) {
+        // a save that finishes the basics says so, first run or replay (it had said so only on a replay)
+        let finished = basicsLeft && !tourBasicsLeft()
+        if finished {
             replay = nil
-            return done
+            refreshTour()
         }
-        return next?["text"] as? String
+        return TourRules.afterHint(basicsLeftBefore: basicsLeft, basicsLeftAfter: !finished && basicsLeft,
+                                   doneHint: logic.string("lib/tour", "TOUR_DONE_HINT", []) ?? "", next: next?["text"] as? String)
     }
 }

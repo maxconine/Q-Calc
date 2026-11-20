@@ -386,7 +386,7 @@ final class BarModel: ObservableObject {
             engine.cancel(.live)
             return
         }
-        let command = BarCommand.of(typed, sheets: sheets)
+        let command = barCommand(typed)
         if let command {
             var found: Bool?
             if case let .message(_, name, _) = command {
@@ -402,7 +402,11 @@ final class BarModel: ObservableObject {
                 let rest = logic.string("lib/completion", "completionFor", [typed, ["contacts": [String]()]])
                 completion = rest.flatMap { $0.isEmpty ? nil : $0 }
             }
-            if command == .help, !helpShown { track("help") }
+            if command == .help, !helpShown {
+                track("help")
+                // `?` is the walkthrough's last extra: seen now, it isn't offered again (the page marks it on ↵)
+                markTour(tourBit("help"))
+            }
             helpShown = command == .help
             if case let .graph(body) = command { showGraph(body) } else { graph = nil }
             setLive(.blank, for: typed)
@@ -511,7 +515,7 @@ final class BarModel: ObservableObject {
     // the squiggle shows once typing has paused 700 ms on a blank line (SQUIGGLE_IDLE_MS), never for commands
     private func squiggleLater(_ typed: String) {
         squiggleTimer?.invalidate()
-        guard live.isBlank, !typed.trimmingCharacters(in: .whitespaces).isEmpty, BarCommand.of(typed, sheets: sheets) == nil,
+        guard live.isBlank, !typed.trimmingCharacters(in: .whitespaces).isEmpty, barCommand(typed) == nil,
               !isBarrelRoll(text: typed), !isKonamiLine(text: typed) else { return }
         squiggleTimer = Timer.scheduledTimer(withTimeInterval: 0.7, repeats: false) { [weak self] _ in
             guard let self, self.text == typed, self.live.isBlank else { return }
@@ -643,7 +647,7 @@ final class BarModel: ObservableObject {
     /// panel of its own (graph, sys, periodic, sheets, games, help, the tutorial), and Typst would show something
     /// the bar doesn't (`typstPreviewUseful`). The answer beside it is the one the slot shows, nothing for a message.
     func refreshTypeset() {
-        let command = BarCommand.of(text, sheets: sheets)
+        let command = barCommand(text)
         // native only: with "Stacked fractions and powers" on the line is already typeset, so no preview under it,
         // unless it uses `ans`: the preview shows the number that stands for
         let usesAns = decorations.ans != nil && (chained || text.range(of: #"\bans\b"#, options: [.regularExpression, .caseInsensitive]) != nil)
@@ -885,7 +889,7 @@ final class BarModel: ObservableObject {
             clearLine()
             return
         }
-        if let command = BarCommand.of(text, sheets: sheets) {
+        if let command = barCommand(text) {
             run(command)
             return
         }
@@ -898,6 +902,8 @@ final class BarModel: ObservableObject {
             clearLine()
             onPeriodic?()
             track("periodic")
+            // the walkthrough's periodic extra, done (QuickCalc.tsx marks it here; it was offered again after)
+            markTour(tourBit("periodic"))
         case let .identities(id, section, _):
             clearLine()
             onIdentities?(id, section)
@@ -1024,7 +1030,7 @@ final class BarModel: ObservableObject {
             }
             guard !leaving, self.text == typed else { return }
             if done.saved {
-                self.hint = self.onboardingAfterCommit(expr: typed, facts: facts, solve: done.row?.solve != nil, graph: typed.lowercased().hasPrefix("graph"))
+                self.hint = self.onboardingAfterCommit(expr: typed, facts: facts, solve: done.row?.solve != nil, graph: TourRules.isGraphLine(typed))
                 self.text = done.input
             } else {
                 self.hint = done.hint ?? "nothing to save yet · finish the line, or esc to close"
@@ -1441,6 +1447,7 @@ final class BarModel: ObservableObject {
     }
 
     func flashCopied() {
+        tourAfterCopy()
         copied = true
         copiedTimer?.invalidate()
         copiedTimer = Timer.scheduledTimer(withTimeInterval: 1.2, repeats: false) { [weak self] _ in self?.copied = false }
