@@ -22,6 +22,11 @@ final class BarTextView: NSTextView {
     var ghostTail = "" { didSet { if ghostTail != oldValue { needsDisplay = true } } }
     /// the InputEvent.inputType of the edit in progress (undo.ts editKind)
     var editKind: String?
+    /// a piece put in that isn't typing (a completion, a history row, a tile): its own undo step that the next
+    /// keystroke doesn't join, as the page's `commit` makes it (it had joined the typing run: one ⌘Z took both)
+    var pieceInsert = false
+    /// a wrap of the selection: undo selects it again (BarModel.markUndoSelection)
+    var markUndoSelection: ((NSRange) -> Void)?
     var trailingParens = 0 {
         didSet {
             guard trailingParens != oldValue else { return }
@@ -541,7 +546,9 @@ final class BarTextView: NSTextView {
         if !hasMarkedText(), replacementRange.location == NSNotFound, ["[", "]", "(", "{"].contains(typed) {
             // typed brackets are typing: they join the run (a `[` had been its own undo step and broke the run)
             if let w = Symbols.wrap(string, start: sel.location, end: sel.location + sel.length, key: typed) {
-                editKind = "insertText"
+                // its own step (not typing), and undo selects what was wrapped again (wrapSelection)
+                markUndoSelection?(sel)
+                editKind = nil
                 replace(with: w.text, selection: NSRange(location: w.start, length: w.end - w.start))
                 return
             }
@@ -1122,6 +1129,7 @@ struct InputField: NSViewRepresentable {
         model.setField = { [weak text] value in
             text?.replace(with: value, selection: NSRange(location: (value as NSString).length, length: 0))
         }
+        text.markUndoSelection = { [weak model] range in model?.markUndoSelection(range) }
         model.fieldCaret = { [weak text] in text?.selectedRange().location ?? 0 }
         model.fillParensInField = { [weak text] value, caret in
             guard let text else { return }
@@ -1138,6 +1146,8 @@ struct InputField: NSViewRepresentable {
         model.insertIntoField = { [weak text] piece in
             guard let text else { return }
             text.window?.makeFirstResponder(text)
+            text.pieceInsert = true
+            defer { text.pieceInsert = false }
             text.insertText(piece, replacementRange: text.selectedRange())
         }
         return scroll
@@ -1227,6 +1237,7 @@ struct InputField: NSViewRepresentable {
         func textDidChange(_ notification: Notification) {
             guard let text else { return }
             defer { if BarTextView.stackedOn { text.restyle() } else { text.hideRootSigns() } }
+            if text.pieceInsert { text.editKind = nil }
             // typed words become symbols as they're finished (prettyTokens), unless "keep words" is on
             if !text.hasMarkedText() {
                 let caret = text.selectedRange().location

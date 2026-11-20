@@ -59,6 +59,15 @@ enum Undo {
         return b
     }
 
+    /// a key that wraps the selection is its own step, and undo brings the selection back with the text
+    /// (QuickInput's wrapSelection: `current` takes the selection, then the run is broken)
+    static func markSelection(_ u: State, start: Int, end: Int) -> State {
+        var m = u
+        m.current.start = start
+        m.current.end = end
+        return breakRun(m)
+    }
+
     static func undo(_ u: State) -> State? {
         guard let prev = u.past.last else { return nil }
         return State(past: Array(u.past.dropLast()), future: [u.current] + u.future, current: prev, run: nil, at: 0)

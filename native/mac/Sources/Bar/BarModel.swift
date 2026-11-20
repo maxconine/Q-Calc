@@ -1432,6 +1432,9 @@ final class BarModel: ObservableObject {
 
     func recordEdit(_ value: String, start: Int, end: Int, kind inputType: String?) {
         if !undoReady { resetUndo() }
+        // any change to the line lets go of a deleted row: ⌘Z then undoes the edit, not the delete from before it
+        // (QuickCalc's onChange clears tapeUndoRef; the row had come back over the typing after it)
+        if !value.utf16.elementsEqual(undoState.current.value.utf16) { deleted = nil }
         undoState = Undo.record(undoState, Undo.Step(value: value, start: start, end: end), Undo.editKind(inputType),
                                 now: Date().timeIntervalSince1970 * 1000)
     }
@@ -1441,10 +1444,17 @@ final class BarModel: ObservableObject {
         undoState = Undo.breakRun(undoState)
     }
 
+    /// a wrap of the selection: its own step, and undo selects what was wrapped again
+    func markUndoSelection(_ range: NSRange) {
+        if !undoReady { resetUndo() }
+        undoState = Undo.markSelection(undoState, start: range.location, end: NSMaxRange(range))
+    }
+
     private func applyUndo(_ redo: Bool) -> Bool {
         if !undoReady { resetUndo() }
         guard let next = redo ? Undo.redo(undoState) : Undo.undo(undoState) else { return false }
         undoState = next
+        deleted = nil
         let c = next.current
         restoreField?(c.value, NSRange(location: c.start, length: max(0, c.end - c.start)))
         return true

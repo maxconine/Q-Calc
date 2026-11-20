@@ -104,5 +104,27 @@ check("a Typst line", "\(GhostRules.typstLine("$sqrt(2$"))", "true")
 check("money isn't a Typst line", "\(GhostRules.typstLine("$10 + (2"))", "false")
 check("one $ sign", "\(GhostRules.typstLine("$"))", "false")
 
+// QA item 71: a completion or a history insert is its own step (kind nil), typing after it starts a new one
+var t = Undo.start("")
+t = Undo.record(t, step("2 s"), .insert, now: 0)
+t = Undo.record(t, step("2 sq"), .insert, now: 100)
+t = Undo.record(t, step("2 sqrt("), nil, now: 200)
+t = Undo.record(t, step("2 sqrt(9"), .insert, now: 300)
+check("completion between typing runs", t.past.map(\.value).joined(separator: ","), ",2 sq,2 sqrt(")
+t = Undo.undo(t)!
+check("⌘Z takes the typing after the completion", t.current.value, "2 sqrt(")
+t = Undo.undo(t)!
+check("⌘Z takes the completion alone", t.current.value, "2 sq")
+t = Undo.redo(t)!
+check("⇧⌘Z puts the completion back", t.current.value, "2 sqrt(")
+// a wrap: undo gives back the line with what was wrapped selected
+var wu = Undo.record(Undo.start(""), step("2x+1"), .insert, now: 0)
+wu = Undo.markSelection(wu, start: 0, end: 2)
+wu = Undo.record(wu, Undo.Step(value: "(2x)+1", start: 1, end: 3), nil, now: 50)
+wu = Undo.record(wu, step("(2x)+12"), .insert, now: 100)
+check("typing after a wrap is its own step", wu.past.map(\.value).joined(separator: ","), ",2x+1,(2x)+1")
+wu = Undo.undo(Undo.undo(wu)!)!
+check("undo a wrap selects it again", "\(wu.current.value) \(wu.current.start) \(wu.current.end)", "2x+1 0 2")
+
 if failures > 0 { print("\(failures) failed"); exit(1) }
 print("all passed")
