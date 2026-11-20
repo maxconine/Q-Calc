@@ -103,6 +103,16 @@ The user asked for all three. Mac files: `macos/IdentityWindow.swift` (shared wi
 
 To test on Windows: open `finance`, search `ohm` (Physics and Electrical Engineering rows, the Ω constants), `force`, and `effective anual yield` (closest matches: compound interest); click compound interest, then a Related formula (`A = Pe^{rt}` opens its own explanation, Back returns); with the bar up, click into the sheet's search and type.
 
+### Input line: undo steps for paste, cut and brackets (20 Nov 2026)
+
+Mac file: `native/mac/Sources/Bar/InputField.swift` (`pastePlain`, `cut`, `insertText`, `replace`); headless test `native/mac/scripts/test-input.sh` (`Tests/input/main.swift`: words to symbols, `[` pairing, undo runs).
+
+- **A paste is its own undo step** (`insertFromPaste`, kind none): it went through the field's own typing path and was recorded as typing, so ⌘Z within a second took the paste and what was typed before it together. A cut likewise (`deleteByCut`). Check Windows' input does the same.
+- **A typed `[` (pairing, stepping over `]`, wrapping a selection) joins the typing run**: it had been its own step and ended the run.
+- **Whole-line swaps record the caret where it lands**: the caret was set after the change was recorded, so undo/redo back to such a step (a `[` pair, a stacked `/`, a bounds key) put it at the end of the line.
+
+To test on Windows: type `12`, paste `+34` at once, ⌘Z (Ctrl+Z) leaves `12`; type `v=[1 2` then Ctrl+Z, Ctrl+Shift+Z, and the caret comes back inside the brackets.
+
 ### Already ported
 
 The stacked fractions round (TeX sizes, Desmos keys, grown brackets, stacked history rows, answers shrinking as one) and the newer graph round were ported for 3.0.2 (branch `win-port-302`, 8 Nov 2026). What stays different on Windows:

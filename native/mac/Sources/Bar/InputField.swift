@@ -488,9 +488,13 @@ final class BarTextView: NSTextView {
         let all = NSRange(location: 0, length: (string as NSString).length)
         if shouldChangeText(in: all, replacementString: text) {
             textStorage?.replaceCharacters(in: all, with: NSAttributedString(string: text, attributes: Self.attributes))
+            // the caret goes in before the change is announced, so the undo step (and prettyTokens) see where it
+            // really is; it had been recorded wherever the whole-line swap left it, and redo put it back there
+            setSelectedRange(selection)
             didChangeText()
+        } else {
+            setSelectedRange(selection)
         }
-        setSelectedRange(selection)
     }
 
     // `[` pairs, `]` steps over, `(`/`[`/`{` over a selection wraps it (bracketKey, wrapSelection)
@@ -499,11 +503,14 @@ final class BarTextView: NSTextView {
         let sel = selectedRange()
         if Self.stackedOn, !hasMarkedText(), replacementRange.location == NSNotFound, stackedTyping(typed, sel) { return }
         if !hasMarkedText(), replacementRange.location == NSNotFound, ["[", "]", "(", "{"].contains(typed) {
+            // typed brackets are typing: they join the run (a `[` had been its own undo step and broke the run)
             if let w = Symbols.wrap(string, start: sel.location, end: sel.location + sel.length, key: typed) {
+                editKind = "insertText"
                 replace(with: w.text, selection: NSRange(location: w.start, length: w.end - w.start))
                 return
             }
             if let b = Symbols.bracketKey(string, start: sel.location, end: sel.location + sel.length, key: typed) {
+                editKind = "insertText"
                 replace(with: b.text, selection: NSRange(location: b.caret, length: 0))
                 return
             }
@@ -834,7 +841,8 @@ final class BarTextView: NSTextView {
         copy(sender)
         editKind = "deleteByCut"
         if keepSlot(selectedRange()) { return }
-        insertText("", replacementRange: selectedRange())
+        // super's: this class's insertText would call the cut typing and join it to the run before
+        super.insertText("", replacementRange: selectedRange())
     }
 
     // plain text only, one line (cleanPastedText collapses line breaks)
@@ -847,7 +855,10 @@ final class BarTextView: NSTextView {
         if onPasteLines?(raw) == true { return }
         // one plain line, as Spotlight takes a paste: no breaks, tabs or indents
         let clean = PlainText.flatten(raw)
-        insertText(clean, replacementRange: selectedRange())
+        guard !clean.isEmpty || selectedRange().length > 0 else { editKind = nil; return }
+        // super's, so a paste stays its own undo step (insertFromPaste); through this class's insertText it was
+        // called typing, joined the run before it, and one ⌘Z took the paste and what was typed before it
+        super.insertText(clean, replacementRange: selectedRange())
         // a pasted sentence or paragraph goes back on the clipboard that way too
         if PlainText.isProse(clean) { onPastedProse?(clean) }
     }
