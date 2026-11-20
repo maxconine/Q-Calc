@@ -170,6 +170,26 @@ fn with_quantities(expr: &str, quantities: &BTreeMap<String, String>) -> String 
     .into_owned()
 }
 
+/// Native only, for definitions on the line (`… where m = 1200 kg, v = 20 m/s`): whether `name` is written as the
+/// unit of a number in `expr` (a rate after it, `20 m/s`, or the whole value one amount, `50 m`), so it is the
+/// unit there and not the variable. (A sheet's own lines keep the web's reading: the variable wins.)
+fn unit_after_number(expr: &str, name: &str) -> bool {
+    static AFTER_NUMBER: Lazy =
+        Lazy::new(|| js(r"(?:^|[^A-Za-z0-9_.])\d+(?:\.\d*)?(?:e[+-]?\d+)?\s*$", "i"));
+    static RATE_AFTER: Lazy = Lazy::new(|| js(r"^\s*/\s*\(?\s*[A-Za-zµμΩ°]", ""));
+    static ONE_AMOUNT: Lazy =
+        Lazy::new(|| js(r"^\s*[+-]?\d+(?:\.\d*)?(?:e[+-]?\d+)?\s*[A-Za-z]+\s*$", "i"));
+    if !crate::units::reads_as_unit(name) {
+        return false;
+    }
+    let whole = jsre::test(&ONE_AMOUNT, expr);
+    let re = jsre::js_cached(&format!(r"(?<![A-Za-z_]){name}(?![A-Za-z0-9_])"), "");
+    re.find_iter(expr).filter_map(Result::ok).any(|m| {
+        jsre::test(&AFTER_NUMBER, &expr[..m.start()])
+            && (whole || jsre::test(&RATE_AFTER, &expr[m.end()..]))
+    })
+}
+
 /// `ans ft` when ans is already 5 m reads as ans in feet: a unit of the same kind converts.
 fn ans_in_unit(expr: &str, ans_qty: Option<&str>, opts: &EvaluateOptions) -> String {
     static RE: Lazy = Lazy::new(|| {
@@ -481,10 +501,30 @@ fn part_definitions(part: &str) -> Option<Vec<(String, String)>> {
         .collect()
 }
 
+/// Where a ` where ` outside brackets starts (lower case, spaced), when the line has one.
+fn where_at(text: &str) -> Option<usize> {
+    let mut depth = 0_i32;
+    for (i, c) in text.char_indices() {
+        match c {
+            '(' | '[' | '{' => depth += 1,
+            ')' | ']' | '}' => depth -= 1,
+            ' ' if depth == 0 && text[i..].starts_with(" where ") => return Some(i),
+            _ => {}
+        }
+    }
+    None
+}
+
 /// `x^2 + y; x=5; y=2` (or `; x=5, y=2`): the expression and the definitions after it. None unless everything
 /// after the first semicolon defines a letter
 /// or a function (`f(2); f(x) = x^3`, the function named `f(x)` here).
 pub fn split_line_definitions(text: &str) -> Option<(&str, Vec<(String, String)>)> {
+    // native only: `m v^2/r where m = 1200 kg, v = 20 m/s` is the `;` form, as homework writes it
+    if let Some(at) = where_at(text) {
+        let head = text[..at].trim();
+        let definitions = part_definitions(&text[at + " where ".len()..])?;
+        return (!head.is_empty() && !head.contains(';')).then_some((head, definitions));
+    }
     if !text.contains(';') {
         return None;
     }
@@ -547,7 +587,16 @@ fn line_with_definitions(text: &str, options: &EvaluateOptions) -> Option<LineRe
             scoped.functions.insert(f, UserFunction { params, body });
             continue;
         }
-        let line = evaluate_sheet(&[value], &scoped).pop()?;
+        // read as the assignment it is, so `v = 3 m/s` keeps the units typed (alone, `3 m/s` shows in ft/s); a
+        // unit name defined before (`m = 1200 kg`) is still the unit in `v = 20 m/s`
+        let mut here = scoped.clone();
+        here.quantities.retain(|n, _| !unit_after_number(&value, n));
+        here.variables.retain(|n, _| !unit_after_number(&value, n));
+        let scoped_now = &here;
+        let line = evaluate_sheet(&[format!("{name} = {value}")], scoped_now)
+            .pop()
+            .filter(|l| l.value.is_some())
+            .or_else(|| evaluate_sheet(&[value], scoped_now).pop())?;
         match (&line.quantity, &line.value) {
             (Some(quantity), _) => {
                 scoped.quantities.insert(name, quantity.clone());

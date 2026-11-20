@@ -1099,6 +1099,15 @@ fn compound_dim(d: Dim) -> bool {
     )
 }
 
+/// Native only: a specific heat `J/(kg·K)` (or `kJ/(kg·K)`, `BTU/(lb·°R)`) or a damping `N·s/m` keeps its three
+/// typed units, where it read `m^2 / s^2 K` and `kg / s` (that one didn't read back as a variable's value).
+fn three_part_compound(u: &[(UnitRef, f64)]) -> bool {
+    let has = |d: Dim, p: f64| u.iter().any(|(x, e)| x.dim == d && *e == p);
+    u.len() == 3
+        && ((has(Dim::Energy, 1.0) && has(Dim::Mass, -1.0) && has(Dim::Temperature, -1.0))
+            || (has(Dim::Force, 1.0) && has(Dim::Time, 1.0) && has(Dim::Length, -1.0)))
+}
+
 /// Physical constants are never the unit of an answer: `1 c` would read back as a coulomb.
 const CONSTANT_UNIT_IDS: &[&str] = &["light", "emass", "pmass", "nmass", "amu"];
 
@@ -1157,8 +1166,8 @@ fn system_value(q: &Qty) -> Option<Value> {
         return engineering(q, &on_ladder);
     }
     if let Some(label) = &label
-        && typed.len() <= 2
-        && typed.iter().all(|(u, _)| compound_dim(u.dim))
+        && ((typed.len() <= 2 && typed.iter().all(|(u, _)| compound_dim(u.dim)))
+            || three_part_compound(&typed))
     {
         return Some(valued(q.si / size, label.clone(), None));
     }
@@ -1517,6 +1526,19 @@ fn qty_value(q: &Qty, target: Option<&Qty>, target_label: Option<&str>) -> Optio
     if let Some(per_angle) = angle_rate_value(q) {
         return Some(per_angle);
     }
+    // native only: radians are a ratio, so I ω² (kg m² · rad²/s²) is an energy in J and τ ω a power in W
+    if q.dim[ANGLE_AXIS] > 0.0 {
+        let rest: DimVec = std::array::from_fn(|i| if i == ANGLE_AXIS { 0.0 } else { q.dim[i] });
+        if (is_energy(&rest) && q.dim[ANGLE_AXIS] == 2.0) || is_power(&rest) {
+            let plain = Qty {
+                dim: rest,
+                prefer: None,
+                via: None,
+                ..q.clone()
+            };
+            return qty_value(&plain, None, None);
+        }
+    }
     if let Some(p) = &q.prefer {
         let fits = p.dim.vec() == q.dim;
         // `200 GPa * 0.001` is 200 MPa: scaled stresses, forces, energies and powers keep an engineering prefix
@@ -1606,6 +1628,9 @@ struct Parser<'v> {
     /// Open brackets around the current position: past [`MAX_BRACKETS`] the reading fails, so `((((…` 20,000
     /// deep can't overflow the stack (the TS one throws a RangeError there).
     depth: usize,
+    /// Reading an exponent: `m^2/50 m` is m² over 50 m, not m to the 2/50 (a whole-number fraction before a unit
+    /// is one amount only outside an exponent).
+    exponent: bool,
 }
 
 static NO_VARS: BTreeMap<String, f64> = BTreeMap::new();
@@ -1624,6 +1649,7 @@ impl<'v> Parser<'v> {
             shadowed: false,
             vars,
             depth: 0,
+            exponent: false,
         }
     }
 
@@ -1719,8 +1745,14 @@ impl<'v> Parser<'v> {
                 left = div_qty(&left, &right)?;
                 continue;
             }
-            // `5 (2 m)` and `(2 m) (3 s)` multiply, but after a unit `(` is a function call (`sec(0)`)
-            let after_paren = || trim_end(&self.s[..self.i]).last() == Some(&')');
+            // `5 (2 m)` and `(2 m) (3 s)` multiply, but right after a unit `(` is a function call (`sec(0)`); native
+            // only: `12 V (1 - x)` and `(40 mA)^2 (100 Ω)`, spaced or after a power, multiply too
+            let after_paren = || {
+                let before = &self.s[..self.i];
+                trim_end(before).last() == Some(&')')
+                    || before.last().is_some_and(|c| is_space(*c))
+                    || trim_end(before).last().is_some_and(char::is_ascii_digit)
+            };
             if is_letter(ch.as_ref())
                 || (ch == Some('(') && (is_zero_vec(&left.dim) || after_paren()))
             {
@@ -1728,9 +1760,21 @@ impl<'v> Parser<'v> {
                 left = mul_qty(&left, &right);
                 continue;
             }
-            // `5 ft 10 in`: a juxtaposed quantity of the same dimension adds
-            if ch.is_some_and(|c| c.is_ascii_digit() || c == '.') && !is_zero_vec(&left.dim) {
+            // `5 ft 10 in`: a juxtaposed quantity of the same dimension adds; native only: a number after a word
+            // multiplies (`2 pi 60 Hz`)
+            let after_word = || {
+                let before = &self.s[..self.i];
+                before.last().is_some_and(|c| is_space(*c))
+                    && trim_end(before).last().is_some_and(|c| c.is_alphabetic())
+            };
+            if ch.is_some_and(|c| c.is_ascii_digit() || c == '.')
+                && (!is_zero_vec(&left.dim) || after_word())
+            {
                 let right = self.parse_pow()?;
+                if is_zero_vec(&left.dim) {
+                    left = mul_qty(&left, &right);
+                    continue;
+                }
                 if left.dim != right.dim {
                     return None;
                 }
@@ -1749,8 +1793,16 @@ impl<'v> Parser<'v> {
             return Some(base);
         }
         self.i += 1;
-        let exp = self.parse_primary()?;
+        let exp = self.parse_exponent()?;
         pow_qty(&base, &exp)
+    }
+
+    fn parse_exponent(&mut self) -> Option<Qty> {
+        let was = self.exponent;
+        self.exponent = true;
+        let exp = self.parse_primary();
+        self.exponent = was;
+        exp
     }
 
     fn word_at(&self, k: usize, word: &str) -> bool {
@@ -1825,7 +1877,7 @@ impl<'v> Parser<'v> {
             return Some(unit);
         }
         self.i += 1;
-        let exp = self.parse_primary()?;
+        let exp = self.parse_exponent()?;
         pow_qty(&unit, &exp)
     }
 
@@ -1927,7 +1979,7 @@ impl<'v> Parser<'v> {
                 && den
                     .as_ref()
                     .is_some_and(|d| jsnum::is_integer(d.si) && d.si > 1.0 && d.prec.is_none());
-            if vulgar && match_unit_at_start(&self.s[self.i..]).is_some() {
+            if vulgar && !self.exponent && match_unit_at_start(&self.s[self.i..]).is_some() {
                 return div_qty(&q, den.as_ref()?);
             }
             self.i = at;
