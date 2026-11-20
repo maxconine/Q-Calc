@@ -19,6 +19,8 @@
 # Graph: drag:<x1>,<y1>,<x2>,<y2>[,shift][,right][,steps] (pan, or orbit in 3D), scroll:<x>,<y>,<dy>[,<dx>][,precise][,shift]
 # (wheel lines, or two fingers in points), pinch:<x>,<y>,<m> (a pinch, + spreads), dblclick:<x>,<y>, graphstate:<file> (the
 # graph's window and view, key=value lines; chip= the critical point chip hovered or focused, home= its home window).
+# Games: gamekey:<chord>[:down|:up] and gamekeys:<text> (a key, one half of it, or text straight to the open game's window,
+# which works with q calc in the background or the screen locked), gamestate:<file> (its title, frame, big, dark), closegame.
 # QCALC_DEV_ID=<bundle id> drives a copy of the dev build re-signed under another id instead.
 for cmd in "$@"; do
   if [[ "$cmd" == sleep:* ]]; then

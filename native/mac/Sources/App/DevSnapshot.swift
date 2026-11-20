@@ -358,6 +358,40 @@ enum DevSnapshot {
         }
     }
 
+    /// The open game's window: a key handed straight to it (`gamekey:<chord>`, `:down`/`:up` for one half, a held
+    /// key), so a game can be driven while q calc isn't the active app (a locked screen), as `key:` can't
+    static func gameKey(_ arg: String) {
+        guard let window = NSApp.windows.first(where: { $0 is GameNSWindow && $0.isVisible }) else { return }
+        var chord = arg, only: NSEvent.EventType?
+        if arg.hasSuffix(":down") { chord = String(arg.dropLast(5)); only = .keyDown }
+        if arg.hasSuffix(":up") { chord = String(arg.dropLast(3)); only = .keyUp }
+        for event in keyEvents(chord, window) where only == nil || event.type == only {
+            if event.type == .keyDown, event.modifierFlags.contains(.command), window.performKeyEquivalent(with: event) { return }
+            window.sendEvent(event)
+        }
+    }
+
+    /// The game window's title, frame, whether it is the big window, its appearance and who has the keys, key=value
+    /// lines (`open=0` with no game up)
+    static func gameState(to file: String) {
+        var out = NSApp.windows.contains { $0 is GameNSWindow && $0.contentView != nil } ? "open=hidden" : "open=0"
+        if let w = NSApp.windows.first(where: { $0 is GameNSWindow && $0.isVisible }) {
+            let f = w.frame
+            out = ["open=1", "title=\(w.title)", "frame=\(Int(f.minX)),\(Int(f.minY)),\(Int(f.width)),\(Int(f.height))",
+                   "big=\(w.styleMask.contains(.titled) ? 1 : 0)", "dark=\(w.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? 1 : 0)",
+                   "responder=\(w.firstResponder.map { String(describing: type(of: $0)) } ?? "none")",
+                   "field=\((w.firstResponder as? NSTextView)?.string ?? "")"].joined(separator: "\n")
+        }
+        out += "\napp=\(NSApp.isHidden ? "hidden" : NSApp.isActive ? "active" : "back")"
+        try? out.write(toFile: file, atomically: true, encoding: .utf8)
+    }
+
+    /// Text typed into the game's own field with the keys (24's line)
+    static func gameKeys(_ text: String) {
+        guard let window = NSApp.windows.first(where: { $0 is GameNSWindow && $0.isVisible }) else { return }
+        (window.firstResponder as? NSTextView)?.insertText(text, replacementRange: NSRange(location: NSNotFound, length: 0))
+    }
+
     /// Text typed into the front sheet's (or its popover's) field with the keys, as `keys:` does for the key window
     static func sheetKeys(_ text: String) {
         (sheetKeyWindow()?.firstResponder as? NSTextView)?.insertText(text, replacementRange: NSRange(location: NSNotFound, length: 0))

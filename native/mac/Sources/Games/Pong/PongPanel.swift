@@ -160,7 +160,7 @@ struct PongGameView: View {
             BarModel.announce(GameSpeech.pongScore(mine: mine, theirs: theirs, peer: peer, scorer: scorer, won: won), high: won != nil)
         }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in model.release() }
-        .onDisappear {
+        .onGameLeave {
             model.release()
             model.stop()
         }

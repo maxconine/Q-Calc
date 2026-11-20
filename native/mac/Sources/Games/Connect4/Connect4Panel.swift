@@ -168,7 +168,7 @@ struct Connect4GameView: View {
         }
         // the big window around the square board, not the bar's 680-wide card
         .onAppear { shell.bigWidth = 460 }
-        .onDisappear {
+        .onGameLeave {
             model.stop()
             shell.bigWidth = nil
         }

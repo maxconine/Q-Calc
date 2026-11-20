@@ -214,7 +214,7 @@ struct UltimateGameView: View {
             }
             return true
         }
-        .onDisappear { model.stop() }
+        .onGameLeave { model.stop() }
     }
 
     /// The board for VoiceOver: each small board's marks and outcome, then where the next move goes.

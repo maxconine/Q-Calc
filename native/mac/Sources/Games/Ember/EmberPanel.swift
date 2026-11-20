@@ -338,7 +338,7 @@ struct EmberPlayView: View {
         // the game window losing the keys with the app still in front (the bar called up, another window clicked)
         // never sent the key-ups: a held D kept ember running, and online kept sending it to the friend
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in model.blur() }
-        .onDisappear { model.stop() }
+        .onGameLeave { model.stop() }
     }
 }
 

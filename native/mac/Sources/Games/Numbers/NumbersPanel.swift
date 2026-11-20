@@ -171,18 +171,29 @@ private struct NumbersGame: View {
         .padding(.vertical, GameMetrics.sp3)
         .padding(.horizontal, GameMetrics.gutter)
         .onAppear { focus() }
-        .onDisappear { m.leave() }
+        .onGameLeave { m.leave() }
         .gameKeys(shell) { key in handle(key) }
     }
 
     // the input has the keys while a round is up
     private func focus() {
         for ms in [0, 40, 120, 280] {
-            DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(ms)) { focused = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(ms)) {
+                focused = true
+                // focusing a field selects all it holds: back from the big window (⌃F) the next key replaced the
+                // expression typed so far; the caret goes to its end instead
+                DispatchQueue.main.async {
+                    guard let editor = gameFieldEditor else { return }
+                    let n = (editor.string as NSString).length
+                    if n > 0, editor.selectedRange() == NSRange(location: 0, length: n) { editor.setSelectedRange(NSRange(location: n, length: 0)) }
+                }
+            }
         }
     }
 
     private var fieldEditor: NSTextView? { NSApp.keyWindow?.firstResponder as? NSTextView }
+    // the game window's field editor, key window or not
+    private var gameFieldEditor: NSTextView? { NSApp.windows.first { $0 is GameNSWindow && $0.isVisible }?.firstResponder as? NSTextView }
 
     private func handle(_ key: GameKey) -> Bool {
         guard key.down, key.key != "Escape", key.plain else { return false }

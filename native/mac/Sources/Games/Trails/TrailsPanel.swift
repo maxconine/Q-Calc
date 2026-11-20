@@ -199,7 +199,7 @@ struct TrailsArenaView: View {
             PongNote(f?.note ?? "")
         }
         .gameKeys(shell) { k in model.key(k) }
-        .onDisappear { model.stop() }
+        .onGameLeave { model.stop() }
     }
 }
 

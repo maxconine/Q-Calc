@@ -206,6 +206,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // what settings' Remove / Unblock does for a name
         case "forget": Messages.shared.forget(arg)
         case "closegame": overlay.closeGame()
+        // gamekey:<chord>[:down|:up] and gamekeys:<text>: a key or text straight to the open game's window (works with
+        // q calc in the background or the screen locked); gamestate:<file> the game window's kind, size and full screen
+        case "gamekey": DevSnapshot.gameKey(arg)
+        case "gamekeys": DevSnapshot.gameKeys(arg)
+        case "gamestate": DevSnapshot.gameState(to: arg)
         case "bench": DevBench.run(spec: arg, model: overlay.model)
         // sendfile:<name>:<path> offers a file as a drop on their thread would; savefile saves every file that can
         // be (Messages/MessageFiles.swift), as Save does

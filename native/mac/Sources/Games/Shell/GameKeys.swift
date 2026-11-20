@@ -137,3 +137,35 @@ extension View {
         modifier(GameKeysModifier(shell: shell, handler: handler))
     }
 }
+
+// a game's goodbye when its view really goes. The window turning big or back (⌃F) takes the view down and puts it straight
+// back up, same state, and onDisappear fires in between: 24 counted a round under way as given up, trails and ember
+// left their match. The leave waits a moment and is called off when the view comes back.
+private struct GameLeaveModifier: ViewModifier {
+    let leave: () -> Void
+    @State private var box = LeaveBox()
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear { box.up = true; box.pending?.cancel(); box.pending = nil }
+            .onDisappear {
+                box.up = false
+                let b = box, leave = leave
+                let work = DispatchWorkItem { if !b.up { leave() } }
+                b.pending = work
+                DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(250), execute: work)
+            }
+    }
+}
+
+private final class LeaveBox {
+    var up = false
+    var pending: DispatchWorkItem?
+}
+
+extension View {
+    /// Runs `leave` when this view goes for good: not when it is only taken down and put back (the big window, ⌃F).
+    func onGameLeave(_ leave: @escaping () -> Void) -> some View {
+        modifier(GameLeaveModifier(leave: leave))
+    }
+}
