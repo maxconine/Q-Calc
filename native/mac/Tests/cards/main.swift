@@ -65,6 +65,13 @@ let sentWords = CardRules.putBack(["b.pdf"], to: "max", typed: typed, line: "", 
 check("words that went leave the files alone on the line", sentWords?.line == "send file to max")
 check("a line typed on since keeps its words", CardRules.putBack([String](), to: "max", typed: typed, wordsUnsent: true, line: "2+3", waiting: [String]()) == nil)
 
+// ---- a put-back `message` line's hint counts the files waiting on it (QA item 83) ----
+
+check("words and files: the hint counts the files", CardRules.messageHint("↵ sends to max", name: "max", text: "here you go", dropped: "2 files") == "↵ sends to max with 2 files")
+check("no words yet: ↵ offers the files", CardRules.messageHint("then what to say to max", name: "max", text: "", dropped: "a.pdf") == "↵ offers a.pdf to max")
+check("nothing waiting: the hint as it was", CardRules.messageHint("↵ sends to max", name: "max", text: "hi", dropped: "") == "↵ sends to max")
+check("username not found stays", CardRules.messageHint("username not found", name: "max", text: "hi", dropped: "a.pdf") == "username not found")
+
 // ---- Copied ----
 
 var flash = FlashTicket()

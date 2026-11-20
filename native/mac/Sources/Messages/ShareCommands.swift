@@ -21,6 +21,13 @@ extension BarModel {
         return ShareCmd(what: o["what"] as? String ?? "", to: o["to"] as? String ?? "", name: o["name"] as? String ?? "")
     }
 
+    /// a `message <name> …` line's hint with the files waiting on it counted (`↵ sends to max with 2 files`)
+    func waitingFilesHint(_ hint: String, name: String, text: String) -> String {
+        let pending = MessageFiles.shared.pendingDrop
+        let dropped = pending.first.flatMap { logic.string("lib/messaging", "droppedLabel", [$0.lastPathComponent, pending.count]) } ?? ""
+        return CardRules.messageHint(hint, name: name, text: text, dropped: dropped)
+    }
+
     /// the hint in the answer slot, and Tab's rest of the name
     func shareLine(_ typed: String) {
         decorations = Decorations()
@@ -224,7 +231,13 @@ extension BarModel {
         MessageFiles.shared.pendingDrop = back.waiting
         if text != back.line { text = back.line }
         // the hint counts what waits (`offers 2 files to max`): a second file put back doesn't change the line
-        if shareCommand(back.line) != nil { shareLine(back.line) }
+        if shareCommand(back.line) != nil {
+            shareLine(back.line)
+        } else if case let .message(_, name, said) = barCommand(back.line), let hint = commandMessage {
+            // a `message max words` line: its hint counts the files too (QA item 83), a second one put back
+            // doesn't change the line, so it's said here
+            commandMessage = waitingFilesHint(hint, name: name, text: said)
+        }
         focusField?()
     }
 

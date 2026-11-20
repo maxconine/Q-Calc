@@ -48,6 +48,17 @@ enum CardRules {
         putBack([file], to: name, line: line, waiting: waiting)
     }
 
+    /// A `message <name> …` line's hint while files wait on it (put back when the relay was out of reach, QA item
+    /// 83): ↵ sends them with the words, so the hint counts them (`↵ sends to max with 2 files`), or offers them
+    /// alone with no words yet (`↵ offers a.pdf to max`, as ↵ does). `dropped` is the files' label (`a.pdf`,
+    /// `2 files`); any other hint (no name yet, username not found, settings) is left as it was.
+    static func messageHint(_ hint: String, name: String, text: String, dropped: String) -> String {
+        guard !dropped.isEmpty, !name.isEmpty else { return hint }
+        if hint == "then what to say to \(name)" { return "↵ offers \(dropped) to \(name)" }
+        if hint == "↵ sends to \(name)" { return "↵ sends to \(name) with \(dropped)" }
+        return hint
+    }
+
     /// The same for a drop sent from a `message <name> words` line (`typed`, QA item 80): when its words weren't
     /// sent (`wordsUnsent`, any status but delivered, as a plain `message` line keeps them) the whole line comes
     /// back, with the files that didn't go waiting on it, so ↵ sends both again; words that went leave

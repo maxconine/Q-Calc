@@ -420,6 +420,9 @@ final class BarModel: ObservableObject {
                 nameCheckTimer?.invalidate()
             }
             commandMessage = command.hint(messaging: Messages.shared, found: found)
+            if case let .message(_, name, said) = command, let hint = commandMessage {
+                commandMessage = waitingFilesHint(hint, name: name, text: said)
+            }
             // native only: a sheet's short word still finishes to its full name (`formula` to `formulas`)
             if case .identities = command {
                 let rest = logic.string("lib/completion", "completionFor", [typed, ["contacts": [String]()]])
