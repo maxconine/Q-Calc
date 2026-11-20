@@ -27,15 +27,23 @@ pub enum ValueKind {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Meas {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "whole_number")]
     pub sig: Option<i32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "whole_number")]
     pub dp: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unc: Option<f64>,
     /// Significant digits of a ± the user typed, while the answer's ± is still that one (`0.10` → `10`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unc_digits: Option<String>,
+}
+
+/// A count stored as a JS number: history JSON writes `sig` and `dp` as `2.0` (`sanitizeMeas`), and reading that
+/// back as an integer failed, so a variable set to `3.0 ± 0.1` lost its ± on the next line (`x^2` was `9`).
+fn whole_number<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<i32>, D::Error> {
+    let n = Option::<f64>::deserialize(d)?;
+    Ok(n.filter(|n| n.is_finite() && n.fract() == 0.0 && n.abs() <= f64::from(i32::MAX))
+        .map(|n| n as i32))
 }
 
 /// A complex answer's parts at full precision.

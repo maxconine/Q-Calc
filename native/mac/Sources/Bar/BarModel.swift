@@ -826,14 +826,16 @@ final class BarModel: ObservableObject {
         let options = self.options
         let display = live.display, exact = self.exact, valueJson = live.valueJson, meas = live.meas
         engine.submit(.forms, { engine -> [String] in
-            var out = [display]
             let source = FormSource(valueJson: valueJson ?? "", display: display, exact: exact, meas: meas,
                                     sigFigs: options.sigFigs, sigFigMode: options.sigFigMode, rationalize: options.rationalize)
             let views = valueJson == nil ? [] : engine.answerForms(source: source)
-            // the engine's answerForms (WP-APP-LOGIC): the other ways ⌃E shows this answer
-            out += views.map(\.display)
+            // the engine's answerForms (WP-APP-LOGIC): the other ways ⌃E shows this answer. Slot 0 is the answer as
+            // shown; the engine already leaves that out unless it is a dual (`√2 ≈ 1.41421`), whose decimal alone is
+            // a form of its own (useAnswerForms), so it is not deduped against slot 0 (⌃E skipped it before)
             var seen = Set<String>()
-            return out.filter { seen.insert($0.trimmingCharacters(in: .whitespaces)).inserted && !$0.contains("undefined") }
+            return [display] + views.map(\.display).filter {
+                seen.insert($0.trimmingCharacters(in: .whitespaces)).inserted && !$0.contains("undefined")
+            }
         }) { [weak self] list in
             guard let self, self.text == typed else { return }
             self.forms = list
