@@ -1557,8 +1557,10 @@ pub fn fill_holes(r: &mut GraphResult) {
             let (c, d) = (side(-h / 64.0)?, side(h / 64.0)?);
             let y = (c + d) / 2.0;
             let gap = (c - d).abs();
+            // and the sides settle on it: 1/x² and ln(x²) match either side of 0 too, but run off as they near it
             (gap <= tol
                 && gap <= (a - b).abs() + tol
+                && ((a + b) / 2.0 - y).abs() <= tol
                 && crate::graph::inside(bounds.as_ref(), x, y))
             .then_some(y)
         };
@@ -1616,20 +1618,6 @@ pub fn fill_holes(r: &mut GraphResult) {
     }
 }
 
-/// A crossing found by bisection to the last bit, rounded to a nearby short number when one is that close
-/// (11.999999999999998 → 12), so it reads as the point it is.
-fn tidy_x(x: f64, step: f64) -> f64 {
-    for digits in 0..12 {
-        let k = 10f64.powi(digits);
-        let r = (x * k).round() / k;
-        if (r - x).abs() <= (step * 1e-6).max(x.abs() * 1e-13) {
-            return if r == 0.0 { 0.0 } else { r };
-        }
-    }
-    x
-}
-            // and the sides settle on it: 1/x² and ln(x²) match either side of 0 too, but run off as they near it
-                && ((a + b) / 2.0 - y).abs() <= tol
 /// Native only: a curve that only fades toward 0 (`exp(-x^2)`, `e^x` to the left) has no root where its samples
 /// drop under the root finder's 1e-12: a run of such samples reaching the window's edge, none of them 0 and all
 /// one sign, is a tail, not a root (the web lists `exp(-x^2)`'s at ±5.3).
@@ -1659,3 +1647,15 @@ pub fn drop_tail_roots(r: &mut GraphResult) {
     });
 }
 
+/// A crossing found by bisection to the last bit, rounded to a nearby short number when one is that close
+/// (11.999999999999998 → 12), so it reads as the point it is.
+fn tidy_x(x: f64, step: f64) -> f64 {
+    for digits in 0..12 {
+        let k = 10f64.powi(digits);
+        let r = (x * k).round() / k;
+        if (r - x).abs() <= (step * 1e-6).max(x.abs() * 1e-13) {
+            return if r == 0.0 { 0.0 } else { r };
+        }
+    }
+    x
+}
