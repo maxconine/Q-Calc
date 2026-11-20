@@ -16,7 +16,7 @@ pub mod together;
 pub mod tree;
 
 use std::cell::RefCell;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::jsnum;
 use crate::jsre::{self, Lazy};
@@ -647,7 +647,60 @@ fn partial_vars(denominator: &str) -> Vec<String> {
     out
 }
 
+/// Native only: a derivative of a derivative (`d/dx d/dx x^3`, `derivative of derivative of x^3`) is one
+/// derivative of the combined order; the inner `d/dx` was read as plain division (`-4/x⁵`, not `6x`).
 fn parse_derivative(
+    text: &str,
+    functions: &BTreeMap<String, UserFunction>,
+    variables: &BTreeMap<String, f64>,
+) -> Option<Intent> {
+    let Intent::Derivative {
+        body,
+        vars,
+        at,
+        partial,
+    } = parse_derivative_once(text, functions, variables)?
+    else {
+        return None;
+    };
+    let Some(Intent::Derivative {
+        body: inner,
+        vars: inner_vars,
+        at: None,
+        partial: inner_partial,
+    }) = parse_derivative(&body, functions, variables)
+    else {
+        return Some(Intent::Derivative {
+            body,
+            vars,
+            at,
+            partial,
+        });
+    };
+    let mut all: Vec<String> = inner_vars.into_iter().chain(vars).collect();
+    // a letter left to pick (`derivative of d/dx x^3`) is the one the other part names, when it names one
+    let given: BTreeSet<&String> = all.iter().filter(|v| !v.is_empty()).collect();
+    if given.len() > 1 && all.iter().any(String::is_empty) {
+        return None;
+    }
+    if let Some(&v) = given.iter().next() {
+        let v = v.clone();
+        all.iter_mut()
+            .filter(|x| x.is_empty())
+            .for_each(|x| *x = v.clone());
+    }
+    if all.len() > 9 {
+        return None;
+    }
+    Some(Intent::Derivative {
+        body: inner,
+        vars: all,
+        at,
+        partial: partial || inner_partial,
+    })
+}
+
+fn parse_derivative_once(
     text: &str,
     functions: &BTreeMap<String, UserFunction>,
     variables: &BTreeMap<String, f64>,

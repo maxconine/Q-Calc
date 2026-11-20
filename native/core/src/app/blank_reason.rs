@@ -60,6 +60,10 @@ fn reason(expr: &str, ok: &dyn Fn(&str) -> bool, names: &Names) -> Option<Span> 
     if jstr::trim(expr).is_empty() || ok(expr) || crate::chem::is_reaction_input(expr) {
         return None;
     }
+    // native only: a bare `d/dx`, `lim` or `solve`, or a trailing `to`/`=`, is unfinished, not wrong
+    if unfinished_hint(jstr::trim(expr)).is_some() {
+        return None;
+    }
     // `2x+3==11` would solve without its second `=`, so that's what's wrong, not the x
     if expr.contains('=') {
         return stray_operator(expr, ok)
@@ -207,6 +211,60 @@ pub struct EnterFacts {
     pub history: Option<bool>,
 }
 
+/// Native only: a line that stops where its next part should start — a bare `d/dx`, `lim`, `solve` or `sin`, a
+/// trailing `to`/`=`, an open `[` — says what goes next (it said "no answer for that", or that `dx` isn't a name).
+fn unfinished_hint(expr: &str) -> Option<String> {
+    static DERIVATIVE: Lazy = Lazy::new(|| {
+        js(
+            r"^(?:d[²³]?\s*/\s*d[A-Za-z][²³]?|∂\s*/\s*∂[A-Za-z]|(?:the\s+)?(?:second\s+)?derivative(?:\s+of)?)$",
+            "i",
+        )
+    });
+    static INTEGRAL: Lazy = Lazy::new(|| js(r"^(?:∫|integral(?:\s+of)?|integrate)$", "i"));
+    static LIMIT: Lazy = Lazy::new(|| {
+        js(
+            r"^(?:lim|limit)(?:\s+of)?(?:\s+[A-Za-z]\s*(?:->|→|-)?)?$",
+            "i",
+        )
+    });
+    static SOLVE: Lazy = Lazy::new(|| js(r"^(?:solve|isolate)(?:\s+for)?$", "i"));
+    static CONVERT: Lazy = Lazy::new(|| js(r"\s(?:to|in|as|into)$", "i"));
+    static WORD: Lazy = Lazy::new(|| js(r"^[A-Za-z][A-Za-z0-9]*$", ""));
+    if jsre::test(&DERIVATIVE, expr) {
+        return Some("unfinished: what to differentiate goes next, like d/dx x^2".into());
+    }
+    if jsre::test(&INTEGRAL, expr) {
+        return Some("unfinished: what to integrate goes next, like ∫ x^2 dx".into());
+    }
+    if jsre::test(&LIMIT, expr) {
+        return Some("unfinished: a limit needs where x goes, like lim x->0 sin(x)/x".into());
+    }
+    if jsre::test(&SOLVE, expr) {
+        return Some("unfinished: an equation goes next, like solve x^2 = 9".into());
+    }
+    if expr.ends_with('=') && !expr.ends_with("==") {
+        return Some("unfinished: something goes after the =".into());
+    }
+    if jsre::test(&CONVERT, expr) {
+        return Some("unfinished: a unit goes next, like 5 m to ft".into());
+    }
+    for (open, close) in [('[', ']'), ('{', '}')] {
+        if expr.matches(open).count() > expr.matches(close).count() {
+            return Some(format!("a {open} has no {close} to close it"));
+        }
+    }
+    let functions = [
+        "pi", "tau", "inf", "infinity", "ans", "rand", "random", "mod",
+    ];
+    if jsre::test(&WORD, expr)
+        && !functions.contains(&expr)
+        && SCIENTIFIC_NAMES.split('|').any(|n| n == expr)
+    {
+        return Some(format!("{expr} needs something to work on, like {expr}(2)"));
+    }
+    None
+}
+
 /// One line for ↵ that saved nothing: what stopped the answer and where to look, never the answer.
 pub fn enter_hint(f: &EnterFacts) -> String {
     static TRAILING_OPERATOR: Lazy = Lazy::new(|| js(r"([+\-−*×·/÷^])\s*$", ""));
@@ -236,6 +294,9 @@ pub fn enter_hint(f: &EnterFacts) -> String {
     let closes = expr.matches(')').count();
     if closes > opens {
         return "a ) has no ( to match".into();
+    }
+    if let Some(hint) = unfinished_hint(expr) {
+        return hint;
     }
     let trailing = TRAILING_OPERATOR
         .captures(expr)
