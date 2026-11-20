@@ -220,17 +220,24 @@ pub fn answer_phrase(
     if let Some(zone) = time_zone.filter(|z| crate::phrases::time_zone(z).is_some()) {
         options["timeZone"] = json!(zone);
     }
+    // native only: `C$20`, `₩5000`, `CHF 20` read as the currencies they are
+    let regional = crate::phrases::native_money::regional(expr);
+    let expr = regional.as_deref().unwrap_or(expr);
     let Some(a) =
         call("engine/phrases", "answerPhrase", &[json!(expr), options]).filter(|a| !a.is_null())
     else {
-        // native only: currency lines the web leaves blank (`$5 + €3`, `$5 * 3 to eur`, `usd to eur`)
+        // native only: currency lines the web leaves blank (`$5 + €3`, `$5 * 3 to eur`, `usd to eur`) and a
+        // clock time in another zone (`3pm est in pst`)
         let table = crate::phrases::currency::CurrencyRates::from_json(rates);
-        return crate::phrases::native_money::answer(expr, table.as_ref(), sig_figs).map(|p| {
-            PhraseAnswer {
+        let zone = time_zone
+            .and_then(crate::phrases::time_zone)
+            .or_else(|| crate::phrases::time_zone(crate::phrases::golden::RECORDED_ZONE))?;
+        return crate::phrases::native_answer(expr, table.as_ref(), sig_figs, now_ms, &zone).map(
+            |p| PhraseAnswer {
                 display: p.display,
                 n: p.n,
-            }
-        });
+            },
+        );
     };
     Some(PhraseAnswer {
         display: a.get("display")?.as_str()?.to_string(),

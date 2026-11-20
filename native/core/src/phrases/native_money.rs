@@ -3,6 +3,7 @@
 //! - sums before a conversion: `$5 * 3 to eur`, `$20/hr * 40 hr in gbp`
 //! - different currencies in one sum, answered in the first: `$5 + €3`, `£10 - $2 to yen`
 //! - a currency on its own, as one of it: `usd to eur`
+//! - the other dollars and a code written first: `C$20`, `A$5`, `NZ$`, `HK$`, `S$`, `R$`, `₩5000`, `CHF 20`
 
 use super::currency::{
     Currency, CurrencyRates, Money, convert_currency, currency_word, parse_money,
@@ -101,7 +102,7 @@ fn short_date(iso: &str) -> Option<String> {
 /// Native only: the hover note on a converted amount (`100 usd to eur`): the rate it used and its day.
 pub fn rate_note(expr: &str, rates: &CurrencyRates) -> Option<String> {
     static TO: Lazy = Lazy::new(|| js_re(r"^(.+?)\s+(?:in|to|as|into)\s+(.+)$", ""));
-    let s = normalize(expr);
+    let s = normalize(regional(expr).as_deref().unwrap_or(expr));
     let m = caps(&TO, &s)?;
     let to = currency_word(g(&m, 2), true)?;
     let left = g(&m, 1);
@@ -115,6 +116,75 @@ pub fn rate_note(expr: &str, rates: &CurrencyRates) -> Option<String> {
         Some((rate, day)) => format!("{rate} · ECB rate, {}", day.trim_end_matches(')')),
         None => format!("{line} · ECB rate"),
     })
+}
+
+/// Native only: `C$20 in usd` as `20 cad in usd`, so the web's phrases read it (they took `C$20` for US dollars,
+/// skipping the `C` as a word). Also `₩5000` and a code written before the amount in capitals (`CHF 20`, `USD 5`;
+/// capitals only, as `try 5` is no lira). None when the line has none of these.
+pub fn regional(expr: &str) -> Option<String> {
+    static DOLLARS: Lazy = Lazy::new(|| {
+        js_re(
+            r"(^|[^a-zA-Z])(us|ca|c|au|a|nz|hk|sg|s|r)\$\s?((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+)(k|m|bn|b)?(?![\w.,])",
+            "i",
+        )
+    });
+    static WON: Lazy =
+        Lazy::new(|| js_re(r"₩\s?((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)(?![\w.,])", ""));
+    static CODE_FIRST: Lazy = Lazy::new(|| {
+        js_re(
+            r"\b(USD|EUR|GBP|JPY|CAD|AUD|CHF|CNY|INR|MXN|NZD|SEK|NOK|DKK|HKD|SGD|KRW|BRL|ZAR|PLN|CZK|HUF|TRY|ILS|THB)\s?((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)(?![\w.,])",
+            "",
+        )
+    });
+    let code = |p: &str| match p.to_lowercase().as_str() {
+        "us" => "usd",
+        "ca" | "c" => "cad",
+        "au" | "a" => "aud",
+        "nz" => "nzd",
+        "hk" => "hkd",
+        "sg" | "s" => "sgd",
+        _ => "brl",
+    };
+    let out = crate::jsre::replace_all(&DOLLARS, expr, |c| {
+        // `C$1.5k`: the shorthand moves the point, as `$1.5k` reads it
+        let zeros = match g(c, 4).to_lowercase().as_str() {
+            "k" => 3,
+            "m" => 6,
+            "b" | "bn" => 9,
+            _ => 0,
+        };
+        format!(
+            "{}{} {}",
+            g(c, 1),
+            shift_point(g(c, 3), zeros),
+            code(g(c, 2))
+        )
+    });
+    let out = crate::jsre::replace_all(&WON, &out, |c| format!("{} krw", g(c, 1)));
+    let out = crate::jsre::replace_all(&CODE_FIRST, &out, |c| format!("{} {}", g(c, 2), g(c, 1)));
+    (out.as_ref() != expr).then(|| out.into_owned())
+}
+
+/// `1,500.25` times 10^zeros, written out (`1.5`, 3 → `1500`), so no float rounding shows.
+fn shift_point(num: &str, zeros: usize) -> String {
+    if zeros == 0 {
+        return num.to_string();
+    }
+    let digits = num.replace(',', "");
+    let (int, frac) = digits.split_once('.').unwrap_or((&digits, ""));
+    let mut frac = frac.to_string();
+    while frac.len() < zeros {
+        frac.push('0');
+    }
+    let (moved, rest) = frac.split_at(zeros);
+    let int = format!("{int}{moved}");
+    let int = int.trim_start_matches('0');
+    let int = if int.is_empty() { "0" } else { int };
+    if rest.is_empty() {
+        int.to_string()
+    } else {
+        format!("{int}.{rest}")
+    }
 }
 
 /// The answer for a currency line the web's phrases don't answer.

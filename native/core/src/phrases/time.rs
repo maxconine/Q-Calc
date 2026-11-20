@@ -393,6 +393,60 @@ fn city_time(s: &str, now: f64) -> Option<PhraseAnswer> {
     )))
 }
 
+/// Native only: a clock time in one zone read in another. `3pm est in pst`, `9am london time to tokyo`, `3pm in
+/// tokyo` (from the user's own zone), `3pm tokyo time` (into it). Today's date in the zone it was said in; when
+/// the other zone is on another day, the answer says which (`8:00 am next day`).
+pub fn zone_convert(s: &str, now: f64, here: &TimeZone) -> Option<PhraseAnswer> {
+    static BOTH: Lazy = Lazy::new(|| js_re(r"^(.+?)\s+(?:in|to|into|as)\s+(.+?)(?:\s+time)?$", ""));
+    static FROM: Lazy = Lazy::new(|| js_re(r"^(.+?)(?:\s+time)?$", ""));
+    let place = |t: &str| super::time_zone(zone(js_trim(t))?);
+    // `3pm est` / `9am london time` / `3pm`: the clock and the zone after it, if any
+    let said = |t: &str| -> Option<(f64, Option<TimeZone>)> {
+        let t = js_trim(t);
+        if let Some(c) = parse_clock(t).or_else(|| loose_clock(t)) {
+            return Some((c, None));
+        }
+        let body = g(&caps(&FROM, t)?, 1);
+        // `3pm new york`, `3:30 pm est`: the first split that reads as a clock and then a place
+        body.match_indices(' ').find_map(|(i, _)| {
+            let c = parse_clock(&body[..i]).or_else(|| loose_clock(&body[..i]))?;
+            Some((c, Some(place(&body[i + 1..])?)))
+        })
+    };
+    if now.is_nan() {
+        return None;
+    }
+    let (clock, from, to) = if let Some(m) = caps(&BOTH, s) {
+        let (clock, from) = said(g(&m, 1))?;
+        (
+            clock,
+            from.unwrap_or_else(|| here.clone()),
+            place(g(&m, 2))?,
+        )
+    } else {
+        // `3pm tokyo time`: into the user's zone; a bare clock is the TS's own answer
+        let (clock, from) = said(s)?;
+        (clock, from?, here.clone())
+    };
+    let start = jiff::Timestamp::from_millisecond(now as i64)
+        .ok()?
+        .to_zoned(from.clone());
+    let minutes = clock as i64;
+    let at = start
+        .date()
+        .at((minutes / 60) as i8, (minutes % 60) as i8, 0, 0)
+        .to_zoned(from)
+        .ok()?;
+    let there = at.with_time_zone(to);
+    let shown = format_clock((there.hour() as f64) * 60.0 + there.minute() as f64);
+    let shown = match there.date().cmp(&at.date()) {
+        std::cmp::Ordering::Greater => format!("{shown} next day"),
+        std::cmp::Ordering::Less => format!("{shown} previous day"),
+        std::cmp::Ordering::Equal => shown,
+    };
+    Some(PhraseAnswer::shown(shown))
+}
+
 // `10:30` or `9:05` as a time of day, which parseClock leaves alone because on its own it could be a duration
 fn loose_clock(s: &str) -> Option<f64> {
     static RE: Lazy = Lazy::new(|| js_re(r"^(\d{1,2}):(\d{2})$", ""));

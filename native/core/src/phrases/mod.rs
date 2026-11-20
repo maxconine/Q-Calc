@@ -463,16 +463,33 @@ fn conversion_phrase(s: &str, rates: Option<&CurrencyRates>) -> Answered {
 
 /// `answerPhrase`, or None where the TS throws (see [`try_answer_phrase`]).
 pub fn answer_phrase(expr: &str, options: &PhraseOptions<'_>) -> Option<PhraseAnswer> {
+    // native only: `C$20`, `₩5000`, `CHF 20` read as the currencies they are
+    let regional = native_money::regional(expr);
+    let expr = regional.as_deref().unwrap_or(expr);
     match try_answer_phrase(expr, options) {
         Ok(Some(a)) => Some(a),
-        // native only: currency lines the web leaves blank
-        Ok(None) => native_money::answer(
+        Ok(None) => native_answer(
             expr,
             options.rates,
             options.sig_figs.unwrap_or(DEFAULT_SIG_FIGS as f64),
+            options.now_ms,
+            options.time_zone,
         ),
         Err(_) => None,
     }
+}
+
+/// Native only: what answers once the web's phrases answered nothing: currency lines it leaves blank
+/// ([`native_money`]) and a clock time read in another zone (`3pm est in pst`, [`time::zone_convert`]).
+pub fn native_answer(
+    expr: &str,
+    rates: Option<&CurrencyRates>,
+    sig_figs: f64,
+    now_ms: f64,
+    tz: &TimeZone,
+) -> Option<PhraseAnswer> {
+    native_money::answer(expr, rates, sig_figs)
+        .or_else(|| time::zone_convert(&normalize(expr), now_ms, tz))
 }
 
 /// `answerPhrase`, with the TS's throws kept apart.
