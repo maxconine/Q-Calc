@@ -900,10 +900,16 @@ impl<'o> Sheet<'o> {
 
     fn named_solve(&mut self, raw: &str, named: &stubs::NamedSolve) -> LineResult {
         let unit_eq = with_quantities(&named.eq, &self.quantities);
+        // "units don't match" only when nothing else reads it: `E = 1/2 m v^2 for v` took E and m
+        // as units, while the letters the line names solve it (native only)
+        let mut mismatch: Option<LineResult> = None;
         if let Some(r) =
             self.unit_solved(raw, &unit_eq, Some(&named.variable), named.near.as_deref())
         {
-            return r;
+            if r.solve.is_some() {
+                return r;
+            }
+            mismatch = Some(r);
         }
         if let Some(formula) = stubs::isolate_with_units(&unit_eq, &named.variable, &self.variables)
         {
@@ -917,7 +923,7 @@ impl<'o> Sheet<'o> {
             .chain(self.variables.keys().cloned())
             .collect();
         if stubs::clearly_units_blank(&unit_eq, &names) {
-            return LineResult::blank(raw);
+            return mismatch.unwrap_or_else(|| LineResult::blank(raw));
         }
         let known = |n: &str| self.known(n);
         let typed_named = stubs::split_letters(&named.numeric, &known, &[]);
@@ -946,9 +952,10 @@ impl<'o> Sheet<'o> {
                 ..LineResult::blank(raw)
             };
         }
-        match solved {
-            Some(s) => self.push_solved(raw, &s),
-            None => LineResult::blank(raw),
+        match (solved, mismatch) {
+            (_, Some(m)) => m,
+            (Some(s), None) => self.push_solved(raw, &s),
+            (None, None) => LineResult::blank(raw),
         }
     }
 

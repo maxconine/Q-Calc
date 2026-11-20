@@ -105,6 +105,7 @@ pub fn solve_call(text: &str) -> String {
     let b = s.as_bytes();
     let mut depth = 0i32;
     let mut comma: Option<usize> = None;
+    let mut commas: Vec<usize> = Vec::new();
     for (i, &ch) in b.iter().enumerate().skip(open) {
         match ch {
             b'(' | b'[' => depth += 1,
@@ -114,11 +115,25 @@ pub fn solve_call(text: &str) -> String {
                     return text.to_string();
                 }
             }
-            b',' if depth == 1 => comma = Some(i),
+            b',' if depth == 1 => {
+                comma = Some(i);
+                commas.push(i);
+            }
             _ => {}
         }
     }
     let inner = &s[open + 1..s.len() - 1];
+    // `solve(x^2 - 9, x, 4)`: the starting guess as a third argument (native only)
+    if let [first, second] = commas[..] {
+        let name = s[first + 1..second].trim();
+        let guess = s[second + 1..s.len() - 1].trim();
+        if jsre::test(&NAME, name) && !guess.is_empty() {
+            return format!(
+                "solve {} for {name} near {guess}",
+                s[open + 1..first].trim()
+            );
+        }
+    }
     let Some(comma) = comma else {
         return format!("solve {}", inner.trim());
     };
@@ -146,12 +161,20 @@ pub fn split_near(text: &str) -> (String, Option<String>) {
             "i",
         )
     });
+    // `x^2 = 9 near 5`: one equation's guess without `for x` (native only)
+    static BARE: Lazy = Lazy::new(|| js(r"(?s)^([^=]+=[^=]+?)\s+near\s+([^=]+)$", "i"));
     match RE.captures(text.trim()).ok().flatten() {
         Some(c) => (
             jsre::group(&c, 1).to_string(),
             Some(jsre::group(&c, 2).trim().to_string()),
         ),
-        None => (text.to_string(), None),
+        None => match BARE.captures(text.trim()).ok().flatten() {
+            Some(c) => (
+                jsre::group(&c, 1).to_string(),
+                Some(jsre::group(&c, 2).trim().to_string()),
+            ),
+            None => (text.to_string(), None),
+        },
     }
 }
 
