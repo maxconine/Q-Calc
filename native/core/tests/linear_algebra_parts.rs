@@ -150,11 +150,12 @@ fn history_reads_parts_back() {
     let q = history_quantities(&rows);
     assert_eq!(
         q.get("L").and_then(|v| v.as_str()),
-        Some("[[1, 0], [1.5, 1]]")
+        // exact since QA item 36: a part keeps its simple fractions
+        Some("[[1, 0], [3/2, 1]]")
     );
     assert_eq!(
         q.get("U").and_then(|v| v.as_str()),
-        Some("[[4, 3], [0, -1.5]]")
+        Some("[[4, 3], [0, -3/2]]")
     );
     assert_eq!(
         q.get("M").and_then(|v| v.as_str()),

@@ -792,6 +792,61 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
             )]))
         }
 
+        // ---- size and statistics over every entry (QA item 36) ----
+        "size" => {
+            let g = ev.grid(one(&mut args)?)?;
+            let n = |k: usize| f.lift(&ri(k as i64));
+            Ok(X::Grid(vec![vec![n(g.len()), n(g[0].len())]]))
+        }
+        "numel" => {
+            let g = ev.grid(one(&mut args)?)?;
+            Ok(X::Num(f.lift(&ri((g.len() * g[0].len()) as i64))))
+        }
+        "sum" | "mean" | "median" | "std" | "var" | "min" | "max" => {
+            let v: Vec<F::C> = ev.grid(one(&mut args)?)?.into_iter().flatten().collect();
+            let n = |k: usize| f.lift(&ri(k as i64));
+            let total = v.iter().fold(f.zero(), |s, c| f.add(&s, c));
+            let mean = f.div(&total, &n(v.len()));
+            // the sample variance, as `std(1, 2, 3)` is 1
+            let var = || -> XR<F::C> {
+                if v.len() < 2 {
+                    return fail(format!("{key} needs at least two entries"));
+                }
+                let sq = v.iter().fold(f.zero(), |s, c| {
+                    let d = f.sub(c, &mean);
+                    f.add(&s, &f.mul(&d, &d))
+                });
+                Ok(f.div(&sq, &n(v.len() - 1)))
+            };
+            // order needs numbers; a symbol goes to the next field
+            let sorted = || -> XR<Vec<F::C>> {
+                let mut keyed = v
+                    .iter()
+                    .map(|c| f.approx(c).map(|x| (x, c.clone())))
+                    .collect::<Option<Vec<_>>>()
+                    .ok_or(XFail::NotExact)?;
+                keyed.sort_by(|a, b| a.0.total_cmp(&b.0));
+                Ok(keyed.into_iter().map(|(_, c)| c).collect())
+            };
+            Ok(X::Num(match key {
+                "sum" => total,
+                "mean" => mean,
+                "var" => var()?,
+                "std" => f.sqrt(&var()?).ok_or(XFail::NotExact)?,
+                "min" => sorted()?.remove(0),
+                "max" => sorted()?.pop().ok_or(XFail::NotExact)?,
+                _ => {
+                    let s = sorted()?;
+                    let h = s.len() / 2;
+                    if s.len() % 2 == 1 {
+                        s[h].clone()
+                    } else {
+                        f.div(&f.add(&s[h - 1], &s[h]), &n(2))
+                    }
+                }
+            }))
+        }
+
         // ---- decompositions ----
         "lu" => {
             let g = ev.grid(one(&mut args)?)?;

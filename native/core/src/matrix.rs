@@ -187,7 +187,20 @@ const NEW_FNS: &[&str] = &[
     "orthcomp",
     "svals",
     "qc_cob",
+    // a matrix's size and statistics over its entries (QA item 36)
+    "size",
+    "numel",
+    // STATS
+    "sum",
+    "mean",
+    "median",
+    "std",
+    "var",
+    "min",
+    "max",
 ];
+/// NEW_FNS that a list (`mean([1, 2, 3])`) also takes: they count only with a matrix literal typed.
+const STATS: &[&str] = &["sum", "mean", "median", "std", "var", "min", "max"];
 /// New names that make a matrix with no matrix typed.
 const MAKERS: &str = "zeros|ones|rot";
 /// New names that read as words: `eigenvalues of A`, `null A`.
@@ -610,7 +623,20 @@ fn looks_new(expr: &str, functions: &[String]) -> bool {
     } else {
         jsre::test(&new_call_re(functions), &expr)
     };
-    called || jsre::test(&NEW_WORD_FORM, &expr)
+    // `mean([1, 2, 3])` is a list for the calculator; the statistics take a matrix only when one is typed
+    let stats_only = called
+        && !(jsre::test(&TWO_D, &expr) || jsre::test(&SPACED_ROW, &expr))
+        && !jsre::test(&new_call_re(&stat_names(functions)), &expr);
+    (called && !stats_only) || jsre::test(&NEW_WORD_FORM, &expr)
+}
+
+/// The statistics in NEW_FNS (QA item 36), plus the user's own names, as names `new_call_re` leaves out.
+fn stat_names(functions: &[String]) -> Vec<String> {
+    STATS
+        .iter()
+        .map(|s| s.to_string())
+        .chain(functions.iter().cloned())
+        .collect()
 }
 
 /// Some call in the line is one only the generic evaluator knows.

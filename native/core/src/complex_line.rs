@@ -190,6 +190,93 @@ fn polar_input(text: &str, mode: AngleMode) -> (String, bool) {
     (out, hit)
 }
 
+/// What `named_forms` found: a call it rewrote, and the answer form one asked for (`polar(z)` polar, `rect(z)` rect).
+#[derive(Default)]
+struct Named {
+    hit: bool,
+    polar: Option<bool>,
+}
+
+/// `cis(θ)` as `e^(iθ)`, `rect(r, θ)` as `r e^(iθ)` (an angle takes its typed unit, else the mode, as `polar(r, θ)`
+/// does), and `polar(z)` / `rect(z)` with one argument as `z`, asking the answer in that form (QA item 36). A name
+/// you defined stays your function.
+fn named_forms(text: &str, functions: &[String], mode: AngleMode, found: &mut Named) -> String {
+    static NAME: Lazy = Lazy::new(|| js(r"(?<![A-Za-z0-9_.])(cis|rect|polar)\s*\(", "i"));
+    static UNIT: Lazy = Lazy::new(|| js(r"\s*(°|deg(?:rees?)?|rad(?:ians?)?)\s*$", "i"));
+    let radians = |angle: &str| {
+        let (angle, unit) = match UNIT.captures(angle).ok().flatten() {
+            Some(c) => (
+                &angle[..c.get(0).map_or(angle.len(), |m| m.start())],
+                jsre::group(&c, 1).to_lowercase(),
+            ),
+            None => (angle, String::new()),
+        };
+        let degrees = if unit.is_empty() {
+            mode == AngleMode::Deg
+        } else {
+            !unit.starts_with("rad")
+        };
+        if degrees {
+            format!("({angle})*pi/180")
+        } else {
+            format!("({angle})")
+        }
+    };
+    let mut out = String::new();
+    let mut rest = text;
+    while let Some(c) = NAME.captures(rest).ok().flatten() {
+        let (Some(whole), name) = (c.get(0), jsre::group(&c, 1).to_lowercase()) else {
+            break;
+        };
+        // the call's own closing bracket and its top-level commas
+        let open = whole.end();
+        let (mut depth, mut close, mut commas) = (1, None, Vec::new());
+        for (k, ch) in rest[open..].char_indices() {
+            match ch {
+                '(' | '[' => depth += 1,
+                ')' | ']' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        close = Some(open + k);
+                        break;
+                    }
+                }
+                ',' if depth == 1 => commas.push(open + k),
+                _ => {}
+            }
+        }
+        let own = functions.iter().any(|f| f.eq_ignore_ascii_case(&name));
+        let fits = match name.as_str() {
+            "cis" => commas.is_empty(),
+            "rect" => commas.len() <= 1,
+            _ => commas.is_empty(),
+        };
+        let Some(close) = close.filter(|_| fits && !own) else {
+            out.push_str(&rest[..open]);
+            rest = &rest[open..];
+            continue;
+        };
+        out.push_str(&rest[..whole.start()]);
+        let mut read = |t: &str| named_forms(t, functions, mode, found);
+        let (a, b) = match commas.first() {
+            Some(&at) => (read(&rest[open..at]), Some(read(&rest[at + 1..close]))),
+            None => (read(&rest[open..close]), None),
+        };
+        found.hit = true;
+        out.push_str(&match (name.as_str(), b) {
+            ("cis", _) => format!("(e^(i*{}))", radians(a.trim())),
+            ("rect", Some(b)) => format!("(({})*e^(i*{}))", a.trim(), radians(b.trim())),
+            (form, _) => {
+                found.polar = Some(form == "polar");
+                format!("({})", a.trim())
+            }
+        });
+        rest = &rest[close + 1..];
+    }
+    out.push_str(rest);
+    out
+}
+
 /// The line as this layer reads it, or None when it has none of the notation.
 pub fn rewrite(
     text: &str,
@@ -231,12 +318,20 @@ pub fn rewrite(
         return None;
     }
     let (imag, j, spelled) = imaginary_words(&body, variables, functions);
+    let mut named = Named::default();
+    let imag = named_forms(&imag, functions, mode, &mut named);
+    // `polar(z)` asks the polar form, unless `in rect` said otherwise
+    let polar = if asked_form {
+        polar
+    } else {
+        named.polar.unwrap_or(polar)
+    };
     let (expr, polar_typed) = polar_input(&imag, mode);
     // polar is the engineer's notation too
     let j = j || polar_typed;
     // `angle(3+4i)` and `phase(…)`, which the engine has no name for
     let alias = jsre::test(&ALIAS_ARG, &imag) || jsre::test(&ALIAS_ABS, &imag);
-    if !(spelled || j || polar_typed || ((asked_form || alias) && typed_i(&imag))) {
+    if !(spelled || j || polar_typed || named.hit || ((asked_form || alias) && typed_i(&imag))) {
         return None;
     }
     let mut target = None;

@@ -42,6 +42,11 @@ pub(super) fn shows_whole(r: &Rat) -> bool {
     digits.count() <= 6
 }
 
+/// Not whole, over a denominator a fraction reads at a glance (up to 1000, the float reader's limit).
+fn simple_fraction(r: &Rat) -> bool {
+    !r.d.is_one() && r.d <= BigInt::from(1000)
+}
+
 /// One entry of an answer.
 #[derive(Clone, Debug)]
 pub(super) struct Cell {
@@ -159,7 +164,11 @@ impl Fmt {
         let exact = f.show(c);
         match v {
             Some(v) => Cell {
-                rich: f.as_rat(c).is_none_or(|r| !shows_whole(&r)),
+                // a labeled part (`L = …`) writes a simple fraction beside its decimal, as the float reader
+                // writes `[1 2; 3 4]/2`: `lu([4 3; 6 3])` has `3/2` (QA item 36)
+                rich: f
+                    .as_rat(c)
+                    .is_none_or(|r| !shows_whole(&r) || simple_fraction(&r)),
                 dec: self.num(v),
                 exact: Some(exact),
                 z: (v, 0.0),
