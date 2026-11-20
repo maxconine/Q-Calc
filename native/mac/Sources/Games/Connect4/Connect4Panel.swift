@@ -137,18 +137,21 @@ struct Connect4GameView: View {
                           onHover: { c in col = c; aiming = true }, onLeave: { aiming = false }, onPick: { model.play($0) })
                 .accessibilityElement(children: .contain)
                 .accessibilityLabel("board")
+                // the discs are layers VoiceOver can't see: the board read column by column
+                .accessibilityValue(GameSpeech.c4Board(v.board.map { $0.map { $0 == role } }, mine: "you", theirs: peer))
             PongNote("← → or 1–7 to pick · ↵ or ↓ drop · G \(ghostOn ? "hides" : "shows") the preview · \(skillName.map { "\($0) · " } ?? "")esc leaves")
         }
         .gameKeys(shell) { key in
             guard key.down, key.plain, key.key != "Escape" else { return false }
             let n = Int(key.key).flatMap { (1...7).contains($0) ? $0 : nil }
-            if key.key == "ArrowLeft" || key.key == "ArrowRight" || n != nil { aiming = true }
-            if key.key == "ArrowLeft" {
-                col = (col + 6) % 7
-            } else if key.key == "ArrowRight" {
-                col = (col + 1) % 7
-            } else if let n {
-                col = n - 1
+            if key.key == "ArrowLeft" || key.key == "ArrowRight" || n != nil {
+                aiming = true
+                let next = key.key == "ArrowLeft" ? (col + 6) % 7 : key.key == "ArrowRight" ? (col + 1) % 7 : n! - 1
+                col = next
+                // the held disc is drawn only: say where it went
+                if NSWorkspace.shared.isVoiceOverEnabled {
+                    BarModel.announce(GameSpeech.c4Column(next, full: model.view.landing[next] < 0))
+                }
             } else if key.key.lowercased() == "g" {
                 if !key.isRepeat {
                     ghostOn.toggle()

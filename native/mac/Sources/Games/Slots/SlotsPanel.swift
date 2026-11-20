@@ -61,6 +61,22 @@ private final class SlotsModel: ObservableObject {
             chipsFrom = s.chips
         }
         GameSaves.store(saveKey, slotsSave(state: s))
+        if e != .refill {
+            BarModel.announce(GameSpeech.slotsLine(s.reels.map { strip[Int($0)] }, result: Self.resultText(e, win: s.win)))
+        } else {
+            BarModel.announce(Self.resultText(e, win: s.win))
+        }
+    }
+
+    /// The result under the machine for the last event.
+    static func resultText(_ e: SlotsEvent?, win: UInt32) -> String {
+        switch e {
+        case .big: return "jackpot +\(win)"
+        case .win: return "+\(win)"
+        case .lose: return "no win"
+        case .refill: return "+100 free chips"
+        default: return ""
+        }
     }
 
     /// Space, ↵ or a click: spins, or while spinning stops the next reel.
@@ -138,7 +154,11 @@ private struct SlotsGame: View {
                 SlotsReels(input: model.reels(colors))
                     .frame(width: machineW, height: machineW * 0.52)
                     .accessibilityElement()
-                    .accessibilityLabel(accessibility)
+                    .accessibilityLabel("reels")
+                    .accessibilityValue(accessibility)
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityHint(model.s.phase == .spinning ? "stops a reel" : "spins")
+                    .accessibilityAction { model.spin() }
                     .contentShape(Rectangle())
                     .onTapGesture { model.spin() }
                     .frame(maxWidth: .infinity)
@@ -211,13 +231,7 @@ private struct SlotsGame: View {
     private var result: String {
         let s = model.s
         guard s.phase == .idle else { return "" }
-        switch model.last {
-        case .big: return "jackpot +\(s.win)"
-        case .win: return "+\(s.win)"
-        case .lose: return "no win"
-        case .refill: return "+100 free chips"
-        default: return ""
-        }
+        return SlotsModel.resultText(model.last, win: s.win)
     }
 
     private var resultColor: RGBA {
@@ -230,8 +244,7 @@ private struct SlotsGame: View {
     private var accessibility: String {
         let s = model.s
         if s.phase == .spinning { return "spinning" }
-        let line = s.reels.map { strip[Int($0)].isEmpty ? "blank" : strip[Int($0)] }.joined(separator: ", ")
-        return "\(line). \(result)"
+        return GameSpeech.slotsLine(s.reels.map { strip[Int($0)] }, result: result)
     }
 }
 
@@ -307,6 +320,9 @@ final class ReelsView: NSView {
             builtFor = (bounds.size, next.colors)
             shownPlan = next.plan
             place(next, animated: false)
+            // resized, full screen or a new theme mid-spin: the new layers roll on from where the reels are
+            let settle = (0..<3).map { slotsSettledAt(state: next.state, reel: UInt32($0)) }
+            if GameSpeech.slotsKeepRolling(settledAt: settle, now: GameTime.now()) { place(next, animated: true) }
             light(next, animated: false)
         } else {
             // a spin or a press plans the reels again; the spin's end needs nothing, as the animations finish where

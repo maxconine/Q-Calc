@@ -177,6 +177,16 @@ QA item 21, Mac only (`mac/Sources/Bar/Surfaces.swift`, new; used in `Systems.sw
 
 To test on Windows: in dark, `sys` ↵ and `matrix 2x2` ↵; the card has a faint light edge. A message card's reply line has a dark ring and a visible drop.
 
+### Games: slots mid-spin resize, VoiceOver for slots and connect 4 (20 Nov 2026)
+
+QA item 27, Mac only (`mac/Sources/Games/Shell/GameSpeech.swift`, new; `Slots/SlotsPanel.swift`, `Connect4/Connect4Panel.swift`; test `mac/scripts/test-games.sh`). Check the Windows games for the same:
+
+- **Slots, a resize mid-spin:** going full screen, resizing or switching light/dark while the reels rolled rebuilt the machine and snapped every reel to where it would land. Now the new reels roll on from where they are (any reel not yet settled, bounce included).
+- **Slots, VoiceOver:** each result is announced with the line, every spin (`π, blank, e. +5`, `+100 free chips`), not only when the text changes. The reels are a button named `reels` whose value is the line, with an action that spins (or stops a reel).
+- **Connect 4, VoiceOver:** the board's discs are drawn, so the board now has a value read column by column from the bottom (`column 1: you, computer. column 4: you`, or `empty`). With VoiceOver on, ← → and 1–7 announce the held column (`column 4`, `column 7, full`).
+
+To test on Windows: with Narrator, `slots` ↵ and spin twice (both results read); go full screen mid-spin (the reels keep rolling). `connect 4` ↵ › easy, drop two discs, read the board; ← and → read the column.
+
 ### Already ported
 
 The stacked fractions round (TeX sizes, Desmos keys, grown brackets, stacked history rows, answers shrinking as one) and the newer graph round were ported for 3.0.2 (branch `win-port-302`, 8 Nov 2026). What stays different on Windows:
