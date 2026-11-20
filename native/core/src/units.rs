@@ -479,6 +479,16 @@ pub fn unit_info(word: &str) -> Option<UnitInfo> {
     None
 }
 
+/// native only (`crate::engineering`): the kind of quantity a whole typed word reads as (`µF` capacitance).
+pub fn unit_dim(word: &str) -> Option<Dim> {
+    if word.is_empty() || word.chars().any(is_space) {
+        return None;
+    }
+    [word.to_string(), word.replace('µ', "μ"), word.replace(['µ', 'μ'], "u")]
+        .iter()
+        .find_map(|w| match_unit_at_start(&cs(w)).filter(|h| h.rest.is_empty()).map(|h| h.unit.dim))
+}
+
 // the plainest singular name: `meter` for m, `second` not `secs`, `gram` not a generated prefix pile-up,
 // and spaced when there's a choice (`foot pound`, `newton meter`)
 fn spelled_name(unit: &Unit) -> String {

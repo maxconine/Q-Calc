@@ -66,6 +66,8 @@ pub mod graph;
 pub mod graph_implicit3d;
 pub mod graph_native;
 pub mod named_constants;
+// native only (QA item 56): deg(), rad(), `||`, circuit products, mol beside other units
+pub mod engineering;
 
 pub use evaluate::{evaluate_line, evaluate_sheet};
 pub use types::{EvaluateOptions, LineResult, Value};

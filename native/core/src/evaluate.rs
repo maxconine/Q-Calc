@@ -749,6 +749,34 @@ impl<'o> Sheet<'o> {
             return result;
         }
         let mut result = self.line_as_typed(&marked);
+        // native only: `deg(pi)`, `10 Ω || 20 Ω`, `60 Hz 100 µF`, after the web paths left the line blank
+        if result.display.is_empty()
+            && result.value.is_none()
+            && let Some(spelled) = crate::engineering::rewrite(&marked)
+        {
+            let retry = self.line_as_typed(&spelled);
+            if !retry.display.is_empty() {
+                result = retry;
+                result.raw = raw.to_string();
+            }
+        }
+        // native only: `8.314 J/(mol K) * 300 K`, mol beside other units
+        if result.display.is_empty()
+            && result.value.is_none()
+            && let Some(value) = crate::engineering::with_moles(&marked, |t| {
+                try_plain_math(t, &self.plain(false))
+            })
+        {
+            self.last_ans = Some(value.n);
+            self.measures.remove("ans");
+            self.quantities.remove("ans");
+            result = LineResult {
+                raw: raw.into(),
+                display: show(&value, false, self.sig_figs),
+                value: Some(value),
+                ..LineResult::blank(raw)
+            };
+        }
         if matches!(named, Cow::Owned(_)) || matches!(marked, Cow::Owned(_)) {
             result.raw = raw.to_string();
         }
