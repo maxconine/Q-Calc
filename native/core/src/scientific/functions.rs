@@ -435,6 +435,19 @@ fn positive_log(x: f64, f: fn(f64) -> f64) -> EvalResult {
     num(if x <= 0.0 { f64::NAN } else { f(x) })
 }
 
+/// native only: with an `i` typed, the log of a complex or a negative is the principal complex log over `ln(base)`
+/// (`ln(-1)+i` is `4.14159i`, `log(i)` is `0.682188i`); otherwise the real log, undefined at or below 0.
+fn any_log(a: &[Val], scope: &Scope, f: fn(f64) -> f64, base: f64) -> EvalResult {
+    let z = match a.first() {
+        Some(Val::Complex { re, im }) => C::new(*re, *im),
+        _ if scope.complex_typed && n(a, 0) < 0.0 => C::new(n(a, 0), 0.0),
+        _ => return positive_log(n(a, 0), f),
+    };
+    let w = z.log();
+    let k = if base == 0.0 { 1.0 } else { jsmath::ln(base) };
+    Ok(C::new(w.re / k, w.im / k).val())
+}
+
 /// `log(x)` with one argument is mathjs's (complex for a negative); with a base it's the engine's.
 /// (One-argument `log(...)` is rewritten to `log10` before evaluation, so the first form is rare.)
 fn log(a: &[Val], _: &Scope) -> EvalResult {
@@ -1168,9 +1181,9 @@ macro_rules! entry {
 /// Looked up after the foundation's own table in `crate::eval::builtins`.
 pub const TABLE: &[Builtin] = &[
     entry!("zeta", 1, zeta),
-    entry!("ln", 1, |a, _| positive_log(n(a, 0), jsmath::ln)),
-    entry!("log2", 1, |a, _| positive_log(n(a, 0), jsmath::log2)),
-    entry!("log10", 1, |a, _| positive_log(n(a, 0), jsmath::log10)),
+    entry!("ln", 1, |a, s| any_log(a, s, jsmath::ln, 0.0)),
+    entry!("log2", 1, |a, s| any_log(a, s, jsmath::log2, 2.0)),
+    entry!("log10", 1, |a, s| any_log(a, s, jsmath::log10, 10.0)),
     entry!("log", 2, log),
     // native only: a complex power of e, as `e^(i*pi)` already gives (the TS scope's exp is real only)
     entry!("exp", 1, |a, _| match a.first() {

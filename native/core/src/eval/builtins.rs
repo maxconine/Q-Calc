@@ -179,6 +179,10 @@ pub fn factorial(n: f64) -> f64 {
 }
 
 fn sqrt(args: &[Val], scope: &Scope) -> EvalResult {
+    // native only: the principal root of a complex (`sqrt(i)`, `sqrt(3+4i)` is 2 + i)
+    if let Some(Val::Complex { re, im }) = args.first() {
+        return Ok(super::complex::C::new(*re, *im).sqrt().val());
+    }
     let x = arg(args, 0);
     // with an i typed, the root of a negative is imaginary; in plain real maths it's undefined
     if x < 0.0 {

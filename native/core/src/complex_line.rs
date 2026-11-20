@@ -75,7 +75,34 @@ fn imaginary_words(
         }
         let word: String = chars[start..i].iter().collect();
         let head = word.chars().next().unwrap_or(' ');
-        let tail = &word[1..];
+        let mut tail = word[1..].to_string();
+        // a power of ten on the number: `j2e3`, and `j2e-3` (whose word stops at the e)
+        let mut power = String::new();
+        if let Some(at) = tail
+            .find(['e', 'E'])
+            .filter(|_| (head == 'j' || head == 'i') && !known(&word))
+        {
+            let (mantissa, rest) = tail.split_at(at);
+            let rest = &rest[1..];
+            let digits = |t: &str| !t.is_empty() && t.chars().all(|d| d.is_ascii_digit());
+            if digits(mantissa) && digits(rest) {
+                power = format!("e{rest}");
+                tail = mantissa.to_string();
+            } else if digits(mantissa)
+                && rest.is_empty()
+                && matches!(chars.get(i), Some('+' | '-'))
+                && chars.get(i + 1).is_some_and(char::is_ascii_digit)
+            {
+                let mut k = i + 1;
+                while k < chars.len() && chars[k].is_ascii_digit() {
+                    k += 1;
+                }
+                power = format!("e{}", chars[i..k].iter().collect::<String>());
+                tail = mantissa.to_string();
+                i = k;
+            }
+        }
+        let tail = tail.as_str();
         let imaginary = head == 'j' || head == 'i';
         if !imaginary
             || known(&word)
@@ -91,7 +118,10 @@ fn imaginary_words(
         }
         // the fraction of `j0.5` or `j.5`
         let mut digits = tail.to_string();
-        if chars.get(i) == Some(&'.') && chars.get(i + 1).is_some_and(char::is_ascii_digit) {
+        if power.is_empty()
+            && chars.get(i) == Some(&'.')
+            && chars.get(i + 1).is_some_and(char::is_ascii_digit)
+        {
             digits.push('.');
             i += 1;
             while i < chars.len() && chars[i].is_ascii_digit() {
@@ -108,7 +138,7 @@ fn imaginary_words(
                 spelled = true;
             }
         } else {
-            out.push_str(&format!("({digits}i)"));
+            out.push_str(&format!("({digits}{power}i)"));
             spelled = true;
         }
     }
@@ -204,7 +234,9 @@ pub fn rewrite(
     let (expr, polar_typed) = polar_input(&imag, mode);
     // polar is the engineer's notation too
     let j = j || polar_typed;
-    if !(spelled || j || polar_typed || (asked_form && typed_i(&imag))) {
+    // `angle(3+4i)` and `phase(…)`, which the engine has no name for
+    let alias = jsre::test(&ALIAS_ARG, &imag) || jsre::test(&ALIAS_ABS, &imag);
+    if !(spelled || j || polar_typed || ((asked_form || alias) && typed_i(&imag))) {
         return None;
     }
     let mut target = None;
@@ -646,6 +678,7 @@ fn snap(x: f64) -> f64 {
 
 /// `3 + j4`, `3 - 4i`, `j`: the real part first, a coefficient of 1 left out.
 fn rectangular(re: f64, im: f64, j: bool, sig: f64) -> String {
+    let (re, im) = chopped(re, im);
     let size = im.abs();
     let imag = if (size - 1.0).abs() < 1e-12 {
         if j { "j".to_string() } else { "i".to_string() }
@@ -654,6 +687,9 @@ fn rectangular(re: f64, im: f64, j: bool, sig: f64) -> String {
     } else {
         format!("{}i", format_number(snap(size), sig))
     };
+    if im == 0.0 {
+        return format_number(snap(re), sig);
+    }
     if re == 0.0 {
         return if im < 0.0 { format!("-{imag}") } else { imag };
     }

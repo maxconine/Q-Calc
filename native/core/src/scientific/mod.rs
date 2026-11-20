@@ -56,7 +56,12 @@ fn snap_int(n: f64) -> f64 {
 
 /// `5 + 5i`, `3 - i`, `-2i`: the real part first, a coefficient of 1 left out.
 pub fn format_complex(re: f64, im: f64) -> String {
-    let real = chop(re);
+    // float noise in the real part beside a far larger imaginary one: (1+i)^10 is 32i, not 0 + 32i
+    let real = if re.abs() <= im.abs() * 1e-13 {
+        0.0
+    } else {
+        chop(re)
+    };
     let size = im.abs();
     let unit = if (size - 1.0).abs() < 1e-12 {
         "i".to_string()

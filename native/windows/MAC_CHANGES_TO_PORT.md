@@ -63,6 +63,8 @@ The rest is done. (`dx` touching the integrand, halves powers as roots and the f
 
 - **`ans` beside a number or a name; functions defined after `;`** (core `app/chain.rs`: `spaced_ans`, `ans_written_out`, called from `app/live.rs` `live`; `evaluate.rs`: `part_definitions`, `line_with_definitions`; native only, QA 20 Nov 2026): `2ans` was blank and is now 2·ans; `pi ans`, `e ans` and `x ans` were blank (`ans` after a name read as a call) and now multiply. A number written out beside a number keeps a bracket in the tape, `3 ans` after 10 is `3 (10)` (it read `3 10`). After `;` a function can be defined for that line alone, with letters as before: `f(2); f(x) = x^3` is 8, `f(2) + y; f(x) = x^2, y = 3` is 7, and the preview lists `f(x) = x^3`. Test: `tests/variables_ans.rs`, then type `5`, ↵, `2ans` in the bar and check the tape row reads `2 (5)`.
 
+- **Matrices: `A(2, 1)`, `A^-1` steps, why a system has no answer** (core `matrix.rs`: `indexing`, `has_ragged`, `matrix_answer`; `matrix/exact_eval.rs`: `inverse_of`; `matrix/steps.rs`: `solve_remark`; `app/matrix_grid.rs`: `is_index`; native only, QA 20 Nov 2026): `A(2,1)` with a stored `A` was `rows differ in length`, now `3` (`A(2, :)`, `A(:, 1)` too; `A(2)` still multiplies); `A == A` no longer claims ragged rows. `A^-1`, `A^(-1)`, `A⁻¹` get the same row-operation steps as `inv(A)`. A singular `inv` and a system with no or many solutions now keep their steps (the chip shows), ending `no inverse: the left side can't become I`, `R₂ reads 0 = 1: no solution` or `a free variable: infinitely many solutions`. Ctrl+G on `A[1, 2]` no longer opens the index as a 1×2 grid. Test: `tests/matrices_qa.rs`, then type `inv([1 2; 2 4])` and open its steps.
+
 ## 2. Edited on Windows but never run: test it
 
 - **Sheet filter: greek spelled in latin** (`sheet_page.rs`: `latin`, used in `matches`; the Mac's `IdentityWindow.swift` does the same with ICU's Greek-Latin). `tmax` finds `τ_max`, `sx` finds `σ_x`, and a typed `τ` still finds only τ. Edited from the Mac, where `qcalc-win` doesn't build (`stacked.rs` calls the Windows-only `crate::input`); the logic was tested on its own. Test: `cargo test -p qcalc-win a_filter_word`, then type `tmax` in the continuum mechanics sheet's filter.
@@ -130,6 +132,17 @@ Mac file: `native/mac/Sources/Bar/BarModel.swift` (`upgradeClosedForm`, `dropUpg
 - **The upgraded exact form belongs to its search job**: only typing cleared it, so a line answered again without a text change (⌃D degrees/radians, the sig-figs or fraction toggles, a d/dt chip) kept the closed form found under the old mode beside the new decimal until a new search replaced it, or for good when the new answer had none. It is now dropped when the new answer's `closedFormJob` differs, and kept, without searching again, when it is the same job. A line answered outside the live lane (a command, a hint) drops it too.
 
 To test on Windows: type `integral of ln(x) ln(1-x) from 0 to 1` (shows `2 - π²/6 ≈ 0.355066`), toggle degrees/radians: the exact form stays and no second search runs; with a trig integrand whose closed form exists in one mode only, toggle and check no old exact form stays beside the new decimal.
+
+### Complex answers: noise, `j2e3`, roots and logs of a complex (20 Nov 2026)
+
+Core only (shared with Windows): `core/src/complex_line.rs` (`imaginary_words`, `rectangular`, the `angle(`/`phase(` gate), `core/src/scientific/mod.rs` (`format_complex`), `core/src/scientific/functions.rs` (`any_log`), `core/src/eval/builtins.rs` (`sqrt`); test `core/tests/complex_numbers.rs`.
+
+- **No `0 +` from float noise**: `(1+i)^10` showed `0 + 32i`, `e^(i*pi/2)` `0 + i`; a part 1e-13 times smaller than the other is now dropped (`32i`, `i`).
+- **`j` numbers with a power of ten**: `1e3+j2e3` was blank; `j2e3`, `j2e-3` now read as 2000j and 0.002j.
+- **Roots and logs of a complex** (native only): `sqrt(3+4i)` is `2 + i`, `sqrt(i)`, `log(i)`, `ln(-1)+i` answer; with no `i` typed, `sqrt(-4)`, `ln(-1)` stay undefined as on the web.
+- **`angle(3+4i)` / `phase(…)` with an `i`** answer like `phase(3+j4)` did (they were "isn't a name I know").
+
+To test on Windows: the lines above; nothing UI-side changes.
 
 ### Already ported
 
