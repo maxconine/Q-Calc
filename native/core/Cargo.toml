@@ -45,5 +45,9 @@ name = "new_features_bench"
 path = "../bench/new_features_bench.rs"
 
 [[example]]
+name = "live_bench"
+path = "../bench/live_bench.rs"
+
+[[example]]
 name = "fuzz"
 path = "../bench/fuzz.rs"

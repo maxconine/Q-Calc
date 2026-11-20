@@ -321,3 +321,26 @@ Found on the way, not fixed:
   `Sources/Shared/SettingsWindow.swift`, shared with the web-view app, so it was left alone.
 - ~~Ember's level picker shows "Optional(nil)" at the start of its note~~ (fixed: the note is read straight off the frame, not through `?? nil`, which made `$0` an optional).
   This is a display bug, not performance, and it was left for the games work.
+
+### QA night, second pass (2026-11-20, `af283a8` against `5ccf1d6`, engine only)
+
+Release builds of both commits from clean worktrees, run interleaved twice each on the M4 Pro (load 8-9). The new
+`bench/live_bench.rs` times `app::live` per prefix (what a keystroke asks the core for); `engine_bench` times
+`evaluate_sheet` alone.
+
+| | `af283a8` | `5ccf1d6` |
+|---|---|---|
+| engine, 269 golden inputs: keystroke median / p90 / p99 / max | 0.037 / 0.097 / 0.37 / 9.6 ms | 0.038 / 0.100 / 0.36 / 9.6 ms |
+| engine, all 12,174 keystrokes warm | 233-235 ms | 238-239 ms |
+| engine heavy rows (PSLQ, ∫, system, units, graph, 60-line sheet) | 111 / 0.09 / 0.03 / 0.11 / 7.4 / 16.4 ms | 111 / 0.09 / 0.04 / 0.12 / 7.5 / 16.9 ms |
+| live path, golden: keystroke median / p90 / p99 / max | 0.061 / 0.126 / 0.39 / 9.6 ms | 0.065 / 0.133 / 0.40 / 9.6 ms |
+| live path, golden: all keystrokes once | 331-334 ms | 351-354 ms |
+| live path, 34 of the night's new lines: p99 / max | 0.35 / 3.6 ms | 0.67 / 12.7 ms |
+
+- Nothing slowed down that matters: +2% on the engine, +6% on the live path, both well under the app's ~1.4 ms of
+  Swift work per keystroke.
+- The largest relative change is matrix lines (+20-50%, still under 0.1 ms a keystroke): a matrix line that fails
+  to parse now checks each bracket on its own before saying "rows differ in length" (`has_ragged`, the `A == A`
+  fix), and `A^-1` now has steps. Both are fixes, kept.
+- The new max is lines that were blank before and now answer: ∫₀^∞ sin x / x and sin²x / x² (Levin summation,
+  10-13 ms, the full line only), `E = 1/2 m v^2 for v` (2.4 ms), `f(2); f(x) = x^3` (0.5-1 ms).
