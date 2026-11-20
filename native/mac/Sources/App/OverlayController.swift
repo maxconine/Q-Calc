@@ -305,7 +305,8 @@ final class OverlayController: NSObject {
             games.nativeHotkey()
             return
         }
-        if let panel, panel.isVisible, panel.isOnActiveSpace, panel.alphaValue > 0 {
+        if let panel, EggRules.barIsUp(visible: panel.isVisible, onActiveSpace: panel.isOnActiveSpace,
+                                       alpha: Double(panel.alphaValue), rolling: effects.rolling) {
             hide(because: source)
             return
         }

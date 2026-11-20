@@ -218,6 +218,9 @@ final class BarModel: ObservableObject {
     private let effectGate = EggGate()
     private let lineEggGate = LineEggGate()
     private let konamiGate = KonamiGate()
+    /// the tape as the code's first ↑ found it, and the line as its B came: the keys still reach the bar (↑↑ opens
+    /// the tape, B A type `ba`), so a finished code puts both back
+    private var konamiStart: (tapeOpen: Bool, text: String)?
     private var effectSettle: Timer?
     /// the line a black hole, the π digits or the barrel roll is playing for; typing on ends it
     private var effectLine: String?
@@ -807,9 +810,22 @@ final class BarModel: ObservableObject {
             key = !mods.isEmpty ? .other : c == "b" ? .b : c == "a" ? .a : .other
         }
         let before = konamiGate.progress()
+        if before == 0, key == .up { konamiStart = (tapeOpen, text) }
+        if key == .b, konamiGate.progress() == 8 { konamiStart?.text = text }
         if konamiGate.push(key: key) {
             crt.toggle()
             OverlayLog.note("konami: crt \(crt ? "on" : "off")")
+            // once the A has landed in the line: take the code's `ba` back out, and close a tape its ↑↑ opened
+            if let start = konamiStart {
+                konamiStart = nil
+                DispatchQueue.main.async { [weak self] in
+                    guard let self else { return }
+                    if let back = EggRules.konamiLeftover(before: start.text, after: self.text) {
+                        if let fill = self.fillParensInField { fill(back.text, back.caret) } else { self.text = back.text }
+                    }
+                    if !start.tapeOpen, self.selected == nil { self.tapeOpen = false }
+                }
+            }
         } else if before >= 4, konamiGate.progress() <= before {
             // how far a try got, and the key that broke it, to tell a missed key from one the bar never saw
             OverlayLog.note("konami: \(before)/10, then \(key) (key code \(event.keyCode))")

@@ -28,6 +28,8 @@ final class EggOverlay {
     private var veilTimer: Timer?
     /// the bar the barrel roll hid while its picture spins
     private weak var rolled: NSWindow?
+    /// a barrel roll is up: the bar sits at alpha 0 under its picture, but it's still up (the hotkey hides it)
+    var rolling: Bool { rolled != nil }
 
     /// the line changed under an effect tied to its answer: end it now
     func interrupt() {
@@ -61,6 +63,8 @@ final class EggOverlay {
         root.isGeometryFlipped = true
         host.layer = root
         host.wantsLayer = true
+        // the roll's picture takes the Konami CRT's filters, which cacheDisplay leaves out of it
+        if kind == "roll" { host.layerUsesCoreImageFilters = true }
         root.contentsScale = bar.backingScaleFactor
         panel.contentView = host
         // the bar, where the page drew it: (room, room) from the top left, at the bar's size
@@ -614,6 +618,8 @@ final class EggOverlay {
         picture.frame = bar
         picture.contents = image
         picture.contentsGravity = .resize
+        // with the Konami CRT look on, the picture is green phosphor too (it turned back to the usual look mid-roll)
+        if !view.contentFilters.isEmpty { picture.filters = view.contentFilters }
         picture.shadowColor = CGColor(gray: 0, alpha: 1)
         picture.shadowOpacity = 0.25
         picture.shadowRadius = 12
