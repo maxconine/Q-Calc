@@ -40,6 +40,16 @@ enum CardRules {
         let head = "\(mine ? "Your" : "\(who)’s") file \(name), \(size)"
         return note.isEmpty ? head : "\(head). \(note)"
     }
+
+    /// A dropped file whose send never started (no relay, no key for them) goes back on the line as
+    /// `send file to <name>` with any others put back already, so ↵ sends them again; nil when the line holds
+    /// something else by then (typed on since), which is left alone.
+    static func putBack<T: Equatable>(_ file: T, to name: String, line: String, waiting: [T]) -> (line: String, waiting: [T])? {
+        let back = "send file to \(name)"
+        if line.trimmingCharacters(in: .whitespaces).isEmpty { return (back, [file]) }
+        guard line == back else { return nil }
+        return (back, waiting.contains(file) ? waiting : waiting + [file])
+    }
 }
 
 /// The `Copied` flash on a Copy button: each click restarts its 1.2 s, where the first click's timer had cut a

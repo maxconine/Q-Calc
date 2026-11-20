@@ -52,7 +52,9 @@ extension BarModel {
         if !dropped.isEmpty {
             MessageFiles.shared.pendingDrop = []
             clearLine()
-            dropped.forEach { MessageFiles.shared.sendFile($0, to: name, done: say) }
+            dropped.forEach { url in
+                MessageFiles.shared.sendFile(url, to: name, done: say) { [weak self] in self?.putBack(url, to: name) }
+            }
             return
         }
         clearLine()
@@ -184,7 +186,9 @@ extension BarModel {
                     if status != "delivered" { say(Messages.sendStatusText(status, to: target.name)) }
                 }
             }
-            files.forEach { MessageFiles.shared.sendFile($0, to: target.name, done: say) }
+            files.forEach { url in
+                MessageFiles.shared.sendFile(url, to: target.name, done: say) { [weak self] in self?.putBack(url, to: target.name) }
+            }
             return true
         }
         if let target {
@@ -199,6 +203,18 @@ extension BarModel {
         text = "send file to "
         focusField?()
         return true
+    }
+
+    /// a dropped file whose send never started (the relay couldn't be reached, no key for them) waits on the line
+    /// again as `send file to <name>`, so ↵ tries again, as a `message` line keeps its words when not sent (the
+    /// line had been cleared and the drop lost); a line typed on since is left alone, the hint saying why
+    func putBack(_ url: URL, to name: String) {
+        guard let back = CardRules.putBack(url, to: name, line: text, waiting: MessageFiles.shared.pendingDrop) else { return }
+        MessageFiles.shared.pendingDrop = back.waiting
+        if text != back.line { text = back.line }
+        // the hint counts what waits (`offers 2 files to max`): a second file put back doesn't change the line
+        shareLine(back.line)
+        focusField?()
     }
 
     /// ⌘V with files copied (Finder's Copy): in a thread they go to that person, and on a line that names someone

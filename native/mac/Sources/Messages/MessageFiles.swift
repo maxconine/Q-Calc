@@ -246,9 +246,11 @@ final class MessageFiles: NSObject, ObservableObject {
 
     /// `to`'s key, checked against their pin, before anything's sealed for them; `done` hears why not, if not
     private func recipientKey(_ to: String, what: String, done: @escaping (String) -> Void,
+                              unsent: (() -> Void)? = nil,
                               then: @escaping (ShareCrypt.PublicKey, String) -> Void) {
         ShareKeys.shared.keyFor(sending: to) { [weak self] found in
             guard let self else { return }
+            if case .key = found {} else { unsent?() }
             switch found {
             case let .key(theirs, text): then(theirs, text)
             case .changed: done(self.shareStatus("key-changed", to: to, what: what))
@@ -282,7 +284,9 @@ final class MessageFiles: NSObject, ObservableObject {
     // MARK: - sending a file
 
     /// encrypts the file, then offers it; `done` hears what the bar says. The upload waits for the recipient
-    func sendFile(_ given: URL, to raw: String, done: @escaping (String) -> Void) {
+    /// `unsent` is called (before `done` says why) when the send never started because the relay couldn't be
+    /// reached or had no key for them, so the bar can put the file back on its line for ↵ to try again
+    func sendFile(_ given: URL, to raw: String, done: @escaping (String) -> Void, unsent: (() -> Void)? = nil) {
         // a Finder alias or a symlink sends what it points to (it had sent the tiny alias file itself, or said it
         // couldn't read a link)
         let url = (try? URL(resolvingAliasFileAt: given)) ?? given
@@ -297,7 +301,7 @@ final class MessageFiles: NSObject, ObservableObject {
         let name = cleanName(url.lastPathComponent)
         let type = values?.typeIdentifier.flatMap { UTType($0)?.preferredMIMEType } ?? "application/octet-stream"
         PrivacyNotice.shared.firstShare()
-        recipientKey(to, what: "file", done: done) { [weak self] theirs, theirText in
+        recipientKey(to, what: "file", done: done, unsent: unsent) { [weak self] theirs, theirText in
             self?.encryptAndOffer(url, name: name, type: type, size: size, to: to, theirs: theirs, theirText: theirText, done: done)
         }
     }

@@ -40,6 +40,16 @@ check("a file with nothing to say ends at its size",
 check("a file's state follows",
       CardRules.fileLabel(mine: true, who: "max", name: "a.pdf", size: "2 KB", note: "sent") == "Your file a.pdf, 2 KB. sent")
 
+// ---- a file that never went goes back on the line ----
+
+let one = CardRules.putBack("a.pdf", to: "max", line: "", waiting: [String]())
+check("an unsent drop waits on an empty line again", one?.line == "send file to max" && one?.waiting == ["a.pdf"])
+let two = CardRules.putBack("b.pdf", to: "max", line: "send file to max", waiting: ["a.pdf"])
+check("a second unsent file joins the first", two?.waiting == ["a.pdf", "b.pdf"])
+check("the same file isn't put back twice", CardRules.putBack("a.pdf", to: "max", line: "send file to max", waiting: ["a.pdf"])?.waiting == ["a.pdf"])
+check("a line typed on since is left alone", CardRules.putBack("a.pdf", to: "max", line: "2+3", waiting: [String]()) == nil)
+check("a line for someone else is left alone", CardRules.putBack("a.pdf", to: "max", line: "send file to sam", waiting: ["c.pdf"]) == nil)
+
 // ---- Copied ----
 
 var flash = FlashTicket()
