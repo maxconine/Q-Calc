@@ -997,6 +997,13 @@ thread_local! {
     static LEFT: std::cell::Cell<u64> = const { std::cell::Cell::new(BUDGET) };
     /// What the line being evaluated has left for all its simplifies, while one is (see `with_line_budget`).
     static LINE_LEFT: std::cell::Cell<Option<u64>> = const { std::cell::Cell::new(None) };
+    /// What the running simplify's current pass has spent, call by call (see [`Counting`]).
+    static TRACE: std::cell::RefCell<Vec<u64>> = const { std::cell::RefCell::new(Vec::new()) };
+    /// Simplifies started, so a pass can tell it ran one inside it.
+    static ENTERED: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+    /// Tests run the whole count to check the shortcut lands in the same place.
+    #[cfg(test)]
+    static WALK_IT_ALL: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
 /// All the simplifies one line may run together, in [`BUDGET`]'s units: isolate and calculus simplify several
@@ -1022,6 +1029,7 @@ pub fn with_line_budget<R>(f: impl FnOnce() -> R) -> R {
 }
 
 fn spend(units: u64) -> Result<(), SymError> {
+    TRACE.with(|t| t.borrow_mut().push(units));
     LEFT.with(|l| match l.get().checked_sub(units) {
         Some(rest) => {
             l.set(rest);
@@ -1053,9 +1061,11 @@ pub fn simplify_with(
     struct Restore {
         outer: u64,
         start: u64,
+        trace: Vec<u64>,
     }
     impl Drop for Restore {
         fn drop(&mut self) {
+            TRACE.with(|t| *t.borrow_mut() = std::mem::take(&mut self.trace));
             let spent = self.start - LEFT.with(|l| l.get());
             LINE_LEFT.with(|l| l.set(l.get().map(|left| left.saturating_sub(spent))));
             LEFT.with(|l| l.set(self.outer));
@@ -1067,14 +1077,22 @@ pub fn simplify_with(
     let _restore = Restore {
         outer: LEFT.with(|l| l.replace(start)),
         start,
+        trace: TRACE.with(|t| std::mem::take(&mut *t.borrow_mut())),
     };
+    ENTERED.with(|e| e.set(e.get() + 1));
+    let mut counting = Counting::default();
     let mut res = remove_parens(&resolve(expr));
     let mut visited = HashSet::new();
     let mut text = to_string(&res, &PrintOptions::all());
     let mut passes = 0;
     loop {
         let len = text.len() as u64;
-        if !visited.insert(text) {
+        if let Some(e) = counting.ends(&text, passes) {
+            return e;
+        }
+        let entered = ENTERED.with(|e| e.get());
+        TRACE.with(|t| t.borrow_mut().clear());
+        if !visited.insert(text.clone()) {
             break;
         }
         passes += 1;
@@ -1095,9 +1113,171 @@ pub fn simplify_with(
             };
             res = unflatten_l(&res, &ctx);
         }
-        text = to_string(&res, &PrintOptions::all());
+        let before = std::mem::replace(&mut text, to_string(&res, &PrintOptions::all()));
+        let nested = ENTERED.with(|e| e.get()) != entered;
+        counting.pass(
+            &before,
+            &text,
+            TRACE.with(|t| std::mem::take(&mut *t.borrow_mut())),
+            nested,
+        );
     }
     Ok(res)
+}
+
+/// Native only (QA 99): a simplify that only counts, pass after pass, never settles: `((y+inf-2)/3i)^(1/i)`
+/// turns `1^(3/i)` into `1^(4/i)`, `1^(5/i)`, … until the budget runs out, 0.45 s later. Once a pass has done
+/// nothing but step one whole number up by the same amount for long enough, and each pass's spends are
+/// seen to grow only with the printed length (one part per digit), the rest of the walk is charged without
+/// running it: the same spends, in the same order, until the budget or the pass limit stops it, so it fails
+/// with the same error and leaves the line exactly the budget it would have.
+#[derive(Default)]
+struct Counting {
+    /// the counting number's place among the text's digit runs, its last value and its step
+    at: Option<(usize, u64, u64)>,
+    /// each counting pass's printed length before and after, and its spends
+    passes: Vec<(u64, u64, Vec<u64>)>,
+}
+
+/// Passes in a row that only count before the rest is charged without running
+const COUNTING_PASSES: usize = 24;
+
+impl Counting {
+    fn pass(&mut self, before: &str, after: &str, trace: Vec<u64>, nested: bool) {
+        let step = (!nested).then(|| counting_step(before, after)).flatten();
+        match step {
+            Some((i, from, to))
+                if self
+                    .at
+                    .is_none_or(|(j, last, k)| j == i && last == from && k == to - from) =>
+            {
+                self.at = Some((i, to, to - from));
+                self.passes
+                    .push((before.len() as u64, after.len() as u64, trace));
+            }
+            Some((i, from, to)) => {
+                self.at = Some((i, to, to - from));
+                self.passes = vec![(before.len() as u64, after.len() as u64, trace)];
+            }
+            None => {
+                self.at = None;
+                self.passes.clear();
+            }
+        }
+    }
+
+    /// The simplify's end, charged, when the passes so far say it only counts from here.
+    fn ends(&self, text: &str, mut passes: usize) -> Option<Result<Node, SymError>> {
+        #[cfg(test)]
+        if WALK_IT_ALL.with(|w| w.get()) {
+            return None;
+        }
+        let (_, value, step) = self.at?;
+        if self.passes.len() < COUNTING_PASSES || value < 10 || step == 0 || step > 1000 {
+            return None;
+        }
+        // each spend is a + b·(length before) + c·(length after), b and c whole numbers: seen on a pass that kept
+        // its length, one that grew (the count passing 9, 99, …) and one after (the run's first passes can still
+        // differ: `1^(1/i)^2` became `1^(3/i)` there)
+        let seen = &self.passes[2..];
+        let size = seen.last()?.2.len();
+        if seen.iter().any(|p| p.2.len() != size) {
+            return None;
+        }
+        let grew = seen.iter().rposition(|p| p.0 != p.1)?;
+        let (l1, l2, grown) = (seen[grew].0, seen[grew].1, &seen[grew].2);
+        let kept = &seen[..grew].iter().rfind(|p| p.0 == l1 && p.1 == l1)?.2;
+        let after = &seen[grew + 1..].iter().find(|p| p.0 == l2 && p.1 == l2)?.2;
+        let dl = l2 as i128 - l1 as i128;
+        let mut fit: Vec<(i128, i128, i128)> = Vec::with_capacity(size);
+        for i in 0..size {
+            let (k, g, a) = (kept[i] as i128, grown[i] as i128, after[i] as i128);
+            let (dc, db) = (g - k, a - g);
+            if dc % dl != 0 || db % dl != 0 || dc < 0 || db < 0 {
+                return None;
+            }
+            let (b, c) = (db / dl, dc / dl);
+            fit.push((k - (b + c) * l1 as i128, b, c));
+        }
+        let at =
+            |lb: u64, la: u64, i: usize| fit[i].0 + fit[i].1 * lb as i128 + fit[i].2 * la as i128;
+        if seen.iter().any(|(lb, la, t)| {
+            t.iter()
+                .enumerate()
+                .any(|(i, a)| at(*lb, *la, i) != *a as i128)
+        }) {
+            return None;
+        }
+        let digits = |v: u64| v.to_string().len() as u64;
+        let base = text.len() as u64 - digits(value);
+        let mut v = value;
+        loop {
+            passes += 1;
+            if passes > MAX_PASSES {
+                return Some(err("simplify did not settle"));
+            }
+            // (the pass limit comes long before the count could overflow)
+            let next = v.saturating_add(step);
+            let (lb, la) = (base + digits(v), base + digits(next));
+            for i in 0..size {
+                let a = at(lb, la, i).max(0);
+                if let Err(e) = spend(a as u64) {
+                    return Some(Err(e));
+                }
+            }
+            v = next;
+        }
+    }
+}
+
+/// Two texts that differ only in one whole number (a run of digits, not part of a name or a decimal), which
+/// grew: its place among the digit runs, and the number before and after.
+fn counting_step(before: &str, after: &str) -> Option<(usize, u64, u64)> {
+    fn runs(t: &str) -> Vec<(bool, &str)> {
+        let mut out: Vec<(bool, &str)> = Vec::new();
+        let mut start = 0;
+        let b = t.as_bytes();
+        for i in 1..=b.len() {
+            if i == b.len() || b[i].is_ascii_digit() != b[start].is_ascii_digit() {
+                out.push((b[start].is_ascii_digit(), &t[start..i]));
+                start = i;
+            }
+        }
+        out
+    }
+    let (x, y) = (runs(before), runs(after));
+    if x.len() != y.len() || x.is_empty() {
+        return None;
+    }
+    let mut found: Option<(usize, u64, u64)> = None;
+    let mut digit_run = 0;
+    for (k, (p, q)) in x.iter().zip(&y).enumerate() {
+        if p.0 != q.0 {
+            return None;
+        }
+        if p.1 == q.1 {
+            digit_run += usize::from(p.0);
+            continue;
+        }
+        if !p.0 || found.is_some() || p.1.starts_with('0') || q.1.starts_with('0') {
+            return None;
+        }
+        // a whole number on its own: not after a letter or a point, not before a point or an exponent
+        let prev = k.checked_sub(1).and_then(|j| x[j].1.chars().last());
+        let next = x.get(k + 1).and_then(|r| r.1.chars().next());
+        if prev.is_some_and(|c| c.is_alphanumeric() || c == '_' || c == '.')
+            || next.is_some_and(|c| c.is_alphanumeric() || c == '_' || c == '.')
+        {
+            return None;
+        }
+        let (from, to) = (p.1.parse::<u64>().ok()?, q.1.parse::<u64>().ok()?);
+        if to <= from {
+            return None;
+        }
+        found = Some((digit_run, from, to));
+        digit_run += 1;
+    }
+    found
 }
 
 // ---- simplifyCore
@@ -1388,4 +1568,47 @@ pub fn simplify_core(node: &Node) -> Node {
         return super::op(op, vec![a, a1]);
     }
     super::op(op, args.iter().map(simplify_core).collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The error and what the line has left, walked in full or charged at once
+    fn end(text: &str, walk: bool) -> (String, Option<u64>, Option<u64>) {
+        WALK_IT_ALL.with(|w| w.set(walk));
+        let (r, left, after) = with_line_budget(|| {
+            let r = simplify_text(text);
+            let left = LINE_LEFT.with(|l| l.get());
+            // a small simplify after it still sees the same budget
+            let after = simplify_text("x + x")
+                .ok()
+                .map(|_| LINE_LEFT.with(|l| l.get()).unwrap_or(0));
+            (r, left, after)
+        });
+        WALK_IT_ALL.with(|w| w.set(false));
+        (format!("{r:?}"), left, after)
+    }
+
+    #[test]
+    fn a_count_that_never_settles_is_charged_as_if_walked() {
+        for text in [
+            "((y - -Infinity - 2)/(3i))^(1/i)",
+            "((y + 5)/(2i))^(1/i)",
+            "(x/(7i))^(1/i) + y",
+        ] {
+            let t = std::time::Instant::now();
+            let fast = end(text, false);
+            let quick = t.elapsed();
+            let slow = end(text, true);
+            assert_eq!(fast, slow, "{text}");
+            assert!(fast.0.contains("Err"), "{text}: {}", fast.0);
+            assert!(quick.as_millis() * 3 < 1000, "{text}: {quick:?}");
+        }
+        // with no line budget too
+        WALK_IT_ALL.with(|w| w.set(true));
+        let slow = format!("{:?}", simplify_text("((y + 5)/(2i))^(1/i)"));
+        WALK_IT_ALL.with(|w| w.set(false));
+        assert_eq!(format!("{:?}", simplify_text("((y + 5)/(2i))^(1/i)")), slow);
+    }
 }

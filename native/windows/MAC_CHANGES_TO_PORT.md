@@ -100,6 +100,8 @@ The rest is done. (`dx` touching the integrand, halves powers as roots and the f
 
 - **Fuzzed hangs: huge exact powers, tiny decimals, expanding a huge power** (core `symbolic/fraction.rs` `pow` hands a result past 2^16 bits to the float power, `from_f64` answers below 1/(1+10^7) at once; `symbolic/rationalize.rs` `MAX_EXPANDED_POWER`; bench `fuzz.rs` `FUZZ_TONIGHT`; QA item 93): `x^1e-5 = 1e21 for x` took 15 s (now instant, same `no solution found`), `1e-10 = 1/2 m v^2 for v` 1.5 s (now instant, same answer), `y = x^1e-5 + 1 m for x` crashed the engine thread with a stack overflow (now blank). Test `core/tests/robustness.rs` `huge_exact_powers_and_tiny_decimals_are_quick`.
 
+- **Absurd isolate lines quick** (core `symbolic/fraction.rs` `from_f64` takes each run of Farey steps at once; `symbolic/simplify.rs` `Counting` charges a simplify that only counts up (`1^(3/i)`, `1^(4/i)`, …) without running it, same error and same budget left; QA item 99): `y = 1e17 x^1e9 - 1 for x` 0.65 s → 25 ms, `y = 2+3i x^i + -inf for x` 0.45 s → 35 ms, answers unchanged. Tests `core/tests/isolate_speed.rs`, unit tests in both files.
+
 ## 2. Edited on Windows but never run: test it
 
 - **Sheet filter: greek spelled in latin** (`sheet_page.rs`: `latin`, used in `matches`; the Mac's `IdentityWindow.swift` does the same with ICU's Greek-Latin). `tmax` finds `τ_max`, `sx` finds `σ_x`, and a typed `τ` still finds only τ. Edited from the Mac, where `qcalc-win` doesn't build (`stacked.rs` calls the Windows-only `crate::input`); the logic was tested on its own. Test: `cargo test -p qcalc-win a_filter_word`, then type `tmax` in the continuum mechanics sheet's filter.

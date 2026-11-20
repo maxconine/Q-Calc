@@ -94,21 +94,44 @@ impl Fraction {
                         d = b;
                     }
                     break;
+                }
+                // a run of steps the same way, taken at once (QA 99): `0.9999999608560541` walked b up one at a
+                // time, 10^7 steps. The j-th step's mediant only moves one way, so the run ends where it first
+                // stops being on the same side of p1 (or b/dd passes N), found by galloping on the same
+                // expressions, and the walk lands where the one-at-a-time walk would.
+                let right = p1 > m;
+                let (lo_n, lo_d, hi_n, hi_d) = if right { (a, b, c, dd) } else { (c, dd, a, b) };
+                // step j (from 1) runs while its start is within N and its mediant is still on this side
+                let steps = |j: f64| {
+                    lo_d + (j - 1.0) * hi_d <= big_n && {
+                        let mj = (lo_n + j * hi_n) / (lo_d + j * hi_d);
+                        if right { p1 > mj } else { p1 < mj }
+                    }
+                };
+                let (mut good, mut step) = (1.0f64, 1.0f64);
+                while steps(good + step) {
+                    good += step;
+                    step *= 2.0;
+                }
+                while step > 1.0 {
+                    step /= 2.0;
+                    if steps(good + step) {
+                        good += step;
+                    }
+                }
+                if right {
+                    a += good * c;
+                    b += good * dd;
                 } else {
-                    if p1 > m {
-                        a += c;
-                        b += dd;
-                    } else {
-                        c += a;
-                        dd += b;
-                    }
-                    if b > big_n {
-                        n = c;
-                        d = dd;
-                    } else {
-                        n = a;
-                        d = b;
-                    }
+                    c += good * a;
+                    dd += good * b;
+                }
+                if b > big_n {
+                    n = c;
+                    d = dd;
+                } else {
+                    n = a;
+                    d = b;
                 }
             }
             (int_from_f64(n) * int_from_f64(z), int_from_f64(d))
@@ -285,6 +308,87 @@ mod tests {
         );
         let ln2 = Fraction::from_f64(std::f64::consts::LN_2).unwrap();
         assert_ne!(ln2.value(), std::f64::consts::LN_2);
+    }
+
+    /// Fraction.js's walk one step at a time, as it was before the runs were taken at once
+    fn farey_one_step(p1: f64) -> (f64, f64) {
+        let (mut a, mut b, mut c, mut dd) = (0.0f64, 1.0f64, 1.0f64, 1.0f64);
+        let big_n = 10_000_000.0f64;
+        let (mut n, mut d) = (0.0f64, 1.0f64);
+        if p1 < 1.0 / (1.0 + big_n) {
+            b = big_n + 1.0;
+        }
+        while b <= big_n && dd <= big_n {
+            let m = (a + c) / (b + dd);
+            if p1 == m {
+                if b + dd <= big_n {
+                    (n, d) = (a + c, b + dd);
+                } else if dd > b {
+                    (n, d) = (c, dd);
+                } else {
+                    (n, d) = (a, b);
+                }
+                break;
+            }
+            if p1 > m {
+                a += c;
+                b += dd;
+            } else {
+                c += a;
+                dd += b;
+            }
+            (n, d) = if b > big_n { (c, dd) } else { (a, b) };
+        }
+        (n, d)
+    }
+
+    #[test]
+    fn farey_runs_land_where_single_steps_do() {
+        let mut xs: Vec<f64> = vec![
+            0.9999999608560541,
+            0.5,
+            1.0 / 3.0,
+            2.0 / 3.0,
+            1e-7,
+            1.0 / 9_999_999.0,
+            1.0 / 10_000_001.0,
+            9_999_999.0 / 10_000_000.0,
+            0.1,
+            0.7,
+            std::f64::consts::PI / 10.0,
+            std::f64::consts::LN_2,
+            0.999_999_9,
+            0.000_000_2,
+            0.618_033_988_749_894_9,
+        ];
+        let mut seed = 99u64;
+        for _ in 0..240 {
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            let u = (seed >> 11) as f64 / (1u64 << 53) as f64;
+            let k = (seed >> 3) % 6;
+            xs.push(match k {
+                0 => u,
+                1 => 1.0 - u * 1e-6,
+                2 => u * 1e-6,
+                3 => {
+                    ((seed >> 20) % 10_000_000) as f64 / ((seed >> 40) % 10_000_000 + 1) as f64
+                        % 1.0
+                }
+                4 => 1.0 / (((seed >> 20) % 20_000_000) as f64 + 1.0),
+                _ => 1.0 - 1.0 / (((seed >> 20) % 20_000_000) as f64 + 2.0),
+            });
+        }
+        for p1 in xs {
+            if !(p1 > 0.0 && p1 < 1.0) {
+                continue;
+            }
+            let (n, d) = farey_one_step(p1);
+            let f = Fraction::from_f64(p1).unwrap();
+            let g = Fraction::new(int_from_f64(n), int_from_f64(d)).unwrap();
+            assert_eq!((&f.n, &f.d), (&g.n, &g.d), "{p1}");
+        }
     }
 
     #[test]
