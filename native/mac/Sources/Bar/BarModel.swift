@@ -76,6 +76,9 @@ final class BarModel: ObservableObject {
     @Published var sysLines: [String]?
     @Published var sysAnswer: SysAnswer?
     @Published var sysFocus: Int?
+    /// the equations an edit of the `sys N` line closed, back when the count comes back (⌘Z after a stray ⌫ on the
+    /// line had opened the fields empty); kept while the line is empty or still on its way to `sys`
+    var sysClosed: [String]?
     // the matrix grid and the row-operation steps (Matrices.swift, native only)
     @Published var grid: GridState?
     @Published var gridFocus: GridCell?
@@ -359,7 +362,8 @@ final class BarModel: ObservableObject {
         // native only: the fields open the moment the count is typed (the page waits for ↵), the caret in the
         // first; a new count keeps what's typed in the fields it still has
         if case let .count(n) = sys, sysLines?.count != n {
-            let kept = Array((sysLines ?? []).prefix(n))
+            let kept = Array((sysLines ?? sysClosed ?? []).prefix(n))
+            sysClosed = nil
             sysLines = kept + Array(repeating: "", count: n - kept.count)
             sysFocus = 0
         }
@@ -369,7 +373,8 @@ final class BarModel: ObservableObject {
             engine.cancel(.live)
             return
         }
-        if sysLines != nil { sysLines = nil; sysAnswer = nil }
+        if sysLines != nil { sysClosed = sysLines; sysLines = nil; sysAnswer = nil }
+        if sys == nil, !SysCommand.onTheWay(typed) { sysClosed = nil }
         if case let .hint(h) = sys {
             commandMessage = h
             setLive(.blank, for: typed)
@@ -1149,17 +1154,53 @@ final class BarModel: ObservableObject {
         }
     }
 
+    /// One answer on a tape row, each way it inserts and copies (the core's `lib/answer` `rowAnswers`): `insert` at
+    /// full precision with its unit, `bare` without the unit (⌥), `copy` as shown (the unitless setting applied),
+    /// `copyFull` at full precision, and the Copy As forms.
+    struct RowPick {
+        let insert: String
+        let bare: String
+        let copy: String
+        let copyFull: String
+        let copyAs: [(label: String, text: String)]
+    }
+
+    private var rowAnswerCache: [String: (answers: [RowPick], start: Int)] = [:]
+
+    /// rowAnswers (core/src/app/answer.rs `row_answers`): every answer a row shows in ← → order after its
+    /// expression, and the one ↑ lands on; cached per row and the settings it reads.
+    func rowAnswers(_ row: HistoryRow) -> (answers: [RowPick], start: Int) {
+        let key = "\(row.id)|\(row.display)|\(settings.answerForm)|\(settings.significantFigures)|\(settings.copyUnitless)"
+        if let hit = rowAnswerCache[key] { return hit }
+        var out: (answers: [RowPick], start: Int) = ([], 0)
+        if let data = core.historyToJson(rows: [row]).data(using: .utf8),
+           let rowJson = (try? JSONSerialization.jsonObject(with: data)) as? [Any], let first = rowJson.first,
+           let got = logic.call("lib/answer", "rowAnswers",
+                                [first, settings.answerForm, settings.significantFigures, settings.copyUnitless]) as? [String: Any] {
+            let list = got["answers"] as? [[String: Any]] ?? []
+            let answers = list.map { a in
+                RowPick(insert: a["insert"] as? String ?? "", bare: a["bare"] as? String ?? "",
+                        copy: a["copy"] as? String ?? "", copyFull: a["copyFull"] as? String ?? "",
+                        copyAs: (a["copyAs"] as? [[String: Any]] ?? []).map { ($0["label"] as? String ?? "", $0["text"] as? String ?? "") })
+            }
+            out = (answers, answers.isEmpty ? 0 : (got["start"] as? NSNumber)?.intValue ?? 1)
+        }
+        if rowAnswerCache.count > 500 { rowAnswerCache.removeAll() }
+        rowAnswerCache[key] = out
+        return out
+    }
+
+    /// The answer a row reads as (`answers[start-1]`), nil when it has none (a note, system or function).
+    func readAnswer(_ row: HistoryRow) -> RowPick? {
+        let a = rowAnswers(row)
+        return a.start > 0 && a.start <= a.answers.count ? a.answers[a.start - 1] : nil
+    }
+
     /// historyPicks (src/lib/answer.ts): what ← → step through on a row after its expression, as each inserts, and
     /// the pick ↑ lands on.
     func picks(_ row: HistoryRow) -> (answers: [String], start: Int) {
-        if row.kind == .function || row.kind == .system || row.kind == .note { return ([], 0) }
-        if row.kind == .definition { return ([row.expr], 1) }
-        if let solve = row.solve {
-            guard solve.outcome == .roots else { return ([], 0) }
-            return (solve.roots.map { String(format: "%.\(max(1, settings.significantFigures))g", $0) }, 1)
-        }
-        if row.hasDual, let exact = row.exact { return ([exact, row.display], settings.answerForm == "exact" ? 1 : 2) }
-        return ([settings.answerForm == "exact" ? (row.exact ?? row.display) : row.display], 1)
+        let a = rowAnswers(row)
+        return (a.answers.map(\.insert), a.start)
     }
 
     /// ↑ ↓ keep to the side ← → last chose (historyPickOn)
@@ -1220,43 +1261,70 @@ final class BarModel: ObservableObject {
 
     var historySelected: Bool { selected != nil }
 
-    /// ↵ on a highlighted row: whatever ← → picked (insertHistoryPick); ⌥↵ the other half (insertHistoryOther)
-    func enterOnRow(_ i: Int, other: Bool) {
+    /// ↵ on a highlighted row: whatever ← → picked (insertHistoryPick); ⌥↵ the other half (insertHistoryOther).
+    /// native only: ⇧ keeps the tape open with the row still picked (several answers in a row), ⌃ inserts the
+    /// picked answer without its unit (`bare`).
+    func enterOnRow(_ i: Int, other: Bool, keep: Bool = false, bare: Bool = false) {
         guard rows.indices.contains(i) else { return }
         let row = rows[i]
         if row.kind == .system { openHistorySystem(i); return }
         if other {
             let expr = row.kind == .definition || row.kind == .function || settings.historyInsert == "answer"
-            insertFromRow(i, answer: !expr)
+            insertFromRow(i, answer: !expr, keep: keep, bare: bare)
             return
         }
-        let answers = picks(row).answers
+        let answers = rowAnswers(row).answers
         if pick > 0, !answers.isEmpty {
-            finishRowInsert(amongLine(answers[min(pick, answers.count) - 1], row))
+            let a = answers[min(pick, answers.count) - 1]
+            finishRowInsert(amongLine(bare ? a.bare : a.insert, row), keep: keep)
         } else {
-            insertFromRow(i, answer: false)
+            insertFromRow(i, answer: false, keep: keep)
         }
     }
 
-    /// A click on a row's half (clicks insert the side they hit).
-    func insertFromRow(_ i: Int, answer: Bool) {
+    /// A click on a row's half (clicks insert the side they hit). `at` is the answer clicked (1 the exact half of a
+    /// dual, 2 its ≈ half), nil for the one the row reads as; ⇧ keeps the tape open, ⌥ (`bare`) drops the unit.
+    func insertFromRow(_ i: Int, answer: Bool, at: Int? = nil, keep: Bool = false, bare: Bool = false) {
         guard rows.indices.contains(i) else { return }
         let row = rows[i]
         if row.kind == .system {
             openHistorySystem(i)
             return
         }
-        let piece = answer && row.kind != .definition ? (settings.answerForm == "exact" ? (row.exact ?? row.display) : row.display) : row.expr
-        finishRowInsert(answer ? amongLine(piece, row) : piece)
+        guard answer else { return finishRowInsert(row.expr, keep: keep) }
+        let got = rowAnswers(row)
+        let n = at ?? got.start
+        if n > 0, n <= got.answers.count {
+            let a = got.answers[n - 1]
+            return finishRowInsert(amongLine(bare ? a.bare : a.insert, row), keep: keep)
+        }
+        // no answer from the core (a complex solve…): as shown
+        let piece = row.kind == .definition ? row.expr : settings.answerForm == "exact" ? (row.exact ?? row.display) : row.display
+        finishRowInsert(amongLine(piece, row), keep: keep)
     }
 
-    private func finishRowInsert(_ piece: String) {
+    private func finishRowInsert(_ piece: String, keep: Bool = false) {
         track("history.insert")
-        selected = nil
-        tapeOpen = false
+        guard keep else {
+            selected = nil
+            tapeOpen = false
+            insert(piece)
+            // a line made in the matrix grid comes back with the grid open on its matrix
+            if GridMemory.made(piece) { DispatchQueue.main.async { [weak self] in self?.reopenGrid() } }
+            return
+        }
+        // ⇧: the line's edit lets go of the row, so it's put back (now and after the field reports the change)
+        let (sel, at, side) = (selected, pick, sideIsExpr)
         insert(piece)
-        // a line made in the matrix grid comes back with the grid open on its matrix
-        if GridMemory.made(piece) { DispatchQueue.main.async { [weak self] in self?.reopenGrid() } }
+        let restore = { [weak self] in
+            guard let self, let sel, self.rows.indices.contains(sel) else { return }
+            self.tapeOpen = true
+            self.selected = sel
+            self.pick = at
+            self.sideIsExpr = side
+        }
+        restore()
+        DispatchQueue.main.async(execute: restore)
     }
 
     /// Text into the line at the caret (history rows, periodic tiles); the field does the caret part.
@@ -1499,7 +1567,8 @@ final class BarModel: ObservableObject {
         let shown = value ?? shownAnswer
         guard !shown.isEmpty else { return }
         // without its unit when the setting says so, a reaction in ASCII, never the unit error (core answerCopy)
-        let copied = logic.string("lib/touches", "answerCopy", [shown, settings.copyUnitless]) ?? UnitlessCopy.copied(shown)
+        let copied = logic.string("lib/touches", "answerCopy", [shown, settings.copyUnitless])
+            ?? (settings.copyUnitless ? logic.string("lib/answer", "unitlessAnswer", [shown]) ?? shown : shown)
         guard !copied.isEmpty else { return }
         track("copy.answer")
         NSPasteboard.general.clearContents()
@@ -1507,16 +1576,18 @@ final class BarModel: ObservableObject {
         flashCopied()
     }
 
-    /// ⌘C on a tape row picked with ↑ (native only): copies what ← → picked there, the expression or an answer (a
-    /// note's text), as ↵ would insert it. False when no row is selected.
-    func copySelectedRow() -> Bool {
+    /// ⌘C on a tape row picked with ↑ (native only): copies what ← → picked there, the expression or an answer's
+    /// `copy` (a note's text, a system's solution); ⌥⌘C (`full`) the answer at full precision. False when no row is
+    /// selected.
+    func copySelectedRow(full: Bool = false) -> Bool {
         guard let i = selected, rows.indices.contains(i) else { return false }
         let row = rows[i]
-        let answers = picks(row).answers
+        let answers = rowAnswers(row).answers
         track("copy.row")
         NSPasteboard.general.clearContents()
-        if row.kind != .note, row.kind != .definition, pick > 0, !answers.isEmpty {
-            NSPasteboard.general.setString(UnitlessCopy.copied(answers[min(pick, answers.count) - 1]), forType: .string)
+        if pick > 0, !answers.isEmpty {
+            let a = answers[min(pick, answers.count) - 1]
+            NSPasteboard.general.setString(full ? a.copyFull : a.copy, forType: .string)
         } else {
             NSPasteboard.general.setString(row.kind == .system ? row.display : row.expr, forType: .string)
         }
@@ -1552,9 +1623,23 @@ final class BarModel: ObservableObject {
         flashCopied()
     }
 
+    /// the row copy button and Copy Answer: the answer the row reads as (`answers[start-1].copy`); a note its text, a
+    /// system its solution
     func copyRow(_ row: HistoryRow, answer: Bool) {
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(answer && row.kind != .note ? UnitlessCopy.copied(row.display) : row.expr, forType: .string)
+        NSPasteboard.general.setString(answer && row.kind != .note ? rowCopy(row) : row.expr, forType: .string)
+        flashCopied()
+    }
+
+    /// what a row's answer copies and drags as
+    func rowCopy(_ row: HistoryRow) -> String {
+        readAnswer(row)?.copy ?? logic.string("lib/touches", "answerCopy", [row.display, settings.copyUnitless]) ?? row.display
+    }
+
+    /// a Copy As form, from the row's context menu
+    func copyText(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
         flashCopied()
     }
 
@@ -1610,9 +1695,19 @@ final class BarModel: ObservableObject {
         }
         switch code {
         case kVK_Return, kVK_ANSI_KeypadEnter:
+            // native only, on a picked row: ⇧ keeps the tape open, ⌃ inserts the answer without its unit
+            if let i = selected, rows.indices.contains(i), !flags.isEmpty, flags != [.option],
+               flags.isSubset(of: [.option, .shift, .control]) {
+                enterOnRow(i, other: flags.contains(.option), keep: flags.contains(.shift), bare: flags.contains(.control))
+                return true
+            }
             guard flags.isSubset(of: [.option]) else { return false }
             enter(option: flags.contains(.option))
             return true
+        case kVK_ANSI_C:
+            // native only: ⌥⌘C on a picked row copies its answer at full precision
+            guard flags == [.command, .option], selected != nil else { return false }
+            return copySelectedRow(full: true)
         case kVK_UpArrow, kVK_DownArrow:
             // ⌥↑ / ⌥↓ step the answer's SI prefix (stepPrefix)
             if flags == [.option] {

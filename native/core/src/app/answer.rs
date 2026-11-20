@@ -337,6 +337,183 @@ pub fn insertable_history_reuse(
     insertable_history_answer(row, form, sig_figs)
 }
 
+/// native only: a number at full precision, without the float noise past 15 figures (`5760.000000000001` is
+/// `5760`, `0.1 + 0.2` is `0.3`), in text the engine reads back (`3.33333333333333`, `1e+25`).
+pub fn full_number(n: f64) -> String {
+    if !n.is_finite() {
+        return format_number(n, DEFAULT);
+    }
+    let clean = crate::jsnum::parse(&crate::jsnum::to_precision(n, 15)).unwrap_or(n);
+    crate::jsnum::to_string(clean)
+}
+
+/// The unit after an answer's number (`mm` in `5.08 mm`), or "" when it has none `unitless_answer` would strip.
+fn unit_after(text: &str) -> &str {
+    let bare = unitless_answer(text);
+    if bare == text || !text.starts_with(bare.as_str()) {
+        return "";
+    }
+    jstr::trim(&text[bare.len()..])
+}
+
+/// native only: what a history row's answer (the side that isn't exact) inserts at full precision, its unit kept:
+/// `0.333333` inserts `0.333333333333333`, `3.33333 m` inserts `3.33333333333333 m`. A measured answer keeps its
+/// shown figures unless more were typed (`5.00` stays, `4.12346` from `x = 4.123456789` is `4.123456789`); an
+/// answer whose number runs into more units (`5 ft 3 in`), an uncertainty, a date or words insert as shown.
+pub fn full_history_answer(row: &Json) -> String {
+    static PLAIN_NUMBER: Lazy =
+        Lazy::new(|| js(r"^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$", ""));
+    let display = str_of(row, "display").unwrap_or("");
+    let shown = insertable_answer(display, None, DEFAULT);
+    if shown.contains('±') {
+        return shown;
+    }
+    let n = row
+        .get("n")
+        .and_then(Json::as_f64)
+        .filter(|n| n.is_finite());
+    let measured = row.get("meas").is_some_and(|m| !m.is_null());
+    if let Some(q) = str_of(row, "quantity").filter(|q| !q.is_empty()) {
+        let unit = unit_after(q);
+        if unit.is_empty() || unit != unit_after(&shown) {
+            return shown;
+        }
+        let amount = unitless_answer(q);
+        return match jstr::number(jstr::trim(&amount)).filter(|a| a.is_finite()) {
+            Some(a) => format!("{} {unit}", full_number(a)),
+            None => shown,
+        };
+    }
+    let Some(n) = n.filter(|_| jsre::test(&PLAIN_NUMBER, &shown)) else {
+        return shown;
+    };
+    if measured && jstr::number(&shown) == Some(n) {
+        return shown;
+    }
+    full_number(n)
+}
+
+/// One answer on a tape row, each way it inserts and copies.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RowAnswer {
+    /// What a click or ↵ inserts: full precision, with its unit (a definition's word).
+    pub insert: String,
+    /// What ⌥-click or ⌃↵ inserts: the same without its unit.
+    pub bare: String,
+    /// What ⌘C and the row's copy button copy: as the tape shows it, without its unit when the setting says so.
+    pub copy: String,
+    /// What ⌥⌘C copies: full precision, the setting applied the same way.
+    pub copy_full: String,
+    /// The Copy As menu: each different form with its label, the first as shown.
+    pub copy_as: Vec<CopyForm>,
+}
+
+/// A Copy As menu item.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CopyForm {
+    pub label: String,
+    pub text: String,
+}
+
+/// Every answer a tape row shows, in ← → order after its expression (pick 0), and the one it reads as.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RowAnswers {
+    pub answers: Vec<RowAnswer>,
+    /// The pick ↑ lands on and a click, the copy button and ⌘C use when nothing was picked: the answer the row
+    /// reads as (the exact side or the approximation, as Answer form says), 0 when there is none.
+    pub start: usize,
+}
+
+fn copy_forms(shown: &str, full: &str) -> Vec<CopyForm> {
+    let mut out: Vec<CopyForm> = Vec::new();
+    let mut add = |label: &str, text: String| {
+        if !text.is_empty() && !out.iter().any(|f| f.text == text) {
+            out.push(CopyForm {
+                label: label.into(),
+                text,
+            });
+        }
+    };
+    add("As Shown", shown.to_string());
+    add("Without Units", unitless_answer(shown));
+    add("Full Precision", full.to_string());
+    add("Full Precision Without Units", unitless_answer(full));
+    add(
+        "Typst",
+        crate::app::typst_math::copied_equation(&strip_grouping_commas(shown), true),
+    );
+    out
+}
+
+fn row_answer(shown: &str, full: &str, unitless: bool) -> RowAnswer {
+    // a reaction copies in ASCII, as the web's copyValue writes it (`2H2 + O2 -> 2H2O`)
+    let copied = |t: &str| crate::app::touches::answer_copy(t, unitless);
+    RowAnswer {
+        insert: full.to_string(),
+        bare: unitless_answer(full),
+        copy: copied(shown),
+        copy_full: copied(full),
+        copy_as: copy_forms(shown, full),
+    }
+}
+
+/// native only: what each answer on a tape row inserts and copies (`history_picks` at full precision, with the
+/// copies beside it). A solve's roots each, the exact side and then the approximation, or the one answer; a
+/// definition inserts its word and copies its meaning; a function, system or note has none (the Mac copies a
+/// system's solution and a note's text itself). `unitless` is the "Copy answers without units" setting.
+pub fn row_answers(row: &Json, form: AnswerForm, sig_figs: f64, unitless: bool) -> RowAnswers {
+    let none = RowAnswers::default();
+    match str_of(row, "kind") {
+        Some("function" | "system" | "note") => return none,
+        Some("definition") => {
+            let word = str_of(row, "expr").unwrap_or("").to_string();
+            let meaning = str_of(row, "display").unwrap_or("").to_string();
+            return RowAnswers {
+                answers: vec![RowAnswer {
+                    insert: word.clone(),
+                    bare: word,
+                    copy: meaning.clone(),
+                    copy_full: meaning.clone(),
+                    copy_as: copy_forms(&meaning, &meaning),
+                }],
+                start: 1,
+            };
+        }
+        _ => {}
+    }
+    if solve_of(row).is_some() && outcome_of(row) != Some("roots") {
+        return none;
+    }
+    if let Some(roots) = roots_of(row) {
+        return RowAnswers {
+            answers: roots
+                .into_iter()
+                .map(|r| row_answer(&format_number(r, sig_figs), &full_number(r), unitless))
+                .collect(),
+            start: 1,
+        };
+    }
+    let approx_shown = str_of(row, "display").unwrap_or("").to_string();
+    let approx = row_answer(&approx_shown, &full_history_answer(row), unitless);
+    if row_has_dual_answer(row) {
+        let exact_shown = str_of(row, "exact").unwrap_or("");
+        let exact_in = insertable_answer(exact_shown, None, DEFAULT);
+        return RowAnswers {
+            answers: vec![row_answer(exact_shown, &exact_in, unitless), approx],
+            start: if form == AnswerForm::Exact { 1 } else { 2 },
+        };
+    }
+    if approx_shown.trim().is_empty() {
+        return none;
+    }
+    RowAnswers {
+        answers: vec![approx],
+        start: 1,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

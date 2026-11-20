@@ -696,6 +696,92 @@ fn a_note_row_keeps_its_text_and_counts_for_nothing() {
     assert!(slim[0]["expr"].as_str().unwrap().chars().count() > 900);
 }
 
+// 2026-11-20: previous answers insert at full precision (⌥ without the unit), copy the side picked, and a Copy As
+// menu offers each form
+#[test]
+fn tape_answers_insert_at_full_precision_and_copy_each_way() {
+    use qcalc_core::app::answer::{AnswerForm, row_answers};
+    use qcalc_core::app::live::commit;
+    use serde_json::json;
+    let row = |text: &str| commit(&req(text), &[], "a").row.unwrap();
+    let one = |text: &str, unitless: bool| {
+        let a = row_answers(&row(text), AnswerForm::Approx, 6.0, unitless);
+        assert_eq!(a.answers.len(), 1, "{text}");
+        a.answers[0].clone()
+    };
+    // plain numbers: the whole value, float noise trimmed
+    let third = one("1/3", true);
+    assert_eq!(
+        (third.insert.as_str(), third.copy.as_str()),
+        ("0.333333333333333", "0.333333")
+    );
+    assert_eq!(one("0.1+0.2", true).insert, "0.3");
+    assert_eq!(one("pi/7", true).copy_full, "0.448798950512828");
+    // a unit kept on insert, dropped by ⌥ and by the unitless copy
+    let m = one("10/3 m", true);
+    assert_eq!(
+        (
+            m.insert.as_str(),
+            m.bare.as_str(),
+            m.copy.as_str(),
+            m.copy_full.as_str()
+        ),
+        (
+            "3.33333333333333 m",
+            "3.33333333333333",
+            "3.33333",
+            "3.33333333333333"
+        )
+    );
+    assert_eq!(one("10/3 m", false).copy, "3.33333 m");
+    assert_eq!(one("160lbs*3ft to lb*in", true).insert, "5760 lb*in");
+    // shown as it reads when the number runs into more units, or is a date
+    assert_eq!(one("5 ft + 3 in", true).insert, "5 ft 3 in");
+    // a measured value keeps its figures, unless more were typed
+    assert_eq!(one("x = 4.123456789", true).insert, "4.123456789");
+    // Copy As: each different form once, as shown first
+    let labels: Vec<String> = m
+        .copy_as
+        .iter()
+        .map(|f| format!("{}: {}", f.label, f.text))
+        .collect();
+    assert_eq!(
+        labels[..4],
+        [
+            "As Shown: 3.33333 m",
+            "Without Units: 3.33333",
+            "Full Precision: 3.33333333333333 m",
+            "Full Precision Without Units: 3.33333333333333",
+        ]
+    );
+    // exact ≈ approx: each side its own pick; ↑ lands on the side Answer form reads
+    let root2 = row("sqrt(2)");
+    let exact = row_answers(&root2, AnswerForm::Exact, 6.0, true);
+    assert_eq!(exact.start, 1);
+    assert_eq!(exact.answers[0].insert, "sqrt(2)");
+    assert_eq!(exact.answers[1].insert, "1.4142135623731");
+    assert_eq!(exact.answers[1].copy, "1.41421");
+    assert_eq!(row_answers(&root2, AnswerForm::Approx, 6.0, true).start, 2);
+    // roots each, at full precision
+    let roots = row_answers(&row("x^2 = 2"), AnswerForm::Approx, 6.0, true);
+    let ins: Vec<&str> = roots.answers.iter().map(|a| a.insert.as_str()).collect();
+    assert_eq!(ins, ["-1.4142135623731", "1.4142135623731"]);
+    assert_eq!(roots.answers[1].copy, "1.41421");
+    // a definition inserts its word and copies its meaning; notes and systems have no answer
+    let def = json!({"id": "d", "expr": "ephemeral", "display": "lasting a very short time", "kind": "definition"});
+    let d = &row_answers(&def, AnswerForm::Approx, 6.0, true).answers[0];
+    assert_eq!(
+        (d.insert.as_str(), d.copy.as_str()),
+        ("ephemeral", "lasting a very short time")
+    );
+    let note = json!({"id": "n", "expr": "call Sam", "display": "", "kind": "note"});
+    assert!(
+        row_answers(&note, AnswerForm::Approx, 6.0, true)
+            .answers
+            .is_empty()
+    );
+}
+
 #[test]
 fn every_sheet_can_be_searched() {
     use qcalc_core::app::identities::{native_identity_sheet_by_id, native_sheet_ids};
@@ -709,7 +795,9 @@ fn every_sheet_can_be_searched() {
     }
     // the app asks through the logic table
     match qcalc_core::golden::dispatch("lib/identities", "nativeSheetIds", &[]) {
-        qcalc_core::golden::Outcome::Answer(a) => assert_eq!(a.as_array().map(Vec::len), Some(ids.len())),
+        qcalc_core::golden::Outcome::Answer(a) => {
+            assert_eq!(a.as_array().map(Vec::len), Some(ids.len()))
+        }
         _ => panic!("nativeSheetIds didn't answer"),
     }
 }

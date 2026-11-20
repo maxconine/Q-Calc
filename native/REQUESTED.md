@@ -112,6 +112,7 @@ Status: ✅ tested (a test covers it) · 🔧 fixed here · ❌ missing · 🖥 
 | Tab autofills during tutorial steps | 2026-10-27 | 🖥 | same Tab handling as the line; not driven |
 | Bar hides on click-away unless messaging | 2026-10-28 | 🖥 | `holdsOpen` (PARITY §5) |
 | Copy button beside each tape answer: one click copies, nothing inserted | 2026-11-17 | 🖥 | `RowCopyButton` in `BarView.swift`; driven with `drive.sh` (↑, click) |
+| Earlier answers insert at full precision (⌥ without the unit, ⇧ keeps the tape open, each half of exact ≈ approx its own); copy the side picked, ⌥⌘C full precision, Copy As menu | 2026-11-20 | ✅ | `tape_answers_insert_at_full_precision_and_copy_each_way` (`app/answer.rs` `row_answers`); UI in `BarModel.rowAnswers` |
 | ⌘C on a selected tape row copies it; ⌘↓ back to the line; ⌫ deletes the row | 2026-11-17 | 🖥 | `BarModel.key`, `copySelectedRow`; built, not driven |
 | Sheet explanations: Related at the bottom, each clickable for its own explanation (or a search) | 2026-11-20 | 🖥 | `ExplanationView`, `openRelated` in `macos/IdentityWindow.swift`; link click not driven |
 | Clicking a sheet (its explanation, its search) while the bar is open | 2026-11-20 | 🖥 | `OverlayController.isSheetWindow`, `PeriodicPanel.wantsKeys`; not driven with real clicks |

@@ -181,6 +181,8 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
         ("lib/answer", "prettyRoots") => json!(ans::pretty_roots(&s(0))),
         ("lib/answer", "solveRoots") => opt(ans::solve_roots(&a(0), sig(1))),
         ("lib/answer", "solveInsert") => opt(ans::solve_insert(&a(0), sig(1))),
+        // native only: what each tape answer inserts and copies (full precision, Copy As)
+        ("lib/answer", "rowAnswers") => to(&ans::row_answers(&a(0), form(&a(1)), sig(2), b(3))),
         ("lib/answer", "unitlessAnswer") => json!(ans::unitless_answer(&s(0))),
         // native only: the rate behind a converted amount, for its hover note (`[text, rates JSON, now ms]`)
         ("lib/currency", "rateNote") => {

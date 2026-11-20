@@ -786,7 +786,10 @@ private struct HistoryRowView: View, Equatable {
         // grid: 1fr | minmax(120px, 46%), gap 12, padding 0 8, 36 pt rows with 6 pt corners
         GeometryReader { geo in
             HStack(spacing: 12) {
-                Button { model.insertFromRow(index, answer: false) } label: {
+                Button {
+                    let mods = NSEvent.modifierFlags
+                    model.insertFromRow(index, answer: false, keep: mods.contains(.shift))
+                } label: {
                     exprText
                         .foregroundStyle(exprHover || picked == 0 ? Color.qInk : Color.qMuted)
                         .lineLimit(1)
@@ -803,6 +806,7 @@ private struct HistoryRowView: View, Equatable {
                 // HistoryTape.tsx's titles; the pointer also reads an expression cut off at the row's end in full
                 .hoverTip(exprTip)
                 .accessibilityLabel("Expression \(row.expr)")
+                .accessibilityHint(row.kind == .system ? "" : "Inserts it at the cursor; with Shift the history stays open")
 
                 // a note has no answer: its text takes the row
                 if row.kind != .note {
@@ -827,6 +831,14 @@ private struct HistoryRowView: View, Equatable {
             } else {
                 Button("Copy Expression") { model.copyRow(row, answer: false) }
                 Button("Copy Answer") { model.copyRow(row, answer: true) }
+                // native only: each way the answer copies (rowAnswers' copyAs)
+                if let forms = model.readAnswer(row)?.copyAs, !forms.isEmpty {
+                    Menu("Copy As") {
+                        ForEach(Array(forms.enumerated()), id: \.offset) { _, form in
+                            Button("\(form.label): \(form.text)") { model.copyText(form.text) }
+                        }
+                    }
+                }
             }
             Divider()
             Button("Delete") { model.deleteRow(index) }
@@ -839,7 +851,8 @@ private struct HistoryRowView: View, Equatable {
     private var exprTip: String {
         let what = row.kind == .system ? "Edit equations" : row.kind == .definition ? "Insert word at the cursor"
             : row.kind == .note ? "Insert note at the cursor" : "Insert expression at the cursor"
-        return row.expr.count > 40 ? "\(what) · \(row.expr)" : what
+        let keep = row.kind == .system ? what : "\(what) · ⇧-click keeps the history open"
+        return row.expr.count > 40 ? "\(keep) · \(row.expr)" : keep
     }
 
     @ViewBuilder private var answers: some View {
@@ -859,22 +872,33 @@ private struct HistoryRowView: View, Equatable {
             // the page's titles: exact value, then approximation
             // .tape-a-dual: exact ≈ approx, 6 pt apart, the ≈ in 13 pt muted
             HStack(spacing: 6) {
-                answer(Pretty.answer(exact), insert: true, picked: picked == 1, tip: "Insert exact value at the cursor")
+                answer(Pretty.answer(exact), at: 1, picked: picked == 1, tip: "Insert exact value at the cursor")
                 Text("≈").font(.system(size: Theme.body)).foregroundStyle(Color.qMuted).accessibilityHidden(true)
-                answer(Pretty.answer(row.display), insert: true, picked: picked == 2, tip: "Insert approximation at the cursor")
+                answer(Pretty.answer(row.display), at: 2, picked: picked == 2, tip: "Insert approximation at the cursor")
             }
         } else {
-            answer(Pretty.answer(row.display), insert: true, picked: picked == 1, fill: true,
+            // several roots in one cell (`±√2`) insert as shown; ← → pick each at full precision
+            answer(Pretty.answer(row.display), at: model.rowAnswers(row).answers.count > 1 ? 0 : nil, picked: picked == 1, fill: true,
                    tip: row.kind == .definition ? "Insert word at the cursor"
                        : AppSettings.shared.answerForm == "exact" && row.exact != nil ? "Insert exact value at the cursor"
                        : "Insert approximation at the cursor")
         }
     }
 
-    private func answer(_ text: String, insert: Bool, picked: Bool, fill: Bool = false,
+    /// `at`: the answer this cell is (1 the exact half of a dual, 2 its ≈ half), nil for the one the row reads as.
+    /// A click inserts it at full precision; ⇧ keeps the tape open, ⌥ leaves the unit off.
+    private func answer(_ text: String, at: Int?, picked: Bool, fill: Bool = false,
                         tip: String = "Insert the answer at the cursor") -> some View {
-        AnswerCell(text: text, split: model.numberAndUnit(text), unitName: model.unitName(forAnswer: text), picked: picked, fill: fill, tip: tip) { model.insertFromRow(index, answer: true) }
-            .onDrag { NSItemProvider(object: row.display as NSString) }
+        let unit = model.numberAndUnit(text)
+        let more = row.kind == .definition ? " · ⇧-click keeps the history open"
+            : unit != nil ? " · ⇧-click keeps the history open, ⌥-click leaves off the unit" : " · ⇧-click keeps the history open"
+        return AnswerCell(text: text, split: unit, unitName: model.unitName(forAnswer: text), picked: picked, fill: fill, tip: tip + more,
+                          hint: unit != nil ? "Inserts it at the cursor; with Shift the history stays open, with Option it goes in without its unit"
+                              : "Inserts it at the cursor; with Shift the history stays open") {
+            let mods = NSEvent.modifierFlags
+            model.insertFromRow(index, answer: true, at: at, keep: mods.contains(.shift), bare: mods.contains(.option))
+        }
+        .onDrag { NSItemProvider(object: model.rowCopy(row) as NSString) }
     }
 }
 
@@ -922,6 +946,7 @@ private struct AnswerCell: View {
     /// a lone answer is the whole column (display: block), so its pick ring is too
     var fill = false
     var tip = "Insert the answer at the cursor"
+    var hint = ""
     let action: () -> Void
     @State private var hover = false
     var body: some View {
@@ -936,6 +961,7 @@ private struct AnswerCell: View {
             .buttonStyle(.plain)
             .hoverTip(tip)
             .accessibilityLabel("Answer \(text)")
+            .accessibilityHint(hint)
             if let unit = split?.unit {
                 Button(action: action) {
                     part(unit)
