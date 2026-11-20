@@ -627,6 +627,14 @@ impl<'o> Sheet<'o> {
         // native only: `Earth's axial tilt`, `mass of the moon`, before an apostrophe could read as feet
         let named = crate::named_constants::rewrite(raw, &|n| self.known(n));
         let marked = crate::feet_inches::foot_marks(&named);
+        // native only: `1.8 m to ft in`, `2 m in feet and inches` answer `5 ft 10.8661 in`
+        if let Some(mut result) = crate::feet_inches::split_target(&marked)
+            .map(|inches| self.line_as_typed(&inches))
+            .and_then(|r| crate::feet_inches::answer_split(r, self.sig_figs))
+        {
+            result.raw = raw.to_string();
+            return result;
+        }
         let mut result = self.line_as_typed(&marked);
         if matches!(named, Cow::Owned(_)) || matches!(marked, Cow::Owned(_)) {
             result.raw = raw.to_string();

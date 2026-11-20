@@ -48,6 +48,26 @@ pub fn unit_spans(text: &str, variables: &[String], functions: &[String]) -> Vec
         if jsre::test(&CALL, &text[end..]) {
             continue;
         }
+        // native only: the inches of a feet-and-inches target (`to ft in`, `in feet and inches`)
+        static AFTER_FEET: Lazy = Lazy::new(|| {
+            jsre::js(
+                r"\b(?:to|into|in|as|→|->)\s*(?:ft|foot|feet)\s*(?:and\s+|[,&+-]\s*)?$",
+                "i",
+            )
+        });
+        static END: Lazy = Lazy::new(|| jsre::js(r"^\s*$", ""));
+        if ["in", "inch", "inches"].contains(&word.to_lowercase().as_str())
+            && jsre::test(&AFTER_FEET, &text[..start])
+            && jsre::test(&END, &text[end..])
+            && let Some(info) = unit_info(word)
+        {
+            spans.push(Found {
+                start,
+                end,
+                name: info.name,
+            });
+            continue;
+        }
         if !unit_place(text, start, &spans) {
             continue;
         }

@@ -229,6 +229,35 @@ pub fn answer_in_feet_and_inches(line: &str, result: &mut LineResult, sig_figs: 
     }
 }
 
+/// Native only: a line that asks for feet and inches (`1.8 m to ft in`, `2 m in feet and inches`, `70 in to '"`)
+/// as the same line converted to inches, which `answer_split` then shows split.
+pub fn split_target(line: &str) -> Option<String> {
+    static TARGET: Lazy = Lazy::new(|| {
+        js(
+            r#"^(.+?)\s*(?:\b(?:to|into|in|as)\b|→|->)\s*(?:ft|foot|feet|')\s*(?:and\s+|[+,-]\s*|&\s*)?(?:in|inch|inches|")\s*$"#,
+            "i",
+        )
+    });
+    let c = TARGET.captures(line.trim()).ok().flatten()?;
+    let head = c.get(1)?.as_str().trim();
+    (!head.is_empty()).then(|| format!("{head} to in"))
+}
+
+/// The answer of a `split_target` line in feet and inches (fractions of an inch when the line typed one), or None
+/// when it isn't a length.
+pub fn answer_split(mut result: LineResult, sig_figs: f64) -> Option<LineResult> {
+    // a ± can't be split between feet and inches
+    if result.meas.as_ref().is_some_and(|m| m.unc.is_some()) {
+        return None;
+    }
+    let inches = result.value.as_ref().and_then(inches_of)?;
+    result.display = match typed_inch_fraction(&result.raw) {
+        Some(denominator) => feet_and_fraction(inches, denominator, true),
+        None => feet_and_inches(inches, sig_figs),
+    };
+    Some(result)
+}
+
 fn converts(line: &str) -> bool {
     static CONVERTS: Lazy = Lazy::new(|| js(r"\b(?:to|into|as)\b|→|->|\bin\s+[A-Za-z]", "i"));
     // `(5+3/8) in` is inches, not a conversion
