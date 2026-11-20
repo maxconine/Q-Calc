@@ -52,8 +52,8 @@ struct GraphPanel: View {
                     Text(unit).font(.system(size: Theme.small)).foregroundStyle(Color.qMuted)
                 }
                 Spacer(minLength: 0)
-                if state.kind == .surface, state.error == nil {
-                    // native only: a surface in 3D or as level curves
+                if state.kind == .surface, state.error == nil, !state.implicitSurface {
+                    // native only: a surface in 3D or as level curves (an implicit surface has no level curves)
                     HStack(spacing: 2) {
                         ViewToggle(title: "3D", on: state.shows3D, tip: "Two-finger press and drag to orbit, two-finger scroll to zoom, shift + two-finger drag to pan") { model.setGraph3D(true) }
                         ViewToggle(title: "contour", on: !state.shows3D, tip: "Level curves, seen from above") { model.setGraph3D(false) }
@@ -414,6 +414,9 @@ struct GraphPanel: View {
     }
 
     private var summary: String {
+        if state.implicitSurface {
+            return "Implicit surface \(label) over x \(fmt(state.xMin)) to \(fmt(state.xMax)), drawn in 3D"
+        }
         if state.kind == .surface {
             return "Surface \(label) over x \(fmt(state.xMin)) to \(fmt(state.xMax)), \(state.critical.count) critical points"
         }
@@ -1175,6 +1178,28 @@ struct GraphPanel: View {
             let meshes = (0...steps).map { k -> CGColor in
                 let t = (0.42 + 0.58 * Double(k) / Double(steps)) * 0.62
                 return CGColor(srgbRed: base.0 * t, green: base.1 * t, blue: base.2 * t, alpha: 1)
+            }
+            // an implicit surface (`x^2 + y^2 + z^2 = 1`): its mesh's triangles, edged in their own fill so the
+            // tetrahedra it was found on don't show as lines
+            let m = grid.mesh
+            if m.count >= 9 {
+                for t in stride(from: 0, to: m.count - 8, by: 9) {
+                    let a = (v.u(m[t]), v.v(m[t + 1]), v.w(m[t + 2]))
+                    let b = (v.u(m[t + 3]), v.v(m[t + 4]), v.w(m[t + 5]))
+                    let c = (v.u(m[t + 6]), v.v(m[t + 7]), v.w(m[t + 8]))
+                    if a.2 > 1, b.2 > 1, c.2 > 1 { continue }
+                    if a.2 < -1, b.2 < -1, c.2 < -1 { continue }
+                    let poly = Surface3D.clip([a, b, c])
+                    guard poly.count >= 3 else { continue }
+                    let n = Surface3D.normalize(Surface3D.cross((b.0 - a.0, b.1 - a.1, b.2 - a.2), (c.0 - a.0, c.1 - a.1, c.2 - a.2)))
+                    let level = min(Int((abs(n.0 * light.0 + n.1 * light.1 + n.2 * light.2) * Double(steps)).rounded()), steps)
+                    let projected = poly.map { v.unit($0.0, $0.1, $0.2) }
+                    let depth = projected.reduce(0) { $0 + $1.1 } / Double(projected.count)
+                    let screen = projected.map(\.0)
+                    pieces.append((depth, .patch(screen, fills[level], fills[level])))
+                    patches.append(Patch(depth: depth, screen: screen, cube: poly, layer: layer))
+                }
+                continue
             }
             let nx = Int(grid.nx), ny = Int(grid.ny)
             // the grid's corners in the cube once, not four times

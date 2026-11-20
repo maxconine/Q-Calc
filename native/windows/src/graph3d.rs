@@ -591,6 +591,7 @@ mod tests {
             z,
             z_lo: -10.0,
             z_hi: 10.0,
+            mesh: Vec::new(),
         }
     }
 

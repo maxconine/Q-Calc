@@ -70,7 +70,7 @@ impl GraphOptions {
         }
     }
 
-    fn sci(&self, mode: Option<AngleMode>) -> ScientificContext {
+    pub(crate) fn sci(&self, mode: Option<AngleMode>) -> ScientificContext {
         ScientificContext {
             ans: self.ans,
             angle_mode: mode.unwrap_or_default(),
@@ -264,6 +264,9 @@ pub struct SurfaceGrid {
     pub z: Vec<f64>,
     pub z_lo: f64,
     pub z_hi: f64,
+    /// Native only: an implicit surface's triangles (`x^2 + y^2 + z^2 = 1`), nine numbers each (three corners'
+    /// x, y, z); the grid is then 0 × 0. Empty for a surface z = f(x, y).
+    pub mesh: Vec<f64>,
 }
 
 impl GraphResult {
@@ -1654,6 +1657,9 @@ pub fn line_intercepts(r: &GraphResult) -> Vec<CriticalPoint> {
 /// panel lists for implicit curves and surfaces ([`build_intent`]).
 pub fn build_native_graph(input: &str, options: &GraphOptions) -> Option<GraphResult> {
     let native = crate::graph_native::native_intent(input, options)?;
+    if native.implicit_surface {
+        return Some(build_implicit_surface(native.intent, options));
+    }
     let mut r = build_intent(native.intent, options, true);
     let intercepts = line_intercepts(&r);
     r.critical_points.extend(intercepts);
@@ -1684,6 +1690,58 @@ pub fn build_native_graph(input: &str, options: &GraphOptions) -> Option<GraphRe
         r.error = Some(e);
     }
     Some(r)
+}
+
+/// Native only: an implicit surface F(x, y, z) = 0 (`x^2 + y^2 + z^2 = 1`), drawn in the 3D view as a mesh
+/// ([`crate::graph_implicit3d`]) over the window's x and y and as wide a z about 0 (the cube's). No level curves
+/// or critical points: the contour view has nothing to show.
+fn build_implicit_surface(intent: GraphIntent, options: &GraphOptions) -> GraphResult {
+    let domain = normalize_domain(options.domain, DEFAULT_GRAPH_DOMAIN);
+    let (x0, x1) = domain;
+    let y_mid = options.y_center.filter(|c| c.is_finite()).unwrap_or(0.0);
+    let y_half = ((x1 - x0) * options.aspect()) / 2.0;
+    let y_scale = YScale {
+        min: y_mid - y_half,
+        max: y_mid + y_half,
+    };
+    let mut f = crate::graph_implicit3d::Implicit3D::new(&intent.expression, options);
+    let error =
+        (!f.ok()).then(|| "Write a surface in x, y and z (x^2 + y^2 + z^2 = 1)".to_string());
+    let surface = (options.surface && error.is_none()).then(|| {
+        let half = (x1 - x0) / 2.0;
+        let mesh = crate::graph_implicit3d::implicit_mesh(
+            &mut f,
+            domain,
+            (y_scale.min, y_scale.max),
+            (-half, half),
+            crate::graph_implicit3d::IMPLICIT_CELLS,
+        );
+        SurfaceGrid {
+            nx: 0,
+            ny: 0,
+            x_lo: x0,
+            x_hi: x1,
+            y_lo: y_scale.min,
+            y_hi: y_scale.max,
+            z: vec![f64::NAN],
+            z_lo: -half,
+            z_hi: half,
+            mesh,
+        }
+    });
+    GraphResult {
+        intent,
+        points: Vec::new(),
+        domain,
+        y_scale,
+        critical_points: Vec::new(),
+        roots: Vec::new(),
+        angle_unit: None,
+        contours: Some(Vec::new()),
+        error,
+        readout: GraphReadout::None,
+        surface,
+    }
 }
 
 /// Native only, as Desmos: where a curve cut off by `{a ≤ x ≤ b}` stops, each end inside the window marked
@@ -2485,6 +2543,7 @@ pub fn result_json(r: &GraphResult) -> Json {
                 "xLo": g.x_lo, "xHi": g.x_hi, "yLo": g.y_lo, "yHi": g.y_hi,
                 "zLo": num_json(g.z_lo), "zHi": num_json(g.z_hi),
                 "z": g.z.iter().map(|v| opt_num(Some(*v).filter(|v| v.is_finite()))).collect::<Vec<_>>(),
+                "mesh": g.mesh,
             }),
         );
     }

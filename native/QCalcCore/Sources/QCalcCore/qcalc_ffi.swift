@@ -9426,10 +9426,19 @@ public struct SurfaceGrid: Equatable, Hashable {
     public var z: [Double]
     public var zLo: Double
     public var zHi: Double
+    /**
+     * An implicit surface's triangles (`x^2 + y^2 + z^2 = 1`), nine numbers each (three corners' x, y, z); the
+     * grid is then 0 × 0. Empty for a surface z = f(x, y).
+     */
+    public var mesh: [Double]
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(nx: UInt32, ny: UInt32, xLo: Double, xHi: Double, yLo: Double, yHi: Double, z: [Double], zLo: Double, zHi: Double) {
+    public init(nx: UInt32, ny: UInt32, xLo: Double, xHi: Double, yLo: Double, yHi: Double, z: [Double], zLo: Double, zHi: Double, 
+        /**
+         * An implicit surface's triangles (`x^2 + y^2 + z^2 = 1`), nine numbers each (three corners' x, y, z); the
+         * grid is then 0 × 0. Empty for a surface z = f(x, y).
+         */mesh: [Double]) {
         self.nx = nx
         self.ny = ny
         self.xLo = xLo
@@ -9439,6 +9448,7 @@ public struct SurfaceGrid: Equatable, Hashable {
         self.z = z
         self.zLo = zLo
         self.zHi = zHi
+        self.mesh = mesh
     }
 
     
@@ -9465,7 +9475,8 @@ public struct FfiConverterTypeSurfaceGrid: FfiConverterRustBuffer {
                 yHi: FfiConverterDouble.read(from: &buf), 
                 z: FfiConverterSequenceDouble.read(from: &buf), 
                 zLo: FfiConverterDouble.read(from: &buf), 
-                zHi: FfiConverterDouble.read(from: &buf)
+                zHi: FfiConverterDouble.read(from: &buf), 
+                mesh: FfiConverterSequenceDouble.read(from: &buf)
         )
     }
 
@@ -9479,6 +9490,7 @@ public struct FfiConverterTypeSurfaceGrid: FfiConverterRustBuffer {
         FfiConverterSequenceDouble.write(value.z, into: &buf)
         FfiConverterDouble.write(value.zLo, into: &buf)
         FfiConverterDouble.write(value.zHi, into: &buf)
+        FfiConverterSequenceDouble.write(value.mesh, into: &buf)
     }
 }
 

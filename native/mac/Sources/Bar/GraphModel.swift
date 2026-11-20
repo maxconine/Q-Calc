@@ -60,6 +60,8 @@ struct GraphState: Equatable {
 
     var input: String { "graph \(expression)" }
     var shows3D: Bool { kind == .surface && view3D == true }
+    /// An implicit surface (`x^2 + y^2 + z^2 = 1`): a mesh in 3D, with no level curves to switch to
+    var implicitSurface: Bool { surface.map { !$0.mesh.isEmpty } ?? false }
     var atHome: Bool {
         (homeLo == nil || (xMin == homeLo && xMax == homeHi)) && yCenter == homeYCenter && fixedY == nil && fixedZ == nil
             && (!shows3D || (yaw == Self.homeYaw && pitch == Self.homePitch))

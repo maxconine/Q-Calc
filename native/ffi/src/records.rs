@@ -880,6 +880,9 @@ pub struct SurfaceGrid {
     pub z: Vec<f64>,
     pub z_lo: f64,
     pub z_hi: f64,
+    /// An implicit surface's triangles (`x^2 + y^2 + z^2 = 1`), nine numbers each (three corners' x, y, z); the
+    /// grid is then 0 × 0. Empty for a surface z = f(x, y).
+    pub mesh: Vec<f64>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]

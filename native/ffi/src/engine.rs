@@ -191,6 +191,11 @@ fn graph_result(v: &Json) -> Option<GraphResult> {
                 .collect(),
             z_lo: num(g.get("zLo"))?,
             z_hi: num(g.get("zHi"))?,
+            mesh: g
+                .get("mesh")
+                .and_then(Json::as_array)
+                .map(|m| m.iter().filter_map(Json::as_f64).collect())
+                .unwrap_or_default(),
         })
     });
     // the readout functions (`y`, `z`) don't cross; graph_y and graph_z stand for them, and the grid is its own

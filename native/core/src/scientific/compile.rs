@@ -86,6 +86,11 @@ impl Compiled {
         finish_number(&self.run_val(&[u, v])?)
     }
 
+    /// `at3(u, v, w)` when it's a finite number, else None (native only: an implicit surface's F(x, y, z)).
+    pub fn number_at3(&mut self, u: f64, v: f64, w: f64) -> Option<f64> {
+        finish_number(&self.run_val(&[u, v, w])?)
+    }
+
     /// The value at `x` (one variable).
     pub fn at(&mut self, x: f64) -> Option<Value> {
         self.run(&[x])
@@ -110,4 +115,13 @@ pub fn compile_scientific2(
     b: &str,
 ) -> Option<Compiled> {
     prepare(text, ctx, &[a, b]).map(|p| Compiled::new(p, &[a, b]))
+}
+
+/// Native only: an expression in three free variables, for an implicit surface's F(x, y, z).
+pub fn compile_scientific3(
+    text: &str,
+    ctx: &ScientificContext,
+    vars: [&str; 3],
+) -> Option<Compiled> {
+    prepare(text, ctx, &vars).map(|p| Compiled::new(p, &vars))
 }

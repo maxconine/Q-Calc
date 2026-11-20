@@ -63,6 +63,7 @@ pub mod sums;
 // ---- WP-GRAPH ----
 pub mod feet_inches;
 pub mod graph;
+pub mod graph_implicit3d;
 pub mod graph_native;
 pub mod named_constants;
 

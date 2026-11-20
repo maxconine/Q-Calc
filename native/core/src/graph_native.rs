@@ -35,6 +35,9 @@ pub struct NativeIntent {
     pub intent: GraphIntent,
     pub points: Vec<(f64, f64)>,
     pub error: Option<String>,
+    /// An equation in x, y and z not solvable for z (`x^2 + y^2 + z^2 = 1`): `intent.expression` is F(x, y, z),
+    /// drawn as a mesh in 3D ([`crate::graph_implicit3d`]).
+    pub implicit_surface: bool,
 }
 
 /// The plot's window in graph units.
@@ -229,6 +232,7 @@ fn point_intent(body: &str, options: &GraphOptions) -> Option<NativeIntent> {
         intent: GraphIntent::new("", ""),
         points: points.clone(),
         error: None,
+        implicit_surface: false,
     };
     match (points.len(), slope) {
         (1, Some(m)) => {
@@ -377,6 +381,7 @@ pub fn native_intent(input: &str, options: &GraphOptions) -> Option<NativeIntent
                 error: Some(
                     "Only a polar curve that repeats each turn of θ draws (not a spiral)".into(),
                 ),
+                implicit_surface: false,
             });
         }
         p => p.and_then(Result::ok),
@@ -393,6 +398,7 @@ pub fn native_intent(input: &str, options: &GraphOptions) -> Option<NativeIntent
         None => tidy_label(&intent.label),
     };
     let mut error = None;
+    let mut implicit_surface = false;
     if intent.contour == Some(ContourKind::Zero) && intent.bounds_error.is_none() {
         let mode = options.angle_mode.or(Some(AngleMode::Rad));
         if jsre::test(&FREE_Z, &intent.expression) && !options.variables.contains_key("z") {
@@ -402,7 +408,12 @@ pub fn native_intent(input: &str, options: &GraphOptions) -> Option<NativeIntent
                     intent.expression = z;
                     intent.contour = Some(ContourKind::Levels);
                 }
-                None => error = Some("Write a surface as z = … (one z, solved for)".into()),
+                // not solvable for z: F(x, y, z) = 0 drawn as a mesh (bounds aren't applied to one)
+                None if intent.bounds.is_none() => {
+                    intent.contour = Some(ContourKind::Levels);
+                    implicit_surface = true;
+                }
+                None => error = Some("Bounds don't apply to an implicit surface yet".into()),
             }
         } else {
             let at = |e: &str, k: usize| compile_graph_y(e, options, mode).at(XS[k]);
@@ -432,6 +443,7 @@ pub fn native_intent(input: &str, options: &GraphOptions) -> Option<NativeIntent
         intent,
         points: Vec::new(),
         error,
+        implicit_surface,
     })
 }
 
@@ -929,6 +941,12 @@ pub fn native_home(input: &str, options: &GraphOptions) -> (f64, f64, Option<f64
     let Some(n) = native_intent(input, options) else {
         return (-10.0, 10.0, None);
     };
+    if n.implicit_surface {
+        let mut f = crate::graph_implicit3d::Implicit3D::new(&n.intent.expression, options);
+        let (lo, hi) =
+            crate::graph_implicit3d::implicit_surface_home(&mut f).unwrap_or((-10.0, 10.0));
+        return (lo, hi, None);
+    }
     let intent = n.intent;
     if intent.contour == Some(ContourKind::Zero)
         && intent.bounds.is_none()
@@ -1340,6 +1358,7 @@ pub fn surface_grid(f: &dyn Fn(f64, f64) -> Option<f64>, w: Window) -> SurfaceGr
         z,
         z_lo,
         z_hi,
+        mesh: Vec::new(),
     }
 }
 

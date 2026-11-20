@@ -196,12 +196,13 @@ fn surfaces_have_critical_points_and_a_grid() {
     // no grid unless asked
     assert!(opened("graph z = x^2 - y^2", 1.0, false).surface.is_none());
 
-    // an equation linear in z is a surface; one that isn't asks for z = …
+    // an equation linear in z is a surface; one that isn't is an implicit surface's mesh (QA item 47)
     let plane = opened("graph x + y + z = 1", 1.0, true);
     assert_eq!(plane.error, None);
     assert!(plane.critical_points.is_empty());
     assert_eq!(plane.z_at(1.0, 2.0), Some(-2.0));
-    assert!(opened("graph x^2+y^2+z^2=25", 1.0, true).error.is_some());
+    let sphere = opened("graph x^2+y^2+z^2=25", 1.0, true);
+    assert!(sphere.error.is_none() && !sphere.surface.expect("a mesh").mesh.is_empty());
     // a coefficient on z is solved through: 20z = 2y + 12x is z = (2y + 12x)/20
     let scaled = opened("graph 20z=2y+12x", 1.0, true);
     assert_eq!(scaled.error, None);
