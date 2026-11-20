@@ -141,6 +141,8 @@ struct MathPreview: View {
     let typeset: Typeset
     /// set against the left edge rather than centred (a step's matrix, beside its operation)
     var leading = false
+    /// the tallest it's drawn: the preview row's 72 pt, or a steps card's shared scale
+    var most: CGFloat = 72
 
     var body: some View {
         let paths = typeset.paths
@@ -149,9 +151,9 @@ struct MathPreview: View {
             // an AppKit view, not a Canvas: a Canvas renders into GPU surfaces that SwiftUI keeps per size, about
             // 100 MB of them after a session of typing
             if #available(macOS 13, *) {
-                FitLayout(width: w, height: h, leading: leading) { PathsView(paths: paths, width: w) }
+                FitLayout(width: w, height: h, leading: leading, most: most) { PathsView(paths: paths, width: w) }
             } else {
-                FitFrame(width: w, height: h, leading: leading) { PathsView(paths: paths, width: w) }
+                FitFrame(width: w, height: h, leading: leading, most: most) { PathsView(paths: paths, width: w) }
             }
         }
         .opacity(typeset.stale ? 0.4 : 1)
@@ -166,9 +168,10 @@ struct MathPreview: View {
         let width: CGFloat
         let height: CGFloat
         var leading = false
+        var most: CGFloat = 72
 
         private func scale(_ available: CGFloat?) -> CGFloat {
-            min(1, (available ?? width) / max(width, 1), 72 / max(height, 1))
+            min(1, (available ?? width) / max(width, 1), most / max(height, 1))
         }
 
         func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
@@ -190,11 +193,12 @@ struct MathPreview: View {
         let width: CGFloat
         let height: CGFloat
         var leading = false
+        var most: CGFloat = 72
         @ViewBuilder let content: () -> Content
         @State private var available: CGFloat?
 
         var body: some View {
-            let s = min(1, (available ?? width) / max(width, 1), 72 / max(height, 1))
+            let s = min(1, (available ?? width) / max(width, 1), most / max(height, 1))
             content()
                 .frame(width: width * s, height: height * s)
                 .frame(maxWidth: .infinity, alignment: leading ? .topLeading : .top)

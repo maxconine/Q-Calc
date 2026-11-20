@@ -104,8 +104,8 @@ extension View {
     /// `drive.sh snap` pictures drew it in the text colour. Put it right after `.font`, before any padding, and
     /// leave the prompt empty. `font` overrides the system font at `size`.
     func mutedPrompt(_ text: String, shown: Bool, size: CGFloat, font: Font? = nil, color: Color = .qMuted,
-                     kerning: CGFloat = 0) -> some View {
-        overlay(alignment: .leading) {
+                     kerning: CGFloat = 0, alignment: Alignment = .leading) -> some View {
+        overlay(alignment: alignment) {
             if shown {
                 Text(text)
                     .font(font ?? .system(size: size))

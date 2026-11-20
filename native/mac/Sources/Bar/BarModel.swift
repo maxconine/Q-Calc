@@ -343,7 +343,8 @@ final class BarModel: ObservableObject {
         var lane = false
         defer { if !lane { working = nil; dropUpgrade() } }
         // the grid stays open only while the line is the one it wrote
-        if let g = grid, !writingGrid, typed != g.written { grid = nil; gridFocus = nil }
+        // (closeGrid, so the line takes the keys back from a cell when the change came from outside it)
+        if let g = grid, !writingGrid, typed != g.written { closeGrid() }
         if grid == nil, let h = matrixGridHint(text: typed), !storesMat(typed) {
             commandMessage = h
             setLive(.blank, for: typed)

@@ -39,10 +39,17 @@ struct StepRow: Identifiable, Equatable {
         a.id == b.id && a.op == b.op && a.display == b.display && (a.paths == nil) == (b.paths == nil) && a.remark == b.remark
     }
 
-    /// the typeset matrix's height in the card: the page, at most 72 pt as the preview row allows
-    var height: CGFloat {
+    /// the typeset matrix's height in the card at `scale` (StepsPanel's, one for every row)
+    func height(_ scale: CGFloat) -> CGFloat {
         guard let paths else { return 22 }
-        return min(CGFloat(paths.heightPt), 72)
+        return CGFloat(paths.heightPt) * scale
+    }
+
+    /// One scale for every matrix in the card, so the tallest fits 96 pt: each had been cut to 72 pt on its own,
+    /// so a step with fractions in two rows drew its numbers smaller than the step before it
+    static func scale(_ rows: [StepRow]) -> CGFloat {
+        let tallest = rows.compactMap { $0.paths.map { CGFloat($0.heightPt) } }.max() ?? 0
+        return min(1, 96 / max(tallest, 1))
     }
 }
 
@@ -144,6 +151,17 @@ extension BarModel {
         grid = nil
         gridFocus = nil
         focusField?()
+        // and again once SwiftUI has taken the cells away: closed by a change to the line from outside (a history
+        // insert, a paste, a service) while a cell had the keys, the window was left with no first responder and
+        // typing and ⌃R went nowhere
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.grid == nil else { return }
+            self.focusField?()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+                guard let self, self.grid == nil else { return }
+                self.focusField?()
+            }
+        }
     }
 
     func setGridCell(_ cell: GridCell, _ value: String) {
@@ -344,8 +362,9 @@ struct MatrixGridPanel: View {
             .textFieldStyle(.plain)
             .multilineTextAlignment(.center)
             .font(.system(size: Theme.row))
+            // centred, as the typed value is (the 0 sat at the cell's left edge)
             .mutedPrompt("0", shown: value.isEmpty, size: Theme.row, color: Color.qMuted.opacity(0.5),
-                         kerning: Theme.displayTracking(Theme.row))
+                         kerning: Theme.displayTracking(Theme.row), alignment: .center)
             .foregroundStyle(Color.qInk)
             .padding(.horizontal, 6)
             .frame(width: Self.cellWidth, height: 34)
@@ -470,7 +489,8 @@ struct StepsPanel: View {
 
     var body: some View {
         let rows = model.stepRows
-        let total = rows.reduce(0) { $0 + $1.height } + CGFloat(max(0, rows.count - 1)) * Self.spacing
+        let scale = StepRow.scale(rows)
+        let total = rows.reduce(0) { $0 + $1.height(scale) } + CGFloat(max(0, rows.count - 1)) * Self.spacing
         ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: Self.spacing) {
                 ForEach(rows) { row in
@@ -478,7 +498,7 @@ struct StepsPanel: View {
                         Text(Pretty.matrix(row.op))
                             .font(.system(size: Theme.body))
                             .foregroundStyle(Color.qInk)
-                            .frame(maxWidth: .infinity, minHeight: row.height, alignment: .leading)
+                            .frame(maxWidth: .infinity, minHeight: row.height(scale), alignment: .leading)
                             .textSelection(.enabled)
                     } else {
                         HStack(alignment: .center, spacing: 10) {
@@ -489,9 +509,10 @@ struct StepsPanel: View {
                                 .lineLimit(2)
                                 .fixedSize(horizontal: false, vertical: true)
                             if let paths = row.paths {
-                                MathPreview(typeset: Typeset(paths: paths, doc: ""), leading: true)
+                                MathPreview(typeset: Typeset(paths: paths, doc: ""), leading: true,
+                                            most: row.height(scale))
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                    .frame(height: row.height)
+                                    .frame(height: row.height(scale))
                             } else {
                                 Text(row.display)
                                     .font(.system(size: Theme.body).monospacedDigit())
@@ -501,7 +522,7 @@ struct StepsPanel: View {
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
                         }
-                        .frame(height: row.height)
+                        .frame(height: row.height(scale))
                         .accessibilityElement(children: .ignore)
                         .accessibilityLabel("\(row.op): \(row.display)")
                     }

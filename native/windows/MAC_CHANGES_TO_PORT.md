@@ -337,6 +337,7 @@ Not ported: these landed under Already ported when this file was rebuilt. Lines 
 Open questions for the Mac side:
 
 - **Matrix grid gaps left on Windows:** Ctrl+G and Ctrl+R are fixed chords (the core's keybinds have no matrix actions; a user binding on the same chord wins); a click in a cell puts the caret at the end (double-click selects it) rather than under the pointer; the grid doesn't scroll sideways (8 columns need about 590 px); no UI Automation for the cells yet.
+- **Matrix grid and steps card, live-driven** (Mac `mac/Sources/Bar/Matrices.swift` `closeGrid`, `StepRow.height(_:)`/`StepRow.scale`, `StepsPanel`; `Bar/BarModel.swift` `evaluateLive`; `Bar/MathText.swift` `MathPreview.most`; `Bar/Theme.swift` `mutedPrompt(alignment:)`; QA item 73, driven on a re-signed copy): with a cell holding the keys, a change to the line from outside the grid (a history insert, a paste, a service) shut the grid but left the window with no focused field, so typing and ⌃R went nowhere; the line now takes the keys back. An empty cell's grey `0` sat at the cell's left edge while typed values are centred; now centred. The steps card shrank each matrix to 72 pt on its own, so a step with two rows of fractions drew smaller than the step before it; now one scale for the whole card (the tallest fits 96 pt). Windows: give the line focus when its grid closes by an outside edit; centre the cell placeholder; one scale for all step matrices.
 
 ### Sheet data, for reference
 
