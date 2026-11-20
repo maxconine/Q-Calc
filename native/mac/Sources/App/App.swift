@@ -169,6 +169,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "sheethover": DevSnapshot.sheetClick(arg, hover: true)
         // the front sheet window's pages: back, forward, a finished swipe (sheetswipe:back|forward), Open in New Window on
         // the row at x,y of the front sheet's content (sheetnew:<x>,<y>), and its pages written to a file (sheetpages:<file>)
+        // line:<file> writes the bar's line; sheetkey:<chord> and sheetkeys:<text>: a key or text straight to the front sheet (or its explanation
+        // popover), which works while q calc isn't the active app, as key: and keys: don't
+        case "line": try? overlay.model.text.write(toFile: arg, atomically: true, encoding: .utf8)
+        case "sheetkey": DevSnapshot.sheetKey(arg)
+        case "sheetkeys": DevSnapshot.sheetKeys(arg)
         case "sheetfilter": IdentityWindowController.front()?.setFilter(arg)
         // ↵ in the front sheet's filter: its first row, as if clicked
         case "sheetpick": IdentityWindowController.front()?.pickFirst()

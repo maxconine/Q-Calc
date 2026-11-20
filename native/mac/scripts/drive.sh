@@ -8,8 +8,11 @@
 # contrast:on|off (the bar as with Increase Contrast on), drop:<path>|<path>… (files dropped on the bar),
 # point:<x>,<y> (the pointer resting there in the bar), point:off (the pointer leaving the line), note[:<from>] and
 # noteask[:<from>] (a message's and a request's note in the corner, as while the bar is away).
-# Sheets: sheetclick:<title>:<x>,<y>[:<file>] and sheethover:… (points from the sheet's top left), sheetback,
-# sheetforward, sheetfilter:<text> (the front sheet's search, as if typed), sheetpick (↵ in it: the first row), sheetswipe:back|forward (a swipe that went through), sheetnew:<x>,<y> (Open in New Window on that row of
+# line:<file> (the bar's line written to the file).
+# Sheets: sheetclick:<title>:<x>,<y>[:<file>] and sheethover:… (points from the sheet's top left; title `popover` for the
+# explanation up beside a row), sheetback,
+# sheetforward, sheetkey:<chord> and sheetkeys:<text> (a key or text straight to the front sheet or its explanation, which
+# works while q calc is not the active app, as on a locked screen), sheetfilter:<text> (the front sheet's search, as if typed), sheetpick (↵ in it: the first row), sheetswipe:back|forward (a swipe that went through), sheetnew:<x>,<y> (Open in New Window on that row of
 # the front sheet), sheetpages:<file> (each sheet window's pages, the one up in [brackets]).
 # Graph: drag:<x1>,<y1>,<x2>,<y2>[,shift][,right][,steps] (pan, or orbit in 3D), scroll:<x>,<y>,<dy>[,<dx>][,precise][,shift]
 # (wheel lines, or two fingers in points), graphstate:<file> (the graph's window and view, key=value lines).

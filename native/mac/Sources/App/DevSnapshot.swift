@@ -272,7 +272,10 @@ enum DevSnapshot {
     /// moves the pointer there instead, for the box round what a click would copy.
     static func sheetClick(_ arg: String, hover: Bool = false) {
         let parts = arg.components(separatedBy: ":")
-        guard parts.count >= 2, let window = NSApp.windows.first(where: { $0.title == parts[0] && $0.isVisible }) else { return }
+        // `popover` is the explanation up beside a row (its Related links, Back, Try it in the bar)
+        guard parts.count >= 2, let window = NSApp.windows.first(where: {
+            $0.isVisible && (parts[0] == "popover" ? $0.className.contains("Popover") : $0.title == parts[0])
+        }) else { return }
         let xy = parts[1].split(separator: ",").compactMap { Double($0) }
         guard xy.count == 2, let content = window.contentView else { return }
         window.orderFrontRegardless()
@@ -298,9 +301,38 @@ enum DevSnapshot {
 
     /// A key press, as `enter`, `up`, `down`, `tab`, `escape`, `cmd+w`, `cmd+c`, `ctrl+d`…, to the key window.
     static func key(_ chord: String) {
-        guard let parsed = Chord(chord), let code = KeyNames.byName[parsed.key],
-              let window = NSApp.keyWindow ?? NSApp.windows.first(where: { $0 is GameNSWindow && $0.isVisible })
+        guard let window = NSApp.keyWindow ?? NSApp.windows.first(where: { $0 is GameNSWindow && $0.isVisible })
                 ?? NSApp.windows.first(where: { $0 is OverlayPanel && $0.isVisible }) else { return }
+        for event in keyEvents(chord, window) {
+            // posted, not sent: it comes through the event queue, so local key monitors see it as they do a real key
+            NSApp.postEvent(event, atStart: false)
+        }
+    }
+
+    /// The front sheet window, or its explanation popover while one is up: a key handed straight to it, as AppKit
+    /// would hand it on (⌘ chords as key equivalents first), so a sheet can be driven while q calc isn't the
+    /// active app (a locked screen, another app in front) and has no key window for `key:` to reach
+    static func sheetKey(_ chord: String) {
+        guard let window = sheetKeyWindow() else { return }
+        for event in keyEvents(chord, window) {
+            if event.type == .keyDown, event.modifierFlags.contains(.command), window.performKeyEquivalent(with: event) { return }
+            window.sendEvent(event)
+        }
+    }
+
+    /// Text typed into the front sheet's (or its popover's) field with the keys, as `keys:` does for the key window
+    static func sheetKeys(_ text: String) {
+        (sheetKeyWindow()?.firstResponder as? NSTextView)?.insertText(text, replacementRange: NSRange(location: NSNotFound, length: 0))
+    }
+
+    private static func sheetKeyWindow() -> NSWindow? {
+        guard let sheet = PeriodicPanel.front() else { return nil }
+        let popover = NSApp.windows.first { $0.isVisible && $0.className.contains("Popover") && $0.parent === sheet }
+        return popover ?? sheet
+    }
+
+    private static func keyEvents(_ chord: String, _ window: NSWindow) -> [NSEvent] {
+        guard let parsed = Chord(chord), let code = KeyNames.byName[parsed.key] else { return [] }
         let chars: String = {
             switch parsed.key {
             case "enter": return "\r"
@@ -315,13 +347,11 @@ enum DevSnapshot {
             default: return parsed.key.count == 1 ? parsed.key : ""
             }
         }()
-        for type in [NSEvent.EventType.keyDown, .keyUp] {
-            guard let event = NSEvent.keyEvent(with: type, location: .zero, modifierFlags: parsed.menuModifiers,
-                                               timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
-                                               context: nil, characters: chars, charactersIgnoringModifiers: chars,
-                                               isARepeat: false, keyCode: UInt16(code)) else { continue }
-            // posted, not sent: it comes through the event queue, so local key monitors see it as they do a real key
-            NSApp.postEvent(event, atStart: false)
+        return [NSEvent.EventType.keyDown, .keyUp].compactMap { type in
+            NSEvent.keyEvent(with: type, location: .zero, modifierFlags: parsed.menuModifiers,
+                             timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
+                             context: nil, characters: chars, charactersIgnoringModifiers: chars,
+                             isARepeat: false, keyCode: UInt16(code))
         }
     }
 }

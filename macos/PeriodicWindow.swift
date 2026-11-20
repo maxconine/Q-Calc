@@ -61,6 +61,19 @@ final class PeriodicPanel: NSPanel {
         wantsKeys = false
     }
 
+    // keys nothing in the panel took (the periodic table's ↵, ⌫ and esc; the sheets leave it unset)
+    var onKey: ((NSEvent) -> Bool)?
+
+    override func keyDown(with event: NSEvent) {
+        if onKey?(event) != true { super.keyDown(with: event) }
+    }
+
+    // esc reaches a panel as cancelOperation (which closes it) without a keyDown first
+    override func cancelOperation(_ sender: Any?) {
+        if let event = NSApp.currentEvent, event.type == .keyDown, onKey?(event) == true { return }
+        super.cancelOperation(sender)
+    }
+
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if isCommandWCloseKey(event) {
             close()
@@ -527,6 +540,9 @@ final class PeriodicWindowController: NSObject {
         // no zoom in/out: AppKit runs it as a threaded NSAnimation (_NSWindowTransformAnimation), and a thread was
         // left waiting forever about once per open and close (64 opens filled the user-interactive dispatch pool)
         panel.animationBehavior = .none
+        // with the table's keys (a click gave it them while the bar is away): ↵ puts the formula in as a click on it
+        // does, ⌫ takes the last element away, esc clears the formula and then closes the table
+        panel.onKey = { [weak self] event in self?.key(event) ?? false }
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.contentAspectRatio = size
         panel.contentMinSize = NSSize(width: size.width * 0.6, height: size.height * 0.6)
@@ -591,6 +607,26 @@ final class PeriodicWindowController: NSObject {
         picks = []
         showFormula()
         return true
+    }
+
+    private func key(_ event: NSEvent) -> Bool {
+        guard event.modifierFlags.intersection([.command, .option, .control]).isEmpty else { return false }
+        switch event.keyCode {
+        case 36, 76: // return, keypad enter
+            return putFormulaIn()
+        case 51: // delete
+            guard !picks.isEmpty else { return false }
+            picks.removeLast()
+            showFormula()
+            return true
+        case 53: // escape
+            guard !picks.isEmpty else { return false }
+            picks = []
+            showFormula()
+            return true
+        default:
+            return false
+        }
     }
 
     private func pick(_ symbol: String) {
