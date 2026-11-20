@@ -26,6 +26,8 @@ On Windows (branch `win-port-302`) all three pass, with the golden floors as set
 
 ## 1. Comes from the core: just test it
 
+- **Graphs: `sinc`, polar curves, region bounds, a ring of tops** (core `scientific/functions.rs` + `NAMES` `sinc`; `graph_native.rs` `polar_input`, `region_intent`, `drop_rings`): `sinc(pi)` is 0, `sinc(0)` 1; `graph r = 1 + cos(θ)`, `r = 2`, `r = cos(2θ)` draw (contours; labelled as typed), `r = θ` says only polar curves that repeat each turn draw; `graph z = x + y {x^2 + y^2 < 4}` is a disc of surface (it said "Write bounds like {0 < x < 3}"); `graph z = x^2+y^2 - (x^2+y^2)^2` lists one Max, not twelve. Test: `tests/graph_gaps.rs`; on Windows, check the graph panel draws the cardioid and the disc in 3D.
+
 - **A root or π in a matrix entry** (core `matrix.rs`: `roots`, `spaced`, `SPACED_ROW`): `det([√3 1; 0 2])` is 3.46410161514 (exact `2sqrt(3)`), `[√3 √2]` is two entries, `[1 -√2]` is `[1 -1.41421]`, `[π 1]` and `[2π 1; 0 1]` work. Your report; fixed on the Mac. Test: `roots_and_pi_in_entries` in `tests/linear_algebra_typed.rs`, then type `det([sqrt(3) 1; 0 2])` in the bar.
 
 - **Named constants in words** (core `named_constants.rs`, called from `Sheet::line` in `evaluate.rs`): the constants page of Mitiguy's appendix answer when typed, `Earth's axial tilt` is 23.45 deg, `mass of earth / mass of moon` is 81.3924, `gravity on mars` is 3.7 m/s². Test: `named_constants_answer_in_words` in `tests/requested_features.rs`, then type `Earth's axial tilt` in the bar. A second round added physics constants, each planet's mass, year, day and escape velocity, materials and fun facts; test `more_named_constants_answer_in_words`, then type `young's modulus of steel`.
@@ -201,6 +203,10 @@ QA item 28, Mac only (`mac/Sources/Games/PuzzleSpeech.swift`, new; `Crack/CrackP
 - **Trails, VoiceOver:** the arena read `arena` only; its value is now the score and the banner (`you 1, computer 2. 3`).
 
 To test on Windows: with Narrator, `equal` ↵ › practice, enter a guess and read the row. `trails` ↵ › easy, read the arena. `ember` ↵ › same keyboard, hold D and click another Q Calc window (ember stops).
+
+### Graph: `and` between equations (20 Nov 2026)
+
+QA item 39, Mac (`mac/Sources/Bar/GraphModel.swift` `splitGraphs`): a spaced `and` outside brackets splits equations as `;` does, so `graph sin(x) and cos(x)` draws both (it drew nothing). Case doesn't matter; `{0 < x and x < 3}` (inside braces) and `sand(x)` are left alone. Port to `windows/src/graph.rs` `split_graphs`; test `split_graphs("sin(x) and cos(x)") == ["sin(x)", "cos(x)"]` and `"x^2 {0 < x and x < 3}"` stays whole.
 
 ### Already ported
 

@@ -1255,6 +1255,18 @@ pub const TABLE: &[Builtin] = &[
     entry!("arcsec", 1, asec),
     entry!("arccot", 1, acot),
     entry!("sinh", 1, |a, _| num(jsmath::sinh(n(a, 0)))),
+    // sin(x)/x in radians, 1 at 0 (native only)
+    entry!("sinc", 1, |a, _| {
+        let x = n(a, 0);
+        let sn = jsmath::sin(x);
+        num(if x == 0.0 {
+            1.0
+        } else if sn.abs() <= 1e-14 * x.abs() {
+            0.0
+        } else {
+            sn / x
+        })
+    }),
     entry!("cosh", 1, |a, _| num(jsmath::cosh(n(a, 0)))),
     entry!("tanh", 1, |a, _| num(jsmath::tanh(n(a, 0)))),
     entry!("csch", 1, csch),

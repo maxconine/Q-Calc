@@ -154,11 +154,23 @@ extension BarModel {
         return 10 * p
     }
 
-    /// `graph a; b; c`: the first equation and the rest, split at the `;`s outside brackets.
+    /// `graph a; b; c`: the first equation and the rest, split at the `;`s outside brackets; a spaced ` and `
+    /// outside brackets splits too (`graph sin(x) and cos(x)`).
     static func splitGraphs(_ body: String) -> [String] {
         var parts: [String] = [], depth = 0, cur = ""
-        for ch in body {
+        let chars = Array(body)
+        var i = 0
+        while i < chars.count {
+            let ch = chars[i]
             if "([{".contains(ch) { depth += 1 } else if ")]}".contains(ch) { depth = max(0, depth - 1) }
+            if depth == 0, ch.isWhitespace, i + 4 < chars.count, chars[i + 4].isWhitespace,
+               String(chars[i + 1 ... i + 3]).lowercased() == "and", !cur.trimmingCharacters(in: .whitespaces).isEmpty {
+                parts.append(cur)
+                cur = ""
+                i += 5
+                continue
+            }
+            i += 1
             if ch == ";", depth == 0 {
                 parts.append(cur)
                 cur = ""

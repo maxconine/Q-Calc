@@ -369,8 +369,29 @@ pub fn native_intent(input: &str, options: &GraphOptions) -> Option<NativeIntent
     if let Some(p) = point_intent(body, options) {
         return Some(p);
     }
-    let mut intent = parse_graph_intent(&input, &options.functions, &options.variables)?;
-    intent.label = tidy_label(&intent.label);
+    let polar = match polar_input(body, options) {
+        Some(Err(label)) => {
+            return Some(NativeIntent {
+                intent: GraphIntent::new("", label),
+                points: Vec::new(),
+                error: Some(
+                    "Only a polar curve that repeats each turn of θ draws (not a spiral)".into(),
+                ),
+            });
+        }
+        p => p.and_then(Result::ok),
+    };
+    let input = polar.as_ref().map_or(input.as_str(), |p| p.0.as_str());
+    let mut intent = parse_graph_intent(input, &options.functions, &options.variables)?;
+    if intent.bounds_error.is_some()
+        && let Some(r) = region_intent(input, options)
+    {
+        intent = r;
+    }
+    intent.label = match &polar {
+        Some((_, label)) => label.clone(),
+        None => tidy_label(&intent.label),
+    };
     let mut error = None;
     if intent.contour == Some(ContourKind::Zero) && intent.bounds_error.is_none() {
         let mode = options.angle_mode.or(Some(AngleMode::Rad));
@@ -412,6 +433,127 @@ pub fn native_intent(input: &str, options: &GraphOptions) -> Option<NativeIntent
         points: Vec::new(),
         error,
     })
+}
+
+/// Native only: a polar curve `r = 1 + cos(θ)` (or `r(θ) = …`, `theta`) as the implicit curve in x and y it
+/// traces: ρ = √(x² + y²) and θ = atan2(y, x), with the point at θ + π for a negative r, so `r = cos(2θ)` has all
+/// four petals. θ is in the angle mode's unit, as atan2 gives it. Returns the line to graph and the label as typed, or Err(the
+/// label) for an r that doesn't repeat each turn (`r = θ`, which would draw one turn and a seam).
+fn polar_input(body: &str, options: &GraphOptions) -> Option<Result<(String, String), String>> {
+    static POLAR: Lazy = Lazy::new(|| {
+        js(
+            r"^r\s*(?:\(\s*(?:θ|theta)\s*\))?\s*=\s*([^{}]+?)\s*(\{.*)?$",
+            "s",
+        )
+    });
+    static THETA: Lazy = Lazy::new(|| js(r"θ|(?<![A-Za-z_])theta(?![A-Za-z0-9_])", ""));
+    static XY: Lazy = Lazy::new(|| js(r"(?<![A-Za-z_])[xyr](?![A-Za-z0-9_(])", ""));
+    let m = POLAR.captures(body).ok()??;
+    let rhs = jsre::group(&m, 1);
+    if jsre::test(&XY, rhs) || options.variables.contains_key("r") {
+        return None;
+    }
+    let deg = options.angle_mode == Some(AngleMode::Deg);
+    let label = tidy_label(&format!("r = {rhs}"));
+    let turn = if deg { 360.0 } else { std::f64::consts::TAU };
+    let f = compile_graph_y(
+        &jsre::replace_all(&THETA, rhs, |_| "(x)".to_string()),
+        options,
+        options.angle_mode.or(Some(AngleMode::Rad)),
+    );
+    let repeats = [0.3, 1.1, 2.5, 4.0].iter().all(|&t| {
+        let t = t * turn / std::f64::consts::TAU;
+        match (f.at(t), f.at(t + turn)) {
+            (Some(a), Some(b)) => (a - b).abs() <= 1e-9 * a.abs().max(1.0),
+            (None, None) => true,
+            _ => false,
+        }
+    });
+    if !repeats {
+        return Some(Err(label));
+    }
+    let at = |shift: &str| {
+        jsre::replace_all(&THETA, rhs, |_| format!("(atan2(y, x){shift})")).into_owned()
+    };
+    let rho = "sqrt(x^2 + y^2)";
+    let line = format!(
+        "graph ({rho} - ({})) * ({rho} + ({})) = 0 {}",
+        at(""),
+        at(if deg { " + 180" } else { " + pi" }),
+        jsre::group(&m, 2)
+    );
+    Some(Ok((line.trim().to_string(), label)))
+}
+
+/// Native only: bounds that aren't a range of x or y alone (`{x^2 + y^2 < 4}`, `{y < x}`, `{x y > 1}`) cut
+/// the graph to that region, as Desmos does: the expression is multiplied by a factor that is 1 inside and
+/// undefined outside (`0·√(4 − (x² + y²)) + 1`), so the surface, contour or curve breaks off at its edge. The
+/// ranges among them stay ranges. A curve y = f(x) takes only regions in x. None when a piece isn't a comparison.
+fn region_intent(input: &str, options: &GraphOptions) -> Option<GraphIntent> {
+    static TAIL: Lazy = Lazy::new(|| js(r"(?s)^(.*?)((?:\s*,?\s*\{[^{}]*\})+)\s*$", ""));
+    static GROUP: Lazy = Lazy::new(|| js(r"\{([^{}]*)\}", ""));
+    static CMP: Lazy = Lazy::new(|| js(r"<=|>=|=<|=>|≤|≥|<|>", ""));
+    static FREE_Y: Lazy = Lazy::new(|| js(r"(?<![A-Za-z_])y(?![A-Za-z0-9_])", ""));
+    let m = TAIL.captures(input).ok()??;
+    let head = jsre::group(&m, 1).trim_end().trim_end_matches(',');
+    let pieces: Vec<String> = GROUP
+        .captures_iter(jsre::group(&m, 2))
+        .flatten()
+        .flat_map(|g| {
+            jsre::group(&g, 1)
+                .split(',')
+                .map(|p| p.trim().to_string())
+                .collect::<Vec<_>>()
+        })
+        .filter(|p| !p.is_empty())
+        .collect();
+    let (fns, vars) = (&options.functions, &options.variables);
+    let (mut ranges, mut guards) = (Vec::new(), Vec::new());
+    for p in &pieces {
+        let as_range = format!("{head} {{{p}}}");
+        if parse_graph_intent(&as_range, fns, vars).is_some_and(|i| i.bounds_error.is_none()) {
+            ranges.push(p.clone());
+            continue;
+        }
+        // a < b < c is a < b and b < c; each side less than the next, so √(next − this) is real inside
+        let sides: Vec<&str> = CMP.split(p).flatten().map(str::trim).collect();
+        let ops: Vec<&str> = CMP.find_iter(p).flatten().map(|o| o.as_str()).collect();
+        if sides.len() < 2 || sides.iter().any(|s| s.is_empty()) {
+            return None;
+        }
+        for (k, op) in ops.iter().enumerate() {
+            let (a, b) = if op.contains('<') || *op == "≤" {
+                (sides[k], sides[k + 1])
+            } else {
+                (sides[k + 1], sides[k])
+            };
+            guards.push(format!("(0*sqrt(({b}) - ({a})) + 1)"));
+        }
+    }
+    if guards.is_empty() {
+        return None;
+    }
+    let ranged = if ranges.is_empty() {
+        head.to_string()
+    } else {
+        format!("{head} {{{}}}", ranges.join(", "))
+    };
+    let mut intent = parse_graph_intent(&ranged, fns, vars)?;
+    if intent.bounds_error.is_some() || intent.expression.is_empty() {
+        return None;
+    }
+    let guard = guards.join(" * ");
+    if intent.contour.is_none() && jsre::test(&FREE_Y, &guard) {
+        return None;
+    }
+    intent.expression = format!("({}) * {guard}", intent.expression);
+    let typed: Vec<String> = pieces
+        .iter()
+        .filter(|p| !ranges.contains(p))
+        .map(|p| format!("{{{p}}}"))
+        .collect();
+    intent.label = format!("{} {}", intent.label, typed.join(" "));
+    Some(intent)
 }
 
 // ---- implicit curves ----
@@ -1018,6 +1160,8 @@ pub fn surface_features(f: &dyn Fn(f64, f64) -> Option<f64>, w: Window) -> Vec<C
     let span = w.span();
     let h = span * 1e-5;
     let mut found: Vec<CriticalPoint> = Vec::new();
+    // whether each found point is level along one direction (a curvature a thousandth of the other)
+    let mut flat: Vec<bool> = Vec::new();
     for j in 2..N - 1 {
         for i in 2..N - 1 {
             let c = g2(i, j);
@@ -1111,10 +1255,14 @@ pub fn surface_features(f: &dyn Fn(f64, f64) -> Option<f64>, w: Window) -> Vec<C
                 .iter()
                 .any(|q| len2(q.x - p.x, q.y - p.y) <= span * 1e-5)
             {
+                let big =
+                    (fxx + fyy).abs() / 2.0 + (((fxx - fyy) / 2.0).powi(2) + fxy * fxy).sqrt();
+                flat.push(det.abs() <= 1e-3 * big * big);
                 found.push(p);
             }
         }
     }
+    drop_rings(&mut found, &flat, range);
     let mid = ((w.x.0 + w.x.1) / 2.0, (w.y.0 + w.y.1) / 2.0);
     found.sort_by(|p, q| len2(p.x - mid.0, p.y - mid.1).total_cmp(&len2(q.x - mid.0, q.y - mid.1)));
     found.truncate(MAX_SURFACE_POINTS);
@@ -1124,6 +1272,37 @@ pub fn surface_features(f: &dyn Fn(f64, f64) -> Option<f64>, w: Window) -> Vec<C
 
 /// z over the window for the 3D view, with the heights it frames (2% clipped off each end, so a pole doesn't
 /// flatten the rest).
+/// A ring (or line) of maxima or minima, `x² + y² − (x² + y²)²`'s top all round a circle, is found as a dozen
+/// points the grid happened to land on: points of one kind, level along one direction and at one height, three
+/// or more, are one feature, so only the first is kept. Isolated tops of one height (`sin x sin y`) curve both
+/// ways and stay.
+fn drop_rings(found: &mut Vec<CriticalPoint>, flat: &[bool], range: f64) {
+    let same = |p: &CriticalPoint, q: &CriticalPoint| {
+        p.kind == q.kind
+            && matches!(p.kind, CriticalKind::Max | CriticalKind::Min)
+            && match (p.z, q.z) {
+                (Some(a), Some(b)) => (a - b).abs() <= range * 1e-6,
+                _ => false,
+            }
+    };
+    let mut keep = vec![true; found.len()];
+    for i in 0..found.len() {
+        if !flat[i] || !keep[i] {
+            continue;
+        }
+        let ring: Vec<usize> = (i + 1..found.len())
+            .filter(|&j| keep[j] && flat[j] && same(&found[i], &found[j]))
+            .collect();
+        if ring.len() >= 2 {
+            for j in ring {
+                keep[j] = false;
+            }
+        }
+    }
+    let mut k = keep.into_iter();
+    found.retain(|_| k.next().unwrap_or(true));
+}
+
 pub fn surface_grid(f: &dyn Fn(f64, f64) -> Option<f64>, w: Window) -> SurfaceGrid {
     let n = SURFACE_CELLS;
     let (dx, dy) = ((w.x.1 - w.x.0) / n as f64, (w.y.1 - w.y.0) / n as f64);
