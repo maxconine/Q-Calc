@@ -76,3 +76,37 @@ fn complex_power_in_volt_amperes() {
         assert_eq!(show(t), want, "{t}");
     }
 }
+
+/// QA item 88: the leftovers of item 81.
+#[test]
+fn rectangular_impedance_with_a_trailing_unit() {
+    for (t, want) in [
+        ("100 + j377 Ω", "(100 + j377) Ω"),
+        ("100 - j377 Ω", "(100 - j377) Ω"),
+        ("100 + 377j Ω", "(100 + j377) Ω"),
+        ("100 + j377 kΩ", "(100 + j377) kΩ"),
+        ("100 + j377 Ω in kΩ", "(0.1 + j0.377) kΩ"),
+        ("100 + j377 V in polar", "390.037177715∠75.1442832297° V"),
+    ] {
+        assert_eq!(show(t), want, "{t}");
+    }
+    // a plain sum of reals with a unit is still a mismatch, and sqrt of ohms has no unit to show (as sqrt(4 Ω))
+    assert_eq!(show("100 + 377 Ω"), "");
+    assert_eq!(show("sqrt((3+4j) Ω)"), "");
+}
+
+#[test]
+fn apparent_power_keeps_volt_amperes() {
+    for (t, want) in [
+        ("5 MVA", "5 MVA"),
+        ("2 MVA + 1 MVA", "3 MVA"),
+        ("5000 kVA", "5 MVA"),
+        ("5e6 VA", "5 MVA"),
+        ("0.002 kVA", "2 VA"),
+        ("5 MVA in kVA", "5000 kVA"),
+        ("5 MVA to kW", "5000 kW"),
+        ("5 MW", "5 MW"),
+    ] {
+        assert_eq!(show(t), want, "{t}");
+    }
+}

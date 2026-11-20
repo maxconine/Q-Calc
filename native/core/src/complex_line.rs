@@ -351,6 +351,7 @@ pub fn rewrite(
             target = Some(unit);
         }
     }
+    let expr = rectangular_with_unit(&expr, variables, functions);
     let expr = aliased(&expr);
     Some(Rewritten {
         expr,
@@ -358,6 +359,39 @@ pub fn rewrite(
         polar,
         target,
     })
+}
+
+/// `100 + j377 Ω`, as engineers write an impedance: the unit after a rectangular number is the whole number's,
+/// `(100 + j377) Ω` (QA item 88). A plain sum of reals with a unit (`100 + 377 Ω`) stays a units mismatch.
+fn rectangular_with_unit(
+    expr: &str,
+    variables: &BTreeMap<String, f64>,
+    functions: &[String],
+) -> String {
+    static RECT: Lazy = Lazy::new(|| {
+        js(
+            &format!(
+                r"^\s*([+-]?\s*(?:{NUMBER}))\s*([+-])\s*(\((?:{NUMBER})i\)|(?:{NUMBER})\s*\*?\s*i|i)\s*([A-Za-zµμΩ][A-Za-z0-9µμΩ]*)\s*$"
+            ),
+            "",
+        )
+    });
+    let Some(c) = RECT.captures(expr).ok().flatten() else {
+        return expr.to_string();
+    };
+    let unit = jsre::group(&c, 4);
+    let spelled = unit.replace('Ω', "ohm").replace(['µ', 'μ'], "u");
+    if mine(&spelled, variables, functions)
+        || !matches!(mathjs::symbol(&spelled), Some(Val::Unit(_)))
+    {
+        return expr.to_string();
+    }
+    format!(
+        "({} {} {}) {unit}",
+        jsre::group(&c, 1),
+        jsre::group(&c, 2),
+        jsre::group(&c, 3)
+    )
 }
 
 static ALIAS_ARG: Lazy = Lazy::new(|| js(r"(?<![A-Za-z0-9_.])(?:angle|phase)\s*\(", "i"));
@@ -572,7 +606,7 @@ impl Walk {
                         z: a.z.conjugate(),
                         dims: a.dims,
                     }),
-                    // an angle, in the mode's unit
+                    // an angle, in the mode's unit (`deg`, as asin and atan2 answer in degree mode)
                     "arg" => {
                         let (unit, per) = if scope.angle_mode == AngleMode::Deg {
                             ("deg", std::f64::consts::PI / 180.0)

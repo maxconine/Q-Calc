@@ -230,10 +230,19 @@ fn scale_unit(base: &Unit, prefix: &Prefix) -> Option<UnitRef> {
         tbl()
             .list
             .iter()
-            .find(|u| u.dim == base.dim && same_scale(u.to_base, to_base))
+            .find(|u| {
+                u.dim == base.dim
+                    && same_scale(u.to_base, to_base)
+                    && volt_amperes(u) == volt_amperes(base)
+            })
             .cloned()
             .unwrap_or_else(|| std::sync::Arc::new(table::prefixed_unit(prefix, base, None))),
     )
+}
+
+/// native only: apparent power (VA, kVA, MVA) is its own ladder, not the watts' of the same size (QA item 88).
+fn volt_amperes(u: &Unit) -> bool {
+    u.symbol.ends_with("VA")
 }
 
 fn match_case_prefix_at_end<'a>(rest: &'a Cs, unit: &Unit) -> Option<Hit<'a>> {
@@ -1271,7 +1280,7 @@ fn fold_units(u: &[(UnitRef, f64)], sys: System) -> Vec<(UnitRef, f64)> {
 fn ladder_at(dim: &DimVec, size: f64) -> Option<UnitRef> {
     for rid in PREFIX_ROOTS {
         let root = id(rid);
-        if root.dim.vec() != *dim {
+        if root.dim.vec() != *dim || volt_amperes(&root) {
             continue;
         }
         let exp = jsmath::log10(size / si_of(&root));
@@ -2598,9 +2607,9 @@ fn mentions_unit_like_variable(src: &str, variables: &BTreeMap<String, f64>) -> 
 // ---- prefix ladders ----
 
 /// Units that step through SI prefixes with ⌥↑/⌥↓ (kg and t sit on the gram ladder).
-const PREFIX_ROOTS: [&str; 16] = [
+const PREFIX_ROOTS: [&str; 17] = [
     "m", "g", "s", "l", "j", "w", "pa", "hz", "n", "volt", "amp", "ohm", "farad", "henry",
-    "coulomb", "ev",
+    "coulomb", "ev", "va",
 ];
 
 fn prefix_exponent(p: &Prefix) -> f64 {
@@ -2630,7 +2639,7 @@ fn unit_by_id(uid: Option<&str>) -> Option<UnitRef> {
 fn ladder_place(unit: &Unit) -> Option<(UnitRef, f64)> {
     for rid in PREFIX_ROOTS {
         let root = id(rid);
-        if root.dim != unit.dim {
+        if root.dim != unit.dim || volt_amperes(&root) != volt_amperes(unit) {
             continue;
         }
         let exp = jsmath::log10(unit.to_base / root.to_base);
