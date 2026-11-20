@@ -209,6 +209,8 @@ nullity|colspace|rowspace|adj|adjugate|cofactor|pinv|svd|svals|lu|qr|cholesky|co
 isinvertible|isdiagonalizable|issymmetric|isorthogonal|isposdef";
 
 static NEW_CALL: Lazy = Lazy::new(|| new_call_re(&[]));
+/// NEW_CALL less the statistics, built once: compiling it per keystroke cost ~1.7 ms (QA item 32).
+static NON_STAT_CALL: Lazy = Lazy::new(|| new_call_re(&stat_names(&[])));
 static MAKER_CALL: Lazy = Lazy::new(|| js(&format!(r"(?<![A-Za-z_])(?:{MAKERS})\s*\("), "i"));
 static NEW_WORD_FORM: Lazy = Lazy::new(|| {
     js(
@@ -626,7 +628,11 @@ fn looks_new(expr: &str, functions: &[String]) -> bool {
     // `mean([1, 2, 3])` is a list for the calculator; the statistics take a matrix only when one is typed
     let stats_only = called
         && !(jsre::test(&TWO_D, &expr) || jsre::test(&SPACED_ROW, &expr))
-        && !jsre::test(&new_call_re(&stat_names(functions)), &expr);
+        && !(if functions.is_empty() {
+            jsre::test(&NON_STAT_CALL, &expr)
+        } else {
+            jsre::test(&new_call_re(&stat_names(functions)), &expr)
+        });
     (called && !stats_only) || jsre::test(&NEW_WORD_FORM, &expr)
 }
 

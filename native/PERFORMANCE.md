@@ -347,6 +347,27 @@ Release builds of both commits from clean worktrees, run interleaved twice each 
 - The new max is lines that were blank before and now answer: ∫₀^∞ sin x / x and sin²x / x² (Levin summation,
   10-13 ms, the full line only), `E = 1/2 m v^2 for v` (2.4 ms), `f(2); f(x) = x^3` (0.5-1 ms).
 
+### QA night, final pass (2026-11-20, `5ccf1d6` against `01ca28c`, engine and live path)
+
+Release builds from clean worktrees, interleaved twice each (item 32), same inputs as the table above plus 32 lines
+from items 45-106 (`late`).
+
+| | `5ccf1d6` | `01ca28c` | `01ca28c` + fix |
+|---|---|---|---|
+| engine, 269 golden inputs: keystroke median / p99, all keystrokes warm | 0.037 / 0.35 ms, 233 ms | 0.040 / 0.45 ms, 265-271 ms | 0.040 / 0.35 ms, 245 ms |
+| live path, golden: median / p99, all keystrokes once | 0.063 / 0.39 ms, 344 ms | 0.070 / 1.10 ms, 510 ms | 0.069 / 0.92 ms, 476 ms |
+| live path, late lines: p99 / max, total | 0.67 / 605 ms, 654 ms | 3.3 / 3.5 ms, 115 ms | 0.64 / 3.4 ms, 55 ms |
+
+- **Fixed:** item 36 made `looks_new` compile a regex of every matrix function name on each evaluation of a matrix
+  call with no 2D matrix typed (`sum([1, 2])`, `mean([1, 2`, `svals([1 2`): 1.7 ms a keystroke, 3.4 ms on the live
+  path (it runs again for the grey-paren fill). Now built once (`NON_STAT_CALL`), 0.03 ms
+  (`core/tests/matrix_stats_speed.rs`).
+- **Left, by design:** item 57's grey-paren fill (`live.rs` `filled_when_blank`) evaluates a blank half-typed line
+  again with its parens closed. Half-typed derivatives cost the most: `d/dt (theta^2 dot(the` fills to
+  `d/dt (theta^2 dot(the))`, 4-6 ms a keystroke (was 0.07). Typing `d/dt (theta^2 dot(theta))` once went from
+  3.7 to 25 ms in all. Most of the remaining +38% on the live path comes from the six `d/dt` golden lines.
+- The late lines' 605 ms max at `5ccf1d6` was `y = 1e17 x^1e9 - 1 for x` (item 99 fixed it).
+
 ### QA night, the app (2026-11-20, arm64, native only)
 
 Measured with `top` on re-signed copies of the dev build (`footprint`, `sample` and `vmmap` need Developer Mode on
