@@ -866,7 +866,17 @@ private struct HistoryRowView: View, Equatable {
         // native only: a solved row names its letter, `D = 26`; a click still inserts the number alone
         if let v = row.solve?.variable, !v.isEmpty, row.solve?.outcome == .roots || row.solve?.outcome == .complex {
             HStack(spacing: 4) {
-                Text("\(v) =").font(.system(size: Theme.body)).foregroundStyle(Color.qMuted).accessibilityHidden(true)
+                if rootLabels != nil, !row.hasDual {
+                    // the page's lead: the letter before a row's roots copies them all
+                    Button { model.copyAnswer(row.display) } label: {
+                        Text("\(v) =").font(.system(size: Theme.body)).foregroundStyle(Color.qMuted).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .hoverTip("Copy all the solutions")
+                    .accessibilityLabel("Copy all the solutions")
+                } else {
+                    Text("\(v) =").font(.system(size: Theme.body)).foregroundStyle(Color.qMuted).accessibilityHidden(true)
+                }
                 answerCells
             }
         } else {
@@ -874,8 +884,27 @@ private struct HistoryRowView: View, Equatable {
         }
     }
 
+    /// a solved row's roots, each its own button (the page's RootPicks), nil for any other row (QA item 98: one
+    /// `±1.41421` cell had inserted only the first root)
+    private var rootLabels: [String]? {
+        guard let s = row.solve, s.outcome == .roots, s.roots.count > 1 else { return nil }
+        let each = model.rowAnswers(row).answers.map(\.copy)
+        return each.count == s.roots.count ? TapeRules.rootLabels(display: row.display, each: each) : nil
+    }
+
     @ViewBuilder private var answerCells: some View {
-        if row.hasDual, let exact = row.exact {
+        if let roots = rootLabels {
+            if row.hasDual, let exact = row.exact {
+                // .tape-a-dual with RootPicks after the ≈: the exact side inserts the first root, as on the page
+                HStack(spacing: 6) {
+                    answer(Pretty.answer(exact), at: 1, picked: false, tip: "Insert exact value at the cursor")
+                    Text("≈").font(.system(size: Theme.body)).foregroundStyle(Color.qMuted).accessibilityHidden(true)
+                    rootCells(roots)
+                }
+            } else {
+                rootCells(roots)
+            }
+        } else if row.hasDual, let exact = row.exact {
             // the page's titles: exact value, then approximation
             // .tape-a-dual: exact ≈ approx, 6 pt apart, the ≈ in 13 pt muted
             HStack(spacing: 6) {
@@ -890,6 +919,23 @@ private struct HistoryRowView: View, Equatable {
                        : AppSettings.shared.answerForm == "exact" && row.exact != nil ? "Insert exact value at the cursor"
                        : "Insert approximation at the cursor")
         }
+    }
+
+    /// .tape-roots: each root inserts itself at full precision, ← → pick each; `, …` when there are more
+    private func rootCells(_ labels: [String]) -> some View {
+        HStack(spacing: 0) {
+            ForEach(Array(labels.enumerated()), id: \.offset) { k, label in
+                if k > 0 { separator(", ") }
+                answer(Pretty.answer(label), at: k + 1, picked: picked == k + 1, tip: "Insert this solution at the cursor")
+            }
+            if row.solve?.more == true { separator(", …") }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Solutions: click one to insert it")
+    }
+
+    private func separator(_ s: String) -> some View {
+        Text(s).font(.system(size: Theme.row)).foregroundStyle(Color.qAnswer).accessibilityHidden(true)
     }
 
     /// `at`: the answer this cell is (1 the exact half of a dual, 2 its ≈ half), nil for the one the row reads as.

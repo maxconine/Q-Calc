@@ -1205,6 +1205,8 @@ final class BarModel: ObservableObject {
 
     /// ↑ ↓ keep to the side ← → last chose (historyPickOn)
     private var sideIsExpr = false
+    /// the row and pick a ⇧-click or ⇧↵ just put in, still picked: ⌫ then edits the line (TapeRules.deleteEditsLine)
+    private var keptInsert: (row: Int, pick: Int)?
 
     private func land(on i: Int) {
         selected = i
@@ -1212,6 +1214,7 @@ final class BarModel: ObservableObject {
     }
 
     func moveSelection(up: Bool) {
+        keptInsert = nil
         if listMove(up: up) { return }
         if gamesShown {
             // in the games list ↑ starts at the game nearest the bar and climbs; ↓ past the last leaves it
@@ -1250,6 +1253,7 @@ final class BarModel: ObservableObject {
     /// ← → on a highlighted row (onSide)
     func pickSide(_ dir: Int) {
         guard let i = selected, rows.indices.contains(i) else { return }
+        keptInsert = nil
         let next = min(picks(rows[i]).answers.count, max(0, pick + dir))
         sideIsExpr = next == 0
         pick = next
@@ -1306,6 +1310,7 @@ final class BarModel: ObservableObject {
     private func finishRowInsert(_ piece: String, keep: Bool = false) {
         track("history.insert")
         guard keep else {
+            keptInsert = nil
             selected = nil
             tapeOpen = false
             insert(piece)
@@ -1322,6 +1327,7 @@ final class BarModel: ObservableObject {
             self.selected = sel
             self.pick = at
             self.sideIsExpr = side
+            self.keptInsert = (sel, at)
         }
         restore()
         DispatchQueue.main.async(execute: restore)
@@ -1749,7 +1755,13 @@ final class BarModel: ObservableObject {
             if !flags.contains(.shift) { _ = fillTourStep() || acceptCompletion() || acceptParens() || tabToCard() }
             return true
         case kVK_Delete, kVK_ForwardDelete:
-            // ⌘⌫, and (native only) a plain ⌫ or ⌦ on a selected row, deletes it; ⌘Z brings it back
+            // ⌘⌫, and (native only) a plain ⌫ or ⌦ on a selected row, deletes it; ⌘Z brings it back. Right after a
+            // ⇧-insert from that row a plain one edits the line instead (QA item 98)
+            if flags.isEmpty, TapeRules.deleteEditsLine(kept: keptInsert, selected: selected, pick: pick) {
+                keptInsert = nil
+                selected = nil
+                return false
+            }
             if selected != nil, flags.isEmpty || flags == [.command] { return deleteSelected() }
             return false
         case kVK_ANSI_Z:

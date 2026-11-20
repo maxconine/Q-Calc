@@ -101,11 +101,28 @@ pub fn unitless_answer(text: &str) -> String {
             "",
         )
     });
-    jsre::replace_all(&NUMBER_WITH_UNIT, text, |c| {
+    // native only (QA item 98): an exact form with a unit, `√(2) m`, `2sqrt(2) m/s`, `π/4 rad`, copies bare too (the
+    // page's pattern needs a digit last, so a bracketed root or a π kept its unit)
+    static EXACT_WITH_UNIT: Lazy = Lazy::new(|| {
+        js(
+            &format!(
+                r"(^|=\s*|\(\s*|,\s*|\sor\s+)([+\-−±]?{EXACT_PART}*(?:[√∛π]|sqrt|cbrt|pi){EXACT_PART}*)\s+{SHOWN_UNIT}(?=\s*$|\s*,|\s*\)|\s+or\b)"
+            ),
+            "",
+        )
+    });
+    let bare = jsre::replace_all(&NUMBER_WITH_UNIT, text, |c| {
+        format!("{}{}", jsre::group(c, 1), jstr::trim(jsre::group(c, 2)))
+    })
+    .into_owned();
+    jsre::replace_all(&EXACT_WITH_UNIT, &bare, |c| {
         format!("{}{}", jsre::group(c, 1), jstr::trim(jsre::group(c, 2)))
     })
     .into_owned()
 }
+
+// native only: a piece of an exact form (`2sqrt(2)`, `√(3)/2`, `3π`), brackets and the spelled roots included
+const EXACT_PART: &str = r"(?:[\d.,√∛π/^⁰¹²³⁴⁵⁶⁷⁸⁹⁻·×*()]|sqrt|cbrt|pi)";
 
 /// native only: a system's answer with fraction form off: `A = 15/2, B = 25/2` is `A = 7.5, B = 12.5`. A fraction
 /// that's part of a root or a π (`√2/2`, `2/3π`) stays as it is.
