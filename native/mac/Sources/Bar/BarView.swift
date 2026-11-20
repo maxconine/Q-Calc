@@ -758,6 +758,13 @@ private struct HistoryTape: View {
     }
 }
 
+/// the keys held for a click on a tape row (⇧ keeps the tape open, ⌥ leaves off the unit); the dev drive's
+/// `click:<x>,<y>,shift` holds them in `dev`, since a made click can't press the keyboard's
+enum TapeClick {
+    static var dev: NSEvent.ModifierFlags?
+    static var flags: NSEvent.ModifierFlags { dev ?? NSEvent.modifierFlags }
+}
+
 /// Not observing the model: a row redraws only when what it shows changes (`.equatable()`), not on every keystroke.
 private struct HistoryRowView: View, Equatable {
     let model: BarModel
@@ -787,7 +794,7 @@ private struct HistoryRowView: View, Equatable {
         GeometryReader { geo in
             HStack(spacing: 12) {
                 Button {
-                    let mods = NSEvent.modifierFlags
+                    let mods = TapeClick.flags
                     model.insertFromRow(index, answer: false, keep: mods.contains(.shift))
                 } label: {
                     exprText
@@ -895,7 +902,7 @@ private struct HistoryRowView: View, Equatable {
         return AnswerCell(text: text, split: unit, unitName: model.unitName(forAnswer: text), picked: picked, fill: fill, tip: tip + more,
                           hint: unit != nil ? "Inserts it at the cursor; with Shift the history stays open, with Option it goes in without its unit"
                               : "Inserts it at the cursor; with Shift the history stays open") {
-            let mods = NSEvent.modifierFlags
+            let mods = TapeClick.flags
             model.insertFromRow(index, answer: true, at: at, keep: mods.contains(.shift), bare: mods.contains(.option))
         }
         .onDrag { NSItemProvider(object: model.rowCopy(row) as NSString) }

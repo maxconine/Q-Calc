@@ -6,7 +6,7 @@
 # paste[:<system field>], snap:<path prefix> (a PNG per visible window), sleep:<seconds>, keys:<text> (typed into the
 # focused field), click:<x>,<y> (in the bar, points from its top-left), settings[:<tab index>], keybinds (the keybinds sheet), forget:<name>,
 # contrast:on|off (the bar as with Increase Contrast on), drop:<path>|<path>… (files dropped on the bar),
-# point:<x>,<y> (the pointer resting there in the bar), point:off (the pointer leaving the line), note[:<from>] and
+# click:<x>,<y>,shift|option|control|command (a click with those keys held), point:<x>,<y> (the pointer resting there in the bar), point:off (the pointer leaving the line), note[:<from>] and
 # noteask[:<from>] (a message's and a request's note in the corner, as while the bar is away).
 # line:<file> (the bar's line written to the file).
 # Tape: barkey:<chord> (a key straight to the bar's line, as on a locked screen: barkey:up, barkey:cmd+z), tapestate:<file>

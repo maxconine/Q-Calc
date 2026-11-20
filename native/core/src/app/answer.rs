@@ -450,12 +450,18 @@ fn copy_forms(shown: &str, full: &str) -> Vec<CopyForm> {
 fn row_answer(shown: &str, full: &str, unitless: bool) -> RowAnswer {
     // a reaction copies in ASCII, as the web's copyValue writes it (`2H2 + O2 -> 2H2O`)
     let copied = |t: &str| crate::app::touches::answer_copy(t, unitless);
+    // the brackets a ± answer inserts in (`(3.0 ± 0.1)`) are for the line, not a copy
+    let full_copy = if full.contains('±') && is_wrapped(full) {
+        &full[1..full.len() - 1]
+    } else {
+        full
+    };
     RowAnswer {
         insert: full.to_string(),
         bare: unitless_answer(full),
         copy: copied(shown),
-        copy_full: copied(full),
-        copy_as: copy_forms(shown, full),
+        copy_full: copied(full_copy),
+        copy_as: copy_forms(shown, full_copy),
     }
 }
 

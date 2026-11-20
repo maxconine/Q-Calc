@@ -783,6 +783,26 @@ fn tape_answers_insert_at_full_precision_and_copy_each_way() {
 }
 
 #[test]
+fn tape_full_precision_copy_of_a_measured_answer_has_no_insert_brackets() {
+    // QA item 95: ⌥⌘C on `3.0 ± 0.1` copied `(3.0 ± 0.1)`, the brackets ↵ puts it in the line with
+    use qcalc_core::app::answer::{AnswerForm, row_answers};
+    use qcalc_core::app::live::commit;
+    let row = commit(&req("3.0 ± 0.1"), &[], "a").row.unwrap();
+    let a = &row_answers(&row, AnswerForm::Approx, 6.0, true).answers[0];
+    assert_eq!(a.insert, "(3.0 ± 0.1)");
+    assert_eq!(a.copy, "3.0 ± 0.1");
+    assert_eq!(a.copy_full, "3.0 ± 0.1");
+    // Copy As lists it once, not again as a bracketed Full Precision
+    let texts: Vec<&str> = a.copy_as.iter().map(|f| f.text.as_str()).collect();
+    assert!(!texts.iter().any(|t| t.starts_with('(')), "{texts:?}");
+    let m = commit(&req("(2.0 ± 0.1) m * 3"), &[], "a").row.unwrap();
+    let a = &row_answers(&m, AnswerForm::Approx, 6.0, true).answers[0];
+    assert_eq!(a.copy_full, "6.0 ± 0.3");
+    let a = &row_answers(&m, AnswerForm::Approx, 6.0, false).answers[0];
+    assert_eq!(a.copy_full, "6.0 ± 0.3 m");
+}
+
+#[test]
 fn every_sheet_can_be_searched() {
     use qcalc_core::app::identities::{native_identity_sheet_by_id, native_sheet_ids};
     let ids = native_sheet_ids();

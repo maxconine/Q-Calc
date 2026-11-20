@@ -159,15 +159,27 @@ enum DevSnapshot {
         try? text.write(toFile: path, atomically: true, encoding: .utf8)
     }
 
-    /// A left click at `x,y` (points from the bar's top-left), sent through the window as a real click is.
+    /// A left click at `x,y` (points from the bar's top-left), sent through the window as a real click is;
+    /// `click:<x>,<y>,shift` / `,option` / `,control` / `,command` hold those keys for it (the event's flags, and the
+    /// ones a tape row reads, `TapeClick.flags`)
     static func click(_ spot: String, count: Int = 1) {
-        let xy = spot.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
+        let parts = spot.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+        let xy = parts.prefix(2).compactMap { Double($0) }
+        var flags: NSEvent.ModifierFlags = []
+        if parts.contains("shift") { flags.insert(.shift) }
+        if parts.contains("option") || parts.contains("alt") { flags.insert(.option) }
+        if parts.contains("control") || parts.contains("ctrl") { flags.insert(.control) }
+        if parts.contains("command") || parts.contains("cmd") { flags.insert(.command) }
         guard xy.count == 2, let window = NSApp.windows.first(where: { $0 is OverlayPanel && $0.isVisible }) else { return }
         let point = NSPoint(x: xy[0], y: window.frame.height - xy[1])
+        if !flags.isEmpty {
+            TapeClick.dev = flags
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { TapeClick.dev = nil }
+        }
         // a double-click (`dblclick:`) is two clicks, the second with a click count of 2, as AppKit sends them
         for n in 1...max(1, count) {
             for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
-                guard let event = NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                guard let event = NSEvent.mouseEvent(with: type, location: point, modifierFlags: flags, timestamp: ProcessInfo.processInfo.systemUptime,
                                                      windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: n,
                                                      pressure: type == .leftMouseDown ? 1 : 0) else { continue }
                 window.sendEvent(event)
