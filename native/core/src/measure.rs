@@ -55,6 +55,14 @@ static PLUS_MINUS_RE: Lazy = Lazy::new(|| {
     )
 });
 
+// `(6.02 ± 0.01)e23`: the exponent scales both parts (`6.02e23 ± 0.01e23`)
+static SCALED_RE: Lazy = Lazy::new(|| {
+    js(
+        r"\(\s*(\d+\.?\d*|\.\d+)\s*±\s*(\d+\.?\d*|\.\d+)\s*\)\s*e([+-]?\d+)(?![A-Za-z_0-9.(])",
+        "i",
+    )
+});
+
 // keep the sig figs of the argument
 const SIG_FNS: &[&str] = &[
     "sqrt", "cbrt", "sin", "cos", "tan", "csc", "sec", "cot", "asin", "acos", "atan", "acsc",
@@ -316,8 +324,15 @@ fn walk_binary(op: Op, a: &M, b: &M) -> Option<M> {
             Some(by_sig(v, js_min(a.sig, b.sig), unc))
         }
         Op::Pow => {
+            // an uncertain exponent: worst case of a^b over both ranges, for a positive base
             if b.unc > 0.0 {
-                return None;
+                if a.v <= 0.0 {
+                    return None;
+                }
+                let v = crate::eval::ops::js_pow(a.v, b.v);
+                let unc = v.abs() * ((b.v / a.v).abs() * a.unc + jsmath::ln(a.v).abs() * b.unc);
+                return (v.is_finite() && unc.is_finite())
+                    .then(|| by_sig(v, js_min(a.sig, b.sig), unc));
             }
             let v = crate::eval::ops::js_pow(a.v, b.v);
             if !v.is_finite() || (a.unc > 0.0 && a.v == 0.0) {
@@ -464,6 +479,11 @@ impl Walker<'_, '_> {
 /// Sig figs come from the literals and ± propagates worst case. None for anything not modelled.
 pub fn measure(text: &str, ctx: &MeasureContext<'_>) -> Option<Measured> {
     let src = fill_parens(&rewrite_typeset_mul(text.trim()));
+    let src = jsre::replace_all(&SCALED_RE, &src, |c| {
+        let e = jsre::group(c, 3);
+        format!("({}e{e} ± {}e{e})", jsre::group(c, 1), jsre::group(c, 2))
+    })
+    .into_owned();
     if src.is_empty() || src.contains('|') {
         return None;
     }
@@ -609,6 +629,17 @@ pub fn format_uncertain(v: f64, unc: f64, unc_digits: Option<&str>) -> Option<St
     }
     let u = jsnum::parse(&jsnum::to_precision(unc, figs)).unwrap_or(f64::NAN);
     let place = mag(u) - figs as f64 + 1.0;
+    // past 20 decimals `toFixed` reads 0.000… ± 0.000…: `6.02e-23 ± 1e-25`, like the large side's `6.02e+23 ± 1e+21`
+    if place < -20.0 {
+        let value = if v == 0.0 {
+            "0".to_string()
+        } else {
+            let figs = (mag(v) - place + 1.0).clamp(1.0, 100.0);
+            jsnum::to_exponential(v, figs as usize - 1)
+        };
+        let unc = jsnum::to_exponential(u, figs - 1);
+        return Some(format!("{} ± {}", unsigned(value), unc));
+    }
     let decimals = (-place).clamp(0.0, 20.0);
     let value = if place > 0.0 {
         let p = ten_to(place);

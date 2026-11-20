@@ -1811,7 +1811,8 @@ impl<'v> Parser<'v> {
         if let Some(amount) = amount {
             if let Some(unit) = self.parse_unit_ref() {
                 let raised = self.parse_unit_power(unit)?;
-                return self.parse_per_units(mul_qty(&amount, &raised));
+                let q = self.parse_per_units(mul_qty(&amount, &raised))?;
+                return self.parse_unit_uncertainty(&amount, q);
             }
             return Some(amount);
         }
@@ -1842,6 +1843,50 @@ impl<'v> Parser<'v> {
             out = div_qty(&out, &den)?;
         }
         Some(out)
+    }
+
+    /// `10 m ± 1 m`, `10 m ± 5 cm` or `10 m ± 1`: a ± after the unit, in the same dimension (a bare number is in
+    /// the value's unit). Typed digits are kept only when the ± is in the value's own unit.
+    fn parse_unit_uncertainty(&mut self, amount: &Qty, q: Qty) -> Option<Qty> {
+        if self.peek() != Some('±') {
+            return Some(q);
+        }
+        if q.si == 0.0 || amount.si == 0.0 || amount.prec.as_ref().is_some_and(|p| p.rel != 0.0) {
+            return None;
+        }
+        self.i += 1;
+        self.skip();
+        let start = self.i;
+        let n = self.parse_number()?;
+        let end = self.i;
+        let scale = q.si / amount.si;
+        let (u, same_unit) = match self.parse_unit_ref() {
+            Some(unit) => {
+                let raised = self.parse_unit_power(unit)?;
+                let u = self.parse_per_units(mul_qty(&n, &raised))?;
+                if u.dim != q.dim {
+                    self.incompatible = true;
+                    return None;
+                }
+                let same = n.si != 0.0 && ((u.si / n.si) / scale - 1.0).abs() < 1e-12;
+                (u.si, same)
+            }
+            None => (n.si * scale, true),
+        };
+        let typed: String = self.s[start..end]
+            .iter()
+            .filter(|c| !(is_space(**c) || **c == '+' || **c == '-'))
+            .collect();
+        Some(Qty {
+            prec: Some(Prec {
+                sig: amount.prec.as_ref().map_or(f64::INFINITY, |p| p.sig),
+                rel: (u / q.si).abs(),
+                digits: same_unit
+                    .then(|| typed_digits(&typed))
+                    .filter(|d| !d.is_empty()),
+            }),
+            ..q
+        })
     }
 
     /// A number as written: `2.50` carries 3 sig figs, `5.0 ± 0.1` / `10 ± 5%` an uncertainty, and a whole-number
