@@ -50,8 +50,18 @@ Do one subsection per branch, in this order, with the simplest and most used fir
 6. The working panel, Ctrl+W.
 7. Graph panel: implicit curves and key points first, then several equations and graph settings, then the 3D view.
 8. Tape: copy button and notes.
-9. Sheets: Related links, search everywhere, clicks with the bar up.
 9. Sheets: a click explains the equation.
+10. Sheets: Related links, search everywhere, clicks with the bar up.
+11. Input line: undo steps for paste, cut and brackets.
+12. Live answer: a stale closed form after a mode toggle.
+13. Complex answers (core only: just test it as in step 2).
+14. Tape: deleting rows, scrolling, saving on quit.
+15. Bar across displays; the tray icon's name.
+16. Cards and reply lines in dark.
+17. Graph: `and` between equations.
+18. Slots, then the two games subsections (slots/connect 4, then crack/ember/equal/24/trails).
+19. Effects: the Konami code's leftovers, the hotkey during a barrel roll.
+20. QA round, 20 Nov 2026: one line per branch, Mac lines only (the core lines are tested as in step 2).
 
 If several agents run in parallel, give each one a subsection from this list. The subsections touch different files.
 
