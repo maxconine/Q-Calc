@@ -265,8 +265,6 @@ New in the bench:
 | the 420 smoke's puff images dropped when the effect ends (they were cached for good) | after one 420: 63 → 30 MB (idle before it 24); while it plays, unchanged | kept |
 | one Core Image context for all of the smoke's puffs | the smoke's peak 160 → 259 MB | reverted |
 | ember's level pictures dropped when the game closes (a static cache) | open the level picker, close the game: 47.5 → 37.2 MB | kept |
-| QA 65: Typst's documents, paths and memos dropped (`clearCaches`, then `$ x^2 $` again) 30 s after a hide | 200 committed lines then hidden, `top` mem at 5 s / 37 s: 67 / 67 MB (old build 95 / 95). Where the growth is: a fresh launch with the bar up is 37 MB; the first 6 plain lines (`3/7 + 2/3`) add 16 MB (first use of the typing path: regexes, Typst's first real page, the tape), then each new kind of line ~1-2 MB once (units, solve, matrix `^-1`, d/dx, ∫: 53 → 63 MB over 54 lines), then ~1 MB a 50 lines, flat by ~500 (item 51). The first graph adds ~8 MB, a 3D surface ~5 and an implicit one ~9 more, each once, kept after the hide; no 60 MB step seen (item 51's figure included `snap:`, which alone took the app 67 → 201 MB for a moment and 85 MB after) | reverted |
-| QA 69: the evaluation and app-logic threads' compiled regexes freed 30 s after a hide, as on Windows (`Engine.ownCompiled`/`releaseCompiled`, then `malloc_zone_pressure_relief`; warm-up steps at the next showing; other threads keep seek, `jsre::seek_on_every_thread`) | re-signed copy, 12 committed lines (units, solve, d/dx, ∫, matrix, phrases) then hidden, `top` mem shown / 5 s / 40 s hidden / shown again and typed: 72 / 72 / 71 / 73 MB. 668-672 statics freed in 7-16 ms, but malloc gives back almost no pages (pressure relief 0 KB): the regexes' blocks sit among longer-lived ones in its tiny and small regions, so the freed space is reused rather than returned. Windows needed its own slabs for that (heap.rs); a Mac equivalent is a malloc zone for `building_compiled` allocations | kept (caps regrowth; real return needs the zone) |
 
 Before and after: the build this night started from (`native` at 405b057) against the last commit. Three
 invocations each with `--runs 2`, interleaved, so each cell spans six sessions (launches: 9 cold and 15
@@ -326,6 +324,8 @@ Found on the way, not fixed:
 
 ### QA night, second pass (2026-11-20, `af283a8` against `5ccf1d6`, engine only)
 
+`af283a8` is where the night's second pass started, `5ccf1d6` the commit measured partway through it.
+
 Release builds of both commits from clean worktrees, run interleaved twice each on the M4 Pro (load 8-9). The new
 `bench/live_bench.rs` times `app::live` per prefix (what a keystroke asks the core for); `engine_bench` times
 `evaluate_sheet` alone.
@@ -346,3 +346,28 @@ Release builds of both commits from clean worktrees, run interleaved twice each 
   fix), and `A^-1` now has steps. Both are fixes, kept.
 - The new max is lines that were blank before and now answer: ∫₀^∞ sin x / x and sin²x / x² (Levin summation,
   10-13 ms, the full line only), `E = 1/2 m v^2 for v` (2.4 ms), `f(2); f(x) = x^3` (0.5-1 ms).
+
+### QA night, the app (2026-11-20, arm64, native only)
+
+Measured with `top` on re-signed copies of the dev build (`footprint`, `sample` and `vmmap` need Developer Mode on
+this Mac); the item numbers are `native/QA_BACKLOG.md`'s.
+
+- **Hidden means idle** (item 2): a stacked line's caret blink (every 0.53 s, ~50 ms CPU per 30 s) and the empty
+  bar's example rotation (every 2.5 s) kept running while the bar was hidden. They stop at a hide and start at the
+  next show, so the hidden bar uses 0 ms of CPU. Warm launch ~100 ms, idle 27 MB. `parity/measure.sh` prints the
+  hidden-CPU line.
+- **Long runs** (item 51): show/hide 300 times, 1,000 committed lines, 50 graphs, 50 games, 50 sheet and periodic
+  opens. Memory levels off (74 MB at 500 lines, flat to 1,000), no hidden wakeups, no WebContent process left.
+  Each sheet or periodic table open and close left a thread waiting in AppKit's threaded zoom animation (26 → 95
+  threads; 64 fill the user-interactive pool); those panels no longer animate. `scripts/test-leaks.sh` checks it.
+- **Slow lines found by fuzzing** (item 93): `x^1e-5 = 1e21 for x` took 15 s (an exact power in bignums, now the
+  float power), a tiny decimal like `1e-10` walked a 10^7-step Farey search (1.5 s, now instant), and
+  `y = x^1e-5 + 1 m for x` overflowed the engine's stack (now capped). Left at the time: a few isolate lines at
+  absurd numbers (0.5–1.5 s) and implicit 3D surfaces (0.3–0.6 s), item 99.
+- **Typing** (items 61, 100): every golden input typed a character at a time through `app::live` (19,636 inputs,
+  306k prefixes, twice): none over 50 ms.
+
+| change | measured | kept? |
+|---|---|---|
+| QA 65: Typst's documents, paths and memos dropped (`clearCaches`, then `$ x^2 $` again) 30 s after a hide | 200 committed lines then hidden, `top` mem at 5 s / 37 s: 67 / 67 MB (old build 95 / 95). Where the growth is: a fresh launch with the bar up is 37 MB; the first 6 plain lines (`3/7 + 2/3`) add 16 MB (first use of the typing path: regexes, Typst's first real page, the tape), then each new kind of line ~1-2 MB once (units, solve, matrix `^-1`, d/dx, ∫: 53 → 63 MB over 54 lines), then ~1 MB a 50 lines, flat by ~500 (item 51). The first graph adds ~8 MB, a 3D surface ~5 and an implicit one ~9 more, each once, kept after the hide; no 60 MB step seen (item 51's figure included `snap:`, which alone took the app 67 → 201 MB for a moment and 85 MB after) | reverted |
+| QA 69: the evaluation and app-logic threads' compiled regexes freed 30 s after a hide, as on Windows (`Engine.ownCompiled`/`releaseCompiled`, then `malloc_zone_pressure_relief`; warm-up steps at the next showing; other threads keep seek, `jsre::seek_on_every_thread`) | re-signed copy, 12 committed lines (units, solve, d/dx, ∫, matrix, phrases) then hidden, `top` mem shown / 5 s / 40 s hidden / shown again and typed: 72 / 72 / 71 / 73 MB. 668-672 statics freed in 7-16 ms, but malloc gives back almost no pages (pressure relief 0 KB): the regexes' blocks sit among longer-lived ones in its tiny and small regions, so the freed space is reused rather than returned. Windows needed its own slabs for that (heap.rs); a Mac equivalent is a malloc zone for `building_compiled` allocations | kept (caps regrowth; real return needs the zone) |

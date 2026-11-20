@@ -48,13 +48,13 @@ What it does:
 
 ## Games and the 420 / 67 / 69 effects
 
-The calculator never makes a web view. Pong, connect 4, ultimate, crack, equal and 24 / countdown are native: their
-rules are in the Rust core (`native/core/src/games/`) and they draw in SwiftUI inside the shell in
-`Sources/Games/Shell/` (its README says how a game plugs in; `Sources/Games/NativeGames.swift` lists them). The games
-not ported yet (`ember`, `trails`) open a window with one `WKWebView` (`Sources/Games/GameWindowController.swift`)
-loading `Contents/Resources/web/games.html#<kind>`; closing the window releases it and the WebContent process exits
-(`parity/game-lifecycle.sh` checks this). The effects load `games.html?x=…#smoke|arms|fold` in a click-through
-panel over the bar and tear down after the animation.
+The calculator never makes a web view. Every game is native (pong, connect 4, ultimate, crack, equal, 24 /
+countdown, ember & frost, trails and the native-only slots): their rules are in the Rust core
+(`native/core/src/games/`) and they draw in SwiftUI inside the shell in `Sources/Games/Shell/` (its README says how a
+game plugs in; `Sources/Games/NativeGames.swift` lists them). The 420 / 67 / 69 effects are native too
+(`Sources/Effects/EggOverlay.swift`). A game kind not listed in `NativeGames` would still open a window with one
+`WKWebView` (`Sources/Games/GameWindowController.swift`) loading `Contents/Resources/web/games.html#<kind>`; closing
+the window releases it and the WebContent process exits (`parity/game-lifecycle.sh` checks this).
 
 `games.html` is a Vite entry (`games.html`, `src/games.tsx`) that mounts the existing `GameShell` and game panels
 with today's bridge messages (`game`, `gameSave`, `nickname`, `copy`, `escapeLayer`, `gameFullscreen`, plus
@@ -65,7 +65,30 @@ Without it the app still builds, and games say the build has none.
 ## Development tools
 
 - `scripts/drive.sh` sends commands to a running dev build (show, type:…, key:…, snap:…, theme:…); release builds
-  don't listen. `snap:` writes a PNG of every window, drawn by the app itself, plus its view tree.
+  don't listen. `snap:` writes a PNG of every window, drawn by the app itself, plus its view tree. Its header lists
+  every command; the groups:
+  - the bar: `type:`, `keys:`, `key:<chord>` (a real key event), `click:<x>,<y>[,shift|option|control|command]`,
+    `point:<x>,<y>` / `point:off`, `hover:on|off` (the edge tools), `contrast:on|off`, `drop:<path>|…`, `line:<file>`,
+    `clear`;
+  - keys straight to a window, which work with q calc in the background or the screen locked (where the posted
+    keys of `key:` reach nothing): `barkey:<chord>` (the bar's line) with `tapestate:<file>` (the tape's open, pick
+    and rows), `sheetkey:` / `sheetkeys:` (the front sheet or its explanation) with `sheetexplain:<file>`,
+    `sheetclick:`, `sheetfilter:`, `sheetpick`, `sheetpages:<file>`, `gamekey:<chord>[:down|:up]` / `gamekeys:` with
+    `gamestate:<file>` and `closegame`, and `winkey:<title>:<chord>` / `winkeys:` (any window by title, e.g.
+    Settings' tabs);
+  - the graph: `drag:`, `scroll:`, `pinch:<x>,<y>,<m>`, `dblclick:` and `graphstate:<file>` (window, view, `chip=`,
+    `home=`);
+  - messages: `card`, `ask`, `note`, `noteask`, `sendfile:<name>:<path>`, `sendclip:<name>:<text>`, `savefile`,
+    `forget:<name>`;
+  - the app: `threads:<file>` (every thread's name, queue and stack, for leak hunts) and `bench:<spec>` (`DevBench`).
+  `QCALC_DEV_ID=<bundle id>` drives a copy of the dev build re-signed under another id, with its own support folder,
+  defaults and shortcut, so checks never touch the Q Calc Dev in use.
+- `scripts/test-*.sh` are the check scripts: headless ones build a file of rules (`TapeRules`, `CardRules`,
+  `Symbols`/`Undo`, `Theme`, …) with `Tests/<name>/main.swift` into a command-line binary; driven ones run against a
+  re-signed copy (they say so in their header). `scripts/test-all.sh` runs every one of them and the web-view app's
+  `macos/*_test.swift` and prints a pass/fail table (about 4 minutes; `--headless` needs no app; names pick some,
+  e.g. `test-all.sh tape sys`). A new `test-*.sh` has to be listed in it, or it says so. The Rust tests are
+  `cargo test -p qcalc-core`, separately.
 - `parity/run.sh` renders each parity scenario with the current app's own page (`parity/WebReference.swift` loads
   `dist/quick.html` with the web-view app's boot flags) and with the dev build, in light and dark, into
   `parity-screenshots/`.
@@ -81,7 +104,9 @@ Sources/Bar       BarModel (state and keys), BarView, InputField (NSTextView), G
                   History, Symbols (typed words to symbols), TextRules (pretty answers, chaining, commands),
                   RadicalText, MathText (the Typst hook)
 Sources/Engine    EngineService (QCalcCore glue, graph fallback), EngineThread (lanes, newest wins)
-Sources/Games     GameWindowController, EffectOverlay
+Sources/Games     NativeGames (kind → view), Shell (the window, lobby, relay), one folder per game,
+                  GameWindowController (opens a game; the web view fallback)
+Sources/Effects   EggOverlay (420 / 67 / 69, divide by zero, Euler, Konami, barrel roll), EggRules
 Sources/Messages  MessageHistory (each conversation, kept in messages.json), MessageThreads (`messages`, the thread
                   view under the bar, the settings History rows); native only
 Sources/Settings  UnitSettings (choices from the engine)
