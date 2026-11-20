@@ -45,6 +45,7 @@ struct ClipBlock: View {
     var who = ""
     var lines = 8
     @State private var copied = false
+    @State private var flashes = FlashTicket()
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -82,7 +83,8 @@ struct ClipBlock: View {
 
     private func flash() {
         copied = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { copied = false }
+        let ticket = flashes.start()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { if flashes.current(ticket) { copied = false } }
     }
 }
 
@@ -133,7 +135,7 @@ struct FileBlock: View {
         .padding(.horizontal, 8)
         .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(Color.qFillHover))
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("\(mine ? "Your" : "\(who)’s") file \(file.name), \(files.sizeText(file.size)). \(note)")
+        .accessibilityLabel(CardRules.fileLabel(mine: mine, who: who, name: file.name, size: files.sizeText(file.size), note: note))
     }
 
     @ViewBuilder private func actions(_ t: MessageFiles.Transfer) -> some View {

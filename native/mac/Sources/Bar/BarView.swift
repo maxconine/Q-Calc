@@ -1271,8 +1271,22 @@ private struct CardView: View {
             model.cardFocusRequest = nil
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(card.ask ? "\(card.from) wants to message you" : "Message from \(card.from): \(card.text)")
-        // the click on the name or words that opens the thread, for VoiceOver and Full Keyboard Access
-        .accessibilityAction(named: "Open messages with \(card.from)") { if !card.ask { model.openThread(card.from) } }
+        .accessibilityLabel(CardRules.label(from: card.from, ask: card.ask, clip: card.clip != nil, file: card.file?.name, text: card.text))
+        // the click on the name or words that opens the thread, for VoiceOver and Full Keyboard Access (a request has
+        // no thread to open, so no action that does nothing)
+        .modifier(CardOpenAction(name: card.from, on: !card.ask) { model.openThread(card.from) })
+    }
+}
+
+private struct CardOpenAction: ViewModifier {
+    let name: String
+    let on: Bool
+    let open: () -> Void
+    func body(content: Content) -> some View {
+        if on {
+            content.accessibilityAction(named: "Open messages with \(name)", open)
+        } else {
+            content
+        }
     }
 }

@@ -1755,7 +1755,9 @@ final class BarModel: ObservableObject {
         for card in MessageFiles.shared.takeCards() where !threadOpen(with: card.from) {
             cards.insert(card, at: 0)
         }
-        if cards.count > 3 { cards = Array(cards.prefix(3)) }
+        // three at most; a card being answered stays and an older one goes (CardRules.kept)
+        cards = CardRules.kept(cards) { self.replyFocused == $0.id || !$0.draft.isEmpty || $0.reply == .sending }
+        if let id = replyFocused, !cards.contains(where: { $0.id == id }) { replyFocused = nil }
         // VoiceOver hears each new card (they hide on their own after 10 s)
         for card in cards.reversed() where !before.contains(card.id) {
             let kind = card.ask ? "ask" : card.clip != nil ? "clip" : card.file != nil ? "file" : "text"
@@ -1796,7 +1798,10 @@ final class BarModel: ObservableObject {
 
     func setDraft(_ id: String, _ draft: String) {
         guard let i = cards.firstIndex(where: { $0.id == id }) else { return }
+        guard cards[i].draft != draft else { return }
         cards[i].draft = draft
+        // a failure note goes once the reply is edited, as the thread's does
+        if case .failed = cards[i].reply { cards[i].reply = .idle }
     }
 
     func sendReply(_ id: String) {
@@ -1809,6 +1814,8 @@ final class BarModel: ObservableObject {
             guard let self, let j = self.cards.firstIndex(where: { $0.id == id }) else { return }
             if status == "delivered" {
                 Self.announce("sent")
+                // a reply is a message to them: Tab offers their name first, as after `message` or a thread reply
+                Messages.shared.noteSent(card.from)
                 self.cards[j].reply = .sent
                 self.cards[j].draft = ""
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
