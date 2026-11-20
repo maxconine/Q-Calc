@@ -67,7 +67,23 @@ pub fn modulo(a: f64, b: f64) -> Result<f64, EvalError> {
 }
 
 /// Exact n/d for x, or None when x isn't a fraction with a small denominator (like π or √2).
+/// The search is 10,000 steps for an irrational, and a graph asks it at every sample for the same exponent
+/// (`x^pi = y` took 2 s on a tall contour grid), so the last answer is kept per thread.
 pub fn as_ratio(x: f64) -> Option<(f64, f64)> {
+    thread_local! {
+        static LAST: std::cell::Cell<Option<(u64, Option<(f64, f64)>)>> = const { std::cell::Cell::new(None) };
+    }
+    if let Some((bits, r)) = LAST.get()
+        && bits == x.to_bits()
+    {
+        return r;
+    }
+    let r = as_ratio_search(x);
+    LAST.set(Some((x.to_bits(), r)));
+    r
+}
+
+fn as_ratio_search(x: f64) -> Option<(f64, f64)> {
     for d in 1..=10_000 {
         let d = f64::from(d);
         let n = jsnum::round(x * d);

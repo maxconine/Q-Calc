@@ -389,6 +389,11 @@ impl Canon {
                     if !crate::jsnum::is_integer(valor) || valor <= 0.0 {
                         return err("Non-integer exponent is not allowed");
                     }
+                    // the coefficients are a dense list, so `Q^1e10` (fuzzed, from `x^1e-10 = 1 m for x`) asked
+                    // for 160 GB; past a million terms the caller keeps the power as it is
+                    if valor > MAX_CANONICAL_DEGREE {
+                        return err("exponent too large");
+                    }
                     let v = valor as usize;
                     for i in self.max_expo + 1..v {
                         *self.coef(i) = Some(0.0);
@@ -412,6 +417,9 @@ impl Canon {
         }
     }
 }
+
+/// The highest power `polyToCanonical` writes out (native only; mathjs has no limit).
+const MAX_CANONICAL_DEGREE: f64 = 1_000_000.0;
 
 /// `polyToCanonical(node)`: a one-variable polynomial in descending powers (`3 x ^ 2 - x + 1`).
 fn poly_to_canonical(node: &Node) -> Result<Node, SymError> {
