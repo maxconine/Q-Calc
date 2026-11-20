@@ -32,6 +32,9 @@ enum Theme {
     private static let mutedContrast = dynamic(0x636366, 0xaeaeb2)
     static var muted: NSColor { increaseContrast ? mutedContrast : mutedBase }
     static func muted(contrast: Bool) -> NSColor { contrast ? mutedContrast : mutedBase }
+    /// muted faded to `alpha` (the ghost, the squiggle, the placeholder): with Increase Contrast the faded greys fell
+    /// to 2.1–3.8:1 even on the stronger muted, so they draw it whole (5.5:1 and up, WCAG AA)
+    static func mutedFaded(_ alpha: CGFloat) -> NSColor { increaseContrast ? mutedContrast : mutedBase.withAlphaComponent(alpha) }
     static let answer = dynamic(0x1d1d1f, 0xf5f5f7)
     static let answerHover = dynamic(0x48484a, 0xd1d1d6)
     static let accent = dynamic(0x1d7a4c, 0x63d392)
@@ -83,6 +86,8 @@ extension Color {
     private static let qMutedBase = Color(nsColor: Theme.muted(contrast: false))
     private static let qMutedContrast = Color(nsColor: Theme.muted(contrast: true))
     static var qMuted: Color { Theme.increaseContrast ? qMutedContrast : qMutedBase }
+    /// muted at `opacity`, or the whole Increase Contrast muted (Theme.mutedFaded)
+    static func qMutedFaded(_ opacity: Double) -> Color { Theme.increaseContrast ? qMutedContrast : qMutedBase.opacity(opacity) }
     static let qAnswer = Color(nsColor: Theme.answer)
     static let qAnswerHover = Color(nsColor: Theme.answerHover)
     static let qAccent = Color(nsColor: Theme.accent)

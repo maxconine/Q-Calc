@@ -920,7 +920,7 @@ final class BarTextView: NSTextView {
         // the text view leaves the clip at its text container (the inset off the top): the stacks, roots and grown
         // brackets reach into the room above it, and were cut off there
         NSBezierPath(rect: bounds.intersection(dirtyRect)).setClip()
-        let attrs: [NSAttributedString.Key: Any] = [.font: Self.lineFont, .foregroundColor: Theme.muted.withAlphaComponent(0.8), .kern: Theme.displayTracking(Self.fontSize)]
+        let attrs: [NSAttributedString.Key: Any] = [.font: Self.lineFont, .foregroundColor: Theme.mutedFaded(0.8), .kern: Theme.displayTracking(Self.fontSize)]
         // .quick-inferred: the grey parens the engine would add, ahead of the text and after it
         let inferred: [NSAttributedString.Key: Any] = [.font: Self.lineFont, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)]
         // .quick-squiggle: a wavy line, muted at 70%, under where a blank answer stops reading
@@ -949,7 +949,7 @@ final class BarTextView: NSTextView {
                 up.toggle()
             }
             path.lineWidth = 1
-            Theme.muted.withAlphaComponent(0.7).setStroke()
+            Theme.mutedFaded(0.7).setStroke()
             path.stroke()
         }
         drawHoles()

@@ -136,9 +136,11 @@ private struct EqualGame: View {
         _m = StateObject(wrappedValue: EqualModel(practice: practice))
     }
 
-    private var hit: RGBA { colors.dark ? RGBA(0x3f9e64) : RGBA(0x2e8b57) }
-    private var near: RGBA { colors.dark ? RGBA(0xc7a33a) : RGBA(0xc9a227) }
-    private var miss: RGBA { colors.dark ? RGBA(0x545458) : RGBA(0x8e8e93) }
+    // Increase Contrast (native only): white on the page's yellow is 2.4:1 and on its green 3.3–4.2:1, the light
+    // grey 3.3:1; these take each to 4.9:1 or more (WCAG AA) and keep their hue
+    private var hit: RGBA { colors.contrast ? (colors.dark ? RGBA(0x2c7a4c) : RGBA(0x1f7a47)) : colors.dark ? RGBA(0x3f9e64) : RGBA(0x2e8b57) }
+    private var near: RGBA { colors.contrast ? (colors.dark ? RGBA(0x8c6d14) : RGBA(0x8a6a00)) : colors.dark ? RGBA(0xc7a33a) : RGBA(0xc9a227) }
+    private var miss: RGBA { colors.contrast && !colors.dark ? RGBA(0x636366) : colors.dark ? RGBA(0x545458) : RGBA(0x8e8e93) }
     private func fill(_ mk: EqualMark) -> RGBA { mk == .hit ? hit : mk == .near ? near : miss }
     private func speech(_ mk: EqualMark) -> PuzzleSpeech.Mark { mk == .hit ? .hit : mk == .near ? .near : .miss }
 
@@ -336,17 +338,25 @@ private struct EqualKey: View {
     @Environment(\.gameColors) private var colors
     @State private var hover = false
 
+    /// Increase Contrast, dark: a "not in it" key at 70% (#545458 on the card) was 1.3:1 from an unused key (#58585c),
+    /// so it sinks instead: the page's own dark, muted letters, an edge and no shadow (7.7:1 text, 2.4:1 from a key)
+    private var sunk: Bool { mark == .miss && colors.contrast && colors.dark }
+
     var body: some View {
         Button(action: action) {
             Text(label)
                 .font(.game(GameMetrics.fsBody, .semibold))
-                .foregroundColor(fill != nil ? .white : colors.ink.color)
+                .foregroundColor(sunk ? colors.muted.color : fill != nil ? .white : colors.ink.color)
                 .padding(.horizontal, GameMetrics.sp1)
                 .frame(minWidth: wide ? 46 : 30, minHeight: 30, maxHeight: 30)
                 .background(RoundedRectangle(cornerRadius: GameMetrics.radiusS)
-                    .fill((fill ?? (hover ? colors.control.mix(0.92, colors.ink) : colors.control)).color))
+                    .fill((sunk ? colors.page : fill ?? (hover ? colors.control.mix(0.92, colors.ink) : colors.control)).color))
+                .overlay {
+                    if sunk { RoundedRectangle(cornerRadius: GameMetrics.radiusS).strokeBorder(colors.line.color, lineWidth: 1) }
+                }
                 .boxShadow(fill == nil ? colors.controlShadow : [], radius: GameMetrics.radiusS)
-                .opacity(mark == .miss ? 0.7 : 1)
+                // with Increase Contrast a miss stays whole (white on #8e8e93 at 70% was 2.2:1)
+                .opacity(mark == .miss && !colors.contrast ? 0.7 : 1)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

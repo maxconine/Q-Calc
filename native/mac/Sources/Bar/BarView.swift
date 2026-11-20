@@ -241,7 +241,7 @@ private struct Composer: View {
                     Text("Calculate")
                         .font(.system(size: Theme.display))
                         .tracking(Theme.displayTracking(Theme.display))
-                        .foregroundStyle(Color.qMuted.opacity(0.8))
+                        .foregroundStyle(Color.qMutedFaded(0.8))
                         .allowsHitTesting(false)
                         .accessibilityHidden(true)
                 }
@@ -299,7 +299,7 @@ struct LiveAnswerView: View {
             // .live-example: the example's answer, muted at 70%, fading with it
             ExampleFade(id: example.id) {
                 AnswerText(text: Pretty.answer(example.answer), size: Theme.display)
-                    .foregroundStyle(Color.qMuted.opacity(0.7))
+                    .foregroundStyle(Color.qMutedFaded(0.7))
                     .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
             }
             .accessibilityHidden(true)
@@ -324,7 +324,7 @@ struct LiveAnswerView: View {
         } else if model.live.isBlank, let steady = model.steady {
             // .live-steady: never the answer's colour, gone after a pause
             AnswerText(text: model.pretty(steady), size: Theme.display)
-                .foregroundStyle(Color.qMuted.opacity(0.5))
+                .foregroundStyle(Color.qMutedFaded(0.5))
                 .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
                 .accessibilityHidden(true)
         } else if let solve = model.live.solve, solve.outcome != .roots, solve.outcome != .complex {
@@ -682,7 +682,7 @@ private struct EdgeTool<Label: View>: View {
             content
                 .font(.system(size: Theme.caption, weight: .medium))
                 .viewTracking(0.02 * Theme.caption)
-                .foregroundStyle(active || (hover && alignLeft) ? Color.qAnswer : hover ? Color.qMuted : Color.qMuted.opacity(0.72))
+                .foregroundStyle(active || (hover && alignLeft) ? Color.qAnswer : hover ? Color.qMuted : Color.qMutedFaded(0.72))
                 .padding(.vertical, 4)
                 .padding(.horizontal, alignLeft ? 6 : 9)
                 .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(pressed ? Color.qFillSelected : hover ? Color.qFillHover : .clear))
