@@ -214,6 +214,16 @@ To test on Windows: with Narrator, `equal` ↵ › practice, enter a guess and r
 
 QA item 39, Mac (`mac/Sources/Bar/GraphModel.swift` `splitGraphs`): a spaced `and` outside brackets splits equations as `;` does, so `graph sin(x) and cos(x)` draws both (it drew nothing). Case doesn't matter; `{0 < x and x < 3}` (inside braces) and `sand(x)` are left alone. Port to `windows/src/graph.rs` `split_graphs`; test `split_graphs("sin(x) and cos(x)") == ["sin(x)", "cos(x)"]` and `"x^2 {0 < x and x < 3}"` stays whole.
 
+### Graph: zoom about the pointer in y too, implicit surfaces' readout (20 Nov 2026)
+
+QA item 52, Mac (`mac/Sources/Bar/GraphModel.swift` `zoomGraph`/`scrollGraph`, `Bar/GraphPanel.swift`; driven test `mac/scripts/test-graph.sh`, new drive commands `drag:`, `scroll:`, `graphstate:`):
+
+- **Wheel / two-finger zoom on a 2D plot** kept x under the pointer but scaled y about the middle, so the point under the pointer slid up or down. y now scales about the pointer too (`atY`, its fraction up the plot); a plot of x and y (implicit, polar, contour; no held y window) moves its y centre the same way. Pinch and the head's buttons still zoom about the middle.
+- **Implicit surface, 3D hover:** the readout asked the engine for z at the pointer's (x, y), which an implicit surface hasn't got one of (a torus's hole read `z -0.2`, its dot drawn off the surface); it now reads the mesh's own point under the pointer.
+- **Implicit surface alone:** the "Critical points — None in this domain" list under it is left out.
+
+To test on Windows: `graph x^2`, wheel near the top-left corner (the curve there stays under the pointer); `graph (sqrt(x^2+y^2)-2)^2+z^2=1`, hover the torus (x, y, z satisfy the equation; no critical points list).
+
 ### Effects: the Konami code's leftovers, the hotkey during a barrel roll (20 Nov 2026)
 
 QA item 29, Mac only (`mac/Sources/Effects/EggRules.swift`, new; `Effects/EggOverlay.swift`, `Bar/BarModel.swift`, `App/OverlayController.swift`; test `mac/scripts/test-eggs.sh`). Check the Windows bar for the same:

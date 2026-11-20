@@ -385,7 +385,7 @@ extension BarModel {
     /// pans), a mouse wheel zooms about the middle. Pinching zooms too. False (the scroll goes on) outside 3D.
     /// Two fingers (or a wheel) over the plot, 2D or 3D: up/down zooms (about `at`, the pointer's fraction across a
     /// 2D plot), shift pans. True when it was the graph's.
-    func scrollGraph(_ event: NSEvent, size: CGSize, at: Double = 0.5) -> Bool {
+    func scrollGraph(_ event: NSEvent, size: CGSize, at: Double = 0.5, atY: Double = 0.5) -> Bool {
         guard let g = graph, size.width > 0, size.height > 0 else { return false }
         if event.hasPreciseScrollingDeltas {
             // momentum after the fingers lift would keep it going; only the gesture itself counts
@@ -396,12 +396,12 @@ extension BarModel {
             } else {
                 // two fingers up/down zoom (as Onshape): fingers up zooms in, whatever the natural-scrolling setting
                 let up = (event.isDirectionInvertedFromDevice ? -event.scrollingDeltaY : event.scrollingDeltaY) / size.height
-                if up != 0 { zoomGraph(exp(-up * 2.5), at: at) }
+                if up != 0 { zoomGraph(exp(-up * 2.5), at: at, atY: atY) }
             }
         } else {
             let lines = event.scrollingDeltaY
             guard lines != 0 else { return true }
-            zoomGraph(exp(-lines * 0.08), at: at)
+            zoomGraph(exp(-lines * 0.08), at: at, atY: atY)
         }
         return true
     }
@@ -415,17 +415,22 @@ extension BarModel {
     }
 
     /// zoomAt: the x window about its centre (or `at`, a fraction across), kept within 1e-6 … 1e6 wide; a y or z
-    /// window that's set scales with it
-    func zoomGraph(_ factor: Double, at: Double = 0.5) {
+    /// window that's set scales with it, a 2D y window about `atY` (a fraction up), so the point under the pointer
+    /// stays put both ways, as Desmos zooms
+    func zoomGraph(_ factor: Double, at: Double = 0.5, atY: Double = 0.5) {
         guard var g = graph, factor.isFinite, factor > 0, !graphPrefs.lockViewport else { return }
         let (lo, hi) = Self.scaled(g.xMin, g.xMax, by: factor, at: at, log: g.logX)
         guard hi - lo >= 1e-6, hi - lo <= 1e6 || g.logX else { return }
         (g.xMin, g.xMax) = (lo, hi)
         if !g.shows3D, g.kind == .curve { Self.holdY(&g) }
         if let fy = g.fixedY {
-            let (a, b) = Self.scaled(fy.lowerBound, fy.upperBound, by: factor, at: 0.5, log: g.logY)
+            let (a, b) = Self.scaled(fy.lowerBound, fy.upperBound, by: factor, at: g.shows3D ? 0.5 : atY, log: g.logY)
             g.fixedY = a...b
             if !g.shows3D { (g.yMin, g.yMax) = (a, b) }
+        } else if !g.shows3D, g.kind != .curve, g.yMax > g.yMin {
+            // a plot of x and y (one scale for both) centres on yCenter: it moves so the pointer's y stays put
+            let pivot = g.yMin + (g.yMax - g.yMin) * atY, c = g.yCenter ?? (g.yMin + g.yMax) / 2
+            g.yCenter = pivot + (c - pivot) * factor
         }
         if let fz = g.fixedZ {
             let (a, b) = Self.scaled(fz.lowerBound, fz.upperBound, by: factor, at: 0.5, log: false)

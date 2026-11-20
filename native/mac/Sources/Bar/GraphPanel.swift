@@ -102,7 +102,8 @@ struct GraphPanel: View {
                     .padding(.vertical, 12)
             } else {
                 plot
-                details
+                // an implicit surface alone has no critical points to list ("None in this domain" read as a fault)
+                if !(state.implicitSurface && state.layers.allSatisfy(\.isBlank)) { details }
             }
         }
         .padding(.top, 12)
@@ -290,7 +291,10 @@ struct GraphPanel: View {
                         guard !state.shows3D else { return model.scrollGraph(event, size: size) }
                         let left = Self.pad.left * scale, w = (Self.svgW - Self.pad.left - Self.pad.right) * scale
                         let at = min(1, max(0, (p.x - left) / w))
-                        return model.scrollGraph(event, size: CGSize(width: w, height: size.height), at: at)
+                        // and up the plot (the view is flipped), so the point under the pointer stays put in y too
+                        let top = Self.pad.top * scale, h = (plotH - Self.pad.top - Self.pad.bottom) * scale
+                        let atY = h > 0 ? min(1, max(0, 1 - (p.y - top) / h)) : 0.5
+                        return model.scrollGraph(event, size: CGSize(width: w, height: size.height), at: at, atY: atY)
                     },
                     magnify: { [model] m in model.zoomGraph(1 / (1 + m)) },
                     hover: { p in hover = p.map { CGPoint(x: $0.x / scale, y: $0.y / scale) } },
@@ -1257,7 +1261,10 @@ struct GraphPanel: View {
             let x = v.xLo + (hit.0 + 1) / 2 * (v.xHi - v.xLo), y = v.yLo + (hit.1 + 1) / 2 * (v.yHi - v.yLo)
             let layerInput = hit.layer == 0 ? nil : g.layers[hit.layer - 1].input
             let zGrid = v.zLo + (hit.2 + 1) / 2 * (v.zHi - v.zLo)
-            let z = model.graphReadoutZ(x, y, input: layerInput) ?? zGrid
+            // an implicit surface (`x^2 + y^2 + z^2 = 1`) has no one z over (x, y): the mesh's own point under the
+            // pointer (asking the engine gave a z off the surface, inside a torus's hole)
+            let mesh = hit.layer == 0 ? g.implicitSurface : !(g.layers[hit.layer - 1].surface?.mesh.isEmpty ?? true)
+            let z = mesh ? zGrid : model.graphReadoutZ(x, y, input: layerInput) ?? zGrid
             if z.isFinite, let q = v.project(x, y, z).0 {
                 onSurface = true
                 let guide = ink.copy(alpha: 0.6) ?? ink

@@ -182,6 +182,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             try? lines.joined(separator: "\n").write(toFile: arg, atomically: true, encoding: .utf8)
         // point:<x>,<y> rests the pointer there in the bar (the hover label), point:off leaves the line
         case "point": DevSnapshot.point(arg)
+        // drag:<x1>,<y1>,<x2>,<y2>[,shift][,right][,steps] and scroll:<x>,<y>,<dy>[,<dx>][,precise][,shift] in the bar
+        // (the graph's pan, orbit and zoom); graphstate:<file> writes the graph's window and view
+        case "drag": DevSnapshot.drag(arg)
+        case "scroll": DevSnapshot.scroll(arg)
+        case "graphstate": DevSnapshot.graphState(overlay.model, to: arg)
         // what settings' Remove / Unblock does for a name
         case "forget": Messages.shared.forget(arg)
         case "closegame": overlay.closeGame()
