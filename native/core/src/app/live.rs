@@ -325,6 +325,8 @@ fn half_typed_index_call(expr: &str) -> bool {
         let mut depth = 0i32;
         let mut commas = 0;
         let mut letter = false;
+        // after the first comma: the bounds as typed (`n = 1..10`, or `1, 10` for the default index)
+        let mut bounds = String::new();
         for &c in &chars[at + 1..] {
             match c {
                 '(' | '[' | '{' => depth += 1,
@@ -333,8 +335,19 @@ fn half_typed_index_call(expr: &str) -> bool {
                 c if c.is_alphabetic() => letter = true,
                 _ => {}
             }
+            if commas > 0 {
+                bounds.push(c);
+            }
         }
-        letter && commas < 3
+        // QA item 100: bounds already typed (`Σ(n^2, n = 1..10`, `Σ(n^2, 1, 10`, `Σ(n^2, n=1, 10`) read as the grey paren closes them
+        let ranged = bounds
+            .split_once("..")
+            .is_some_and(|(_, hi)| !hi.trim().is_empty());
+        let from = bounds
+            .split_once('=')
+            .map_or(bounds.as_str(), |(_, from)| from);
+        let numeric = commas == 2 && !from.chars().any(char::is_alphabetic);
+        letter && commas < 3 && !ranged && !numeric
     })
 }
 
