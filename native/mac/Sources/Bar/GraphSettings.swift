@@ -74,11 +74,11 @@ struct GraphSettingsView: View {
             ? "The window across. Type numbers or pi; Step is the gap between numbered lines (blank picks one)."
             : name == "z" ? "How high the box reaches. Step is the gap between numbered lines."
             : "The window up and down. Log spaces 1, 10, 100… evenly, for values that grow fast.") {
-            NumberField(value: lo) { set($0 ?? lo, hi) }.frame(width: 96)
+            NumberField(value: lo, label: "\(name) from") { set($0 ?? lo, hi) }.frame(width: 96)
             Text("to").font(.system(size: Theme.small)).foregroundStyle(Color.qMuted)
-            NumberField(value: hi) { set(lo, $0 ?? hi) }.frame(width: 96)
+            NumberField(value: hi, label: "\(name) to") { set(lo, $0 ?? hi) }.frame(width: 96)
             Text("step").font(.system(size: Theme.small)).foregroundStyle(Color.qMuted).padding(.leading, 4)
-            NumberField(value: step, placeholder: "auto") { setStep($0) }.frame(width: 56)
+            NumberField(value: step, placeholder: "auto", label: "\(name) step") { setStep($0) }.frame(width: 56)
             if let log {
                 Choice(["Linear", "Log"], at: log ? 1 : 0) { setLog($0 == 1) }
             }
@@ -102,9 +102,9 @@ struct GraphExportView: View {
                     WrapRow(spacing: 6, leading: true) {
                         Cell("Label key points", on: labelPoints, tip: "Write each point's kind and (x, y) beside it") { labelPoints.toggle() }
                         Text("x axis").font(.system(size: Theme.small)).foregroundStyle(Color.qMuted).padding(.leading, 4)
-                        FieldBox { TextField("x", text: Binding(get: { g.xLabel }, set: { model.setGraphAxis(xLabel: $0) })) }.frame(width: 90)
+                        FieldBox { TextField("x", text: Binding(get: { g.xLabel }, set: { model.setGraphAxis(xLabel: $0) })).accessibilityLabel("x axis name") }.frame(width: 90)
                         Text(g.shows3D ? "z axis" : "y axis").font(.system(size: Theme.small)).foregroundStyle(Color.qMuted)
-                        FieldBox { TextField(g.shows3D ? "z" : "y", text: Binding(get: { g.yLabel }, set: { model.setGraphAxis(yLabel: $0) })) }.frame(width: 90)
+                        FieldBox { TextField(g.shows3D ? "z" : "y", text: Binding(get: { g.yLabel }, set: { model.setGraphAxis(yLabel: $0) })).accessibilityLabel(g.shows3D ? "z axis name" : "y axis name") }.frame(width: 90)
                         Button(action: save) {
                             Label("Save picture", systemImage: "square.and.arrow.down")
                                 .font(.system(size: Theme.small, weight: .semibold))
@@ -212,6 +212,8 @@ struct FieldBox<Content: View>: View {
 struct NumberField: View {
     let value: Double?
     var placeholder = ""
+    /// what VoiceOver calls it: the placeholder alone (`auto`, or none) doesn't say which field it is
+    var label = ""
     let commit: (Double?) -> Void
     @State private var text = ""
     @FocusState private var focused: Bool
@@ -238,7 +240,7 @@ struct NumberField: View {
     }
 
     var body: some View {
-        FieldBox { TextField(placeholder, text: $text) }
+        FieldBox { TextField(placeholder, text: $text).accessibilityLabel(label.isEmpty ? placeholder : label) }
             .focused($focused)
             .onAppear { text = Self.show(value) }
             .onChange(of: value) { if !focused { text = Self.show($0) } }
@@ -278,6 +280,7 @@ struct GraphEquations: View {
                             .textFieldStyle(.plain)
                             .font(.system(size: Theme.small))
                             .focused($focus, equals: layer.id)
+                            .accessibilityLabel("Equation \(i + 2)")
                     }
                     if let error = layer.error, !layer.isBlank {
                         Text(error).font(.system(size: Theme.caption)).foregroundStyle(Color.qMuted).lineLimit(1)
@@ -292,6 +295,7 @@ struct GraphEquations: View {
                         }
                         .buttonStyle(.plain)
                         .hoverTip("Remove")
+                        .accessibilityLabel("Remove equation \(i + 2)")
                     }
                 }
             }

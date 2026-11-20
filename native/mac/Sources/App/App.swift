@@ -273,6 +273,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         } else {
             button.toolTip = "Q Calc" + (settings.activeHotKey.map { ": \($0.title)" } ?? "")
         }
+        // VoiceOver hears the name, and the warning when there is one (the icon alone had no label)
+        button.setAccessibilityLabel(none ? "Q Calc, no shortcut set" : "Q Calc")
+        button.setAccessibilityHelp(button.toolTip)
     }
 
     // a dot in the top right corner, cut out of the icon so it reads at menu bar size; still a template
@@ -298,6 +301,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             button.image = statusBarImage()
             button.imageScaling = .scaleProportionallyDown
             button.toolTip = "Q Calc"
+            button.setAccessibilityLabel("Q Calc")
             // files dropped on the Q open the bar, which asks who they're for
             statusDrop = StatusDrop(button) { [weak self] urls in
                 guard let self else { return }

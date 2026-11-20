@@ -25,4 +25,13 @@ enum TapeRules {
     static func spoken(expr: String, display: String, note: Bool) -> String {
         note || display.isEmpty ? (note ? "Note \(expr)" : expr) : "\(expr) equals \(display)"
     }
+
+    /// What VoiceOver hears once typing pauses (native only; the page's live answer is aria-live): "equals" and the
+    /// answer shown. Nothing for an empty line, a blank answer, an answer that only repeats the line (`5`), or the
+    /// same answer read last time (a space typed, a unit retyped).
+    static func liveSpoken(answer: String, text: String, last: String) -> String? {
+        let a = answer.trimmingCharacters(in: .whitespaces), t = text.trimmingCharacters(in: .whitespaces)
+        guard !a.isEmpty, !t.isEmpty, a != t, a != last else { return nil }
+        return "equals \(a)"
+    }
 }

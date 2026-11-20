@@ -32,6 +32,12 @@ check("empty tape: nowhere", TapeRules.scrollTarget(selected: nil, count: 0), Op
 check("answer row", TapeRules.spoken(expr: "2^10", display: "1024", note: false), "2^10 equals 1024")
 check("note row has no equals", TapeRules.spoken(expr: "call Sam", display: "", note: true), "Note call Sam")
 check("blank answer has no equals", TapeRules.spoken(expr: "f(x) = x", display: "", note: false), "f(x) = x")
+// VoiceOver: the live answer once typing pauses
+check("live answer read", TapeRules.liveSpoken(answer: "1024", text: "2^10", last: ""), Optional("equals 1024"))
+check("same answer not read twice", TapeRules.liveSpoken(answer: "1024", text: "2^10 ", last: "1024"), Optional<String>.none)
+check("blank answer not read", TapeRules.liveSpoken(answer: " ", text: "2^", last: "1024"), Optional<String>.none)
+check("empty line not read", TapeRules.liveSpoken(answer: "1024", text: "", last: ""), Optional<String>.none)
+check("answer that repeats the line not read", TapeRules.liveSpoken(answer: "5", text: "5", last: ""), Optional<String>.none)
 
 print(failures == 0 ? "all tape checks pass" : "\(failures) failed")
 exit(failures == 0 ? 0 : 1)

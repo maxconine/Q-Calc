@@ -161,6 +161,12 @@ QA item 16, Mac only (`mac/Sources/Bar/TapeRules.swift`, new; `BarModel.swift` `
 
 To test on Windows: ↑ to a mid-tape row of a long tape, ⌫: the tape stays there and the next row is picked; type `12`, right-click another row › Delete, then ⌫: the line reads `1`, the tape keeps its rows. Mac check: `mac/scripts/test-tape.sh`.
 
+### Cards and reply lines in dark: the page's dark shadows (20 Nov 2026)
+
+QA item 21, Mac only (`mac/Sources/Bar/Surfaces.swift`, new; used in `Systems.swift`, `Matrices.swift`, the message card's reply line in `BarView.swift` and the thread's in `MessageThreads.swift`). The `sys` panel's card, the matrix grid and steps cards and the reply lines drew the light `--shadow-card` / `--control-shadow` in dark too: a black 10% ring on a #252527 card (no edge) and a 6% drop. They now take the page's dark values: card ring white 10%, drop black 30%; control ring black 30%, drop black 25% (light unchanged).
+
+To test on Windows: in dark, `sys` ↵ and `matrix 2x2` ↵; the card has a faint light edge. A message card's reply line has a dark ring and a visible drop.
+
 ### Already ported
 
 The stacked fractions round (TeX sizes, Desmos keys, grown brackets, stacked history rows, answers shrinking as one) and the newer graph round were ported for 3.0.2 (branch `win-port-302`, 8 Nov 2026). What stays different on Windows:

@@ -307,8 +307,8 @@ struct MatrixGridPanel: View {
         }
         .padding(10)
         .background(RoundedRectangle(cornerRadius: Theme.radiusCard).fill(Color.qBgTape)
-            .shadow(color: .black.opacity(0.06), radius: 1.5, y: 1))
-        .overlay(RoundedRectangle(cornerRadius: Theme.radiusCard).strokeBorder(Color.black.opacity(0.1), lineWidth: 0.5))
+            .shadow(color: Surfaces.cardShadow, radius: 1.5, y: 1))
+        .overlay(RoundedRectangle(cornerRadius: Theme.radiusCard).strokeBorder(Surfaces.cardRing, lineWidth: 0.5))
         .padding(.horizontal, 12)
         .padding(.bottom, 12)
         // the cell takes the keys once the panel is in the window (the bar's line holds them as ↵ opens it)
@@ -512,8 +512,8 @@ struct StepsPanel: View {
         .frame(height: min(total + 4, Self.most))
         .padding(10)
         .background(RoundedRectangle(cornerRadius: Theme.radiusCard).fill(Color.qBgTape)
-            .shadow(color: .black.opacity(0.06), radius: 1.5, y: 1))
-        .overlay(RoundedRectangle(cornerRadius: Theme.radiusCard).strokeBorder(Color.black.opacity(0.1), lineWidth: 0.5))
+            .shadow(color: Surfaces.cardShadow, radius: 1.5, y: 1))
+        .overlay(RoundedRectangle(cornerRadius: Theme.radiusCard).strokeBorder(Surfaces.cardRing, lineWidth: 0.5))
         .padding(.horizontal, 12)
         .padding(.bottom, 12)
         .onAppear { model.refreshSteps() }

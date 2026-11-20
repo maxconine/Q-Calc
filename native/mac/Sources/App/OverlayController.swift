@@ -115,10 +115,13 @@ final class OverlayController: NSObject {
     private var extraSheetWindows: [IdentityWindowController] = []
     private lazy var games = GameWindowController()
     private lazy var effects = EggOverlay()
+    // VoiceOver hears the live answer once typing pauses
+    private var spoken: SpokenAnswer?
 
     init(model: BarModel) {
         self.model = model
         super.init()
+        spoken = SpokenAnswer(model)
         model.onHide = { [weak self] why in self?.hide(because: why) }
         model.onShow = { [weak self] why in self?.show(from: why) }
         // a click on a note in the corner: the bar, on their thread (a request is the bar's own card)
@@ -264,7 +267,11 @@ final class OverlayController: NSObject {
     }
 
     private func environmentChanged(_ why: String) {
-        guard !wantVisible else { return }
+        // up while a display goes away, the Dock grows or the resolution changes: pulled back onto a screen
+        guard !wantVisible else {
+            DispatchQueue.main.async { [weak self] in self?.keepOnScreen() }
+            return
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
             guard let self, !self.wantVisible, self.panel?.isVisible != true else { return }
             self.replacePanel(why)
@@ -491,8 +498,23 @@ final class OverlayController: NSObject {
     }
 
     private func fittedWidth(_ width: CGFloat, on screen: NSScreen?) -> CGFloat {
-        guard let visible = (screen ?? NSScreen.main)?.visibleFrame else { return max(width, minOverlayWidth) }
-        return min(max(width, minOverlayWidth), max(minOverlayWidth, visible.width - 40))
+        BarPlacement.fittedWidth(width, minimum: minOverlayWidth, visible: (screen ?? NSScreen.main)?.visibleFrame)
+    }
+
+    private func keepOnScreen() {
+        guard let panel, panel.isVisible else { return }
+        let screens = NSScreen.screens
+        guard BarPlacement.isOffScreen(panel.frame, visibleFrames: screens.map(\.visibleFrame)) else { return }
+        guard let i = BarPlacement.mostlyOn(panel.frame, screens: screens.map(\.frame)) else {
+            // on no screen at all (its display unplugged): the usual spot on the one with the pointer
+            targetScreen = Self.screenWithPointer()?.frame
+            position()
+            OverlayLog.note("bar's display gone: moved to the pointer's")
+            return
+        }
+        let frame = BarPlacement.keptOnScreen(panel.frame, minimumWidth: minOverlayWidth, visible: screens[i].visibleFrame)
+        panel.setFrame(frame, display: true)
+        panel.invalidateShadow()
     }
 
     private static let positionsKey = "overlayPositions"
@@ -504,6 +526,13 @@ final class OverlayController: NSObject {
               let main = NSScreen.screens.first(where: { $0.frame == targetScreen }) ?? Self.screenWithPointer()
         else { return }
         let screen = main.visibleFrame
+        // the width this screen fits (one dragged wide on a big display spilled off a smaller one)
+        let width = fittedWidth(overlayWidth, on: main)
+        if panel.frame.width != width {
+            var frame = panel.frame
+            frame.size.width = width
+            panel.setFrame(frame, display: false)
+        }
         let size = panel.frame.size
         if let saved = savedComposerTop(on: main) {
             let x = min(max(saved.x, screen.minX), screen.maxX - size.width)
