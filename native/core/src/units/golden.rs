@@ -97,6 +97,9 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Option<Json> {
         }
         ("engine/units", "stepPrefix") => js(value_arg(args, 0)
             .and_then(|v| super::step_prefix(&v, if n(1) > 0.0 { 1 } else { -1 }))),
+        // native only: ⌥↑ / ⌥↓ also on m² / m³ (×10⁶ / ×10⁹) and s ↔ min ↔ hr ↔ day
+        ("engine/units", "stepLadder") => js(value_arg(args, 0)
+            .and_then(|v| super::step_ladder(&v, if n(1) > 0.0 { 1 } else { -1 }))),
         // native only: ⌥↑ / ⌥↓ between inches, feet and inches, and feet
         ("engine/units", "stepFeetInches") => value_arg(args, 0)
             .and_then(|v| {

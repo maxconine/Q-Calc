@@ -1512,7 +1512,8 @@ final class BarModel: ObservableObject {
             track("prefix.step")
             return
         }
-        guard let next = logic.call("engine/units", "stepPrefix", [base, dir]) as? [String: Any],
+        // native only: stepLadder is stepPrefix plus m²/m³ (×10⁶/×10⁹) and s ↔ min ↔ hr ↔ day
+        guard let next = logic.call("engine/units", "stepLadder", [base, dir]) as? [String: Any],
               next["unitId"] != nil else { return }
         prefixValue = next
         prefixShown = logic.string("engine/format", "formatValue", [next, settings.significantFigures])

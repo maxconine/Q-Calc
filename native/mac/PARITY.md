@@ -46,6 +46,7 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 | Example rotation in the empty field | ✅ | `exampleList`, every 2.5 s with the fade, answers evaluated live, until the first keystroke (`Tour.swift`) |
 | ↑/↓ history, ←/→ pick a side | ✅ | the web's pick model (`historyPicks`, side kept row to row); `select` pair |
 | ⌥↑/⌥↓ unit prefix step | ✅ | engine `stepPrefix` + `formatValue` |
+| ⌥↑/⌥↓ squared/cubed metres and time (native) | ✅ | `engine/units` `stepLadder` (`units::step_ladder`): `stepPrefix` plus m² ↔ mm²/km² (×10⁶), m³ ↔ mm³/km³ (×10⁹), s ↔ min ↔ hr ↔ day (`1.5 hr` ↔ `90 min`); litres keep the SI ladder; `in_ladder_unit` keeps the choice while typing |
 | ⌥↑/⌥↓ feet and inches (native) | ✅ | a length in ft or in steps in ↔ ft-and-in ↔ ft before the SI prefixes: `engine/units` `stepFeetInches` (`core/src/feet_inches.rs`). Native only: a conversion `to ft in` (`in feet and inches`, `to '"`) answers split, `1.8 m to ft in` is `5 ft 10.8661417323 in`, its `in` coloured as a unit (`split_target`) |
 | `′ ″ ''` and `6'2` as ft / in (native) | ✅ | `feet_inches::foot_marks` in `Sheet::line`; a mark after a letter stays a prime, and a line with `°` keeps arc minutes; a line that mixed feet and inches answers `6 ft 2 in` |
 | Currency sums and mixed currencies (native) | ✅ | `phrases/native_money.rs`, tried only when `answerPhrase` answers nothing: `$5 * 3 to eur`, `$5 + €3`, `usd to eur` |

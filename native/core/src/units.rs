@@ -2665,6 +2665,9 @@ fn unit_by_id(uid: Option<&str>) -> Option<UnitRef> {
     if let Some(known) = by_id(uid) {
         return Some(known);
     }
+    if let Some(power) = power_unit_by_id(uid) {
+        return Some(power);
+    }
     let cut = uid.find('_')?;
     if cut == 0 {
         return None;
@@ -2733,7 +2736,7 @@ fn move_on_ladder(value: &Value, from: &(UnitRef, f64), exp: f64) -> Option<Valu
 pub fn can_step_prefix(value: Option<&Value>) -> bool {
     value.is_some_and(|v| {
         v.unit.as_deref().is_some_and(|u| !u.is_empty())
-            && (step_prefix(v, 1).is_some() || step_prefix(v, -1).is_some())
+            && (step_ladder(v, 1).is_some() || step_ladder(v, -1).is_some())
     })
 }
 
@@ -2759,12 +2762,187 @@ pub fn in_ladder_unit(value: &Value, unit_id: &str) -> Option<Value> {
     if value.kind != ValueKind::Number || !value.n.is_finite() {
         return None;
     }
+    // native only: the squared/cubed and clock-time ladders of `step_ladder` (m³ to km³, not to TL)
+    if let Some(native) = in_native_ladder_unit(value, unit_id) {
+        return Some(native);
+    }
     let from = ladder_place(&*unit_by_id(value.unit_id.as_deref())?)?;
     let to = ladder_place(&*unit_by_id(Some(unit_id))?)?;
     if !ptr_eq(&from.0, &to.0) {
         return None;
     }
     move_on_ladder(value, &from, to.1)
+}
+
+// ---- native ladders: squared/cubed lengths and clock time ----
+
+/// The clock-time rungs above the second: ⌥↑ walks s → min → hr → day.
+const TIME_RUNGS: [&str; 4] = ["s", "min", "hr", "day"];
+
+/// Where a unit sits on a native ladder the web's `stepPrefix` doesn't have.
+#[derive(Clone, Copy, PartialEq)]
+enum NativePlace {
+    /// a square (2) or cube (3) of 10^k metres: `cm²` is (2, -2), `km³` is (3, 3)
+    Power(u8, f64),
+    /// an index into TIME_RUNGS
+    Time(usize),
+}
+
+/// base units per (10^k m)^p: area is in m², volume in litres (1 m³ = 1000 L)
+fn power_to_base(p: u8, k: f64) -> f64 {
+    let base = jsmath::pow(10.0, k * f64::from(p));
+    if p == 3 { base * 1000.0 } else { base }
+}
+
+fn native_place(unit: &Unit) -> Option<NativePlace> {
+    if unit.dim == Dim::Time {
+        return TIME_RUNGS
+            .iter()
+            .position(|r| *r == unit.id)
+            .map(NativePlace::Time);
+    }
+    let p: u8 = match unit.dim {
+        // hectares are square hectometres; barns and acres stay off the ladder
+        Dim::Area if unit.symbol.ends_with("m²") || unit.id == "ha" => 2,
+        // litres keep their own prefix ladder (L, mL, μL); only the cubes of metres step by 10⁹
+        Dim::Volume if unit.symbol.ends_with("m³") => 3,
+        _ => return None,
+    };
+    let litres = if p == 3 { 1000.0 } else { 1.0 };
+    let exp = jsmath::log10(unit.to_base / litres) / f64::from(p);
+    let k = jsnum::round(exp);
+    ((exp - k).abs() < 1e-9).then_some(NativePlace::Power(p, k))
+}
+
+/// `milli_m^2` / `kilo_m^3`: a square or cube of a prefixed metre the table doesn't list (mm², km³).
+fn power_unit_by_id(uid: &str) -> Option<UnitRef> {
+    let (prefix, p) = if let Some(pre) = uid.strip_suffix("_m^2") {
+        (pre, 2)
+    } else {
+        (uid.strip_suffix("_m^3")?, 3)
+    };
+    let prefix = table::prefix_by_name(prefix)?;
+    let k = prefix_exponent(prefix);
+    Some(std::sync::Arc::new(Unit {
+        id: uid.to_string(),
+        dim: if p == 2 { Dim::Area } else { Dim::Volume },
+        symbol: format!("{}m{}", prefix.symbol, if p == 2 { '²' } else { '³' }),
+        to_base: power_to_base(p, k),
+        names: Vec::new(),
+        default_to: Some(if p == 2 { "m2" } else { "m3" }.to_string()),
+        prefixable: false,
+        cased: Vec::new(),
+        exact_names: Vec::new(),
+    }))
+}
+
+/// The square or cube of 10^k metres, preferring the table's own (cm², m², km², cm³, m³).
+fn power_unit(p: u8, k: f64) -> Option<UnitRef> {
+    let (dim, mark) = if p == 2 {
+        (Dim::Area, "m²")
+    } else {
+        (Dim::Volume, "m³")
+    };
+    let to_base = power_to_base(p, k);
+    if let Some(known) = tbl()
+        .list
+        .iter()
+        .find(|u| u.dim == dim && u.symbol.ends_with(mark) && same_scale(u.to_base, to_base))
+    {
+        return Some(known.clone());
+    }
+    let prefix = table::PREFIXES.iter().find(|x| prefix_exponent(x) == k)?;
+    power_unit_by_id(&format!("{}_m^{p}", prefix.name))
+}
+
+/// `n` of `from` in `to`, multiplying by whole ratios so 90 min reads 1.5 hr, not 1.4999…
+fn rescale(n: f64, from: &Unit, to: &Unit) -> f64 {
+    if from.to_base >= to.to_base {
+        n * (from.to_base / to.to_base)
+    } else {
+        n / (to.to_base / from.to_base)
+    }
+}
+
+fn power_step(value: &Value, p: u8, k: f64, to_k: f64) -> Option<Value> {
+    if to_k.abs() > 24.0 {
+        return None;
+    }
+    let to = power_unit(p, to_k)?;
+    let shift = (k - to_k) * f64::from(p);
+    let scale = jsmath::pow(10.0, shift.abs());
+    let n = if shift >= 0.0 {
+        value.n * scale
+    } else {
+        value.n / scale
+    };
+    Some(valued(n, to.symbol.clone(), Some(&to.id)))
+}
+
+/// Native ⌥↑/⌥↓: the web's SI prefix step, plus squares and cubes of metres stepping one prefix of the
+/// length (`15 m²` ↔ `15000000 mm²`, ×10⁶; m³ ↔ km³, ×10⁹) and clock time stepping s ↔ min ↔ hr ↔ day
+/// (`1.5 hr` ↔ `90 min`; below a second it's ms, μs as before). `step_prefix` stays the web's for the goldens.
+pub fn step_ladder(value: &Value, dir: i32) -> Option<Value> {
+    if value.kind != ValueKind::Number || !value.n.is_finite() {
+        return None;
+    }
+    let unit = unit_by_id(value.unit_id.as_deref())?;
+    match native_place(&unit) {
+        Some(NativePlace::Power(p, k)) => {
+            let to_k = if dir > 0 {
+                ((k + 1.0) / 3.0).ceil() * 3.0
+            } else {
+                ((k - 1.0) / 3.0).floor() * 3.0
+            };
+            power_step(value, p, k, to_k)
+        }
+        Some(NativePlace::Time(i)) => {
+            let to = if dir > 0 {
+                TIME_RUNGS.get(i + 1)?
+            } else if i == 0 {
+                return step_prefix(value, dir);
+            } else {
+                TIME_RUNGS[i - 1]
+            };
+            let to = id(to);
+            let n = rescale(value.n, &unit, &to);
+            Some(valued(n, to.symbol.clone(), Some(&to.id)))
+        }
+        None => step_prefix(value, dir),
+    }
+}
+
+/// The ladder `in_ladder_unit` may move along natively: a power of metres, or any time on s/min/hr/day or the
+/// second's prefixes (a ⌥↓ to ms then ⌥↑ to min keeps working while the line is retyped).
+fn native_ladder_kind(unit: &Unit) -> Option<u8> {
+    match native_place(unit) {
+        Some(NativePlace::Power(p, _)) => Some(p),
+        Some(NativePlace::Time(_)) => Some(0),
+        None => ladder_place(unit)
+            .filter(|(root, _)| root.id == "s")
+            .map(|_| 0),
+    }
+}
+
+fn in_native_ladder_unit(value: &Value, unit_id: &str) -> Option<Value> {
+    let from = unit_by_id(value.unit_id.as_deref())?;
+    let to = unit_by_id(Some(unit_id))?;
+    if native_ladder_kind(&from)? != native_ladder_kind(&to)? {
+        return None;
+    }
+    if let (Some(NativePlace::Power(p, k)), Some(NativePlace::Power(_, to_k))) =
+        (native_place(&from), native_place(&to))
+    {
+        let mut out = power_step(value, p, k, to_k)?;
+        out.unit = Some(to.symbol.clone());
+        out.unit_id = Some(to.id.clone());
+        return Some(out);
+    }
+    Some(valued(
+        rescale(value.n, &from, &to),
+        to.symbol.clone(),
+        Some(&to.id),
+    ))
 }
 
 // ---- answers as text, alternatives, SI ----
