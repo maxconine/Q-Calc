@@ -174,6 +174,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "line": try? overlay.model.text.write(toFile: arg, atomically: true, encoding: .utf8)
         case "sheetkey": DevSnapshot.sheetKey(arg)
         case "sheetkeys": DevSnapshot.sheetKeys(arg)
+        // sheetexplain:<file>: the explanation popover's title and the text selected in it (a Related link Tab went to)
+        case "sheetexplain": DevSnapshot.sheetExplain(to: arg)
         case "sheetfilter": IdentityWindowController.front()?.setFilter(arg)
         // ↵ in the front sheet's filter: its first row, as if clicked
         case "sheetpick": IdentityWindowController.front()?.pickFirst()

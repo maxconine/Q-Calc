@@ -325,6 +325,18 @@ enum DevSnapshot {
         (sheetKeyWindow()?.firstResponder as? NSTextView)?.insertText(text, replacementRange: NSRange(location: NSNotFound, length: 0))
     }
 
+    /// The explanation up beside a row: its title, then the text selected in it (`(none)` when no popover is up)
+    static func sheetExplain(to file: String) {
+        var out = "(none)"
+        if let sheet = PeriodicPanel.front(),
+           let popover = NSApp.windows.first(where: { $0.isVisible && $0.className.contains("Popover") && $0.parent === sheet }),
+           let text = popover.firstResponder as? NSTextView {
+            let title = text.string.components(separatedBy: "\n").first ?? ""
+            out = title + "\n" + (text.string as NSString).substring(with: text.selectedRange())
+        }
+        try? out.write(toFile: file, atomically: true, encoding: .utf8)
+    }
+
     private static func sheetKeyWindow() -> NSWindow? {
         guard let sheet = PeriodicPanel.front() else { return nil }
         let popover = NSApp.windows.first { $0.isVisible && $0.className.contains("Popover") && $0.parent === sheet }

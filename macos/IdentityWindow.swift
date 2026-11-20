@@ -554,6 +554,68 @@ private final class IdentityRow: NSView {
     }
 }
 
+// An explanation's text, its links reached with the keys as a web page's are: Tab selects the next link (⇧Tab the
+// one before), scrolled into view, past the last one the keys go on to Back and Try it; ↵ or space follows the
+// selected link. VoiceOver reads each link as a link (NSTextView's own AXLink children, named by their text).
+final class LinkTextView: NSTextView {
+    /// every link's range, in order
+    var linkRanges: [NSRange] {
+        guard let storage = textStorage else { return [] }
+        var out: [NSRange] = []
+        storage.enumerateAttribute(.link, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+            if value != nil { out.append(range) }
+        }
+        return out
+    }
+
+    /// the link the selection is on, if any
+    var selectedLink: NSRange? {
+        let at = selectedRange()
+        return linkRanges.first { NSIntersectionRange($0, at).length > 0 || (at.length == 0 && NSLocationInRange(at.location, $0)) }
+    }
+
+    override func keyDown(with event: NSEvent) {
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        guard flags.isDisjoint(with: [.command, .control, .option]) else { return super.keyDown(with: event) }
+        switch event.keyCode {
+        case 48: // tab
+            stepLink(flags.contains(.shift) ? -1 : 1)
+        case 36, 76, 49: // return, enter, space
+            if let link = selectedLink, followLink(link) { return }
+            super.keyDown(with: event)
+        default:
+            super.keyDown(with: event)
+        }
+    }
+
+    // the next (or previous) link from the selection; none left, the keys go on to the next key view and the
+    // selection starts over, so coming back round lands on the first link again
+    func stepLink(_ step: Int) {
+        let links = linkRanges
+        let at = selectedRange()
+        let from = at.length > 0 ? NSMaxRange(at) : at.location
+        let next = step > 0 ? links.first { $0.location >= from } : links.last { $0.location < at.location }
+        guard let next else {
+            setSelectedRange(NSRange(location: 0, length: 0))
+            if step > 0 { window?.selectNextKeyView(self) } else { window?.selectPreviousKeyView(self) }
+            return
+        }
+        setSelectedRange(next)
+        scrollRangeToVisible(next)
+        // VoiceOver: say it's a link, with its words, as Safari's rotor would
+        let words = (string as NSString).substring(with: next)
+        NSAccessibility.post(element: self, notification: .announcementRequested,
+                             userInfo: [.announcement: "\(words), link", .priority: NSAccessibilityPriorityLevel.high.rawValue])
+    }
+
+    @discardableResult
+    func followLink(_ range: NSRange) -> Bool {
+        guard let link = textStorage?.attribute(.link, at: range.location, effectiveRange: nil) else { return false }
+        clicked(onLink: link, at: range.location)
+        return true
+    }
+}
+
 // A row's explanation: the equation, what it's for, when it holds, each letter, a worked example and, last, related
 // formulas, scrolling past 520 pt; a Try button puts the example's line in the bar. Each related formula is a link
 // (`onRelated`, its index): to its own explanation where it has one, else a search for it. Back returns to the
@@ -570,6 +632,8 @@ private final class ExplanationView: NSView, NSTextViewDelegate {
     // the popover's keys once a click gave it them: ⌘W closes the sheet, ⌘[ and ⌘] step through the explanations
     var onClose: (() -> Void)?
     var onStep: ((Int) -> Bool)?
+    /// the explanation's text, which takes the keys in the popover (Tab through its Related links, ↵ follows one)
+    let textView: LinkTextView
 
     init(_ e: IdentitySheet.Explanation, equation item: IdentitySheet.Item, onTry: ((String) -> Void)?,
          onRelated: ((Int) -> Void)? = nil, onBack: (() -> Void)? = nil) {
@@ -577,10 +641,11 @@ private final class ExplanationView: NSView, NSTextViewDelegate {
         self.onRelated = onRelated
         self.onBack = onBack
         tryLine = e.tryLine
+        let inner = Self.width - Self.pad * 2
+        let view = LinkTextView(frame: NSRect(x: 0, y: 0, width: inner, height: 10))
+        textView = view
         super.init(frame: .zero)
         let text = Self.text(e, item, links: onRelated != nil)
-        let inner = Self.width - Self.pad * 2
-        let view = NSTextView(frame: NSRect(x: 0, y: 0, width: inner, height: 10))
         view.isEditable = false
         view.isSelectable = true
         view.drawsBackground = false
@@ -588,6 +653,8 @@ private final class ExplanationView: NSView, NSTextViewDelegate {
         view.textContainer?.lineFragmentPadding = 0
         view.textContainer?.widthTracksTextView = true
         view.textStorage?.setAttributedString(text)
+        // the selection starts at the top, so the first Tab is the first link
+        view.setSelectedRange(NSRange(location: 0, length: 0))
         view.linkTextAttributes = [.foregroundColor: NSColor.controlAccentColor, .cursor: NSCursor.pointingHand]
         view.delegate = self
         view.setAccessibilityLabel(e.title)
@@ -654,6 +721,13 @@ private final class ExplanationView: NSView, NSTextViewDelegate {
     }
 
     private static let body = NSFont.systemFont(ofSize: 12.5)
+
+    /// the popover's text took the keys: Tab lands on the first Related link (or the text, when it has none)
+    func takeKeys() {
+        guard let window = textView.window else { return }
+        window.makeKey()
+        window.makeFirstResponder(textView)
+    }
 
     // the whole explanation as one text
     private static func text(_ e: IdentitySheet.Explanation, _ item: IdentitySheet.Item, links: Bool) -> NSAttributedString {
@@ -1533,6 +1607,7 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         let screen = (row.window?.screen ?? NSScreen.main)?.visibleFrame ?? .zero
         let edge: NSRectEdge = screen.maxX - onScreen.maxX >= onScreen.minX - screen.minX ? .maxX : .minX
         popover.show(relativeTo: row.bounds, of: row, preferredEdge: edge)
+        (popover.contentViewController?.view as? ExplanationView).map { $0.window?.makeFirstResponder($0.textView) }
     }
 
     // the popover shows the last explanation gone to, with Back when a Related link brought it there
@@ -1548,8 +1623,13 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         } : nil)
         view.onClose = { [weak self] in self?.panel?.close() }
         view.onStep = { [weak self] in self?.stepExplanation($0) ?? false }
+        // the popover had the keys (a Related link followed with ↵, Back): the new text has them, on its first link
+        let hadKeys = popover.contentViewController?.view.window?.isKeyWindow == true
         popover.contentViewController?.view = view
         popover.contentSize = view.frame.size
+        // the text is the popover's first responder, so its keys (Tab, ↵) are there whenever the popover has them
+        view.window?.makeFirstResponder(view.textView)
+        if hadKeys { view.takeKeys() }
     }
 
     // a Related formula: its own explanation, in the same popover, when some row has one; otherwise the sheets
@@ -1589,6 +1669,13 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         guard control === filterField else { return false }
         if selector == #selector(NSResponder.insertNewline(_:)) {
             return pickFirst()
+        }
+        // Tab with an explanation up goes into it, onto its first Related link
+        if selector == #selector(NSResponder.insertTab(_:)), let explainer, explainer.isShown,
+           let view = explainer.contentViewController?.view as? ExplanationView {
+            view.takeKeys()
+            view.textView.stepLink(1)
+            return true
         }
         guard selector == #selector(NSResponder.cancelOperation(_:)) else { return false }
         if let explainer, explainer.isShown {
