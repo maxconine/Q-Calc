@@ -190,6 +190,47 @@ fn as_radical(n: f64, rationalize: bool, tol: Tol) -> Option<String> {
     Some(format_unrationalized(sign, num, den))
 }
 
+/// Native only: an integer plus a square root over a small denominator, the form a binomial denominator
+/// rationalizes to: `sqrt(2)-1` for `1/(1+sqrt(2))`, `(1+sqrt(5))/2`, `(sqrt(5)-1)/4` for `sin(18)`. Only
+/// with the strict tolerance and the smallest denominator that fits, so the fraction is in lowest terms.
+fn as_binomial_radical(n: f64, tol: Tol) -> Option<String> {
+    const RADS: &[f64] = &[2.0, 3.0, 5.0, 6.0, 7.0, 10.0, 11.0, 13.0, 14.0, 15.0, 17.0, 19.0, 21.0];
+    for d in 1..=12u8 {
+        let d = f64::from(d);
+        let dn = d * n;
+        for &r in RADS {
+            let root = r.sqrt();
+            for q in (-12i8..=12).filter(|q| *q != 0) {
+                let q = f64::from(q);
+                let p = jsnum::round(dn - q * root);
+                if p == 0.0 || p.abs() > 1000.0 {
+                    continue;
+                }
+                // float noise in d·n and q·√r, both well under any real gap
+                let slack = d * tol(n) + 4.0 * f64::EPSILON * (dn.abs() + (q * root).abs());
+                if (dn - q * root - p).abs() > slack {
+                    continue;
+                }
+                if int_gcd(int_gcd(p.abs(), q.abs()), d) != 1.0 {
+                    continue;
+                }
+                let rad = radical_term(q.abs(), r);
+                let sum = if p < 0.0 && q > 0.0 {
+                    format!("{rad}-{}", s(-p))
+                } else {
+                    format!("{}{}{rad}", s(p), if q < 0.0 { "-" } else { "+" })
+                };
+                return Some(if d == 1.0 {
+                    sum
+                } else {
+                    format!("({sum})/{}", s(d))
+                });
+            }
+        }
+    }
+    None
+}
+
 fn as_nice_fraction(n: f64, tol: Tol) -> Option<String> {
     let (fnum, fden) = to_fraction(n, 12, tol(n))?;
     if !NICE_DEN.contains(&fden) {
@@ -256,6 +297,27 @@ pub fn exact_form(n: f64, options: ExactFormOptions) -> Option<String> {
         .or_else(|| as_pi_multiple(n, tol))
         .or_else(|| as_radical(n, options.rationalize != Some(false), tol))
         .or_else(|| as_nice_fraction(n, tol))
+}
+
+/// Native only: the bar's `a ± b√r` form ([`as_binomial_radical`]) for a line that [`wants_binomial_form`],
+/// when [`exact_form`] found nothing.
+pub fn binomial_form(n: f64) -> Option<String> {
+    (n.is_finite() && n.abs() >= 1e-3 && n.abs() < 1e4)
+        .then(|| as_binomial_radical(n, strict))
+        .flatten()
+}
+
+/// Native only: a line where `a ± b√r` says something the typed text doesn't: a trig function, or a root
+/// after a `/` (a denominator to rationalize). `1+√2` typed as is keeps the decimal alone.
+pub fn wants_binomial_form(expr: &str) -> bool {
+    static TRIG: Lazy = Lazy::new(|| {
+        jsre::js(
+            r"(?:^|[^A-Za-z_])(?:sin|cos|tan|csc|sec|cot)(?![A-Za-z_])",
+            "i",
+        )
+    });
+    static ROOT_UNDER: Lazy = Lazy::new(|| jsre::js(r"/[^/]*(?:√|\\sqrt|sqrt)", "i"));
+    jsre::test(&TRIG, expr) || jsre::test(&ROOT_UNDER, expr)
 }
 
 /// `exact ≈ decimal` when the two differ.
