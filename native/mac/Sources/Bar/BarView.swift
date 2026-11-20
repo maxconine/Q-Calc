@@ -812,7 +812,7 @@ private struct HistoryRowView: View, Equatable {
                 .onHover { exprHover = $0 }
                 // HistoryTape.tsx's titles; the pointer also reads an expression cut off at the row's end in full
                 .hoverTip(exprTip)
-                .accessibilityLabel("Expression \(row.expr)")
+                .accessibilityLabel("Expression \(row.kind == .note ? row.expr : TapeRules.spokenLimits(row.expr))")
                 .accessibilityHint(row.kind == .system ? "" : "Inserts it at the cursor; with Shift the history stays open")
 
                 // a note has no answer: its text takes the row
@@ -851,7 +851,7 @@ private struct HistoryRowView: View, Equatable {
             Button("Delete") { model.deleteRow(index) }
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(row.kind == .note ? "Note \(row.expr)" : "\(row.expr) equals \(row.display)")
+        .accessibilityLabel(row.kind == .note ? "Note \(row.expr)" : "\(TapeRules.spokenLimits(row.expr)) equals \(row.display)")
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 

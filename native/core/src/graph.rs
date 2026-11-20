@@ -1661,6 +1661,45 @@ pub fn build_native_graph(input: &str, options: &GraphOptions) -> Option<GraphRe
         return Some(build_implicit_surface(native.intent, options));
     }
     let mut r = build_intent(native.intent, options, true);
+    // native only (QA 97): a spiral is drawn as the curve it traces, its features found along that
+    if let Some(spiral) = &native.spiral
+        && r.error.is_none()
+        && let Some(contours) = r.contours.as_mut()
+        && let Some(first) = contours.first_mut()
+    {
+        let bounds = r.intent.bounds.clone();
+        first.segments = spiral.segments(options, &|x, y| inside(bounds.as_ref(), x, y));
+        contours.truncate(1);
+        let g = compile_graph_z(
+            &r.intent.expression,
+            options,
+            options.angle_mode.or(Some(AngleMode::Rad)),
+        );
+        let f = |x: f64, y: f64| {
+            if inside(bounds.as_ref(), x, y) {
+                g.at(x, y)
+            } else {
+                None
+            }
+        };
+        let window = crate::graph_native::Window {
+            x: r.domain,
+            y: (r.y_scale.min, r.y_scale.max),
+        };
+        // F runs on past the turns drawn (to the end of atan2's last turn): only features on the drawn curve
+        let segs = &contours[0].segments;
+        let step = segs
+            .chunks_exact(4)
+            .map(|s| ((s[2] - s[0]).powi(2) + (s[3] - s[1]).powi(2)).sqrt())
+            .fold(0.0, f64::max);
+        r.critical_points = crate::graph_native::implicit_features(&f, contours, window)
+            .into_iter()
+            .filter(|c| {
+                segs.chunks_exact(2)
+                    .any(|p| (p[0] - c.x).abs() <= 2.0 * step && (p[1] - c.y).abs() <= 2.0 * step)
+            })
+            .collect();
+    }
     let intercepts = line_intercepts(&r);
     r.critical_points.extend(intercepts);
     let ends = endpoints(&r);

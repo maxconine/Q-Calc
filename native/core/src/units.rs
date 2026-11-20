@@ -2388,6 +2388,49 @@ fn try_simple_convert(src: &str, defaults: &DefaultUnits, keep_units: bool) -> O
     Some(out)
 }
 
+/// Native only (QA 97): a temperature plus or minus a difference in kelvin or rankine, `20 °C + 5 K` → `25 °C`
+/// (`68 °F - 10 K`, `… in K`), written back as the plain temperature for the line to read. °C and °F are offset
+/// scales, so the web left these blank; a K or °R typed after one can only be a change. `20 °C + 5 °C` stays blank
+/// (a sum of two temperatures).
+pub fn temperature_shift(text: &str) -> Option<String> {
+    const NUM: &str = r"(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?";
+    static RE: Lazy = Lazy::new(|| {
+        js(
+            &format!(
+                r"^(-?{NUM})\s*(degc|degf|(?:deg(?:ree)?s?\s+)?(?:celsius|fahrenheit))\s*([+-])\s*({NUM})\s*(K|kelvins?|degr|rankine)((?:\s+(?:in|to|into)\s+\S.*)?)$"
+            ),
+            "i",
+        )
+    });
+    let t = preprocess(text);
+    let c = RE.captures(t.as_str()).ok()??;
+    let n = jsnum::parse(jsre::group(&c, 1))?;
+    let d = jsnum::parse(jsre::group(&c, 4))?;
+    let celsius = lower(&cs(jsre::group(&c, 2))).contains('c');
+    let kelvin = lower(&cs(jsre::group(&c, 5))).starts_with('k');
+    // degrees of the temperature's own scale per degree of the difference's
+    let per = match (celsius, kelvin) {
+        (true, true) | (false, false) => 1.0,
+        (true, false) => 5.0 / 9.0,
+        (false, true) => 9.0 / 5.0,
+    };
+    let sum = if jsre::group(&c, 3) == "-" {
+        n - d * per
+    } else {
+        n + d * per
+    };
+    // 12 significant figures: `20.1 °C + 0.2 K` is 20.3, not 20.300000000000001
+    let sum = jsnum::parse(&jsnum::to_precision(sum, 12))?;
+    sum.is_finite().then(|| {
+        format!(
+            "{} {}{}",
+            jsnum::to_string(sum),
+            if celsius { "°C" } else { "°F" },
+            jsre::group(&c, 6)
+        )
+    })
+}
+
 fn to_kelvin(n: f64, id: &str) -> f64 {
     match id {
         "c" => n + 273.15,

@@ -38,6 +38,96 @@ pub struct NativeIntent {
     /// An equation in x, y and z not solvable for z (`x^2 + y^2 + z^2 = 1`): `intent.expression` is F(x, y, z),
     /// drawn as a mesh in 3D ([`crate::graph_implicit3d`]).
     pub implicit_surface: bool,
+    /// Native only (QA 97): a polar spiral (`r = θ`), drawn as the curve it traces over its turns of θ.
+    pub spiral: Option<Spiral>,
+}
+
+/// A polar curve that doesn't repeat each turn (`r = θ`, `r = e^(0.1θ)`): r of θ (θ written as x) and the θ it
+/// runs over, three turns from 0 unless typed (`r = θ {0 < θ < 10π}`). `intent.expression` is still an implicit
+/// F(x, y) through it, for the features and the readout, but the curve drawn is the one traced ([`Spiral::trace`]).
+#[derive(Clone, Debug, PartialEq)]
+pub struct Spiral {
+    pub r: String,
+    pub from: f64,
+    pub to: f64,
+}
+
+impl Spiral {
+    /// Points along the spiral (None where r is undefined, which breaks the curve), θ in the angle mode's unit.
+    pub fn trace(&self, options: &GraphOptions) -> Vec<Option<(f64, f64)>> {
+        const N: usize = 3000;
+        let f = compile_graph_y(
+            &self.r,
+            options,
+            options.angle_mode.or(Some(AngleMode::Rad)),
+        );
+        let to_rad = if options.angle_mode == Some(AngleMode::Deg) {
+            std::f64::consts::PI / 180.0
+        } else {
+            1.0
+        };
+        (0..=N)
+            .map(|i| {
+                let t = self.from + (self.to - self.from) * i as f64 / N as f64;
+                let r = f.at(t).filter(|r| r.is_finite())?;
+                let a = t * to_rad;
+                Some((r * jsmath::cos(a), r * jsmath::sin(a)))
+            })
+            .collect()
+    }
+
+    /// The traced curve as segments (x1, y1, x2, y2), kept where `keep` holds; a step longer than a fifth of the
+    /// curve's frame (r running off near a pole, `r = 1/θ`) breaks it.
+    pub fn segments(&self, options: &GraphOptions, keep: &dyn Fn(f64, f64) -> bool) -> Vec<f64> {
+        let pts = self.trace(options);
+        let jump = self.frame(&pts).map_or(f64::INFINITY, |(x0, x1, y0, y1)| {
+            (x1 - x0).max(y1 - y0) / 5.0
+        });
+        let mut out = Vec::new();
+        for w in pts.windows(2) {
+            if let [Some(a), Some(b)] = w
+                && len2(b.0 - a.0, b.1 - a.1) <= jump
+                && keep(a.0, a.1)
+                && keep(b.0, b.1)
+            {
+                out.extend([a.0, a.1, b.0, b.1]);
+            }
+        }
+        out
+    }
+
+    /// The box the curve's body fills (x0, x1, y0, y1): points out past ten times the median r are left out, so a
+    /// spiral that runs off near a pole still opens on its turns.
+    fn frame(&self, pts: &[Option<(f64, f64)>]) -> Option<(f64, f64, f64, f64)> {
+        let mut rs: Vec<f64> = pts.iter().flatten().map(|p| len2(p.0, p.1)).collect();
+        if rs.is_empty() {
+            return None;
+        }
+        sort_numbers(&mut rs);
+        let most = 10.0 * rs[rs.len() / 2].max(1e-9);
+        let mut b = (
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+        );
+        for &(x, y) in pts.iter().flatten().filter(|p| len2(p.0, p.1) <= most) {
+            b = (b.0.min(x), b.1.max(x), b.2.min(y), b.3.max(y));
+        }
+        b.0.is_finite().then_some(b)
+    }
+
+    /// The window the spiral opens on: (lo, hi, y centre when not 0), x and y at one scale.
+    pub fn home(&self, options: &GraphOptions) -> Option<(f64, f64, Option<f64>)> {
+        let (x0, x1, y0, y1) = self.frame(&self.trace(options))?;
+        let aspect = options.aspect();
+        let span = ((x1 - x0).max((y1 - y0) / aspect) * 1.25).max(1e-6);
+        let (cx, cy) = ((x0 + x1) / 2.0, (y0 + y1) / 2.0);
+        let (lo, hi) = nice_window(cx, span);
+        let step = jsmath::pow(10.0, jsmath::log10(span * aspect / 10.0).floor());
+        let cy = (cy.abs() > span * aspect * 0.05).then(|| (cy / step).round() * step);
+        Some((lo, hi, cy))
+    }
 }
 
 /// The plot's window in graph units.
@@ -233,6 +323,7 @@ fn point_intent(body: &str, options: &GraphOptions) -> Option<NativeIntent> {
         points: points.clone(),
         error: None,
         implicit_surface: false,
+        spiral: None,
     };
     match (points.len(), slope) {
         (1, Some(m)) => {
@@ -373,19 +464,7 @@ pub fn native_intent(input: &str, options: &GraphOptions) -> Option<NativeIntent
     if let Some(p) = point_intent(body, options) {
         return Some(p);
     }
-    let polar = match polar_input(body, options) {
-        Some(Err(label)) => {
-            return Some(NativeIntent {
-                intent: GraphIntent::new("", label),
-                points: Vec::new(),
-                error: Some(
-                    "Only a polar curve that repeats each turn of θ draws (not a spiral)".into(),
-                ),
-                implicit_surface: false,
-            });
-        }
-        p => p.and_then(Result::ok),
-    };
+    let polar = polar_input(body, options);
     let input = polar.as_ref().map_or(input.as_str(), |p| p.0.as_str());
     let mut intent = parse_graph_intent(input, &options.functions, &options.variables)?;
     if intent.bounds_error.is_some()
@@ -394,7 +473,7 @@ pub fn native_intent(input: &str, options: &GraphOptions) -> Option<NativeIntent
         intent = r;
     }
     intent.label = match &polar {
-        Some((_, label)) => label.clone(),
+        Some((_, label, _)) => label.clone(),
         None => tidy_label(&intent.label),
     };
     let mut error = None;
@@ -444,14 +523,15 @@ pub fn native_intent(input: &str, options: &GraphOptions) -> Option<NativeIntent
         points: Vec::new(),
         error,
         implicit_surface,
+        spiral: polar.and_then(|p| p.2),
     })
 }
 
 /// Native only: a polar curve `r = 1 + cos(θ)` (or `r(θ) = …`, `theta`) as the implicit curve in x and y it
 /// traces: ρ = √(x² + y²) and θ = atan2(y, x), with the point at θ + π for a negative r, so `r = cos(2θ)` has all
-/// four petals. θ is in the angle mode's unit, as atan2 gives it. Returns the line to graph and the label as typed, or Err(the
-/// label) for an r that doesn't repeat each turn (`r = θ`, which would draw one turn and a seam).
-fn polar_input(body: &str, options: &GraphOptions) -> Option<Result<(String, String), String>> {
+/// four petals. θ is in the angle mode's unit, as atan2 gives it. Returns the line to graph, the label as typed,
+/// and for an r that doesn't repeat each turn (`r = θ`, which drew one turn and a seam) the spiral it traces.
+fn polar_input(body: &str, options: &GraphOptions) -> Option<(String, String, Option<Spiral>)> {
     static POLAR: Lazy = Lazy::new(|| {
         js(
             r"^r\s*(?:\(\s*(?:θ|theta)\s*\))?\s*=\s*([^{}]+?)\s*(\{.*)?$",
@@ -481,20 +561,69 @@ fn polar_input(body: &str, options: &GraphOptions) -> Option<Result<(String, Str
             _ => false,
         }
     });
-    if !repeats {
-        return Some(Err(label));
-    }
     let at = |shift: &str| {
         jsre::replace_all(&THETA, rhs, |_| format!("(atan2(y, x){shift})")).into_owned()
     };
     let rho = "sqrt(x^2 + y^2)";
+    let half = if deg { "180" } else { "pi" };
+    if !repeats {
+        // native only (QA 97): a spiral over its turns of θ, from 0 or as typed in braces
+        let (from, to, tail) = theta_range(jsre::group(&m, 2), options)
+            .map_or((0.0, 3.0 * turn, jsre::group(&m, 2)), |(a, b)| (a, b, ""));
+        let spiral = Spiral {
+            r: jsre::replace_all(&THETA, rhs, |_| "(x)".to_string()).into_owned(),
+            from,
+            to,
+        };
+        // F(x, y) through it, for the features and the readout: ρ − r(φ + k·turn) for each turn k it reaches
+        // from atan2's φ in (−½ turn, ½ turn], and ρ + r(…) on the opposite side only where r goes negative
+        let full = if deg { "360" } else { "2 pi" };
+        let first = ((from - turn / 2.0) / turn).ceil() as i64;
+        // a long spiral's F covers its first dozen turns (the curve drawn is all of it)
+        let last = (((to + turn / 2.0) / turn).floor() as i64).min(first + 12);
+        let f = compile_graph_y(
+            &spiral.r,
+            options,
+            options.angle_mode.or(Some(AngleMode::Rad)),
+        );
+        let negative = (0..=240).any(|i| {
+            f.at(from + (to - from) * f64::from(i) / 240.0)
+                .is_some_and(|r| r < 0.0)
+        });
+        let mut factors = Vec::new();
+        for k in first..=last {
+            factors.push(format!("({rho} - ({}))", at(&format!(" + {k} * {full}"))));
+            if negative {
+                factors.push(format!(
+                    "({rho} + ({}))",
+                    at(&format!(" + {half} + {k} * {full}"))
+                ));
+            }
+        }
+        let line = format!("graph {} = 0 {tail}", factors.join(" * "));
+        return Some((line.trim().to_string(), label, Some(spiral)));
+    }
     let line = format!(
         "graph ({rho} - ({})) * ({rho} + ({})) = 0 {}",
         at(""),
-        at(if deg { " + 180" } else { " + pi" }),
+        at(&format!(" + {half}")),
         jsre::group(&m, 2)
     );
-    Some(Ok((line.trim().to_string(), label)))
+    Some((line.trim().to_string(), label, None))
+}
+
+/// A typed range of θ for a spiral: `{0 < θ < 10π}`, `{0 ≤ theta ≤ 4pi}`. None for anything else.
+fn theta_range(tail: &str, options: &GraphOptions) -> Option<(f64, f64)> {
+    static RANGE: Lazy = Lazy::new(|| {
+        js(
+            r"^\{\s*([^<≤{}]+?)\s*(?:<=?|≤)\s*(?:θ|theta)\s*(?:<=?|≤)\s*([^<≤{}]+?)\s*\}$",
+            "",
+        )
+    });
+    let m = RANGE.captures(tail.trim()).ok()??;
+    let a = evaluate_graph_y(jsre::group(&m, 1), 0.0, options)?;
+    let b = evaluate_graph_y(jsre::group(&m, 2), 0.0, options)?;
+    (a.is_finite() && b.is_finite() && b > a).then_some((a, b))
 }
 
 /// Native only: bounds that aren't a range of x or y alone (`{x^2 + y^2 < 4}`, `{y < x}`, `{x y > 1}`) cut
@@ -946,6 +1075,10 @@ pub fn native_home(input: &str, options: &GraphOptions) -> (f64, f64, Option<f64
         let (lo, hi) =
             crate::graph_implicit3d::implicit_surface_home(&mut f).unwrap_or((-10.0, 10.0));
         return (lo, hi, None);
+    }
+    // native only (QA 97): a spiral opens on its traced turns
+    if let Some(home) = n.spiral.as_ref().and_then(|s| s.home(options)) {
+        return home;
     }
     let intent = n.intent;
     if intent.contour == Some(ContourKind::Zero)

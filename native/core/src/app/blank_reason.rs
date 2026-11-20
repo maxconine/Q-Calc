@@ -88,9 +88,20 @@ fn unknown_word(expr: &str, ok: &dyn Fn(&str) -> bool, names: &Names) -> Option<
         .filter_map(Result::ok)
         .map(|m| (m.as_str(), index16(expr, m.start())))
         .collect();
+    // native only (QA 97): a LaTeX command the LaTeX reading turns into math, leaving no word of its name
+    // (`\frac`, `\cdot`, `\left`), is known: `\frac{1}{2} + \sqrt{x}` squiggled `frac`, not the unknown x
+    let latex = crate::latex::looks_like_latex(expr)
+        .then(|| crate::latex::latex_to_ascii(expr).to_lowercase());
     for (i, &(word, start)) in words.iter().enumerate() {
         let lower = word.to_lowercase();
         if known().contains(&lower) || user.contains(&lower) {
+            continue;
+        }
+        if let Some(ascii) = &latex
+            && start > 0
+            && slice16(expr, start - 1, start) == "\\"
+            && !ascii.contains(&lower)
+        {
             continue;
         }
         let prev = i.checked_sub(1).map(|p| words[p].0);

@@ -781,6 +781,17 @@ impl<'o> Sheet<'o> {
                 self.native_unit_label(&mut result, None);
             }
         }
+        // native only (QA 97): `20 °C + 5 K` is 25 °C, a temperature moved by a difference
+        if result.display.is_empty()
+            && result.value.is_none()
+            && let Some(shifted) = crate::units::temperature_shift(&marked)
+        {
+            let retry = self.line_as_typed(&shifted);
+            if !retry.display.is_empty() {
+                result = retry;
+                result.raw = raw.to_string();
+            }
+        }
         // native only: `8.314 J/(mol K) * 300 K`, mol beside other units (and `ans` after a moles answer, or a
         // variable set to one, keeps its mol: QA 62)
         if result.display.is_empty() && result.value.is_none() {

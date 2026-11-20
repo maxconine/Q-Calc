@@ -90,13 +90,10 @@ fn polar_curves_draw() {
     ] {
         assert!(has(&r, k, x, y), "{:?}", r.critical_points);
     }
-    // a spiral isn't drawn with a seam; it says why
+    // a spiral isn't drawn with a seam: its turns are traced (QA item 97; it said why it wasn't drawn)
     let (_, r) = opened("graph r = θ", false, None);
-    assert!(
-        r.error.as_deref().is_some_and(|e| e.contains("polar")),
-        "{:?}",
-        r.error
-    );
+    assert_eq!(r.error, None);
+    assert!(r.contours.as_ref().is_some_and(|c| c[0].segments.len() > 4000));
 }
 
 #[test]
