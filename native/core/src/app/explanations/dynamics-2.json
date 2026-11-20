@@ -3858,7 +3858,8 @@
   "title": "Shifting a rigid body's angular momentum",
   "about": "A rigid body's angular momentum about any point P is that about a body point B_{p} plus the moment about P of its linear momentum placed at B_{p}. With B_{p} the mass centre, H⃗ about the mass centre is I⃡ · ω⃗, which makes this the usual route to H⃗ about a contact point or pivot.",
   "assumptions": [
-   "Holds for B_{p} the mass centre (the common choice); for another body point use L⃗ located at the mass centre or the full form",
+   "Holds for any point B_{p}: it is the shift theorem with O = B_{p}, because ^{N}H⃗ uses velocities in N",
+   "The mass centre is the usual B_{p}, where ^{N}H⃗^{B∕B_{cm}} = I⃡^{B∕B_{cm}} · ^{N}ω⃗^{B}",
    "All velocities in N"
   ],
   "vars": [

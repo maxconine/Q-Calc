@@ -109,8 +109,8 @@
   "title": "Kinetic energy from linear and angular momentum",
   "about": "A rigid body's kinetic energy is half the dot of the point velocity with linear momentum plus half the dot of angular velocity with angular momentum about Bₚ. It is handy when L⃗ and H⃗ are already worked out.",
   "assumptions": [
-   "Bₚ is the mass centre, or a point of B fixed in N; otherwise a cross term appears",
-   "^{N}H⃗^{B∕B_{p}} = I⃡^{B∕B_{p}} · ^{N}ω⃗^{B} for a rigid body"
+   "Bₚ is any point fixed on B: with ^{N}H⃗^{B∕B_{p}} = I⃡^{B∕B_{p}} · ^{N}ω⃗^{B} + ^{B_{p}}r⃗^{B_{cm}} × m^{B} ^{N}v⃗^{B_{p}}, the cross term m^{B} ^{N}v⃗^{B_{p}} · (^{N}ω⃗^{B} × ^{B_{p}}r⃗^{B_{cm}}) splits evenly between the two halves",
+   "B is rigid; ^{N}H⃗^{B∕B_{p}} = I⃡^{B∕B_{p}} · ^{N}ω⃗^{B} only when Bₚ is the mass centre or fixed in N"
   ],
   "vars": [
    [
@@ -2391,7 +2391,8 @@
   "title": "Geosynchronous orbit radius",
   "about": "The orbit radius at which a satellite's period equals one sidereal day, so it stays over the same longitude. Measured from Earth's centre.",
   "assumptions": [
-   "Circular, equatorial orbit for geostationary"
+   "Circular, equatorial orbit for geostationary",
+   "The book's value; Kepler's law with one sidereal day gives 4.2164 × 10^{7} m (35 786 km up), the figure usually quoted"
   ],
   "vars": [
    [

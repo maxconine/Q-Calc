@@ -3024,7 +3024,7 @@
  },
  "I_{xy} = I_{xz} = I_{yz} = 0": {
   "title": "Products of inertia vanish on symmetry axes",
-  "about": "For every body in the tables, the axes drawn through the mass centre are principal, so all products of inertia are zero. A plane of symmetry makes the products with its normal vanish.",
+  "about": "For every body in the tables except the triangle and the tetrahedron, the axes drawn (through the mass centre, or Bₒ where a row says so) lie on planes of symmetry, so all products of inertia are zero and the axes are principal. A plane of symmetry makes the products with its normal vanish.",
   "assumptions": [
    "Axes through the mass centre, as drawn in each figure",
    "Off those axes, or at another point, products appear; use the shift theorem"

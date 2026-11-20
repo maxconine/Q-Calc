@@ -1318,7 +1318,7 @@
        {
         "show": "I_{xy} = I_{xz} = I_{yz} = 0",
         "copy": "I_xy = I_xz = I_yz = 0",
-        "note": "about the mass centre, on the axes drawn",
+        "note": "on the axes drawn (not the triangle or tetrahedron)",
         "typst": [
          "I_(x\\y) = I_(x\\z) = I_(y\\z) = 0"
         ]
@@ -2440,7 +2440,7 @@
        {
         "show": "^{N}K^{B} = (1/2) ^{N}v⃗^{B_{p}} · ^{N}L⃗^{B} + (1/2) ^{N}ω⃗^{B} · ^{N}H⃗^{B∕B_{p}}",
         "copy": "^NK^B = (1/2) ^Nv⃗^(B_p) · ^NL⃗^B + (1/2) ^Nω⃗^B · ^NH⃗^(B∕B_p)",
-        "note": "Bₚ the mass centre, or fixed in B and N",
+        "note": "any Bₚ fixed on B",
         "typst": [
          "\"\"^(N)K^(B) = (1)/(2) #h(0.15em)\"\"^(N)arrow(v)^(B_(p)) · \"\"^(N)arrow(L)^(B) + (1)/(2) #h(0.15em)\"\"^(N)arrow(ω)^(B) · \"\"^(N)arrow(H)^(B∕B_(p))"
         ]
@@ -2448,7 +2448,7 @@
        {
         "show": "^{N}K^{B} = (1/2) m^{B} ^{N}v⃗^{B_{p}} · ^{N}v⃗^{B_{p}} + (1/2) I_{kk}^{B∕B_{p}} (^{N}ω^{B})^{2}",
         "copy": "^NK^B = (1/2) m^B ^Nv⃗^(B_p) · ^Nv⃗^(B_p) + (1/2) I_kk^(B∕B_p) (^Nω^B)^2",
-        "note": "simple 2D, Bₚ as above",
+        "note": "simple 2D; Bₚ the mass centre or fixed in N",
         "typst": [
          "\"\"^(N)K^(B) = (1)/(2) m^(B) #h(0.15em)\"\"^(N)arrow(v)^(B_(p)) · \"\"^(N)arrow(v)^(B_(p)) + (1)/(2) I_(k\\k)^(B∕B_(p)) (\"\"^(N)ω^(B))^(2)"
         ]
