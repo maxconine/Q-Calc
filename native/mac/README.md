@@ -41,7 +41,7 @@ What it does:
 2. `swift build` of `native/mac/Package.swift` once per architecture (`--triple`), lipo'd into one binary. The
    package depends on `../QCalcCore` and compiles `Sources/` plus `Sources/Shared/`, symlinks to the AppKit code the
    web-view app already has (`macos/AppSettings.swift`, `Keybinds`, `Messages`, `MessageInbox`, `ECBRates`,
-   `SettingsWindow`, `PeriodicWindow`, `IdentityWindow`, `SheetPlace`, `LoginItem`, `Updates`, `UnitlessCopy`,
+   `SettingsWindow`, `PeriodicWindow`, `IdentityWindow`, `SheetPlace`, `SheetMatch`, `LoginItem`, `Updates`, `UnitlessCopy`,
    `OverlayHealth`; `scripts/link-shared.sh` recreates them).
 3. The bundle: `Info.plist`, Sparkle 2.10.0 (from `macos/vendor`, fetched and checksummed like `macos/build.sh`, or
    `QCALC_SPARKLE_DIR`), `Resources/sheets.json`, the icon, and the games bundle; then ad hoc signing.

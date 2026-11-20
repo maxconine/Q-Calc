@@ -7,7 +7,7 @@ cd "$MAC/Sources/Shared"
 # relinked in place, not removed and remade: a synced folder (iCloud Documents) answers a remade link with
 # "Name 2.swift" copies, which then compile twice; any such copy goes
 find . -maxdepth 1 -name '* [0-9]*.swift' -delete
-for f in AppSettings Keybinds UnitlessCopy LoginItem Updates SheetPlace MessageInbox Messages ECBRates \
+for f in AppSettings Keybinds UnitlessCopy LoginItem Updates SheetPlace SheetMatch MessageInbox Messages ECBRates \
   SettingsWindow PeriodicWindow IdentityWindow OverlayHealth Compat; do
   ln -sfn "../../../../macos/$f.swift" "$f.swift"
 done

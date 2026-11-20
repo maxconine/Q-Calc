@@ -225,6 +225,7 @@ build_app() {
     "$MAC/SettingsWindow.swift" \
     "$MAC/Compat.swift" \
     "$MAC/SheetPlace.swift" \
+    "$MAC/SheetMatch.swift" \
     "$MAC/PeriodicWindow.swift" \
     "$MAC/IdentityWindow.swift" \
     "$MAC/Updates.swift" \

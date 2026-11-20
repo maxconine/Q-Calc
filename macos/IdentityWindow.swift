@@ -151,14 +151,42 @@ private final class IdentitySheetView: NSView {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
+// ⌘ and a key, by the layout's letter or, on a layout without latin letters, where it sits on qwerty (`code`), with
+// shift only when asked for
+private func sheetCommand(_ event: NSEvent, _ letter: String, _ code: UInt16, shift: Bool = false) -> Bool {
+    guard event.type == .keyDown else { return false }
+    guard event.modifierFlags.intersection([.command, .option, .control, .shift]) == (shift ? [.command, .shift] : [.command]) else {
+        return false
+    }
+    let chars = event.charactersIgnoringModifiers?.lowercased() ?? ""
+    if chars == letter { return true }
+    return !chars.isEmpty && !chars.unicodeScalars.allSatisfy(\.isASCII) && event.keyCode == code
+}
+
+// cut, copy, paste, select all, undo and redo for the text with the keys: q calc has no menu bar while the bar is
+// up, so nothing sent them (⌘V didn't paste in a sheet's filter, ⌘C didn't copy from an explanation)
+private func sheetEditKey(_ event: NSEvent, in window: NSWindow?) -> Bool {
+    let keys: [(String, UInt16, Bool, Selector)] = [
+        ("x", 7, false, #selector(NSText.cut(_:))), ("c", 8, false, #selector(NSText.copy(_:))),
+        ("v", 9, false, #selector(NSText.paste(_:))), ("a", 0, false, #selector(NSText.selectAll(_:))),
+        ("z", 6, false, Selector(("undo:"))), ("z", 6, true, Selector(("redo:"))),
+    ]
+    guard let responder = window?.firstResponder,
+          let action = keys.first(where: { sheetCommand(event, $0.0, $0.1, shift: $0.2) })?.3 else { return false }
+    return responder.tryToPerform(action, with: nil)
+}
+
 // the window's own content, flipped so the header stays pinned to the top as it resizes
 private final class IdentityRoot: NSView {
     override var isFlipped: Bool { true }
     weak var controller: IdentityWindowController?
 
-    // ⌘[ and ⌘], while the sheet has the keys (the bar sends them on while it's up: OverlayController)
+    // ⌘[ and ⌘], while the sheet has the keys (the bar sends them on while it's up: OverlayController); ⌘F goes to
+    // the filter; and the edit keys, which the filter had no menu to send them (⌘V didn't paste)
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        if let step = IdentityWindowController.navigationStep(event), let controller, controller.go(step) { return true }
+        if let step = IdentityWindowController.navigationStep(event), let controller, controller.navigate(step) { return true }
+        if sheetCommand(event, "f", 3), let controller { controller.focusFilter(); return true }
+        if sheetEditKey(event, in: window) { return true }
         return super.performKeyEquivalent(with: event)
     }
 
@@ -539,6 +567,9 @@ private final class ExplanationView: NSView, NSTextViewDelegate {
     private let onRelated: ((Int) -> Void)?
     private let onBack: (() -> Void)?
     private let tryLine: String
+    // the popover's keys once a click gave it them: ⌘W closes the sheet, ⌘[ and ⌘] step through the explanations
+    var onClose: (() -> Void)?
+    var onStep: ((Int) -> Bool)?
 
     init(_ e: IdentitySheet.Explanation, equation item: IdentitySheet.Item, onTry: ((String) -> Void)?,
          onRelated: ((Int) -> Void)? = nil, onBack: (() -> Void)? = nil) {
@@ -603,6 +634,13 @@ private final class ExplanationView: NSView, NSTextViewDelegate {
 
     @objc private func tryIt() {
         onTry?(tryLine)
+    }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if sheetCommand(event, "w", 13), let onClose { onClose(); return true }
+        if let step = IdentityWindowController.navigationStep(event), onStep?(step) == true { return true }
+        if sheetEditKey(event, in: window) { return true }
+        return super.performKeyEquivalent(with: event)
     }
 
     @objc private func goBack() {
@@ -832,6 +870,10 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
     static var allSheets: (() -> [IdentitySheet])?
     // the explanations a Related link went through, for Back: what's shown, last
     private var explained: [(IdentitySheet.Explanation, IdentitySheet.Item)] = []
+    // the ones ⌘[ stepped back from, for ⌘]
+    private var explainedAhead: [(IdentitySheet.Explanation, IdentitySheet.Item)] = []
+    // the first row a search leaves, for ↵ in the filter
+    private weak var firstPick: IdentityRow?
     private weak var explainedRow: IdentityRow?
     // the explanation a click opened beside its row
     private var explainer: NSPopover?
@@ -930,6 +972,7 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
     private func layout(_ content: NSView, _ sheet: IdentitySheet, filter: String) {
         content.subviews.forEach { $0.removeFromSuperview() }
         sectionTops = [:]
+        firstPick = nil
         idleHint = Self.hint
         let width = content.frame.width
         let words = Self.searchWords(filter)
@@ -944,7 +987,11 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
                 shown.append((nil, "\(other.title) · \(section.title)", section))
             }
         }
-        func kept(_ need: Int) -> [[(IdentitySheet.Group, [IdentitySheet.Item])]] {
+        // a formula typed with spaces (`P = V I`) is first looked for whole, in one of a row's texts; its words alone
+        // match nearly every row (`=`, `v` and `i` are everywhere)
+        let formulaLike = words.contains { $0.count == 1 || !$0.allSatisfy(\.isLetter) }
+        let phrase = words.count > 1 && formulaLike ? Self.compact(words.joined()) : ""
+        func kept(_ need: Int, whole: Bool = false) -> [[(IdentitySheet.Group, [IdentitySheet.Item])]] {
             var elsewhere = 0
             // a row listed once: a one-formula sheet (`ohm's law`) repeats its row from the big sheet
             var seen = Set<String>()
@@ -956,7 +1003,8 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
                     if entry.index == nil, elsewhere >= Self.elsewhereMost { return nil }
                     let rows = group.items.filter { item in
                         guard !item.copy.isEmpty else { return true }
-                        guard Self.matchCount(words, [entry.title, group.title] + Self.searchText(item)) >= need,
+                        guard whole ? Self.hasPhrase(phrase, Self.formulaText(item))
+                                    : Self.matchCount(words, [entry.title, group.title] + Self.searchText(item)) >= need,
                               entry.index != nil || !seen.contains(item.copy) else { return false }
                         seen.insert(item.copy)
                         return true
@@ -973,6 +1021,10 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
             shown.indices.contains { !found[$0].isEmpty && !shown[$0].section.groups.contains { $0.items.contains(where: \.figure) } }
         }
         var found = kept(words.count)
+        if phrase.count > 1 {
+            let whole = kept(0, whole: true)
+            if anyMatch(whole) { found = whole }
+        }
         var closest = false
         if words.count > 1, !anyMatch(found) {
             let near = kept(words.count - 1)
@@ -1034,6 +1086,7 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
                         if item.explain != nil { idleHint = Self.explainHint }
                     }
                     content.addSubview(row)
+                    if firstPick == nil, !words.isEmpty, row.onPick != nil, !item.figure { firstPick = row }
                     gy += height
                 }
                 columns[c] = gy
@@ -1108,6 +1161,16 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         return words.filter { word in
             hay.contains(word) || { let w = compact(word); return !w.isEmpty && tight.contains { $0.contains(w) } }()
         }.count
+    }
+
+    // the row's own formula, as drawn and as copied (not its explanation's related ones)
+    private static func formulaText(_ item: IdentitySheet.Item) -> [String] {
+        (item.lead + [item.runs]).map { $0.map(\.text).joined() } + [item.copy] + item.leadCopy + item.parts.map(\.copy)
+    }
+
+    // the filter's letters and digits, together, inside one of a row's texts
+    private static func hasPhrase(_ phrase: String, _ texts: [String]) -> Bool {
+        texts.contains { let c = compact(fold($0)); return c.contains(phrase) || latin(c).contains(phrase) }
     }
 
     // greek in latin letters (ICU's Greek-Latin), folded again: τ_max is t_max, ω is o, Δ is d
@@ -1264,6 +1327,41 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
     var pageTitles: [String] { pages.map(\.sheet.title) }
     var pageIndex: Int { at }
 
+    /// ⌘[ and ⌘]: through the explanations a Related link went to while one is up, else this window's pages
+    @discardableResult
+    func navigate(_ step: Int) -> Bool {
+        if let explainer, explainer.isShown { return stepExplanation(step) }
+        return go(step)
+    }
+
+    // back to the explanation that linked here, or forward again to the one stepped back from
+    private func stepExplanation(_ step: Int) -> Bool {
+        if step < 0, explained.count > 1 {
+            explainedAhead.append(explained.removeLast())
+        } else if step > 0, let next = explainedAhead.popLast() {
+            explained.append(next)
+        } else {
+            return false
+        }
+        fillExplainer()
+        return true
+    }
+
+    /// ↵ in the filter (and the dev build's `sheetpick`): the first row the search leaves, as if clicked
+    @discardableResult
+    func pickFirst() -> Bool {
+        guard let row = firstPick else { return false }
+        row.onPick?(row)
+        return true
+    }
+
+    /// ⌘F: the filter takes the keys, its text selected
+    func focusFilter() {
+        guard let panel, let filterField else { return }
+        panel.makeFirstResponder(filterField)
+        filterField.selectText(nil)
+    }
+
     /// a step back (-1) or forward (1) through this window's pages; false when there's nowhere to go
     @discardableResult
     func go(_ step: Int) -> Bool {
@@ -1418,6 +1516,7 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
     private func showExplanation(_ explain: IdentitySheet.Explanation, for row: IdentityRow) {
         explainer?.close()
         explained = [(explain, row.item)]
+        explainedAhead = []
         explainedRow = row
         let popover = NSPopover()
         popover.behavior = .transient
@@ -1442,9 +1541,10 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         }, onRelated: { [weak self] i in
             self?.openRelated(explain.related[i])
         }, onBack: explained.count > 1 ? { [weak self] in
-            self?.explained.removeLast()
-            self?.fillExplainer()
+            _ = self?.stepExplanation(-1)
         } : nil)
+        view.onClose = { [weak self] in self?.panel?.close() }
+        view.onStep = { [weak self] in self?.stepExplanation($0) ?? false }
         popover.contentViewController?.view = view
         popover.contentSize = view.frame.size
     }
@@ -1456,6 +1556,7 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         if let item = Self.explainedRow(for: formula, in: [sheet].compactMap { $0 } + (Self.allSheets?() ?? [])),
            let explain = item.explain {
             explained.append((explain, item))
+            explainedAhead = []
             fillExplainer()
             return
         }
@@ -1464,33 +1565,29 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         setFilter(note.isEmpty ? formula : note)
     }
 
-    // the row a formula is: the same characters, leaving out spaces, brackets, ^ _ and the way minus and times are
-    // written, compared with each of a row's cells and its equation, either way round
+    // the row a formula is (SheetMatch): one of a row's cells, either way round, or a chained row holding its sides;
+    // an exact cell anywhere wins over a chain
     private static func explainedRow(for formula: String, in sheets: [IdentitySheet]) -> IdentitySheet.Item? {
-        func key(_ text: String) -> String {
-            let plain = text.replacingOccurrences(of: "\u{2212}", with: "-")
-            return String(plain.lowercased().filter { !" \t{}()^_*·×⋅".contains($0) })
-        }
-        let want = key(formula)
+        guard !SheetMatch.key(formula).isEmpty else { return nil }
+        let rows = sheets.lazy.flatMap(\.sections).flatMap(\.groups).flatMap(\.items).filter { $0.explain != nil }
+        func cells(_ item: IdentitySheet.Item) -> [String] { (item.lead + [item.runs]).map { $0.map(\.text).joined() } }
+        let want = SheetMatch.key(formula)
         let sides = formula.components(separatedBy: "=")
-        let flipped = sides.count == 2 ? key(sides[1] + "=" + sides[0]) : nil
-        guard !want.isEmpty else { return nil }
-        for sheet in sheets {
-            for section in sheet.sections {
-                for group in section.groups {
-                    for item in group.items where item.explain != nil {
-                        let cells = (item.lead + [item.runs]).map { key($0.map(\.text).joined()) }
-                        if cells.contains(want) || flipped.map(cells.contains) == true { return item }
-                    }
-                }
-            }
+        let flipped = sides.count == 2 ? SheetMatch.key(sides[1] + "=" + sides[0]) : nil
+        if let exact = rows.first(where: { cells($0).contains { SheetMatch.key($0) == want || SheetMatch.key($0) == flipped } }) {
+            return exact
         }
-        return nil
+        return rows.first { cells($0).contains { SheetMatch.same(formula, cell: $0) } }
     }
 
+    // ↵ in the filter picks the first row it leaves (copies and explains it, or opens its sheet)
     // Esc closes an explanation, then clears the filter, then closes the sheet
     func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
-        guard control === filterField, selector == #selector(NSResponder.cancelOperation(_:)) else { return false }
+        guard control === filterField else { return false }
+        if selector == #selector(NSResponder.insertNewline(_:)) {
+            return pickFirst()
+        }
+        guard selector == #selector(NSResponder.cancelOperation(_:)) else { return false }
         if let explainer, explainer.isShown {
             explainer.close()
         } else if filterField?.stringValue.isEmpty == false {
@@ -1500,6 +1597,11 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
             panel?.close()
         }
         return true
+    }
+
+    // a closed sheet takes its explanation with it
+    func windowWillClose(_ notification: Notification) {
+        explainer?.close()
     }
 
     func controlTextDidChange(_ note: Notification) {

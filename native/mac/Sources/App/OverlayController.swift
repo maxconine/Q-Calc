@@ -710,7 +710,7 @@ final class OverlayController: NSObject {
             // ⌘W closes the front reference sheet first (sheets never take the keys while the bar is up), else
             // hides the bar
             // ⌘[ and ⌘] step back and forward through the front sheet window's pages
-            if let step = IdentityWindowController.navigationStep(event), let sheets = IdentityWindowController.front(), sheets.go(step) {
+            if let step = IdentityWindowController.navigationStep(event), let sheets = IdentityWindowController.front(), sheets.navigate(step) {
                 return nil
             }
             // native: ⌘+ (or ⌘=) and ⌘− zoom the graph in and out, as the head's buttons do
