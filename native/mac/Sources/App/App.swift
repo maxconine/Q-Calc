@@ -174,10 +174,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "line": try? overlay.model.text.write(toFile: arg, atomically: true, encoding: .utf8)
         // barkey:<chord>: a key straight to the bar's line (the tape's ↑ ← ↵ ⌫ ⌘Z…), which works while q calc isn't the
         // active app (a locked screen), as key: doesn't; tapestate:<file> the tape's pick, rows, line and clipboard
-        case "barkey": DevSnapshot.barKey(arg)
+        case "barkey": DevSnapshot.barKey(arg) { overlay.model.konamiKey($0) }
         case "tapestate": DevSnapshot.tapeState(overlay.model, to: arg)
         case "sheetkey": DevSnapshot.sheetKey(arg)
         case "sheetkeys": DevSnapshot.sheetKeys(arg)
+        case "winkey": DevSnapshot.windowKey(arg)
+        case "winkeys": DevSnapshot.windowKey(arg, text: true)
+        case "postkey": DevSnapshot.postKey(arg)
         // sheetexplain:<file>: the explanation popover's title and the text selected in it (a Related link Tab went to)
         case "sheetexplain": DevSnapshot.sheetExplain(to: arg)
         case "sheetfilter": IdentityWindowController.front()?.setFilter(arg)

@@ -567,8 +567,9 @@ fn read_unit(s: &[char], i: usize, to: usize) -> Piece {
 /// mean (`int 0..1 x^2 dx` is ∫₀¹, `solve x^2 = 4` is the equation, `d/dx x^3` is a d/dx fraction). Copy keeps
 /// `to_typst_math`, so what's pasted still says what was typed.
 pub fn preview_math(expr: &str) -> String {
-    // a line still being typed previews as the input shows it, with its faint parens closed
-    let s = crate::parens::fill_parens(jsstr::trim(expr));
+    // a line still being typed previews as the input shows it, with its faint parens closed (native only: a
+    // `$…$` line's inside its closing `$`, QA item 38: `$sqrt(2$` drew `$√2$` with its dollar signs)
+    let s = crate::parens::fill_typed(jsstr::trim(expr));
     // native only: Typst typed or pasted (`$frac(1, 2)$`, `2 dot.c 3`, `3 plus.minus 1`) previews as the math it
     // is, not its words and dollar signs; LaTeX (`10^{-3}`, `\lim_{x \to 0}`) as the calculator reads it
     let s = if crate::typst_input::looks_like_typst(&s) {

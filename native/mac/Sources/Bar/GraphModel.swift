@@ -587,7 +587,9 @@ extension BarModel {
             // y: as set; or fitted to every curve when the first is one (a plot of x and y keeps its own)
             var yLo = result?.yMin ?? -10, yHi = result?.yMax ?? 10
             // native: about a dozen x ticks (Desmos's density), and with them square grid cells
-            let xTicks = result == nil ? [] : engine.graphTicks(lo: lo, hi: hi, unit: result?.angleUnit, target: in3D ? 6 : 12)
+            // a polar curve's x is a distance, not its angle: plain ticks, not π's (native only, QA item 38)
+            let polar = result?.contour == true && result?.label.hasPrefix("r =") == true
+            let xTicks = result == nil ? [] : engine.graphTicks(lo: lo, hi: hi, unit: polar ? nil : result?.angleUnit, target: in3D ? 6 : 12)
             var squareStep: Double?
             if let fy = g.fixedY, !in3D {
                 (yLo, yHi) = (fy.lowerBound, fy.upperBound)

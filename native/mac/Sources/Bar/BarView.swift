@@ -38,6 +38,9 @@ struct BarView: View {
     var onSize: (BarSize) -> Void
     @State private var anchor: CGFloat = 0
     @State private var lastHeight: CGFloat = 0
+    /// the tape's height as last laid out, and the most it may take so the bar fits under its cap
+    @State private var tapeShown: CGFloat = 0
+    @State private var tapeLimit: CGFloat = .infinity
 
     var body: some View {
         VStack(spacing: 0) {
@@ -58,12 +61,23 @@ struct BarView: View {
         .reportHeight(HeightKey.self)
         .onPreferenceChange(HeightKey.self) { h in
             lastHeight = h
+            fitTape(height: h)
             onSize(BarSize(height: h, anchorTop: anchor))
         }
+        .onPreferenceChange(TapeHeightKey.self) { tapeShown = $0 }
         .onPreferenceChange(AnchorKey.self) { a in
             anchor = a
             onSize(BarSize(height: lastHeight, anchorTop: a))
         }
+    }
+
+    // native only (QA item 38): a tall panel or card under the line (steps, a message card) pushed the bar past its
+    // 640 pt cap, and the window cut off both the top tape row and the card's reply field; the tape now gives up rows
+    // (whole rows, one kept), scrolling as it does past five. What isn't the tape doesn't change with it, so this settles at once.
+    private func fitTape(height h: CGFloat) {
+        let rest = h - tapeShown
+        let limit = max(1, ((Theme.barMaxHeight - rest) / Theme.tapeRow).rounded(.down)) * Theme.tapeRow
+        if abs(limit - tapeLimit) >= 1 { tapeLimit = limit }
     }
 
     // what sits above the line (.tape): the cheat sheet, the games list, or the history
@@ -73,7 +87,7 @@ struct BarView: View {
         } else if model.gamesShown {
             TapeBox { GamesSheet(model: model) }
         } else if !model.visibleRange.isEmpty {
-            TapeBox { HistoryTape(model: model) }
+            TapeBox { HistoryTape(model: model, limit: tapeLimit) }
         }
     }
 
@@ -726,12 +740,20 @@ private struct EdgeTool<Label: View>: View {
 
 // MARK: - the tape (HistoryTape.tsx)
 
+private struct TapeHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
 private struct HistoryTape: View {
     @ObservedObject var model: BarModel
+    /// the most the tape may take (BarView.fitTape)
+    var limit: CGFloat = .infinity
 
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView(.vertical, showsIndicators: model.visibleRange.count > Theme.tapeVisible) {
+            ScrollView(.vertical, showsIndicators: model.visibleRange.count > Theme.tapeVisible
+                       || CGFloat(model.visibleRange.count) * Theme.tapeRow > limit) {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(model.visibleRange), id: \.self) { i in
                         HistoryRowView(model: model, index: i, row: model.rows[i], selected: model.selected == i,
@@ -741,7 +763,10 @@ private struct HistoryTape: View {
                     }
                 }
             }
-            .frame(height: CGFloat(min(model.visibleRange.count, Theme.tapeVisible)) * Theme.tapeRow)
+            .frame(height: min(CGFloat(min(model.visibleRange.count, Theme.tapeVisible)) * Theme.tapeRow, limit))
+            .reportHeight(TapeHeightKey.self)
+            // a shorter tape keeps the newest row (or the picked one) in sight
+            .onChange(of: limit) { _ in proxy.scrollTo(model.selected ?? model.rows.count - 1, anchor: model.selected == nil ? .bottom : nil) }
             .onChange(of: model.selected) { i in
                 if let i { proxy.scrollTo(i) }
             }

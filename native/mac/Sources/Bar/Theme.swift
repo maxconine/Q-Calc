@@ -76,6 +76,9 @@ enum Theme {
     static let tapeVisible = 5
     static let gutter: CGFloat = 16
     static let composerHeight: CGFloat = 72
+    /// the bar window's tallest (OverlayController); past it the tape gives up rows so the panels and cards under the
+    /// line stay whole (native only, QA item 38)
+    static let barMaxHeight: CGFloat = 640
 }
 
 extension Color {

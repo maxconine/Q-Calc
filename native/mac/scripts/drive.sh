@@ -21,6 +21,10 @@
 # graph's window and view, key=value lines; chip= the critical point chip hovered or focused, home= its home window).
 # Games: gamekey:<chord>[:down|:up] and gamekeys:<text> (a key, one half of it, or text straight to the open game's window,
 # which works with q calc in the background or the screen locked), gamestate:<file> (its title, frame, big, dark), closegame.
+# Other windows: sheetclick:<title>:<x>,<y> clicks any titled window too (Settings' tabs: General, Units, Messages; `sheet`
+# for a window's sheet, the keybinds), winkey:<title>:<chord> / winkeys:<title>:<text> a key or text straight to it,
+# postkey:<title>:<chord> a key through the app's event queue (seen by key monitors: the shortcut recorder).
+# barkey: keys also pass the Konami watch the bar's key monitor runs.
 # QCALC_DEV_ID=<bundle id> drives a copy of the dev build re-signed under another id instead.
 for cmd in "$@"; do
   if [[ "$cmd" == sleep:* ]]; then

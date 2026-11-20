@@ -103,7 +103,7 @@ final class OverlayController: NSObject {
     }()
     private let resizeGrip: CGFloat = 8
     private let overlayMinHeight: CGFloat = 64
-    private let overlayMaxHeight: CGFloat = 640
+    private let overlayMaxHeight: CGFloat = Theme.barMaxHeight
     private var sizeAnchorTop: CGFloat = 0
     private var lastSize = BarSize()
     private var userMoving = false
