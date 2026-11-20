@@ -265,6 +265,7 @@ New in the bench:
 | the 420 smoke's puff images dropped when the effect ends (they were cached for good) | after one 420: 63 → 30 MB (idle before it 24); while it plays, unchanged | kept |
 | one Core Image context for all of the smoke's puffs | the smoke's peak 160 → 259 MB | reverted |
 | ember's level pictures dropped when the game closes (a static cache) | open the level picker, close the game: 47.5 → 37.2 MB | kept |
+| QA 65: Typst's documents, paths and memos dropped (`clearCaches`, then `$ x^2 $` again) 30 s after a hide | 200 committed lines then hidden, `top` mem at 5 s / 37 s: 67 / 67 MB (old build 95 / 95). Where the growth is: a fresh launch with the bar up is 37 MB; the first 6 plain lines (`3/7 + 2/3`) add 16 MB (first use of the typing path: regexes, Typst's first real page, the tape), then each new kind of line ~1-2 MB once (units, solve, matrix `^-1`, d/dx, ∫: 53 → 63 MB over 54 lines), then ~1 MB a 50 lines, flat by ~500 (item 51). The first graph adds ~8 MB, a 3D surface ~5 and an implicit one ~9 more, each once, kept after the hide; no 60 MB step seen (item 51's figure included `snap:`, which alone took the app 67 → 201 MB for a moment and 85 MB after) | reverted |
 
 Before and after: the build this night started from (`native` at 405b057) against the last commit. Three
 invocations each with `--runs 2`, interleaved, so each cell spans six sessions (launches: 9 cold and 15
