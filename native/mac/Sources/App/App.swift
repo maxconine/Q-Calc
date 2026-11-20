@@ -168,13 +168,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // the front sheet window's pages: back, forward, a finished swipe (sheetswipe:back|forward), Open in New Window on
         // the row at x,y of the front sheet's content (sheetnew:<x>,<y>), and its pages written to a file (sheetpages:<file>)
         case "sheetfilter": IdentityWindowController.front()?.setFilter(arg)
+        // ↵ in the front sheet's filter: its first row, as if clicked
+        case "sheetpick": IdentityWindowController.front()?.pickFirst()
         case "sheetback": IdentityWindowController.front()?.go(-1)
         case "sheetforward": IdentityWindowController.front()?.go(1)
         case "sheetswipe": IdentityWindowController.front()?.finishSwipe(arg == "forward" ? -1 : 1)
         case "sheetnew":
             let xy = arg.split(separator: ",").compactMap { Double($0) }
-        // ↵ in the front sheet's filter: its first row, as if clicked
-        case "sheetpick": IdentityWindowController.front()?.pickFirst()
             if xy.count == 2 { _ = IdentityWindowController.front()?.openNew(at: NSPoint(x: xy[0], y: xy[1])) }
         case "sheetpages":
             let windows = NSApp.windows.compactMap { $0.isVisible ? $0.delegate as? IdentityWindowController : nil }
