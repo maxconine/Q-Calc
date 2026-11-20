@@ -307,7 +307,7 @@ pub fn cells(row: &HistoryRow, form: AnswerForm, figs: f64, insert: HistoryInser
     let solved_for = row
         .solve
         .as_ref()
-        .filter(|s| s.outcome == SolveOutcome::Roots)
+        .filter(|s| matches!(s.outcome, SolveOutcome::Roots | SolveOutcome::Complex))
         .map(|s| format!("{} =", s.variable));
     let roots = core_answer::solve_roots(&j, figs);
     let root_cells = |out: &mut Vec<Cell>, lead: bool| {
@@ -391,7 +391,7 @@ pub fn cells(row: &HistoryRow, form: AnswerForm, figs: f64, insert: HistoryInser
     let message = row
         .solve
         .as_ref()
-        .is_some_and(|s| s.outcome != SolveOutcome::Roots);
+        .is_some_and(|s| !matches!(s.outcome, SolveOutcome::Roots | SolveOutcome::Complex));
     let text = if row.kind == Some(HistoryKind::Definition) {
         shown.to_string()
     } else if row.solve.is_some() {

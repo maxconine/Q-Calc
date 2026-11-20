@@ -100,6 +100,7 @@ fn outcome_str(o: SolveOutcome) -> &'static str {
     match o {
         SolveOutcome::Roots => "roots",
         SolveOutcome::None => "none",
+        SolveOutcome::Complex => "complex",
         SolveOutcome::Contradiction => "contradiction",
         SolveOutcome::NoneFound => "noneFound",
         SolveOutcome::All => "all",
@@ -119,6 +120,7 @@ pub fn solve_from_json(v: &Json) -> Option<SolveInfo> {
     let outcome = match v.get("outcome")?.as_str()? {
         "roots" => SolveOutcome::Roots,
         "none" => SolveOutcome::None,
+        "complex" => SolveOutcome::Complex,
         "contradiction" => SolveOutcome::Contradiction,
         "noneFound" => SolveOutcome::NoneFound,
         "all" => SolveOutcome::All,

@@ -694,6 +694,16 @@ pub struct Solved {
     pub closed_form: Option<String>,
     pub loose: Option<Vec<bool>>,
     pub evals: u32,
+    /// native only: a polynomial with no real root, its complex roots instead of "no real solution".
+    pub complex: Option<ComplexRoots>,
+}
+
+/// native only: the complex roots of a polynomial that has no real one, one per conjugate pair (`re ± im·i`, im > 0),
+/// ascending by real part; `exact` is the closed form when the quadratic's coefficients are whole (`(-1 ± sqrt(3)i)/2`).
+#[derive(Clone, Debug, PartialEq)]
+pub struct ComplexRoots {
+    pub pairs: Vec<(f64, f64)>,
+    pub exact: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -702,6 +712,7 @@ struct Found {
     exact: Option<Vec<Exact>>,
     closed_form: Option<String>,
     loose: Option<Vec<bool>>,
+    complex: Option<ComplexRoots>,
 }
 
 #[derive(Clone, Debug)]
@@ -1011,6 +1022,7 @@ impl Solver<'_> {
             exact,
             closed_form,
             loose,
+            complex: None,
         }
     }
 
@@ -1244,16 +1256,15 @@ impl Solver<'_> {
             cands.push((r, None));
         }
         let roots = self.settle_all(&cands)?;
-        Some(self.found(
-            if roots.is_empty() {
-                SolveOutcome::None
-            } else {
-                SolveOutcome::Roots
-            },
-            &roots,
-            false,
-            None,
-        ))
+        if roots.is_empty() {
+            let mut none = self.found(SolveOutcome::Complex, &[], false, None);
+            none.complex = complex_pairs(&d[..=n]).map(|pairs| ComplexRoots { pairs, exact: None });
+            if none.complex.is_none() {
+                none.info.outcome = SolveOutcome::None;
+            }
+            return Some(none);
+        }
+        Some(self.found(SolveOutcome::Roots, &roots, false, None))
     }
 
     fn quadratic(&self, d: &[f64], ints: Option<&[f64]>) -> Option<Found> {
@@ -1264,7 +1275,12 @@ impl Solver<'_> {
             let size = bb * bb + 4.0 * (aa * cc).abs();
             if jsnum::is_safe_integer(size) && (disc == 0.0 || disc.abs() * 1e10 >= size) {
                 if disc < 0.0 {
-                    return Some(self.found(SolveOutcome::None, &[], false, None));
+                    let mut none = self.found(SolveOutcome::Complex, &[], false, None);
+                    none.complex = Some(ComplexRoots {
+                        pairs: vec![quadratic_pair(aa, bb, cc)],
+                        exact: complex_closed_form(aa, bb, disc),
+                    });
+                    return Some(none);
                 }
                 if disc == 0.0 {
                     let r = ratio(-bb, 2.0 * aa);
@@ -1301,7 +1317,12 @@ impl Solver<'_> {
             * (2.0 * b.abs() + 4.0 * a.abs() + 4.0 * c.abs());
         let disc = b * b - 4.0 * a * c;
         if disc < -noise {
-            return Some(self.found(SolveOutcome::None, &[], false, None));
+            let mut none = self.found(SolveOutcome::Complex, &[], false, None);
+            none.complex = Some(ComplexRoots {
+                pairs: vec![quadratic_pair(a, b, c)],
+                exact: None,
+            });
+            return Some(none);
         }
         if disc.abs() <= noise
             && disc > 0.0
@@ -1833,6 +1854,7 @@ fn near_guess(found: Option<Found>, l: &Side, r: &Side, guess: f64, v: &str) -> 
                     .map(|e| vec![e.clone()])
             }),
             closed_form: None,
+            complex: None,
             loose: i.and_then(|i| {
                 fd.and_then(|f| f.loose.as_ref())
                     .and_then(|e| e.get(i))
@@ -1898,7 +1920,185 @@ pub fn solve_equation(text: &str, ctx: &SolveContext<'_>) -> Option<Solved> {
         closed_form: out.closed_form,
         loose: out.loose,
         evals: budget.evals.get(),
+        complex: out.complex,
     })
+}
+
+/// `a x² + b x + c` with a negative discriminant: its root with the positive imaginary part.
+fn quadratic_pair(a: f64, b: f64, c: f64) -> (f64, f64) {
+    let re = -b / (2.0 * a);
+    let im = (4.0 * a * c - b * b).sqrt() / (2.0 * a).abs();
+    (if re == 0.0 { 0.0 } else { re }, im)
+}
+
+/// Whole `a`, `b` and a negative `disc`: `±i`, `±2i`, `-1 ± 2i`, `(-1 ± sqrt(3)i)/2`.
+fn complex_closed_form(a: f64, b: f64, disc: f64) -> Option<String> {
+    let (k, rad) = split_squares(-disc);
+    let (mut p, mut q, mut d) = (-b, k, 2.0 * a);
+    if d < 0.0 {
+        p = -p;
+        d = -d;
+    }
+    let g = int_gcd(int_gcd(p, q), d);
+    if !(g.is_finite() && g > 0.0) {
+        return None;
+    }
+    p /= g;
+    q /= g;
+    d /= g;
+    let s = jsnum::to_string;
+    let coef = if q == 1.0 { String::new() } else { s(q) };
+    let term = if rad == 1.0 {
+        format!("{coef}i")
+    } else {
+        format!("{coef}sqrt({})i", s(rad))
+    };
+    Some(if p == 0.0 {
+        if d == 1.0 {
+            format!("±{term}")
+        } else {
+            format!("±{term}/{}", s(d))
+        }
+    } else if d == 1.0 {
+        format!("{} ± {term}", s(p))
+    } else {
+        format!("({} ± {term})/{}", s(p), s(d))
+    })
+}
+
+/// All roots of the polynomial (coefficients ascending) by Durand–Kerner, polished by Newton; one per conjugate
+/// pair. `None` when a root comes out real, since then the real search, not this, has the say.
+fn complex_pairs(c: &[f64]) -> Option<Vec<(f64, f64)>> {
+    type Z = (f64, f64);
+    let n = c.len().checked_sub(1).filter(|n| (2..=24).contains(n))?;
+    let lead = c[n];
+    if lead == 0.0 || c.iter().any(|x| !x.is_finite()) {
+        return None;
+    }
+    let mul = |a: Z, b: Z| (a.0 * b.0 - a.1 * b.1, a.0 * b.1 + a.1 * b.0);
+    let sub = |a: Z, b: Z| (a.0 - b.0, a.1 - b.1);
+    let div = |a: Z, b: Z| {
+        let m = b.0 * b.0 + b.1 * b.1;
+        ((a.0 * b.0 + a.1 * b.1) / m, (a.1 * b.0 - a.0 * b.1) / m)
+    };
+    let monic: Vec<f64> = c.iter().map(|x| x / lead).collect();
+    let eval = |z: Z| {
+        monic.iter().rev().fold((0.0, 0.0), |acc, &k| {
+            let m = mul(acc, z);
+            (m.0 + k, m.1)
+        })
+    };
+    let deriv = |z: Z| {
+        monic[1..]
+            .iter()
+            .enumerate()
+            .rev()
+            .fold((0.0, 0.0), |acc, (i, &k)| {
+                let m = mul(acc, z);
+                (m.0 + k * (i as f64 + 1.0), m.1)
+            })
+    };
+    let radius = 1.0 + monic[..n].iter().fold(0.0f64, |m, x| m.max(x.abs()));
+    let mut zs: Vec<Z> = (0..n)
+        .map(|k| {
+            let t = 0.4 + std::f64::consts::TAU * k as f64 / n as f64;
+            (radius * jsmath::cos(t), radius * jsmath::sin(t))
+        })
+        .collect();
+    for _ in 0..500 {
+        let mut moved = 0.0f64;
+        for i in 0..n {
+            let mut den = (1.0, 0.0);
+            for j in 0..n {
+                if i != j {
+                    den = mul(den, sub(zs[i], zs[j]));
+                }
+            }
+            let step = div(eval(zs[i]), den);
+            if !(step.0.is_finite() && step.1.is_finite()) {
+                return None;
+            }
+            zs[i] = sub(zs[i], step);
+            moved = moved.max(
+                step.0.abs().max(step.1.abs())
+                    / 1f64.max((zs[i].0 * zs[i].0 + zs[i].1 * zs[i].1).sqrt()),
+            );
+        }
+        if moved < 1e-15 {
+            break;
+        }
+    }
+    for z in &mut zs {
+        for _ in 0..3 {
+            let dz = deriv(*z);
+            if dz == (0.0, 0.0) {
+                break;
+            }
+            *z = sub(*z, div(eval(*z), dz));
+        }
+    }
+    if zs
+        .iter()
+        .any(|z| z.1.abs() <= 1e-9 * 1f64.max((z.0 * z.0 + z.1 * z.1).sqrt()))
+    {
+        return None;
+    }
+    let mut pairs: Vec<Z> = zs
+        .into_iter()
+        .filter(|z| z.1 > 0.0)
+        .map(|(re, im)| {
+            let size = (re * re + im * im).sqrt();
+            (if re.abs() <= 1e-12 * size { 0.0 } else { re }, im)
+        })
+        .collect();
+    if pairs.len() * 2 != n {
+        return None;
+    }
+    pairs.sort_by(|a, b| cmp_f(a.0, b.0).then(cmp_f(a.1, b.1)));
+    Some(pairs)
+}
+
+/// native only: `±i`, `-1 ± 2i`, `-0.707107 ± 0.707107i, 0.707107 ± 0.707107i`.
+fn format_complex(c: &ComplexRoots, sig_figs: f64, fraction_mode: bool) -> SolveDisplay {
+    let figs = if c.pairs.len() == 1 {
+        sig_figs
+    } else {
+        sig_figs.min(6.0)
+    };
+    let part = |x: f64| {
+        (if fraction_mode {
+            format_as_fraction(x, 10_000)
+        } else {
+            None
+        })
+        .unwrap_or_else(|| format_number(x, figs))
+    };
+    let display = c
+        .pairs
+        .iter()
+        .map(|&(re, im)| {
+            let t = part(im);
+            let imag = if t == "1" {
+                "i".to_string()
+            } else if t.contains('/') {
+                format!("({t})i")
+            } else {
+                format!("{t}i")
+            };
+            let r = part(re);
+            if r == "0" || r == "-0" {
+                format!("±{imag}")
+            } else {
+                format!("{r} ± {imag}")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    SolveDisplay {
+        exact: c.exact.clone().filter(|e| *e != display),
+        display,
+        message: false,
+    }
 }
 
 fn terminates(d: f64) -> bool {
@@ -1931,6 +2131,12 @@ pub fn format_solve_full(s: &Solved, sig_figs: f64, fraction_mode: bool) -> Solv
     match info.outcome {
         SolveOutcome::All => return message(&format!("true for all {}", info.variable)),
         SolveOutcome::None => return message("no real solution"),
+        SolveOutcome::Complex => {
+            return match &s.complex {
+                Some(c) => format_complex(c, sig_figs, fraction_mode),
+                None => message("no real solution"),
+            };
+        }
         SolveOutcome::Contradiction => return message("no solution"),
         SolveOutcome::NoneFound => return message("no solution found"),
         SolveOutcome::Roots => {}

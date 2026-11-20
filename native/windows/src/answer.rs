@@ -417,8 +417,8 @@ pub fn specs(m: &BarModel) -> Vec<Spec> {
     let Some(a) = live else { return Vec::new() };
     let figs = m.settings.sig_figs.clamp(2, 16) as f64;
     if let Some(solve) = &a.solve {
-        if solve.outcome != SolveOutcome::Roots {
-            // no roots: a message
+        if !matches!(solve.outcome, SolveOutcome::Roots | SolveOutcome::Complex) {
+            // no roots: a message (complex roots, `±i`, are an answer)
             return vec![spec(&a.display, Font::Body, Ink::Muted, None, (PAD_X, 0.0))];
         }
         if solve.roots.len() > 1 && !has_dual(m) {
@@ -466,7 +466,7 @@ pub fn specs(m: &BarModel) -> Vec<Spec> {
     let lead = a
         .solve
         .as_ref()
-        .filter(|s| s.outcome == SolveOutcome::Roots && !s.variable.is_empty())
+        .filter(|s| matches!(s.outcome, SolveOutcome::Roots | SolveOutcome::Complex) && !s.variable.is_empty())
         .map(|s| {
             spec(
                 format!("{} =", s.variable),

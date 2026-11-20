@@ -5,8 +5,8 @@
 use std::collections::HashMap;
 
 use qcalc_core::types::{
-    AngleMode, EvaluateOptions, LineKind, LineResult, MatrixParts, Meas, SolveOutcome as CoreOutcome,
-    TimeLetters as CoreTimeLetters, UserFunction, ValueKind,
+    AngleMode, EvaluateOptions, LineKind, LineResult, MatrixParts, Meas,
+    SolveOutcome as CoreOutcome, TimeLetters as CoreTimeLetters, UserFunction, ValueKind,
 };
 use serde::{Deserialize, Serialize};
 
@@ -338,6 +338,8 @@ pub enum SolveOutcome {
     Contradiction,
     NoneFound,
     All,
+    /// native only: the complex roots, `±i` (an answer, not a message)
+    Complex,
 }
 
 /// A solve's unknown and roots.
@@ -358,6 +360,7 @@ impl From<&qcalc_core::types::SolveInfo> for SolveInfo {
             outcome: match s.outcome {
                 CoreOutcome::Roots => SolveOutcome::Roots,
                 CoreOutcome::None => SolveOutcome::None,
+                CoreOutcome::Complex => SolveOutcome::Complex,
                 CoreOutcome::Contradiction => SolveOutcome::Contradiction,
                 CoreOutcome::NoneFound => SolveOutcome::NoneFound,
                 CoreOutcome::All => SolveOutcome::All,
@@ -375,6 +378,7 @@ impl From<&SolveInfo> for qcalc_core::types::SolveInfo {
             outcome: match s.outcome {
                 SolveOutcome::Roots => CoreOutcome::Roots,
                 SolveOutcome::None => CoreOutcome::None,
+                SolveOutcome::Complex => CoreOutcome::Complex,
                 SolveOutcome::Contradiction => CoreOutcome::Contradiction,
                 SolveOutcome::NoneFound => CoreOutcome::NoneFound,
                 SolveOutcome::All => CoreOutcome::All,

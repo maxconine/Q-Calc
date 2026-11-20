@@ -861,12 +861,18 @@ fn equation(
             }
         }
         if k < 0.0 {
-            if solve.outcome != SolveOutcome::None || !solve.roots.is_empty() {
+            if !matches!(solve.outcome, SolveOutcome::None | SolveOutcome::Complex)
+                || !solve.roots.is_empty()
+            {
                 return None;
             }
             steps.push(step(
                 format!("{v}^2 = {} < 0", num(k, sig)),
-                "a square is never negative: no real root",
+                if shown.display == "no real solution" {
+                    "a square is never negative: no real root"
+                } else {
+                    "a real square is never negative: the roots are imaginary"
+                },
             ));
             steps.push(step(shown.display.clone(), "the answer"));
             return Some(steps);
@@ -910,12 +916,18 @@ fn equation(
     ));
     let d = num(disc, sig);
     if disc < 0.0 {
-        if solve.outcome != SolveOutcome::None || !solve.roots.is_empty() {
+        if !matches!(solve.outcome, SolveOutcome::None | SolveOutcome::Complex)
+            || !solve.roots.is_empty()
+        {
             return None;
         }
         steps.push(step(
             format!("b^2 - 4ac = {d}"),
-            "the discriminant is negative: no real root",
+            if shown.display == "no real solution" {
+                "the discriminant is negative: no real root"
+            } else {
+                "the discriminant is negative: the roots are complex"
+            },
         ));
         steps.push(step(shown.display.clone(), "the answer"));
         return Some(steps);

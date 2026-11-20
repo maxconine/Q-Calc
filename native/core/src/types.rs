@@ -112,6 +112,8 @@ pub enum SolveOutcome {
     Contradiction,
     NoneFound,
     All,
+    /// native only: no real root, so the answer is the complex roots (`x^2 = -1` is `±i`); an answer, not a message.
+    Complex,
 }
 
 /// A solve's unknown and roots.

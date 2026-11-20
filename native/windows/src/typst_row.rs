@@ -102,7 +102,7 @@ pub fn request(m: &BarModel) -> Option<Request> {
     let live = m.live.as_ref().filter(|_| m.live_for == text);
     let solve = live.and_then(|a| a.solve.as_ref());
     let solved_for = solve
-        .filter(|s| s.outcome == SolveOutcome::Roots)
+        .filter(|s| matches!(s.outcome, SolveOutcome::Roots | SolveOutcome::Complex))
         .map(|s| s.variable.clone())
         .unwrap_or_default();
     let st = &m.answer;
