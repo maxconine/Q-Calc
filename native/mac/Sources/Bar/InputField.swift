@@ -796,7 +796,19 @@ final class BarTextView: NSTextView {
             return
         }
         if onKey?(event) == true { return }
+        // a ⌘ key that never came as a key equivalent (the SwiftUI host doesn't offer one to the line, and AppKit offers
+        // none while Q Calc isn't the active app): ⌘A and ⌘V had done nothing here
+        if editingKey(event) { return }
         super.keyDown(with: event)
+    }
+
+    /// the bar has no Edit menu, so the editing keys are the field's own
+    func editingKey(_ event: NSEvent) -> Bool {
+        if isCommandKey(event, "c", 8) { copy(nil); return true }
+        if isCommandKey(event, "x", 7) { cut(nil); return true }
+        if isCommandKey(event, "v", 9) { paste(nil); return true }
+        if isCommandKey(event, "a", 0) { selectAll(nil); return true }
+        return false
     }
 
     /// ↑ ↓ between a fraction's top and bottom (stackVertical), before the bar takes them for the history
@@ -813,11 +825,7 @@ final class BarTextView: NSTextView {
         // arrows carry the function-key flag, so AppKit offers them here before keyDown
         if stackArrow(event) { return true }
         if onKey?(event) == true { return true }
-        // the bar has no Edit menu, so the editing keys are the field's own
-        if isCommandKey(event, "c", 8) { copy(nil); return true }
-        if isCommandKey(event, "x", 7) { cut(nil); return true }
-        if isCommandKey(event, "v", 9) { paste(nil); return true }
-        if isCommandKey(event, "a", 0) { selectAll(nil); return true }
+        if editingKey(event) { return true }
         return super.performKeyEquivalent(with: event)
     }
 

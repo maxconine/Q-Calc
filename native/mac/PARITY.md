@@ -53,7 +53,7 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 | Fractional inches (native) | ✅ | `5 3/8"`, `6'5 3/8"` read as one amount; a line with inch fractions answers in sixteenths or finer (`7 13/16 in`, `≈` when rounded) |
 | Unit sums keep sig figs (native) | ✅ | in sig-fig mode `12.0 kg + 3.15 kg` is `15.2 kg` (`units::with_sum_places`) |
 | Undo by typing runs | ✅ | the web’s `undo.ts` model (runs merge within 1 s, ⌘Z / ⇧⌘Z), NSTextView undo off |
-| ⌘A/⌘X/⌘V, plain one-line paste | ✅ | `BarTextView.paste` |
+| ⌘A/⌘X/⌘V, plain one-line paste | ✅ | `BarTextView.paste`. ⌘A/⌘C/⌘X/⌘V are also taken in the line's keyDown (`editingKey`): the SwiftUI host never offered them as key equivalents, so ⌘A and ⌘V did nothing; driven with real key events on a re-signed copy (`scripts/test-keys.sh`). The bar's other fields take them by the layout's letter (or qwerty key on a non-latin layout) and ⌘⇧Z redoes |
 | Space-thousands, typed-space multiply | ✅ | engine option |
 | d/dt letters panel | ✅ | chips from `LiveAnswer.timeLetters`; a click moves a letter (`EvalOptions.timeVarying`) |
 | Draft kept across hides (`qcalc.draft`) | ✅ | |

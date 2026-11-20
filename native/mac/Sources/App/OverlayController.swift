@@ -40,15 +40,18 @@ final class OverlayPanel: NSPanel {
     /// The bar has no Edit menu, so its other text fields (the graph's settings and equations) get the editing keys
     /// here; the line handles its own (BarTextView.performKeyEquivalent).
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        if let field = firstResponder as? NSTextView, !(field is BarTextView),
-           event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command {
-            switch event.charactersIgnoringModifiers?.lowercased() {
-            case "a": field.selectAll(nil); return true
-            case "c": field.copy(nil); return true
-            case "x": field.cut(nil); return true
-            case "v": field.paste(nil); return true
-            case "z": field.undoManager?.undo(); return true
-            default: break
+        if let field = firstResponder as? NSTextView, !(field is BarTextView), !field.hasMarkedText() {
+            // by the layout's letter, or where it sits on qwerty for a non-latin layout (⌘C on a Russian layout
+            // had done nothing), and ⌘⇧Z redoes as in any text field
+            if isCommandKey(event, "a", kVK_ANSI_A) { field.selectAll(nil); return true }
+            if isCommandKey(event, "c", kVK_ANSI_C) { field.copy(nil); return true }
+            if isCommandKey(event, "x", kVK_ANSI_X) { field.cut(nil); return true }
+            if isCommandKey(event, "v", kVK_ANSI_V) { field.paste(nil); return true }
+            if isCommandKey(event, "z", kVK_ANSI_Z) { field.undoManager?.undo(); return true }
+            if event.modifierFlags.intersection([.command, .option, .control, .shift]) == [.command, .shift],
+               event.keyCode == UInt16(kVK_ANSI_Z) {
+                field.undoManager?.redo()
+                return true
             }
         }
         return super.performKeyEquivalent(with: event)
