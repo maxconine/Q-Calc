@@ -353,3 +353,47 @@ fn curves_cross_at_exact_points() {
         3
     );
 }
+
+/// A removable hole is filled and its turn listed (sin²x/x² in degrees tops out at (π/180)² at 0), any curve
+/// lists its y-intercept, and a curve crosses an implicit one (`x = 1`) where F(x, f(x)) = 0.
+#[test]
+fn holes_intercepts_and_implicit_crossings() {
+    use qcalc_core::graph_native::native_intersections;
+    use qcalc_core::types::AngleMode;
+    let o = GraphOptions {
+        angle_mode: Some(AngleMode::Deg),
+        domain: Some((-360.0, 360.0)),
+        ..GraphOptions::default()
+    };
+    let top = (std::f64::consts::PI / 180.0).powi(2);
+    let r = build_native_graph("graph sin^2(x)/x^2", &o).unwrap();
+    let at0: Vec<_> = r.critical_points.iter().filter(|c| c.x == 0.0).collect();
+    assert_eq!(at0.len(), 1, "{:?}", r.critical_points);
+    assert_eq!(at0[0].kind, CriticalKind::Max);
+    assert!((at0[0].y - top).abs() < 1e-12);
+    let r = build_native_graph("graph x^3+2", &o).unwrap();
+    assert!(
+        r.critical_points
+            .iter()
+            .any(|c| c.kind == CriticalKind::YIntercept && c.x == 0.0 && c.y == 2.0),
+        "{:?}",
+        r.critical_points
+    );
+    // sin x passes through the origin: its root says so, no y-intercept besides
+    let r = build_native_graph("graph sin(x)", &o).unwrap();
+    assert!(
+        !r.critical_points
+            .iter()
+            .any(|c| c.kind == CriticalKind::YIntercept)
+    );
+    let inputs = ["graph sin^2(x)/x^2", "graph x=1"].map(String::from);
+    let cs = native_intersections(&inputs, &o, -360.0, 360.0);
+    assert_eq!(cs.len(), 1, "{cs:?}");
+    assert_eq!(cs[0].x, 1.0);
+    assert!((cs[0].y - 3.0458649045213493e-4).abs() < 1e-15);
+    // a line through a circle: two crossings
+    let inputs = ["graph x^2+y^2=25", "graph y=x+1"].map(String::from);
+    let cs = native_intersections(&inputs, &GraphOptions::default(), -10.0, 10.0);
+    let xs: Vec<f64> = cs.iter().map(|c| c.x).collect();
+    assert_eq!(xs, vec![-4.0, 3.0], "{cs:?}");
+}

@@ -16,9 +16,9 @@
 use crate::format::format_number;
 use crate::graph::{
     ContourKind, ContourLevel, CriticalKind, CriticalPoint, GraphBounds, GraphIntent, GraphOptions,
-    GraphRange, SurfaceGrid, build_intent, build_native_graph, compile_graph_y, compile_graph_z,
-    evaluate_graph_y, home_of, marching_squares, nice_window, parse_graph_intent, quantile,
-    rewrite_params, sort_numbers, tidy, with_minus,
+    GraphRange, GraphResult, SurfaceGrid, build_intent, build_native_graph, compile_graph_y,
+    compile_graph_z, evaluate_graph_y, home_of, marching_squares, nice_window, parse_graph_intent,
+    quantile, rewrite_params, sort_numbers, tidy, with_minus,
 };
 use crate::jsre::{self, Lazy, js};
 use crate::latex::{latex_to_ascii, looks_like_latex};
@@ -1067,13 +1067,18 @@ pub fn native_intersections(
     cheap.domain = Some((lo, hi));
     cheap.sample_count = Some(16.0);
     cheap.find_roots = Some(false);
-    let curves: Vec<_> = inputs
+    let built: Vec<GraphResult> = inputs
         .iter()
         .filter_map(|i| build_native_graph(i, &cheap))
         .filter(|r| r.error.is_none())
-        .filter(|r| r.contours.is_none() && r.intent.contour.is_none() && r.surface.is_none())
         .collect();
-    let fns: Vec<_> = curves.iter().filter_map(|r| r.y_fn()).collect();
+    let fns: Vec<_> = built
+        .iter()
+        .filter(|r| r.contours.is_none() && r.intent.contour.is_none() && r.surface.is_none())
+        .filter_map(|r| r.y_fn())
+        .collect();
+    // implicit curves (`x = 1`, a circle): F(x, y) = 0 on them
+    let fxys: Vec<_> = built.iter().filter_map(|r| r.xy_fn()).collect();
     let step = (hi - lo) / (SAMPLES - 1) as f64;
     let x_at = |i: usize| lo + step * i as f64;
     // each curve sampled once, not once for every curve it's paired with; NaN where it has no finite value
@@ -1112,26 +1117,7 @@ pub fn native_intersections(
                 if v == 0.0 || u.signum() == v.signum() {
                     continue;
                 }
-                let (mut l, mut r, mut dl) = (x_at(i), x_at(i + 1), u);
-                for _ in 0..80 {
-                    let m = (l + r) / 2.0;
-                    // l and r are neighbouring doubles: halving again changes nothing
-                    if m == l || m == r {
-                        break;
-                    }
-                    let Some(dm) = d(m) else { break };
-                    if dm == 0.0 {
-                        l = m;
-                        r = m;
-                        break;
-                    }
-                    if dm.signum() == dl.signum() {
-                        l = m;
-                        dl = dm;
-                    } else {
-                        r = m;
-                    }
-                }
+                let (l, r) = bisect(&d, x_at(i), x_at(i + 1), u);
                 found.push((l + r) / 2.0);
             }
             if ds(SAMPLES - 1) == Some(0.0) {
@@ -1165,7 +1151,173 @@ pub fn native_intersections(
             }
         }
     }
+    // a curve meets an implicit one where F(x, f(x)) = 0: `x = 1` crosses y = f(x) at (1, f(1))
+    for f in &fns {
+        for fxy in &fxys {
+            let g = |x: f64| -> Option<f64> { fxy(x, f(x).filter(|v| v.is_finite())?) };
+            let gs: Vec<Option<f64>> = (0..SAMPLES).map(|i| g(x_at(i))).collect();
+            for i in 0..SAMPLES - 1 {
+                let (Some(u), Some(v)) = (gs[i], gs[i + 1]) else {
+                    continue;
+                };
+                let (l, r) = if u == 0.0 {
+                    (x_at(i), x_at(i))
+                } else if v != 0.0 && u.signum() != v.signum() {
+                    bisect(&g, x_at(i), x_at(i + 1), u)
+                } else {
+                    continue;
+                };
+                let (Some(p), Some(q)) = (f(l), f(r)) else {
+                    continue;
+                };
+                // a jump in the curve or in F, not a crossing: the two sides stay apart
+                let scale = 1.0 + p.abs().max(q.abs());
+                let (Some(gl), Some(gr)) = (g(l), g(r)) else {
+                    continue;
+                };
+                if !((p - q).abs() <= 1e-6 * scale)
+                    || !(gl.abs().max(gr.abs())
+                        <= 1e-6 * (u.abs() + v.abs()).max(f64::MIN_POSITIVE))
+                {
+                    continue;
+                }
+                let x = tidy_x((l + r) / 2.0, step);
+                let Some(y) = f(x).filter(|y| y.is_finite()) else {
+                    continue;
+                };
+                let y = tidy_x(y, 1e-9 * scale);
+                if !out
+                    .iter()
+                    .any(|c| (c.x - x).abs() <= step && (c.y - y).abs() <= 1e-6 * scale)
+                {
+                    out.push(CriticalPoint {
+                        x,
+                        y,
+                        kind: CriticalKind::Intersection,
+                        z: None,
+                    });
+                }
+            }
+            if out.len() > MANY {
+                return out;
+            }
+        }
+    }
     out
+}
+
+/// A sign change of `d` between `l` (where it is `dl`) and `r`, halved down to neighbouring doubles.
+fn bisect(d: &dyn Fn(f64) -> Option<f64>, mut l: f64, mut r: f64, mut dl: f64) -> (f64, f64) {
+    for _ in 0..80 {
+        let m = (l + r) / 2.0;
+        // l and r are neighbouring doubles: halving again changes nothing
+        if m == l || m == r {
+            break;
+        }
+        let Some(dm) = d(m) else { break };
+        if dm == 0.0 {
+            return (m, m);
+        }
+        if dm.signum() == dl.signum() {
+            l = m;
+            dl = dm;
+        } else {
+            r = m;
+        }
+    }
+    (l, r)
+}
+
+/// Native only: a curve's removable holes filled, as Desmos draws them (sin(x)/x is 1 at 0): a sample with no
+/// value whose two sides close in on one takes that value, and is listed as a max or min when it stands above
+/// or below both neighbours (sin²x/x²'s top at 0). Any curve's y-intercept is listed too, the hole's limit
+/// when 0 is one, unless a key point or root is there already (the web lists it for straight lines only).
+pub fn fill_holes(r: &mut GraphResult) {
+    if r.error.is_some()
+        || r.contours.is_some()
+        || r.surface.is_some()
+        || r.intent.contour.is_some()
+    {
+        return;
+    }
+    let span = r.domain.1 - r.domain.0;
+    let y_span = (r.y_scale.max - r.y_scale.min).abs();
+    if !(span > 0.0) || !span.is_finite() {
+        return;
+    }
+    let bounds = r.intent.bounds.clone();
+    let n = r.points.len();
+    let step = span / (n.max(2) - 1) as f64;
+    let (holes, y0) = {
+        let Some(f) = r.y_fn() else { return };
+        let h = span * 1e-7;
+        let tol = 1e-6 * y_span.max(f64::MIN_POSITIVE);
+        let limit = |x: f64| -> Option<f64> {
+            if f(x).is_some_and(f64::is_finite) {
+                return None;
+            }
+            let side = |d: f64| f(x + d).filter(|v| v.is_finite());
+            let (a, b) = (side(-h)?, side(h)?);
+            let (c, d) = (side(-h / 64.0)?, side(h / 64.0)?);
+            let y = (c + d) / 2.0;
+            let gap = (c - d).abs();
+            (gap <= tol
+                && gap <= (a - b).abs() + tol
+                && crate::graph::inside(bounds.as_ref(), x, y))
+            .then_some(y)
+        };
+        let holes: Vec<(usize, f64)> = (1..n.saturating_sub(1))
+            .filter(|&i| {
+                r.points[i].y.is_none()
+                    && r.points[i - 1].y.is_some()
+                    && r.points[i + 1].y.is_some()
+            })
+            .filter_map(|i| limit(r.points[i].x).map(|y| (i, y)))
+            .collect();
+        let y0 = (r.domain.0 <= 0.0 && 0.0 <= r.domain.1)
+            .then(|| f(0.0).filter(|v| v.is_finite()).or_else(|| limit(0.0)))
+            .flatten();
+        (holes, y0)
+    };
+    for &(i, y) in &holes {
+        r.points[i].y = Some(y);
+        // the sampler puts points a hair either side of a hole: compare with ones a real step away
+        let x = r.points[i].x;
+        let apart = |j: &usize| (r.points[*j].x - x).abs() >= step / 2.0;
+        let left = (0..i).rev().find(apart).and_then(|j| r.points[j].y);
+        let right = (i + 1..n).find(apart).and_then(|j| r.points[j].y);
+        let (Some(p), Some(q)) = (left, right) else {
+            continue;
+        };
+        let kind = if y > p && y > q {
+            CriticalKind::Max
+        } else if y < p && y < q {
+            CriticalKind::Min
+        } else {
+            continue;
+        };
+        if !r.critical_points.iter().any(|c| (c.x - x).abs() <= step) {
+            r.critical_points.push(CriticalPoint {
+                x,
+                y,
+                kind,
+                z: None,
+            });
+        }
+    }
+    if let Some(y) = y0 {
+        let near = |x: f64| x.abs() <= step * 1e-6;
+        let taken = r.critical_points.iter().any(|c| near(c.x) && c.z.is_none())
+            || r.roots.iter().any(|&x| near(x));
+        if !taken {
+            r.critical_points.push(CriticalPoint {
+                x: 0.0,
+                y,
+                kind: CriticalKind::YIntercept,
+                z: None,
+            });
+        }
+    }
 }
 
 /// A crossing found by bisection to the last bit, rounded to a nearby short number when one is that close

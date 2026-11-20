@@ -284,6 +284,32 @@ impl GraphResult {
         }
     }
 
+    /// Native only: an implicit curve's F(x, y), which is 0 on the curve (`x = 1` is x − 1), compiled once;
+    /// None outside its bounds and for anything but an `F = 0` curve.
+    pub fn xy_fn(&self) -> Option<impl Fn(f64, f64) -> Option<f64> + '_> {
+        if self.intent.contour != Some(ContourKind::Zero) {
+            return None;
+        }
+        match &self.readout {
+            GraphReadout::Surface {
+                expression,
+                options,
+                mode,
+                bounds,
+            } => {
+                let f = compile_graph_z(expression, options, Some(*mode));
+                Some(move |x: f64, y: f64| {
+                    if inside(bounds.as_ref(), x, y) {
+                        f.at(x, y).filter(|v| v.is_finite())
+                    } else {
+                        None
+                    }
+                })
+            }
+            _ => None,
+        }
+    }
+
     pub fn y_at(&self, x: f64) -> Option<f64> {
         match &self.readout {
             GraphReadout::Curve {
@@ -1633,6 +1659,7 @@ pub fn build_native_graph(input: &str, options: &GraphOptions) -> Option<GraphRe
     r.critical_points.extend(intercepts);
     let ends = endpoints(&r);
     r.critical_points.extend(ends);
+    crate::graph_native::fill_holes(&mut r);
     // the points a line was drawn through, first
     if r.error.is_none() && !native.points.is_empty() {
         let mut marks: Vec<CriticalPoint> = native
