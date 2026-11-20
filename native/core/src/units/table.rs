@@ -731,6 +731,9 @@ fn unit_list() -> Vec<Unit> {
         spec("hp", Power, "hp", 745.699872, "kw", &["hp", "horsepower", "mechanical horsepower"]),
         pre(spec("w", Power, "W", 1.0, "hp", &["w", "watt", "watts"])),
         spec("kw", Power, "kW", 1000.0, "hp", &["kw", "kilowatt", "kilowatts"]),
+        // native only: apparent power, a load's volt-amperes (QA item 81)
+        spec("va", Power, "VA", 1.0, "", &["va", "volt ampere", "volt amperes", "volt-ampere", "volt-amperes"]),
+        spec("kva", Power, "kVA", 1000.0, "", &["kva", "kilovolt ampere", "kilovolt amperes", "kilovolt-ampere", "kilovolt-amperes"]),
 
         spec("psi", Pressure, "psi", PSI, "kpa", &["psi", "pound per square inch", "pounds per square inch"]),
         spec("ksi", Pressure, "ksi", PSI * 1000.0, "mpa", &["ksi"]),

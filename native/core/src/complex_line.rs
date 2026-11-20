@@ -303,8 +303,8 @@ pub fn rewrite(
             "",
         )
     });
-    static ALIAS_ARG: Lazy = Lazy::new(|| js(r"(?<![A-Za-z0-9_.])(?:angle|phase)\s*\(", "i"));
-    static ALIAS_ABS: Lazy = Lazy::new(|| js(r"(?<![A-Za-z0-9_.])(?:mag|magnitude)\s*\(", "i"));
+    let text = power_factor_phrase(text, variables, functions);
+    let text = text.as_str();
     let (body, polar) = match FORM.captures(text).ok().flatten() {
         Some(c) => (
             text[..c.get(0)?.start()].to_string(),
@@ -330,7 +330,9 @@ pub fn rewrite(
     // polar is the engineer's notation too
     let j = j || polar_typed;
     // `angle(3+4i)` and `phase(…)`, which the engine has no name for
-    let alias = jsre::test(&ALIAS_ARG, &imag) || jsre::test(&ALIAS_ABS, &imag);
+    let alias = jsre::test(&ALIAS_ARG, &imag)
+        || jsre::test(&ALIAS_ABS, &imag)
+        || (jsre::test(&ALIAS_PF, &imag) && !mine("pf", variables, functions));
     if !(spelled || j || polar_typed || named.hit || ((asked_form || alias) && typed_i(&imag))) {
         return None;
     }
@@ -349,10 +351,7 @@ pub fn rewrite(
             target = Some(unit);
         }
     }
-    let expr: String =
-        jsre::replace_all(&ALIAS_ARG, expr.as_str(), |_| "arg(".to_string()).into_owned();
-    let expr: String =
-        jsre::replace_all(&ALIAS_ABS, expr.as_str(), |_| "abs(".to_string()).into_owned();
+    let expr = aliased(&expr);
     Some(Rewritten {
         expr,
         j,
@@ -361,16 +360,67 @@ pub fn rewrite(
     })
 }
 
-/// A typed `i` with a unit (`(3 + 4i) Ω`) or a leading number (`i0.5`), once the engine's own path has no answer.
+static ALIAS_ARG: Lazy = Lazy::new(|| js(r"(?<![A-Za-z0-9_.])(?:angle|phase)\s*\(", "i"));
+static ALIAS_ABS: Lazy = Lazy::new(|| js(r"(?<![A-Za-z0-9_.])(?:mag|magnitude)\s*\(", "i"));
+static ALIAS_PF: Lazy = Lazy::new(|| js(r"(?<![A-Za-z0-9_.])pf\s*\(", "i"));
+
+/// `angle(…)`/`phase(…)` as `arg(…)` and `mag(…)` as `abs(…)`, names the engine doesn't know.
+fn aliased(expr: &str) -> String {
+    let expr = jsre::replace_all(&ALIAS_ARG, expr, |_| "arg(".to_string()).into_owned();
+    jsre::replace_all(&ALIAS_ABS, expr.as_str(), |_| "abs(".to_string()).into_owned()
+}
+
+/// A name you defined, which stays yours.
+fn mine(name: &str, variables: &BTreeMap<String, f64>, functions: &[String]) -> bool {
+    variables.contains_key(name) || functions.iter().any(|f| f == name)
+}
+
+/// `power factor of Z` and `pf of Z` as `pf(Z)`: cos of Z's angle (QA item 81).
+fn power_factor_phrase(
+    text: &str,
+    variables: &BTreeMap<String, f64>,
+    functions: &[String],
+) -> String {
+    static PHRASE: Lazy = Lazy::new(|| {
+        js(
+            r"^\s*(?:the\s+)?(?:power\s+factor|pf)\s+of\s+(\S.*?)\s*$",
+            "i",
+        )
+    });
+    match PHRASE.captures(text).ok().flatten() {
+        Some(c) if !mine("pf", variables, functions) => format!("pf({})", jsre::group(&c, 1)),
+        _ => text.to_string(),
+    }
+}
+
+/// A typed `i` with a unit (`(3 + 4i) Ω`) or a leading number (`i0.5`), once the engine's own path has no answer;
+/// also a phasor's parts of a real quantity (`abs(-5 V)`, `conj(2 A)`, `angle(-5)`, `pf(…)`), which the engine's
+/// scalar functions leave blank (QA item 81).
 pub fn fallback(text: &str, ctx: &ScientificContext) -> Option<Value> {
-    let (expr, _, _) = imaginary_words(
-        text,
-        &ctx.variables,
-        &ctx.functions.keys().cloned().collect::<Vec<_>>(),
-    );
-    if !typed_i(&expr) {
+    static PART: Lazy = Lazy::new(|| {
+        js(
+            r"(?<![A-Za-z0-9_.])(abs|conj|re|im|real|imag|arg|angle|phase|mag|magnitude|pf)\s*\(",
+            "i",
+        )
+    });
+    let functions = ctx.functions.keys().cloned().collect::<Vec<_>>();
+    let text = power_factor_phrase(text, &ctx.variables, &functions);
+    let (expr, _, _) = imaginary_words(&text, &ctx.variables, &functions);
+    let part = PART
+        .captures(expr.as_str())
+        .ok()
+        .flatten()
+        .is_some_and(|c| {
+            !mine(
+                &jsre::group(&c, 1).to_lowercase(),
+                &ctx.variables,
+                &functions,
+            )
+        });
+    if !typed_i(&expr) && !part {
         return None;
     }
+    let expr = aliased(&expr);
     evaluate(
         &Rewritten {
             expr,
@@ -428,7 +478,7 @@ fn has_complex_call(n: &Node) -> bool {
         Node::Parenthesis(inner) => has_complex_call(inner),
         Node::Operator { args, .. } => args.iter().any(has_complex_call),
         Node::Function { callee, args } => {
-            matches!(callee.as_ref(), Node::Symbol(s) if CALLS.contains(&s.to_lowercase().as_str()))
+            matches!(callee.as_ref(), Node::Symbol(s) if CALLS.contains(&s.to_lowercase().as_str()) || s.eq_ignore_ascii_case("pf"))
                 || args.iter().any(has_complex_call)
         }
         _ => false,
@@ -472,6 +522,15 @@ impl Walk {
                 if u.units.iter().any(|p| p.offset != 0.0) {
                     return None;
                 }
+                // var, reactive power: mathjs gives it no real size; here it is watts, the j saying it's reactive
+                // (`30 kW + j40 kVAR`)
+                if u.si_factor().is_nan() {
+                    let prefix = u.units.first().map_or(1.0, |p| p.prefix_value);
+                    return Some(Q {
+                        z: C::new(prefix, 0.0),
+                        dims: u.dims,
+                    });
+                }
                 let q = unit_q(&u);
                 self.typed.push((s.clone(), u.si_factor(), u.dims));
                 Some(q)
@@ -507,6 +566,8 @@ impl Walk {
                     "abs" => real(a.z.abs(), a.dims),
                     "re" | "real" => real(a.z.re, a.dims),
                     "im" | "imag" => real(a.z.im, a.dims),
+                    // power factor: cos of the angle between voltage and current, a load's impedance or its power
+                    "pf" => real(jsmath::cos(a.z.arg()), NONE),
                     "conj" => Some(Q {
                         z: a.z.conjugate(),
                         dims: a.dims,
@@ -710,6 +771,16 @@ pub fn evaluate(line: &Rewritten, ctx: &ScientificContext) -> Option<Value> {
         }
     }
     let (re, im) = chopped(q.z.re / factor, q.z.im / factor);
+    // a complex power is apparent power, in volt-amperes: S = V I* (QA item 81)
+    let unit = match unit {
+        Some(u) if im != 0.0 && line.target.is_none() && same(&q.dims, &NAMED[3].1) => {
+            match u.strip_suffix('W') {
+                Some(prefix) if prefix.len() <= 2 => Some(format!("{prefix}VA")),
+                _ => Some(u),
+            }
+        }
+        unit => unit,
+    };
     Some(answer(re, im, unit, line.j, line.polar))
 }
 
