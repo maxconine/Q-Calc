@@ -32,6 +32,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        // an accessory app has no menu bar, so no Services menu: without one the line's and the sheets' right-click
+        // menus had no Services (Look Up, Translate, Search With Google, a Shortcut on the selection)
+        NSApp.servicesMenu = NSMenu(title: "Services")
+        NSApp.registerServicesMenuSendTypes([.string], returnTypes: [.string])
         setupStatusItem()
         // before the web view boots, so its injected settings already carry the shortcut
         registerHotKey()

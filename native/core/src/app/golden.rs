@@ -532,6 +532,25 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
         // ---- lib/steady ----
         ("lib/steady", "isEditOf") => json!(crate::app::steady::is_edit_of(&s(0), &s(1))),
         // ---- lib/touches ----
+        // native only: what the Mac's copies put on the clipboard (touches.rs)
+        ("lib/touches", "answerCopy") => json!(crate::app::touches::answer_copy(&s(0), b(1))),
+        ("lib/touches", "rowLineCopy") => json!(crate::app::touches::row_line_copy(&a(0), form(&a(1)))),
+        ("lib/touches", "liveLineCopy") => {
+            // [text, chained, ansPlain, {display, exact, solve: {variable, outcome}}, form]
+            let line = a(3);
+            json!(crate::app::touches::live_line_copy(
+                &s(0),
+                b(1),
+                a(2).as_str(),
+                line.get("display").and_then(Json::as_str).unwrap_or(""),
+                line.get("exact").and_then(Json::as_str),
+                line.get("solve").map(|v| (
+                    v.get("variable").and_then(Json::as_str).unwrap_or(""),
+                    v.get("outcome").and_then(Json::as_str).unwrap_or("")
+                )),
+                form(&a(4))
+            ))
+        }
         ("lib/touches", "lineCopyText") => {
             let line = a(1);
             json!(crate::app::touches::line_copy_text(

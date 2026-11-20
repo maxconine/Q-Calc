@@ -1402,9 +1402,12 @@ final class BarModel: ObservableObject {
     func copyAnswer(_ value: String? = nil) {
         let shown = value ?? shownAnswer
         guard !shown.isEmpty else { return }
+        // without its unit when the setting says so, a reaction in ASCII, never the unit error (core answerCopy)
+        let copied = logic.string("lib/touches", "answerCopy", [shown, settings.copyUnitless]) ?? UnitlessCopy.copied(shown)
+        guard !copied.isEmpty else { return }
         track("copy.answer")
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(UnitlessCopy.copied(shown), forType: .string)
+        NSPasteboard.general.setString(copied, forType: .string)
         flashCopied()
     }
 
@@ -1425,11 +1428,31 @@ final class BarModel: ObservableObject {
         return true
     }
 
+    /// ⌘⇧C (copyLine): a row picked with ↑ copies its own line; else the live line as the tape would keep it, its
+    /// grey parens filled, then `= answer` (core `liveLineCopy`: `√8 = 2√2 ≈ 2.82843`, `x^2 = 9, x = -3, 3`). It had
+    /// copied `text = shown` as typed, and the live line (or nothing) with a row picked.
     func copyLine() {
-        guard !live.isBlank else { return }
+        var line: String?
+        if let i = selected, rows.indices.contains(i), let data = core.historyToJson(rows: [rows[i]]).data(using: .utf8),
+           let first = ((try? JSONSerialization.jsonObject(with: data)) as? [Any])?.first {
+            line = logic.string("lib/touches", "rowLineCopy", [first, settings.answerForm])
+        } else {
+            guard !live.isBlank else { return }
+            // a ⌃E form or a ⌥↑ step stands alone; otherwise the exact side and the decimal as Answer form reads them
+            let stepped = prefixShown != nil || (formIndex > 0 && forms.indices.contains(formIndex))
+            var answer: [String: Any] = ["display": stepped ? shownAnswer : exponentShown(live.display)]
+            if !stepped, let exact, !exact.isEmpty { answer["exact"] = exact }
+            if let solve = live.solve {
+                answer["solve"] = ["variable": solve.variable, "outcome": solve.outcome == .roots || solve.outcome == .complex ? "roots" : "message"]
+            }
+            line = logic.string("lib/touches", "liveLineCopy",
+                                [text, chained, decorations.ans ?? NSNull(), answer, settings.answerForm])
+                ?? "\(text) = \(shownAnswer)"
+        }
+        guard let line, !line.isEmpty else { return }
         track("copy.line")
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString("\(text) = \(shownAnswer)", forType: .string)
+        NSPasteboard.general.setString(line, forType: .string)
         flashCopied()
     }
 

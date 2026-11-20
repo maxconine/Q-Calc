@@ -166,7 +166,7 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 |---|---|---|
 | Answer as you type, blank lines blank | ✅ | |
 | Chaining from `ans` | ✅ | `Engine.chains` |
-| Copy unitless by default; copy as Typst | ✅ | `copiedEquation` on copies from the field when “Copy Typst compatible” is on |
+| Copy unitless by default; copy as Typst | ✅ | `copiedEquation` on copies from the field when “Copy Typst compatible” is on. ⌘⇧C copies the line as the page's `lineCopyText` (core `liveLineCopy`: the chain written out, grey parens filled, `√8 = 2√2 ≈ 2.82843`, a solve's `x = …`), a picked row its own line (`rowLineCopy`); a reaction copies in ASCII (`chemCopyText`) and `improper unit conversion` copies nothing (`answerCopy`). Drag-out carries the answer as shown, as the page's `dataTransfer` does. **Native only:** the line's and the sheets' right-click menus have Services (an accessory app had none) |
 | Degrees, 6 sig figs, rationalize by default; same UserDefaults keys | ✅ | |
 | Games in an on-demand web view | ✅ | only ember & frost and trails now (another package is porting them); `parity/game-lifecycle.sh` still checks the web view comes and goes |
 | 420 / 67 / 69 effects | 🟡 | native now (`Effects/EggOverlay.swift`): a click-through panel over the bar, Core Animation layers with the components' numbers and keyframes (22 puffs from the core, blurred 18 px; the two hands' weigh keyframes and cubic-béziers; the 6 and 9 spinning), reduced-motion variants; fires after the 200 ms settle through the core's `EggGate` (seen firing in the dev build: `effect smoke (native)`), torn down after `eggPlayMs`. The moving picture isn't captured by `drive.sh snap` (presentation layers), so not pixel-compared |
