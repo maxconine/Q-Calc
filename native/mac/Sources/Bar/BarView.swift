@@ -674,6 +674,7 @@ private struct EdgeTool<Label: View>: View {
     @ViewBuilder var content: Label
     @State private var hover = false
     @State private var tipShown = false
+    @State private var tipWait = 0
     @State private var pressed = false
 
     var body: some View {
@@ -692,10 +693,13 @@ private struct EdgeTool<Label: View>: View {
             hover = on
             if tipShown { HoverTip.onScreen() }
             tipShown = false
+            // a wait from an earlier rest (left and came back within 1.5 s) mustn't show it early
+            tipWait += 1
             guard on else { return }
+            let wait = tipWait
             // 1.5 s every time, not the other labels' short wait
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                if hover { tipShown = true; HoverTip.onScreen() }
+                if hover, wait == tipWait { tipShown = true; HoverTip.onScreen() }
             }
         }
         .overlay(alignment: tipAbove ? .topTrailing : (alignLeft ? .bottomLeading : .bottomTrailing)) {

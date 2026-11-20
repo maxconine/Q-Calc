@@ -267,6 +267,17 @@ QA item 57, Mac only (`mac/Sources/Bar/GhostRules.swift`, new; `Bar/BarModel.swi
 
 To test on Windows: type `sq` then `r` fast (the ghost reads `t`, never `rt`); `(2` then `)` (no extra grey `)`); `2 + sq` then move the caret to the start and press Tab (nothing typed there); `$sqrt(2$` then Tab (`$sqrt(2)$`, answer 1.41421).
 
+### Hover tips: names for the new words, clock lines, edge tools' wait (20 Nov 2026)
+
+QA item 66 (core `app/word_names.rs` `call_name`/`zone_name`/`mole_name`; Mac `Bar/BarView.swift` edge tool `tipWait`, `Bar/GraphSettings.swift`; test `core/tests/hover_tips.rs`). The core part reaches Windows through `wordNames` as is; check the Windows bar for the rest:
+
+- **Names for tonight's words:** `sinc` (sinc (sin x / x), the one engine function without a name), and, as a call only, `deg(` radians to degrees, `rad(` degrees to radians, `cis(`, `rect(`, `polar(`, `angle(`, `phase(`, `diff(` derivative, `solve(`, and the matrix functions (`det(` determinant, `inv(`, `rref(`, `lu(`, `cross(`, `size(` …); `mol`/`kmol`/`mmol`/`moles` mole; `||` between two values in parallel (not a norm's bars, `||v||`). A function of the user's own keeps its name to itself. Answer unit names follow (`2.4942 kJ/mol` names kilojoule/mole).
+- **Clock lines:** the bar answers `3pm`, `5 pm` and `3pm est in pst` as clock times, but the hover named `pm` picometer and `pst` "pst". Now an am/pm right after a number is not named when no other unit is in the line (`5 pm to nm` keeps picometer), and the zones are named in a clock or time line (`est` Eastern time, `pst` Pacific time, `utc`, `gmt`).
+- **Edge tools' 1.5 s wait:** leaving a tool and coming back within 1.5 s showed its tip early (the first rest's wait still ran); each rest now waits its own 1.5 s.
+- **Graph settings:** an equation from the bar's `;` had an AppKit tooltip (`.help`, late and lingering); it is now the bar's hover label like the rest of the graph.
+
+To test on Windows: hover `deg` in `deg(pi)`, `mol` in `8.314 J/(mol K) * 300 K`, `||` in `10 Ω || 20 Ω`, `pm` and `pst` in `3pm est in pst` (no picometer); hover an edge tool, leave after 1 s, come back (its tip waits 1.5 s again).
+
 ### Already ported
 
 The stacked fractions round (TeX sizes, Desmos keys, grown brackets, stacked history rows, answers shrinking as one) and the newer graph round were ported for 3.0.2 (branch `win-port-302`, 8 Nov 2026). What stays different on Windows:

@@ -272,7 +272,7 @@ struct GraphEquations: View {
                 row(color: GraphPanel.layerSwiftColor(i + 1)) {
                     if layer.fromBar {
                         Text(Pretty.radicals(layer.expression)).font(.system(size: Theme.small)).foregroundStyle(Color.qInk).lineLimit(1)
-                            .help("After a ; in the bar: edit it there")
+                            .hoverTip("After a ; in the bar: edit it there")
                     } else {
                         TextField("y = …  or  x^2 + y^2 = 9  or  z = …", text: Binding(
                             get: { layer.expression },

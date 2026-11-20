@@ -9,6 +9,7 @@ use crate::app::js::index16;
 use crate::app::known_words::known_word_spans;
 use crate::app::messaging::is_message_command;
 use crate::app::unit_spans::{UnitSpan, unit_spans};
+use crate::jsre::{self, Lazy, js};
 
 /// The full name of each engine function (`crate::scientific::NAMES`), by its lowercase spelling.
 fn function_name(word: &str) -> Option<&'static str> {
@@ -16,6 +17,7 @@ fn function_name(word: &str) -> Option<&'static str> {
         "sqrt" => "square root",
         "cbrt" => "cube root",
         "nthroot" => "nth root",
+        "sinc" => "sinc (sin x / x)",
         "sin" => "sine",
         "cos" => "cosine",
         "tan" => "tangent",
@@ -90,6 +92,83 @@ fn function_name(word: &str) -> Option<&'static str> {
     })
 }
 
+/// Native only: what the engine reads when the word is called (`word(…)`) but the bar doesn't light as a known word
+/// (`deg(pi)`, `cis(30)`, `diff(x^3, x)`, the matrix functions).
+fn call_name(word: &str) -> Option<&'static str> {
+    Some(match word {
+        "deg" => "radians to degrees",
+        "rad" => "degrees to radians",
+        "cis" => "cis (cos θ + i sin θ)",
+        "rect" => "rectangular form",
+        "polar" => "polar form",
+        "angle" => "angle",
+        "phase" => "phase angle",
+        "diff" => "derivative",
+        "solve" => "solve",
+        "det" | "determinant" => "determinant",
+        "inv" | "inverse" => "inverse",
+        "transpose" => "transpose",
+        "trace" | "tr" => "trace",
+        "rank" => "rank",
+        "rref" => "reduced row echelon form",
+        "norm" => "norm (length)",
+        "identity" | "eye" => "identity matrix",
+        "dot" => "dot product",
+        "cross" => "cross product",
+        "eig" | "eigenvalues" | "eigvals" => "eigenvalues",
+        "eigenvectors" | "eigvecs" | "eigvec" => "eigenvectors",
+        "charpoly" => "characteristic polynomial",
+        "null" | "nullspace" | "kernel" => "null space",
+        "nullity" => "nullity",
+        "colspace" => "column space",
+        "rowspace" => "row space",
+        "gramschmidt" => "Gram–Schmidt",
+        "proj" => "projection",
+        "adj" | "adjugate" => "adjugate",
+        "cofactor" => "cofactor",
+        "minor" => "minor",
+        "kron" => "Kronecker product",
+        "zeros" => "matrix of zeros",
+        "ones" => "matrix of ones",
+        "diag" => "diagonal matrix",
+        "lu" => "LU decomposition",
+        "qr" => "QR decomposition",
+        "svd" => "singular value decomposition",
+        "chol" | "cholesky" => "Cholesky decomposition",
+        "pinv" => "pseudoinverse",
+        "cond" => "condition number",
+        "expm" => "matrix exponential",
+        "size" => "size (rows, columns)",
+        "numel" => "number of entries",
+        _ => return None,
+    })
+}
+
+/// Native only: a time zone the clock phrases read (`3pm est in pst`, `time in utc`).
+fn zone_name(word: &str) -> Option<&'static str> {
+    Some(match word {
+        "utc" => "Coordinated Universal Time",
+        "gmt" => "Greenwich Mean Time",
+        "est" | "edt" => "Eastern time",
+        "cst" | "cdt" => "Central time",
+        "mst" | "mdt" => "Mountain time",
+        "pst" | "pdt" => "Pacific time",
+        _ => return None,
+    })
+}
+
+/// Native only: moles, which the engine reads beside other units (`8.314 J/(mol K)`) but the unit table lacks.
+fn mole_name(word: &str) -> Option<&'static str> {
+    Some(match word {
+        "mol" | "mols" | "mole" | "moles" => "mole",
+        "kmol" => "kilomole",
+        "mmol" => "millimole",
+        "µmol" | "μmol" | "umol" => "micromole",
+        "nmol" => "nanomole",
+        _ => return None,
+    })
+}
+
 /// The constants the engine reads, spelled or as a sign.
 fn constant_name(word: &str) -> Option<&'static str> {
     Some(match word {
@@ -127,6 +206,107 @@ pub fn word_names(
         if let Some(name) = function_name(&word)
             && free(&out, &s)
         {
+            out.push(UnitSpan {
+                start: s.start,
+                end: s.end,
+                name: name.into(),
+            });
+        }
+    }
+    // native only: the bar answers `3pm`, `5 pm`, `3pm est in pst` as clock times, so their am/pm isn't
+    // picometers (unless another unit is about, `5 pm to nm`), and the zones are named
+    let clock_mark = |u: &UnitSpan| {
+        let typed = String::from_utf16_lossy(&units16[u.start..u.end]);
+        matches!(typed.as_str(), "am" | "pm")
+            && String::from_utf16_lossy(&units16[..u.start])
+                .trim_end()
+                .ends_with(|c: char| c.is_ascii_digit())
+    };
+    let zone = |u: &UnitSpan| {
+        zone_name(&word16(&Span {
+            start: u.start,
+            end: u.end,
+        }))
+        .is_some()
+    };
+    let clock = out.iter().any(clock_mark) && out.iter().all(|u| clock_mark(u) || zone(u));
+    static CLOCK: Lazy =
+        Lazy::new(|| js(r"\d:\d\d|\b(?:time|now|today|tomorrow|yesterday)\b", "i"));
+    if clock || jsre::test(&CLOCK, text) {
+        if clock {
+            out.retain(|u| !clock_mark(u));
+        }
+        out.retain(|u| !zone(u));
+        for (start, end) in constant_words(text) {
+            let word = text[start..end].to_lowercase();
+            let mine = variables
+                .iter()
+                .chain(functions)
+                .any(|v| v.to_lowercase() == word);
+            let s = Span {
+                start: index16(text, start),
+                end: index16(text, end),
+            };
+            if let Some(name) = zone_name(&word)
+                && !mine
+                && free(&out, &s)
+            {
+                out.push(UnitSpan {
+                    start: s.start,
+                    end: s.end,
+                    name: name.into(),
+                });
+            }
+        }
+    }
+    // native only: words the engine reads as a call without lighting them (`deg(pi)`, `det(A)`), moles, and `||`
+    static CALL: Lazy = Lazy::new(|| js(r"(?<![A-Za-z0-9_])([A-Za-z]+)(?=\s*\()", ""));
+    static MOLE: Lazy = Lazy::new(|| {
+        js(
+            r"(?<![A-Za-z0-9_])(?:[kmnuµμ]?mol|mols|moles?)(?![A-Za-z0-9_(])",
+            "",
+        )
+    });
+    let mut extra: Vec<(usize, usize, &'static str)> = Vec::new();
+    for m in CALL.find_iter(text).filter_map(Result::ok) {
+        let word = m.as_str().to_lowercase();
+        if variables
+            .iter()
+            .chain(functions)
+            .any(|v| v.to_lowercase() == word)
+        {
+            continue;
+        }
+        if let Some(name) = call_name(&word) {
+            extra.push((m.start(), m.end(), name));
+        }
+    }
+    for m in MOLE.find_iter(text).filter_map(Result::ok) {
+        if variables.iter().any(|v| v == m.as_str()) {
+            continue;
+        }
+        if let Some(name) = mole_name(m.as_str()) {
+            extra.push((m.start(), m.end(), name));
+        }
+    }
+    for (i, _) in text.match_indices("||") {
+        // between two values (`10 Ω || 20 Ω`), not a norm's bars (`||v||`, `||a|| + ||b||`)
+        let before = text[..i].trim_end().chars().last();
+        let after = text[i + 2..].trim_start().chars().next();
+        let operand_end =
+            |c: char| c.is_alphanumeric() || matches!(c, ')' | ']' | '.' | '°' | 'Ω' | 'µ' | 'μ');
+        let operand_start =
+            |c: char| c.is_alphanumeric() || matches!(c, '(' | '[' | '.' | '-' | '√' | 'π');
+        if before.is_some_and(operand_end) && after.is_some_and(operand_start) {
+            extra.push((i, i + 2, "in parallel"));
+        }
+    }
+    for (start, end, name) in extra {
+        let s = Span {
+            start: index16(text, start),
+            end: index16(text, end),
+        };
+        if free(&out, &s) {
             out.push(UnitSpan {
                 start: s.start,
                 end: s.end,
