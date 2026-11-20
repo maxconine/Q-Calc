@@ -49,6 +49,9 @@ Do one subsection per branch, in this order, with the simplest and most used fir
 5. Stacked fractions and powers (off by default).
 6. The working panel, Ctrl+W.
 7. Graph panel: implicit curves and key points first, then several equations and graph settings, then the 3D view.
+8. Tape: copy button and notes.
+9. Sheets: Related links, search everywhere, clicks with the bar up.
+9. Sheets: a click explains the equation.
 
 If several agents run in parallel, give each one a subsection from this list. The subsections touch different files.
 

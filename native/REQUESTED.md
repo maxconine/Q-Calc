@@ -58,6 +58,13 @@ Status: ✅ tested (a test covers it) · 🔧 fixed here · ❌ missing · 🖥 
 | `open messages with max2`, threads with past contacts | 2026-10-27 | ✅ | `message_commands`; `app::messaging::reads_the_conversation_commands` |
 | Custom hotkey (e.g. `alt+q`) is kept | 2026-10-18 | ✅ | `keybinds_are_the_users` |
 | Constants from Mitiguy's appendix (p. 306) answer in words: `Earth's axial tilt` is 23.45° | 2026-11-10 | ✅ | `named_constants_answer_in_words` (`core/src/named_constants.rs`) |
+| More constants in words: physics (CODATA), every planet's mass, year, day and escape velocity, material densities, moduli and heats, fun facts (`mount everest to ft`, `marathon / smoot`) | 2026-11-10 | ✅ | `more_named_constants_answer_in_words` |
+| `ans/2` after `160lbs*3ft to lb*in` had no answer (any conversion to a compound unit kept no `ans`) | 2026-11-11 | 🔧 | `ans_after_a_conversion_to_a_compound_unit` (`units.rs` `quantity_text_now`) |
+| Preview showed `2.1875 × 10⁵` as `2.1875 × 10` (a single raised ⁰ or ⁴–⁹ the math font lacks) | 2026-11-11 | 🔧 | `preview_keeps_a_single_raised_digit` (`typst_math.rs`) |
+| `1/√ans` after `1*10^-7` had no answer (√ rooted only one letter, so `√ans`, `√pi` failed) | 2026-11-12 | 🔧 | `root_of_a_whole_name` (`scientific/preprocess.rs` `ROOT_LETTER`) |
+| `today + 6 days + 10 days` had no answer (a date or clock took only one span) | 2026-11-12 | 🔧 | `a_date_plus_several_spans` (`phrases/time.rs` `span_chain`) |
+| `+ 1 week - 3 days + 12 days - 1 year + 500 days` goes on from a date answer (`Wed 11 Nov 2026` now reads back; `- 2 days` steps back, `-2` stays minus two) | 2026-11-13 | 🔧 | `a_date_answer_chains_by_spans` (`app/chain.rs` `is_date_answer`, `phrases/time.rs`) |
+| Paste text and ↵ saves it as a note row (no answer needed), never `ans` or a variable | 2026-11-17 | ✅ | `a_note_row_keeps_its_text_and_counts_for_nothing` (`app/history.rs` `note` kind); UI in `BarModel.saveNote` |
 | Default keybind ⌘⌥Space | 2026-10-27 | ❌ | Still `ctrl+alt+space` (`app/keybinds.rs` `default_keybind`, `macos/Keybinds.swift`). On hold since that session: macOS uses ⌘⌥Space for Finder search, so Q Calc would find it taken. Needs the user's call (take it over, or only where Finder's is off), then the default changed in both places plus the taken-hotkey note |
 
 ## Games
@@ -104,10 +111,16 @@ Status: ✅ tested (a test covers it) · 🔧 fixed here · ❌ missing · 🖥 
 | Tab on `(838*2123` leaves the caret past the `)`; grey parens as wide as typed ones, nothing shifts | 2026-10-27 | 🖥 | commits 9a603d2, d051328 |
 | Tab autofills during tutorial steps | 2026-10-27 | 🖥 | same Tab handling as the line; not driven |
 | Bar hides on click-away unless messaging | 2026-10-28 | 🖥 | `holdsOpen` (PARITY §5) |
+| Copy button beside each tape answer: one click copies, nothing inserted | 2026-11-17 | 🖥 | `RowCopyButton` in `BarView.swift`; driven with `drive.sh` (↑, click) |
+| ⌘C on a selected tape row copies it; ⌘↓ back to the line; ⌫ deletes the row | 2026-11-17 | 🖥 | `BarModel.key`, `copySelectedRow`; built, not driven |
+| Sheet explanations: Related at the bottom, each clickable for its own explanation (or a search) | 2026-11-20 | 🖥 | `ExplanationView`, `openRelated` in `macos/IdentityWindow.swift`; link click not driven |
+| Clicking a sheet (its explanation, its search) while the bar is open | 2026-11-20 | 🖥 | `OverlayController.isSheetWindow`, `PeriodicPanel.wantsKeys`; not driven with real clicks |
+| Sheet search finds any keyword, unit or constant (`force`, `ohm`) across every sheet | 2026-11-20 | ✅ | `every_sheet_can_be_searched` (core `native_sheet_ids`); search driven with `sheetfilter:` |
+| A click on a sheet equation explains it: assumptions, each variable, related formulas, a worked example | 2026-11-17 | ✅ | `core/tests/explanations.rs` (every row explained, every Try line answers); popup in `IdentityWindow.swift` `ExplanationView` |
 
 ## Counts
 
-- ✅ tested: 51 (43 engine/app, 8 games): 34 new tests in `core/tests/requested_features.rs`, the rest existing tests
+- ✅ tested: 52 (44 engine/app, 8 games): 34 new tests in `core/tests/requested_features.rs`, the explanations in `core/tests/explanations.rs`, the rest existing tests
 - 🔧 fixed: 0 (nothing small and clearly specified was broken)
 - ❌ missing: 1 (default ⌘⌥Space, waiting on a decision)
 - 🖥 UI-only: 27 (26 bar/app, 1 game)
