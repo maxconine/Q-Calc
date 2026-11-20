@@ -1082,7 +1082,11 @@ final class BarModel: ObservableObject {
                 self.rows = self.history.rows
                 self.deleted = nil
                 self.refreshRecent()
-                AppSettings.shared.mergeOnboarding(["commits": (AppSettings.shared.onboarding["commits"] ?? 0) + 1])
+                // counted once: onboardingAfterCommit's recordCommit does it below when the line is still there.
+                // Both had counted, so each save was two and the examples stopped after three saves instead of five
+                if leaving || self.text != typed {
+                    AppSettings.shared.mergeOnboarding(["commits": (AppSettings.shared.onboarding["commits"] ?? 0) + 1])
+                }
                 Analytics.shared.trackCalc(expr: typed, graph: typed.lowercased().hasPrefix("graph"), fn: done.row?.kind == .function,
                                            solve: done.row?.solve != nil, assign: done.row?.kind == .definition,
                                            unit: done.row?.quantity != nil, chained: self.chained)
@@ -1725,11 +1729,14 @@ final class BarModel: ObservableObject {
         selected = nil
         tapeOpen = false
         helpShown = false
+        firstRunHotkey = nil
         refreshRecent()
         rows = history.rows
         restoreDraft()
         pullInbox()
-        AppSettings.shared.mergeOnboarding(["opens": (AppSettings.shared.onboarding["opens"] ?? 0) + 1])
+        // the open is counted once, by beginShowing's recordOpen (as QuickCalc.tsx does). It was also counted here,
+        // so a first run read as a second open: the walkthrough skipped its shortcut step, `⌘, opens settings`
+        // showed on the first open and the shortcut nudge for a forgotten first run never came
         track("open")
         beginShowing()
     }

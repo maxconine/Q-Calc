@@ -245,7 +245,14 @@ extension BarModel {
             if let e = line.exact, e.trimmingCharacters(in: .whitespaces) != line.display.trimmingCharacters(in: .whitespaces) {
                 answer = "\(e) ≈ \(line.display)"
             }
-            if line.kind == .solve, let v = line.variable { answer = "\(v) = \(answer)" }
+            // the solve's own variable (exampleAnswer's solve.variable, in the line's JSON): `variable` is a
+            // definition's name, so the walkthrough's `x^2 = 2` showed `±√2 ≈ ±1.41421` with no `x =`
+            if line.kind == .solve,
+               let row = try? JSONSerialization.jsonObject(with: Data(line.json.utf8)) as? [String: Any],
+               let solve = row["solve"] as? [String: Any], solve["outcome"] as? String == "roots",
+               let v = solve["variable"] as? String {
+                answer = "\(v) = \(answer)"
+            }
             return answer
         }) { [weak self] answer in
             guard let self, self.example?.id == id, self.example?.expr == expr else { return }

@@ -455,10 +455,12 @@ final class OverlayController: NSObject {
         }
     }
 
-    // the first run leads the examples with `Press <shortcut> anytime` (exampleList's firstRunHotkey)
+    // the first run leads the examples with `Press <shortcut> anytime` (exampleList's firstRunHotkey), for that
+    // showing only (__qcalcFirstRun): willShow clears it, so it had led every later open's examples too
     func showFirstRun() {
-        model.firstRunHotkey = AppSettings.shared.activeHotKey?.title
         show(from: "first run")
+        model.firstRunHotkey = AppSettings.shared.activeHotKey?.title
+        model.refreshExample()
     }
 
     func showTips() {
