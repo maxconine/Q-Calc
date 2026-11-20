@@ -479,6 +479,13 @@ fn mark_units(text: &str) -> String {
         .collect();
     // an integral's `dt` is its differential, not decitonnes
     let integral = jsre::test(lazy!(r"∫|\bint", "i"), &s);
+    // native only: a sum's or product's index (`sum_(n=1)^10 n^2`) is its variable, not nano or kilo
+    let indices: Vec<String> =
+        lazy!(r"(?:\b(?:sum|prod|product)|[ΣΠ∑∏])\s*_\s*[({]?\s*([A-Za-z])\s*=")
+            .captures_iter(s.as_str())
+            .flatten()
+            .map(|c| jsre::group(&c, 1).to_string())
+            .collect();
     let units: Vec<u16> = s.encode_utf16().collect();
     let spans: Vec<_> = crate::app::unit_spans::unit_spans(&s, &[], &[])
         .into_iter()
@@ -488,7 +495,9 @@ fn mark_units(text: &str) -> String {
             let named = units
                 .get(u.end)
                 .is_some_and(|&c| (0x30..=0x39).contains(&c));
-            !(integral && jsre::test(lazy!(r"^d[A-Za-z]$"), &word)) && !named
+            !(integral && jsre::test(lazy!(r"^d[A-Za-z]$"), &word))
+                && !named
+                && !indices.contains(&word)
         })
         .collect();
     let mut out = String::new();
@@ -526,6 +535,15 @@ fn read_unit(s: &[char], i: usize, to: usize) -> Piece {
 pub fn preview_math(expr: &str) -> String {
     // a line still being typed previews as the input shows it, with its faint parens closed
     let s = crate::parens::fill_parens(jsstr::trim(expr));
+    // native only: Typst typed or pasted (`$frac(1, 2)$`, `2 dot.c 3`, `3 plus.minus 1`) previews as the math it
+    // is, not its words and dollar signs; LaTeX (`10^{-3}`, `\lim_{x \to 0}`) as the calculator reads it
+    let s = if crate::typst_input::looks_like_typst(&s) {
+        crate::typst_input::typst_to_ascii(&s)
+    } else if crate::latex::looks_like_latex(&s) {
+        crate::latex::latex_to_ascii(&s)
+    } else {
+        s
+    };
     if let Some(d) = derivative_math(&s) {
         return d;
     }
@@ -544,7 +562,7 @@ fn keyword_math(s: &str) -> String {
         "is"
     );
     let lim_arrow = lazy!(
-        r"^lim(?:it)?\s+([A-Za-z]|theta)\s*(?:->|→)\s*(\S+)\s+(.+)$",
+        r"^lim(?:it)?(?:\s+|\s*_\s*)([A-Za-z]|theta)\s*(?:->|→)\s*(\S+)\s+(.+)$",
         "is"
     );
     let lim_words = lazy!(
@@ -1789,6 +1807,13 @@ fn read_subscript(s: &[char], i: usize, to: usize) -> Piece {
             None => (format!("_({})", emit(s, j + 1, to)), to),
             Some(close) => (format!("_({})", emit(s, j + 1, close)), close + 1),
         };
+    }
+    // native only: `x_(a+b)`, `lim_(x -> 0)` (Typst's own spelling): the brackets group the subscript, as
+    // braces do; read as a piece they were kept inside it and drew as x₍ₐ₊ᵦ₎
+    if s[j] == '(' {
+        if let Some(close) = match_close(s, j, to).filter(|&c| c > j + 1) {
+            return (format!("_({})", emit(s, j + 1, close)), close + 1);
+        }
     }
     match read_piece(s, j, to) {
         Some((t, end)) if operand(&t) => (format!("_({t})"), end),

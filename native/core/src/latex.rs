@@ -68,6 +68,34 @@ pub fn latex_to_ascii(latex: &str) -> String {
     });
     s = sub_groups(&s, lazy!(r"\\mathrm\{([^}]+)\}"), |g| g[1].to_string());
     s = sub(&s, lazy!(r"\\[dtc]frac\b"), r"\frac");
+    // native only: `\frac{d}{dx} x^3` and `\frac{d^2}{dx^2}` are the calculator's d/dx (were a d over a dx, blank)
+    s = sub_groups(
+        &s,
+        lazy!(
+            r"\\frac\s*\{\s*(?:d|\\partial)\s*(?:\^\s*\{?(\d)\}?)?\s*\}\s*\{\s*(?:d|\\partial)\s*([A-Za-z])\s*(?:\^\s*\{?\d\}?)?\s*\}"
+        ),
+        |g| match g[1] {
+            "" => format!("d/d{} ", g[2]),
+            n => format!("d^{n}/d{}^{n} ", g[2]),
+        },
+    );
+    // native only: `\frac12` and `\frac1x`, the one-token shorthand, are \frac{1}{2} (were blank)
+    s = sub_groups(
+        &s,
+        lazy!(
+            r"\\frac\s*(\d|[A-Za-z](?![A-Za-z])|\{[^{}]*\})\s*(\d|[A-Za-z](?![A-Za-z])|\{[^{}]*\})"
+        ),
+        |g| {
+            let brace = |t: &str| {
+                if t.starts_with('{') {
+                    t.to_string()
+                } else {
+                    format!("{{{t}}}")
+                }
+            };
+            format!(r"\frac{}{}", brace(g[1]), brace(g[2]))
+        },
+    );
     s = replace_braced(&s, r"\frac", 2, |a| format!("(({})/({}))", a[0], a[1]));
     s = replace_braced(&s, r"\binom", 2, |a| {
         format!("combinations({},{})", a[0], a[1])
@@ -265,7 +293,15 @@ fn convert_logs(src: &str) -> String {
         }
         let put = match (arg, base == "10") {
             (None, true) => "log10".to_string(),
-            (None, false) => format!("log(_,{base})"),
+            // native only: `\log_{2} 8` takes the number after it (the web left `log(_,2)8`, blank)
+            (None, false) => match bare_log_arg(&s[p..]) {
+                Some(len) => {
+                    let put = format!("log({},{base})", &s[p..p + len]);
+                    p += len;
+                    put
+                }
+                None => format!("log(_,{base})"),
+            },
             (Some(a), true) => format!("log10({a})"),
             (Some(a), false) => format!("log({a},{base})"),
         };
@@ -273,6 +309,12 @@ fn convert_logs(src: &str) -> String {
         i = at + put.len();
     }
     s
+}
+
+/// The length of a plain number or a single letter starting `rest`, a bare log argument.
+fn bare_log_arg(rest: &str) -> Option<usize> {
+    static RE: Lazy = Lazy::new(|| re(r"^(?:\d+(?:\.\d+)?|[A-Za-z](?![A-Za-z(]))"));
+    RE.find(rest).ok().flatten().map(|m| m.end())
 }
 
 fn replace_braced(
