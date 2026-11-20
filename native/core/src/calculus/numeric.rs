@@ -562,8 +562,160 @@ fn hidden_bump(f: RealFn, a: f64, b: f64) -> bool {
     })
 }
 
-/// ∫ f from a to b, with ±∞ bounds allowed.
+/// ∫ f from a to b, with ±∞ bounds allowed. An infinite range the double exponential rules can't settle
+/// (∫₀^∞ sin x/x, sin²x/x²) is summed panel by panel between the integrand's zeros and the series accelerated.
 pub fn integrate(f: RealFn, a: f64, b: f64) -> Option<Estimate> {
+    let direct = integrate_de(f, a, b);
+    if direct.is_some() || a.is_nan() || b.is_nan() || (a.is_finite() && b.is_finite()) {
+        return direct;
+    }
+    if a > b {
+        let r = integrate(f, b, a)?;
+        return Some(Estimate {
+            value: -r.value,
+            err: r.err,
+        });
+    }
+    let est = if a == f64::NEG_INFINITY && b == f64::INFINITY {
+        let g = |y: f64| f(-y);
+        let l = integrate_de(&g, 0.0, f64::INFINITY).or_else(|| oscillating_tail(&g, 0.0))?;
+        let r = integrate_de(f, 0.0, f64::INFINITY).or_else(|| oscillating_tail(f, 0.0))?;
+        Estimate {
+            value: l.value + r.value,
+            err: l.err + r.err,
+        }
+    } else if b == f64::INFINITY {
+        oscillating_tail(f, a)?
+    } else {
+        let g = |y: f64| f(-y);
+        oscillating_tail(&g, -b)?
+    };
+    let value = justified(est.value, est.err, None)?;
+    Some(Estimate {
+        value,
+        err: est.err + (value - est.value).abs(),
+    })
+}
+
+/// ∫ₐ^∞ f for a decaying integrand that keeps returning to zero: a head up to its first zero, then one panel per
+/// stretch between zeros, summed with Levin's u transform. Only series that provably converge are summed: terms
+/// that alternate and shrink, or keep one sign and shrink faster than 1/k^1.3.
+fn oscillating_tail(f: RealFn, a: f64) -> Option<Estimate> {
+    const PANELS: usize = 40;
+    const STEP: f64 = 0.05;
+    const MAX_SCAN: usize = 40_000;
+    let mut budget = Budget {
+        evals: 4 * MAX_EVALS,
+        work: WorkBudget::new(2 * MAX_WORK),
+    };
+    let absf = |x: f64| f(x).abs();
+    // the zeros (or touch points) of f, found on an even scan and polished
+    let mut zeros: Vec<f64> = Vec::new();
+    let (mut y0, mut y1) = (f64::NAN, f(a + STEP));
+    let mut top: f64 = y1.abs();
+    for i in 2..MAX_SCAN {
+        if zeros.len() > PANELS {
+            break;
+        }
+        let x = a + STEP * i as f64;
+        let y2 = f(x);
+        if !y2.is_finite() || spent(&mut budget) {
+            return None;
+        }
+        let x1 = x - STEP;
+        let crosses = y1 * y2 < 0.0;
+        let touches =
+            y0.is_finite() && y1.abs() < y0.abs() && y1.abs() <= y2.abs() && y1.abs() < 0.05 * top;
+        if crosses || touches {
+            let lo = if crosses { x1 } else { x1 - STEP };
+            let z = extremum(&absf, lo, x, 1.0);
+            // a dip that isn't a zero (a wobble on a positive tail) is no panel edge
+            if absf(z) <= 1e-6 * top && zeros.last().is_none_or(|&p| z > p + STEP / 2.0) {
+                zeros.push(z);
+                top = 0.0;
+            }
+        }
+        top = top.max(y2.abs());
+        y0 = y1;
+        y1 = y2;
+    }
+    if zeros.len() <= PANELS / 2 {
+        return None;
+    }
+    let head = finite(f, a, zeros[0], &mut budget)?;
+    let work = budget.work;
+    let mut terms = Vec::with_capacity(zeros.len());
+    for w in zeros.windows(2) {
+        let p = gauss_kronrod(f, w[0], w[1], 64, &|| work.over())?;
+        terms.push(p);
+    }
+    let n = terms.len();
+    let mags: Vec<f64> = terms.iter().map(|t| t.value.abs()).collect();
+    if mags.iter().any(|&m| m == 0.0 || !m.is_finite()) {
+        return None;
+    }
+    let alternating = terms.windows(2).all(|w| w[0].value * w[1].value < 0.0);
+    let one_sign = terms.windows(2).all(|w| w[0].value * w[1].value > 0.0);
+    // the decay rate p of |term k| ~ k^-p over the second half
+    let h = n / 2;
+    let p = (mags[h - 1] / mags[n - 1]).ln() / (n as f64 / h as f64).ln();
+    let shrinking = mags[h..].windows(2).all(|w| w[1] < w[0]);
+    if !shrinking || !((alternating && p > 0.2) || (one_sign && p > 1.3)) {
+        return None;
+    }
+    let mut partial = Vec::with_capacity(n);
+    let mut s = head.value;
+    for t in &terms {
+        s += t.value;
+        partial.push(s);
+    }
+    let vals: Vec<f64> = terms.iter().map(|t| t.value).collect();
+    let quad_err = head.err + terms.iter().map(|t| t.err).sum::<f64>();
+    // Levin u with the order raised until two in a row agree; their gap is the error
+    let (mut prev, mut prev_diff) = (f64::NAN, f64::NAN);
+    let mut best: Option<Estimate> = None;
+    for k in 4..n.min(24) {
+        let t = levin_u(&partial, &vals, 0, k)?;
+        let diff = (t - prev).abs();
+        // two gaps in a row, so one lucky near-miss can't vouch for digits
+        let gap = diff.max(prev_diff);
+        if gap.is_finite() && best.is_none_or(|b| gap < b.err) {
+            best = Some(Estimate { value: t, err: gap });
+        }
+        prev = t;
+        prev_diff = diff;
+    }
+    let best = best?;
+    Some(Estimate {
+        value: best.value,
+        err: 4.0 * best.err + quad_err + 1e-15 * best.value.abs(),
+    })
+}
+
+/// Levin's u transform of the partial sums s[n..=n+k], whose last terms are a.
+fn levin_u(s: &[f64], a: &[f64], n: usize, k: usize) -> Option<f64> {
+    if n + k >= s.len() {
+        return None;
+    }
+    let beta = 1.0;
+    let (mut num, mut den) = (0.0, 0.0);
+    let mut binom = 1.0;
+    for j in 0..=k {
+        let c = jsmath::pow(
+            (beta + (n + j) as f64) / (beta + (n + k) as f64),
+            k as f64 - 1.0,
+        );
+        let w = (beta + (n + j) as f64) * a[n + j];
+        let sign = if j % 2 == 0 { 1.0 } else { -1.0 };
+        num += sign * binom * c * s[n + j] / w;
+        den += sign * binom * c / w;
+        binom = binom * (k - j) as f64 / (j + 1) as f64;
+    }
+    let t = num / den;
+    t.is_finite().then_some(t)
+}
+
+fn integrate_de(f: RealFn, a: f64, b: f64) -> Option<Estimate> {
     if a.is_nan() || b.is_nan() {
         return None;
     }
@@ -574,7 +726,7 @@ pub fn integrate(f: RealFn, a: f64, b: f64) -> Option<Estimate> {
         });
     }
     if a > b {
-        let r = integrate(f, b, a)?;
+        let r = integrate_de(f, b, a)?;
         return Some(Estimate {
             value: -r.value,
             err: r.err,
