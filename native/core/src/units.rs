@@ -2900,6 +2900,62 @@ fn power_step(value: &Value, p: u8, k: f64, to_k: f64) -> Option<Value> {
     Some(valued(n, to.symbol.clone(), Some(&to.id)))
 }
 
+/// native only, display: the powers of the units after an answer's number written as superscripts, as the
+/// table's own symbols are (`1e+18 m2` → `1e+18 m²`, `100 kg * m^2/s^2` → `100 kg * m²/s²`, `1 s^-1` →
+/// `1 s⁻¹`). The expression path echoes a typed target unit as typed (web parity, and the goldens keep it);
+/// copy and insert keep that plain text. A word only changes when it reads as a unit (`m2` as m², `H2O` and `x2`
+/// left), and only in a tail of units: anything with `+`, `=` or a comma is left alone.
+pub fn unit_powers_shown(s: &str) -> String {
+    static LEAD: Lazy = Lazy::new(|| {
+        jsre::compile(r"^[-−±∓]?[$€£¥]?[0-9][0-9,]*(?:\.[0-9]+)?(?:e[+\-−]?[0-9]+)?\s+")
+    });
+    static TAIL: Lazy = Lazy::new(|| jsre::compile(r"^[A-Za-zµμΩÅ°·*/()\s0-9.^\-−±]+$"));
+    static POWER: Lazy = Lazy::new(|| {
+        jsre::compile(r"(^|[\s*/·(])([A-Za-zµμΩÅ]+)(?:\^(-?[0-9]+)|([23]))(?=$|[\s*/·)])")
+    });
+    const SUP: [char; 10] = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
+    if !s.contains('^') && !s.contains(['2', '3']) {
+        return s.to_string();
+    }
+    let Some(lead) = LEAD.find(s).ok().flatten().map(|m| m.end()) else {
+        return s.to_string();
+    };
+    let tail = &s[lead..];
+    if !tail.chars().any(char::is_alphabetic) || !jsre::test(&TAIL, tail) {
+        return s.to_string();
+    }
+    let shown = jsre::replace_all(&POWER, tail, |c| {
+        let (before, word, caret, bare) = (
+            jsre::group(c, 1),
+            jsre::group(c, 2),
+            jsre::group(c, 3),
+            jsre::group(c, 4),
+        );
+        let whole = jsre::group(c, 0).to_string();
+        if !bare.is_empty() {
+            // `m2` is the table's m², `Mm2` a square megametre (item 101); `N2` or `H2` read as nothing
+            return match unit_info(&format!("{word}{bare}")) {
+                Some(u) if u.symbol.ends_with(['²', '³']) => {
+                    format!("{before}{word}{}", if bare == "2" { '²' } else { '³' })
+                }
+                _ => whole,
+            };
+        }
+        if unit_info(word).is_none() {
+            return whole;
+        }
+        let sup: String = caret
+            .chars()
+            .map(|ch| match ch.to_digit(10) {
+                Some(d) => SUP[d as usize],
+                None => '⁻',
+            })
+            .collect();
+        format!("{before}{word}{sup}")
+    });
+    format!("{}{shown}", &s[..lead])
+}
+
 /// Native ⌥↑/⌥↓: the web's SI prefix step, plus squares and cubes of metres stepping one prefix of the
 /// length (`15 m²` ↔ `15000000 mm²`, ×10⁶; m³ ↔ km³, ×10⁹) and clock time stepping s ↔ min ↔ hr ↔ day
 /// (`1.5 hr` ↔ `90 min`; below a second it's ms, μs as before). `step_prefix` stays the web's for the goldens.

@@ -248,6 +248,10 @@ final class BarModel: ObservableObject {
         self.core = core
         self.history = history
         rows = history.rows
+        // native only: `to m2` echoed as typed shows as m² in the answer and the tape (item 104)
+        Pretty.unitPowers = { [weak self] s in
+            self?.logic.string("engine/units", "unitPowersShown", [s]) ?? s
+        }
         syncSettings()
         settings.objectWillChange
             .debounce(for: .milliseconds(1), scheduler: RunLoop.main)

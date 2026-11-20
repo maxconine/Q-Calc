@@ -398,7 +398,7 @@ impl State {
         let from_js = !display.is_empty() && line.is_some_and(|l| l.display == display);
         let from_line = |f: bool| line.filter(|_| f);
         LiveAnswer {
-            pretty: pretty_answer(&display),
+            pretty: pretty_answer(&qcalc_core::units::unit_powers_shown(&display)),
             dual_label: dual_label(a.exact.as_deref(), &display),
             exact: a.exact.clone(),
             number: a.number,

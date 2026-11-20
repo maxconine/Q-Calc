@@ -100,6 +100,8 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Option<Json> {
         // native only: ⌥↑ / ⌥↓ also on m² / m³ (×10⁶ / ×10⁹) and s ↔ min ↔ hr ↔ day
         ("engine/units", "stepLadder") => js(value_arg(args, 0)
             .and_then(|v| super::step_ladder(&v, if n(1) > 0.0 { 1 } else { -1 }))),
+        // native only, display: `m2` / `m^2` after an answer's number as m²
+        ("engine/units", "unitPowersShown") => json!(super::unit_powers_shown(&s(0))),
         // native only: ⌥↑ / ⌥↓ between inches, feet and inches, and feet
         ("engine/units", "stepFeetInches") => value_arg(args, 0)
             .and_then(|v| {

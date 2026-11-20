@@ -26,7 +26,25 @@ enum Pretty {
 
     /// prettyAnswer (src/engine/format.ts): a real minus sign and grouped digits. Display only; copy and insert
     /// keep the plain answer, which re-parses.
+    /// native only: the engine's `unitPowersShown` (`1e+18 m2` → `1e+18 m²`, `kg * m^2/s^2` → `kg * m²/s²`), set by
+    /// the bar's model; display only, copy keeps the typed form. Nil (headless checks) leaves units as they are.
+    static var unitPowers: ((String) -> String)?
+    private static let unitPower = regex(#"[A-Za-zµμΩÅ](\^-?\d|[23](?![A-Za-z0-9]))"#)
+    private static var unitPowerMemo: [String: String] = [:]
+
     static func answer(_ s: String) -> String {
+        if let unitPowers, s.first?.isNumber == true || s.first == "-" || s.first == "±",
+           unitPower.matches(s) {
+            if let hit = unitPowerMemo[s] { return plainAnswer(hit) }
+            let shown = unitPowers(s)
+            if unitPowerMemo.count > 256 { unitPowerMemo.removeAll() }
+            unitPowerMemo[s] = shown
+            return plainAnswer(shown)
+        }
+        return plainAnswer(s)
+    }
+
+    private static func plainAnswer(_ s: String) -> String {
         // a solve's `±2sqrt(2)`: the page's Radical draws the root whatever leads it; here the sign kept the rest
         // from being read as maths, so it showed `±2sqrt(2)` in the answer and the tape
         if let first = s.first, first == "±" || first == "∓", s.count > 1 {
