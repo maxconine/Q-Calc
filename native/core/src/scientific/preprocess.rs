@@ -568,7 +568,8 @@ fn rewrite_factorial(expr: &str) -> String {
 
 /// Every rewrite from typed maths to mathjs syntax, in the TS order.
 pub fn preprocess_ascii(expr: &str, extra: &[String]) -> String {
-    static ROOT_LETTER: Lazy = Lazy::new(|| js(r"([√∛])([A-Za-z])(?![A-Za-z0-9_(])", ""));
+    static ROOT_LETTER: Lazy =
+        Lazy::new(|| js(r"([√∛])([A-Za-z][A-Za-z0-9_]*)(?![A-Za-z0-9_(])", ""));
     static SUPERS: Lazy = Lazy::new(|| js(r"[⁻⁰¹²³⁴⁵⁶⁷⁸⁹]+", ""));
     static ABS: Lazy = Lazy::new(|| js(r"(?<![\d)\]!])\|([^|]+)\|", ""));
     static STARSTAR: Lazy = Lazy::new(|| js(r"\*\*", ""));
@@ -635,7 +636,8 @@ pub fn preprocess_ascii(expr: &str, extra: &[String]) -> String {
     static REAL: Lazy = Lazy::new(|| js(r"\breal\b", ""));
     static IMAG: Lazy = Lazy::new(|| js(r"\bimag\b", ""));
 
-    // `√x` roots a single letter; `√2` and `√(x + 1)` already read right
+    // `√x` roots a letter, and (native only) a whole name: `√ans`, `√pi`, `√x2`, which read as one unknown word
+    // `sqrtans`; `√2` and `√(x + 1)` already read right, and `√sin(x)` is left to the call
     let s = replace(&ROOT_LETTER, &lower_calls(expr, extra), |c| {
         format!("{}({})", g(c, 1), g(c, 2))
     });

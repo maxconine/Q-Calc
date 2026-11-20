@@ -611,3 +611,13 @@ fn preview_keeps_a_single_raised_digit() {
     assert_eq!(to_typst_math("1.5 × 10⁻¹²"), "1.5 times 10 ^(-12)");
 }
 
+// 2026-11-12: `1/√ans` after `1*10^-7` had no answer: √ rooted only a single letter, so √ans read as `sqrtans`
+#[test]
+fn root_of_a_whole_name() {
+    assert_eq!(sheet(&["1*10^-7", "1/√ans"]), ["1e-7", "3162.28"]);
+    assert_eq!(after("1e-7", false, "1/√ans").0, "3162.28");
+    assert_eq!(show("√pi"), "1.77245");
+    assert_eq!(show("∛8"), "2");
+    assert_eq!(show("√x; x=4"), "2");
+}
+
