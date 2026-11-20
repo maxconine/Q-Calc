@@ -132,7 +132,8 @@ fn sanitize_solve(raw: Option<&Json>) -> Option<Json> {
     let outcome = str_of(s, "outcome")?;
     if !matches!(
         outcome,
-        "roots" | "none" | "contradiction" | "noneFound" | "all"
+        // `complex` (native only, x^2 = -1 → ±i) was dropped here, so a saved row lost its solve
+        "roots" | "none" | "complex" | "contradiction" | "noneFound" | "all"
     ) {
         return None;
     }

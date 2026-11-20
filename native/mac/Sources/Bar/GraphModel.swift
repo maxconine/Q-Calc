@@ -129,6 +129,27 @@ struct GraphPrefs: Codable, Equatable {
 
     private static let key = "graphPrefs"
 
+    init() {}
+
+    /// Each choice read on its own: one missing (saved before it existed) or unreadable keeps its default, where
+    /// the synthesized decoder threw and every choice went back to its default.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let plain = GraphPrefs()
+        func read(_ k: CodingKeys, _ d: Bool) -> Bool { (try? c.decodeIfPresent(Bool.self, forKey: k)).flatMap { $0 } ?? d }
+        largeText = read(.largeText, plain.largeText)
+        reverseContrast = read(.reverseContrast, plain.reverseContrast)
+        grid = read(.grid, plain.grid)
+        polar = read(.polar, plain.polar)
+        arrows = read(.arrows, plain.arrows)
+        axisNumbers = read(.axisNumbers, plain.axisNumbers)
+        minorGrid = read(.minorGrid, plain.minorGrid)
+        showXAxis = read(.showXAxis, plain.showXAxis)
+        showYAxis = read(.showYAxis, plain.showYAxis)
+        lockViewport = read(.lockViewport, plain.lockViewport)
+        degrees = (try? c.decodeIfPresent(Bool.self, forKey: .degrees)).flatMap { $0 }
+    }
+
     static func load() -> GraphPrefs {
         guard let data = UserDefaults.standard.data(forKey: key),
               var prefs = try? JSONDecoder().decode(GraphPrefs.self, from: data) else { return GraphPrefs() }

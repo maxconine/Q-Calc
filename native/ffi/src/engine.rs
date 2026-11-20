@@ -511,13 +511,16 @@ impl State {
         let Some(path) = self.data_file("history.json") else {
             return Vec::new();
         };
-        let Ok(text) = std::fs::read_to_string(path) else {
+        let Ok(text) = std::fs::read_to_string(&path) else {
             return Vec::new();
         };
-        hist::load_rows(&text)
-            .iter()
-            .map(hist::row_from_json)
-            .collect()
+        let rows = hist::load_rows(&text);
+        // a file with rows that didn't read (damaged, a null row, a newer shape) would be overwritten by the next
+        // save: its text is kept beside it as history.unread.json first
+        if rows.is_empty() && !hist::is_empty_history(&text) {
+            let _ = std::fs::write(path.with_file_name("history.unread.json"), &text);
+        }
+        rows.iter().map(hist::row_from_json).collect()
     }
 
     fn save_history(&self, rows: &[HistoryRow]) -> Result<Vec<HistoryRow>, CoreError> {

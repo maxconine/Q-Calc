@@ -31,6 +31,8 @@ fn kind_of(row: &Json) -> Option<&'static str> {
         Some("definition") => Some("definition"),
         Some("function") => Some("function"),
         Some("system") => Some("system"),
+        // a note (native only) kept its kind in the file but lost it here, so it came back as a plain row
+        Some("note") => Some("note"),
         _ => None,
     }
 }
@@ -248,6 +250,20 @@ fn base36(mut n: u64) -> String {
 /// The file's rows, from `{"version": 1, "rows": […]}` or a bare array, normalized and slimmed (`loadHistory`).
 pub fn load_rows(text: &str) -> Vec<Json> {
     qcalc_core::app::history::load_rows(text, &mut new_row_id)
+}
+
+/// Blank, `[]` or an envelope with no rows: a history that is empty on purpose (nothing worth keeping aside).
+pub fn is_empty_history(text: &str) -> bool {
+    let rows = match serde_json::from_str::<Json>(text) {
+        _ if text.trim().is_empty() => return true,
+        Ok(Json::Array(a)) => a,
+        Ok(Json::Object(mut o)) => match o.remove("rows") {
+            Some(Json::Array(a)) => a,
+            _ => return false,
+        },
+        _ => return false,
+    };
+    rows.is_empty()
 }
 
 #[cfg(test)]
