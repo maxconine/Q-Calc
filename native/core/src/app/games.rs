@@ -17,6 +17,7 @@ pub enum GameKind {
     Numbers,
     Trails,
     Ultimate,
+    Slots,
 }
 
 /// A row of the `games` list.
@@ -30,7 +31,7 @@ pub struct Game {
 }
 
 /// What `games` lists, in order.
-pub const GAMES: [Game; 8] = [
+pub const GAMES: [Game; 9] = [
     Game {
         kind: GameKind::Pong,
         name: "pong",
@@ -79,6 +80,12 @@ pub const GAMES: [Game; 8] = [
         blurb: "leave a trail, don’t hit one · solo, one keyboard or online",
         hint: "↵ play trails",
     },
+    Game {
+        kind: GameKind::Slots,
+        name: "slots",
+        blurb: "three reels, one line · free chips, no money",
+        hint: "↵ play slots",
+    },
 ];
 
 fn squashed(text: &str) -> String {
@@ -111,6 +118,7 @@ fn is(kind: GameKind, text: &str) -> bool {
         )
     });
     static TRAILS: Lazy = Lazy::new(|| js(r"^(?:trails?|cycles)$", "i"));
+    static SLOTS: Lazy = Lazy::new(|| js(r"^(?:slots?|slot ?machine|one[\s-]*armed bandit)$", "i"));
     let t = jstr::trim(text);
     match kind {
         GameKind::Pong => jsre::test(&PONG, t),
@@ -121,6 +129,7 @@ fn is(kind: GameKind, text: &str) -> bool {
         GameKind::Equal => jsre::test(&EQUAL, t),
         GameKind::Numbers => jsre::test(&NUMBERS, &squashed(text)),
         GameKind::Trails => jsre::test(&TRAILS, t),
+        GameKind::Slots => jsre::test(&SLOTS, &squashed(text)),
     }
 }
 
@@ -159,6 +168,9 @@ mod tests {
         assert_eq!(game_command(" Connect-4 "), Some(GameKind::Connect4));
         assert_eq!(game_command("fire  and ice"), Some(GameKind::Ember));
         assert_eq!(game_command("24"), None);
+        assert_eq!(game_command("Slots"), Some(GameKind::Slots));
+        assert_eq!(game_command("slot  machine"), Some(GameKind::Slots));
+        assert_eq!(game_command("slots 2"), None);
         assert!(is_periodic_command("Periodic Table"));
     }
 }

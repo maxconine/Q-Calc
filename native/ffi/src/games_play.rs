@@ -4,8 +4,8 @@
 use std::sync::{Arc, Mutex};
 
 use qcalc_core::games::{
-    connect4, connect4_bot, connect4_session, crack, equal, numbers, pong, pong_session, ultimate,
-    ultimate_bot, ultimate_chalk, ultimate_session,
+    connect4, connect4_bot, connect4_session, crack, equal, numbers, pong, pong_session, slots,
+    ultimate, ultimate_bot, ultimate_chalk, ultimate_session,
 };
 
 use crate::games::{GameSide, lock, math_random};
@@ -855,4 +855,183 @@ pub fn crack_press(state: CrackState, now: f64) -> CrackStep {
 #[uniffi::export]
 pub fn crack_parse_best(raw: Option<String>) -> u32 {
     crack::parse_best(raw.as_deref())
+}
+
+// ---- slots
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum SlotsPhase {
+    Idle,
+    Spinning,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum SlotsEvent {
+    Spin,
+    Stop,
+    Win,
+    Big,
+    Lose,
+    Refill,
+}
+
+/// `SlotsState`: `reels` are the three stops on the line, indexes into `slots_strip()`; `from`, `target` and
+/// `land` are each reel's path (see `slots_path`).
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct SlotsState {
+    pub chips: u32,
+    pub bet: u32,
+    pub best: u32,
+    pub reels: Vec<u32>,
+    pub phase: SlotsPhase,
+    pub since: f64,
+    pub win: u32,
+    pub spins: u32,
+    pub from: Vec<f64>,
+    pub target: Vec<f64>,
+    pub land: Vec<f64>,
+}
+
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct SlotsStep {
+    pub state: SlotsState,
+    pub event: Option<SlotsEvent>,
+}
+
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct SlotsPay {
+    pub line: String,
+    pub times: u32,
+}
+
+fn three<T: Copy + Default>(v: &[T]) -> [T; 3] {
+    let at = |i: usize| v.get(i).copied().unwrap_or_default();
+    [at(0), at(1), at(2)]
+}
+
+impl From<slots::SlotsState> for SlotsState {
+    fn from(s: slots::SlotsState) -> Self {
+        SlotsState {
+            chips: s.chips,
+            bet: s.bet,
+            best: s.best,
+            reels: s.reels.to_vec(),
+            phase: match s.phase {
+                slots::SlotsPhase::Idle => SlotsPhase::Idle,
+                slots::SlotsPhase::Spinning => SlotsPhase::Spinning,
+            },
+            since: s.since,
+            win: s.win,
+            spins: s.spins,
+            from: s.from.to_vec(),
+            target: s.target.to_vec(),
+            land: s.land.to_vec(),
+        }
+    }
+}
+
+impl From<SlotsState> for slots::SlotsState {
+    fn from(s: SlotsState) -> Self {
+        slots::SlotsState {
+            chips: s.chips,
+            bet: s.bet,
+            best: s.best,
+            reels: three(&s.reels),
+            phase: match s.phase {
+                SlotsPhase::Idle => slots::SlotsPhase::Idle,
+                SlotsPhase::Spinning => slots::SlotsPhase::Spinning,
+            },
+            since: s.since,
+            win: s.win,
+            spins: s.spins,
+            from: three(&s.from),
+            target: three(&s.target),
+            land: if s.land.len() == 3 {
+                three(&s.land)
+            } else {
+                [f64::NEG_INFINITY; 3]
+            },
+        }
+    }
+}
+
+fn slots_step((state, event): slots::Step) -> SlotsStep {
+    SlotsStep {
+        state: state.into(),
+        event: event.map(|e| match e {
+            slots::SlotsEvent::Spin => SlotsEvent::Spin,
+            slots::SlotsEvent::Stop => SlotsEvent::Stop,
+            slots::SlotsEvent::Win => SlotsEvent::Win,
+            slots::SlotsEvent::Big => SlotsEvent::Big,
+            slots::SlotsEvent::Lose => SlotsEvent::Lose,
+            slots::SlotsEvent::Refill => SlotsEvent::Refill,
+        }),
+    }
+}
+
+/// One reel's stops top to bottom, as the symbols drawn ("" for a blank).
+#[uniffi::export]
+pub fn slots_strip() -> Vec<String> {
+    slots::STRIP
+        .iter()
+        .map(|&s| slots::SYMBOLS[s as usize].to_string())
+        .collect()
+}
+
+#[uniffi::export]
+pub fn slots_pay_table() -> Vec<SlotsPay> {
+    slots::pay_table()
+        .into_iter()
+        .map(|(line, times)| SlotsPay { line, times })
+        .collect()
+}
+
+/// The game saved as `qcalc-slots`, or a fresh one.
+#[uniffi::export]
+pub fn slots_load(raw: Option<String>) -> SlotsState {
+    slots::load(raw.as_deref()).into()
+}
+
+/// What to save as `qcalc-slots`.
+#[uniffi::export]
+pub fn slots_save(state: SlotsState) -> String {
+    slots::save(&state.into())
+}
+
+#[uniffi::export]
+pub fn slots_set_bet(state: SlotsState, bet: i64) -> SlotsState {
+    slots::set_bet(state.into(), bet).into()
+}
+
+#[uniffi::export]
+pub fn slots_spin(state: SlotsState, now: f64) -> SlotsStep {
+    slots_step(slots::spin(state.into(), now, &mut math_random))
+}
+
+/// Space while spinning: the leftmost reel still rolling stops on the next stop to reach the line.
+#[uniffi::export]
+pub fn slots_press(state: SlotsState, now: f64) -> SlotsStep {
+    slots_step(slots::press(state.into(), now))
+}
+
+#[uniffi::export]
+pub fn slots_tick(state: SlotsState, now: f64) -> SlotsStep {
+    slots_step(slots::tick(state.into(), now))
+}
+
+/// Reel `reel`'s position (stops; mod 32 is the stop on the line) at `count` times from `start`, `step` ms
+/// apart: a whole animation's keyframes in one call.
+#[uniffi::export]
+pub fn slots_path(state: SlotsState, reel: u32, start: f64, step: f64, count: u32) -> Vec<f64> {
+    let s: slots::SlotsState = state.into();
+    let i = (reel as usize).min(2);
+    (0..count)
+        .map(|k| slots::position(&s, i, start + step * k as f64))
+        .collect()
+}
+
+/// When reel `reel` is still at last, its bounce done (ms).
+#[uniffi::export]
+pub fn slots_settled_at(state: SlotsState, reel: u32) -> f64 {
+    slots::settled_at(&state.into(), (reel as usize).min(2))
 }

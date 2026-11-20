@@ -13,6 +13,7 @@ enum NativeGames {
         case "numbers": return AnyView(NumbersPanel())
         case "ember": return AnyView(EmberPanel())
         case "trails": return AnyView(TrailsPanel())
+        case "slots": return AnyView(SlotsPanel())
         default: return nil
         }
     }

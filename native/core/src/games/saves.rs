@@ -4,7 +4,7 @@
 
 use serde_json::Value as Json;
 
-pub const GAME_SAVE_KEYS: [&str; 7] = [
+pub const GAME_SAVE_KEYS: [&str; 8] = [
     "qcalc-equal",       // streak, stats, today's daily
     "qcalc-numbers",     // 24 and countdown stats
     "qcalc-crack",       // best level
@@ -12,6 +12,7 @@ pub const GAME_SAVE_KEYS: [&str; 7] = [
     "qcalc-ember",       // ember & frost progress and mute
     "qcalc-c4-ghost",    //
     "qcalc-host-locked", // the lobby's last open/locked pick
+    "qcalc-slots",       // chips, bet and best
 ];
 
 /// Per value, in characters (UTF-16 units); Swift holds the same line.
@@ -52,6 +53,7 @@ mod tests {
             "qcalc-crack-muted",
             "qcalc-ember",
             "qcalc-host-locked",
+            "qcalc-slots",
         ] {
             assert!(is_game_save_key(k));
         }

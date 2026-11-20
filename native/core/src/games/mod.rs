@@ -26,6 +26,7 @@ pub mod pong;
 pub mod pong_session;
 pub mod saves;
 pub mod shell;
+pub mod slots;
 pub mod trails;
 pub mod ultimate;
 pub mod ultimate_bot;

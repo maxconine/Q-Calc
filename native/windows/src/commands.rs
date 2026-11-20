@@ -61,6 +61,7 @@ pub fn game_id(kind: GameKind) -> &'static str {
         GameKind::Numbers => "numbers",
         GameKind::Trails => "trails",
         GameKind::Ultimate => "ultimate",
+        GameKind::Slots => "slots",
     }
 }
 

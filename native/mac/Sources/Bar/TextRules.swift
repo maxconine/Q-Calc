@@ -191,6 +191,7 @@ enum BarCommand: Equatable {
         ("equal", "equal", "guess the hidden equation · daily or practice", regex(#"^(?:equal|nerdle)$"#, .caseInsensitive)),
         ("numbers", "24 / countdown", "make the number · two modes against the clock", regex(#"^(?:24 ?game|game of 24|count ?down|numbers game|24 ?\/ ?countdown)$"#, .caseInsensitive)),
         ("trails", "trails", "leave a trail, don’t hit one · solo, one keyboard or online", regex(#"^(?:trails?|cycles)$"#, .caseInsensitive)),
+        ("slots", "slots", "three reels, one line · free chips, no money", regex(#"^(?:slots?|slot ?machine|one[\s-]*armed bandit)$"#, .caseInsensitive)),
     ]
 
     private static let messageRE = regex(#"^\s*message(?:\s+(\S+))?(?:\s+([\s\S]*))?$"#, .caseInsensitive)
