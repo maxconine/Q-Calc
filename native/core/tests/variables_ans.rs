@@ -21,7 +21,12 @@ fn session(lines: &[&str]) -> Vec<(String, String)> {
         };
         let shown = live(&r).display;
         let c = commit(&r, &tape, &format!("r{i}"));
-        let expr = c.row.as_ref().and_then(|r| r["expr"].as_str()).unwrap_or("").to_string();
+        let expr = c
+            .row
+            .as_ref()
+            .and_then(|r| r["expr"].as_str())
+            .unwrap_or("")
+            .to_string();
         out.push((shown, expr));
         tape = c.history;
     }

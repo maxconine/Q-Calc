@@ -133,10 +133,14 @@ pub fn spaced_ans(q: &str) -> Cow<'_, str> {
     if !q.to_ascii_lowercase().contains("ans") {
         return Cow::Borrowed(q);
     }
-    let spaced = jsre::replace_all(&GLUED, q, |c| format!("{} {}", jsre::group(c, 1), jsre::group(c, 2)));
+    let spaced = jsre::replace_all(&GLUED, q, |c| {
+        format!("{} {}", jsre::group(c, 1), jsre::group(c, 2))
+    });
     Cow::Owned(
-        jsre::replace_all(&AFTER_NAME, &spaced, |c| format!("{}*{}", jsre::group(c, 1), jsre::group(c, 2)))
-            .into_owned(),
+        jsre::replace_all(&AFTER_NAME, &spaced, |c| {
+            format!("{}*{}", jsre::group(c, 1), jsre::group(c, 2))
+        })
+        .into_owned(),
     )
 }
 
@@ -151,11 +155,11 @@ pub fn mentions_ans(expr: &str) -> bool {
 pub fn ans_chipped(expr: &str, plain: &str) -> String {
     static ANS: Lazy = Lazy::new(|| js(r"\bans\b", "i"));
     static GROUPED: Lazy = Lazy::new(|| js(r"(?<=\d),(?=\d{3}(?!\d))", ""));
-    if plain.is_empty() || !jsre::test(&ANS, expr) || parse_function_def(jstr::trim(expr)).is_some() {
+    if plain.is_empty() || !jsre::test(&ANS, expr) || parse_function_def(jstr::trim(expr)).is_some()
+    {
         return expr.to_string();
     }
     // `3,000` would read as two arguments
     let value = jsre::replace_all(&GROUPED, jstr::trim(plain), |_| String::new()).into_owned();
     jsre::replace_all(&ANS, expr, |_| format!("anschip({value})")).into_owned()
 }
-
