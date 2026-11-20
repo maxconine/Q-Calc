@@ -79,7 +79,8 @@ final class MathTypesetter {
         queue.async { [weak self] in
             guard let self, let renderer = self.renderer, self.lock.withLock({ self.latest == r }) else { return }
             let outcome: Outcome
-            let expr = r.ans.flatMap { self.logic.string("lib/chain", "ansWrittenOut", [r.expr, $0]) } ?? r.expr
+            // native only: `ans` drawn as the number it stands for, in its blue chip (`anschip`)
+            let expr = r.ans.flatMap { self.logic.string("lib/chain", "ansChipped", [r.expr, $0]) } ?? r.expr
             if let m = r.matrix {
                 // a matrix answer always earns the row: it says what one line of text can't
                 if let doc = self.engine.typstSourceMath(expr: expr, answerTypst: m.typst, arrow: m.arrow) {

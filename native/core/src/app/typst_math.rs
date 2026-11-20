@@ -85,6 +85,17 @@ pub const TYPST_PREAMBLE: &str = r##"#let choose = "choose"
 #let ip(x, y) = $lr(chevron.l #x, #y chevron.r)$
 #let ict = math.op("ict")
 #let cross = $times$
+
+// native only: ans in the preview, the number it stands for boxed in blue with an "ans" pill on its edge, as desmos
+// draws it; the number keeps the text colour, so it reads in light and dark
+#let ansblue = rgb("#3478f6")
+#let anschip(body) = box(inset: (bottom: 4.5pt), box(inset: (x: 2.5pt, top: 2pt, bottom: 3pt), radius: 3pt,
+  stroke: 0.9pt + ansblue, fill: ansblue.transparentize(85%), {
+    body
+    place(bottom + center, dy: 7.5pt, box(inset: (x: 2pt, y: 1.2pt), radius: 2pt, fill: ansblue,
+      text(size: 6.5pt, fill: white, top-edge: "x-height", bottom-edge: "baseline")[ans]))
+  }))
+
 "##;
 
 const CONTENT: &[&str] = &[
@@ -329,6 +340,10 @@ pub fn typst_preview_useful(expr: &str) -> bool {
     let math = preview_math(&typed);
     if math.is_empty() {
         return false;
+    }
+    // native only: a line that uses `ans` always shows what it stands for
+    if math.contains("anschip(") {
+        return true;
     }
     // native only: polar and `j` lines say something the bar doesn't
     if jsre::test(
@@ -1053,6 +1068,12 @@ fn call_fn(word: &str, inner: &str) -> String {
     }
     match key.as_str() {
         "sqrt" if unary => return format!("sqrt({})", slot(0)),
+        // native only: `ans` as the number it stands for, in its chip (chain::ans_chipped)
+        "anschip" if unary => {
+            // a negative answer's minus sits against it (`-3`): `- 3` is spaced as a subtraction in the chip
+            let v = slot(0);
+            return format!("anschip({})", v.strip_prefix("- ").map_or(v.clone(), |r| format!("-{r}")));
+        }
         "cbrt" if unary => return format!("root(3, {})", slot(0)),
         "nthroot" if args.len() == 2 => return format!("root({}, {})", slot(1), slot(0)),
         "ncr" | "combinations" if args.len() <= 2 => {

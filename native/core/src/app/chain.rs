@@ -73,3 +73,23 @@ pub fn ans_written_out(expr: &str, plain: &str) -> String {
     })
     .into_owned()
 }
+
+/// native only: whether a line uses `ans` by name.
+pub fn mentions_ans(expr: &str) -> bool {
+    static ANS: Lazy = Lazy::new(|| js(r"\bans\b", "i"));
+    jsre::test(&ANS, expr)
+}
+
+/// native only: the preview's `ans`, as the number it stands for in a chip (`anschip`, macros.typ) marked "ans",
+/// as Desmos draws it. A function body keeps the word, as in the tape.
+pub fn ans_chipped(expr: &str, plain: &str) -> String {
+    static ANS: Lazy = Lazy::new(|| js(r"\bans\b", "i"));
+    static GROUPED: Lazy = Lazy::new(|| js(r"(?<=\d),(?=\d{3}(?!\d))", ""));
+    if plain.is_empty() || !jsre::test(&ANS, expr) || parse_function_def(jstr::trim(expr)).is_some() {
+        return expr.to_string();
+    }
+    // `3,000` would read as two arguments
+    let value = jsre::replace_all(&GROUPED, jstr::trim(plain), |_| String::new()).into_owned();
+    jsre::replace_all(&ANS, expr, |_| format!("anschip({value})")).into_owned()
+}
+

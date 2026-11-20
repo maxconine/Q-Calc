@@ -230,6 +230,7 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
         ("lib/chain", "chainedExpr") => json!(chain::chained_expr(&s(0))),
         ("lib/chain", "chainedHistoryExpr") => json!(chain::chained_history_expr(&s(0), &s(1))),
         ("lib/chain", "ansWrittenOut") => json!(chain::ans_written_out(&s(0), &s(1))),
+        ("lib/chain", "ansChipped") => json!(chain::ans_chipped(&s(0), &s(1))),
         // ---- lib/completion ----
         ("lib/completion", "completionFor") => {
             let names: CompletionNames = of(&a(1)).unwrap_or_default();

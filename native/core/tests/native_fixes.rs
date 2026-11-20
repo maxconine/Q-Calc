@@ -243,6 +243,48 @@ fn the_preview_shows_the_number_ans_stands_for() {
 }
 
 #[test]
+fn a_root_sign_takes_a_whole_ans_pi_or_tau() {
+    let o = EvaluateOptions::default();
+    let after = |first: &str, line: &str| {
+        let lines = [first.to_string(), line.to_string()];
+        qcalc_core::evaluate_sheet(&lines, &o).pop().unwrap().display
+    };
+    // `√ans` read as sqrtans and left the line blank
+    assert_eq!(after("4", "√ans"), "2");
+    assert_eq!(after("4", "3√ans"), "6");
+    assert_eq!(after("4", "√ans+1"), "3");
+    assert_eq!(after("4", "√ans*2"), "4");
+    assert_eq!(after("3247*123", "√ans"), after("3247*123", "sqrt(ans)"));
+    assert_eq!(after("4", "√ANS"), "2");
+    assert_eq!(show("√pi"), show("sqrt(pi)"));
+    // a single letter still roots alone
+    assert_eq!(after("x = 4", "√x*2"), "4");
+}
+
+#[test]
+fn the_preview_draws_ans_as_a_chip_holding_its_number() {
+    use qcalc_core::app::chain::{ans_chipped, mentions_ans};
+    use qcalc_core::app::typst_math::{preview_math, typst_preview_useful};
+    for (line, plain, want) in [
+        ("sqrt(ans(12))", "399381", "sqrt(anschip(399381) (12))"),
+        ("ans * (10^5)/30", "-3", "anschip(-3) dot (10 ^ 5) / 30"),
+        ("ans^2", "3 km", "anschip(3 \"km\") ^ 2"),
+        ("ans", "3,000 m", "anschip(3000 \"m\")"),
+        ("√ans", "4", "sqrt(anschip(4))"),
+    ] {
+        let chipped = ans_chipped(line, plain);
+        assert!(typst_preview_useful(&chipped), "{line}");
+        assert_eq!(preview_math(&chipped), want, "{line}");
+    }
+    // even plain arithmetic shows it: the row says what ans was
+    assert!(typst_preview_useful(&ans_chipped("ans*2", "5")));
+    // a function body reads ans when called, so it keeps the word; no answer, nothing to draw
+    assert_eq!(ans_chipped("f(x) = ans x", "2"), "f(x) = ans x");
+    assert_eq!(ans_chipped("ans*2", ""), "ans*2");
+    assert!(mentions_ans("2 ANS") && !mentions_ans("answer") && !mentions_ans("trans"));
+}
+
+#[test]
 fn a_typed_angle_unit_works_in_either_mode() {
     use qcalc_core::app::angle_marks::angle_marks;
     use qcalc_core::evaluate::evaluate_line;

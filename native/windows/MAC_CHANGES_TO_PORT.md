@@ -30,11 +30,15 @@ On Windows (branch `win-port-302`) all three pass, with the golden floors as set
 
 - **Named constants in words** (core `named_constants.rs`, called from `Sheet::line` in `evaluate.rs`): the constants page of Mitiguy's appendix answer when typed, `Earth's axial tilt` is 23.45 deg, `mass of earth / mass of moon` is 81.3924, `gravity on mars` is 3.7 m/s². Test: `named_constants_answer_in_words` in `tests/requested_features.rs`, then type `Earth's axial tilt` in the bar.
 
+- **`√ans` answers** (core `scientific/preprocess.rs`, `ROOT_NAME`): a root sign takes a whole `ans`, `pi` or `tau`, where it read `sqrtans` and left the line blank. After 4, `√ans` is 2, `3√ans` is 6 and `√ans+1` is 3. Test: `a_root_sign_takes_a_whole_ans_pi_or_tau` in `tests/native_fixes.rs`, then type `4`, ↵, `√ans` in the bar.
+
 The rest is done. (`dx` touching the integrand, halves powers as roots and the faster intersections were checked in the app on 8 Nov 2026, with the linear algebra tables.)
 
 ## 2. Edited on Windows but never run: test it
 
 - **Sheet filter: greek spelled in latin** (`sheet_page.rs`: `latin`, used in `matches`; the Mac's `IdentityWindow.swift` does the same with ICU's Greek-Latin). `tmax` finds `τ_max`, `sx` finds `σ_x`, and a typed `τ` still finds only τ. Edited from the Mac, where `qcalc-win` doesn't build (`stacked.rs` calls the Windows-only `crate::input`); the logic was tested on its own. Test: `cargo test -p qcalc-win a_filter_word`, then type `tmax` in the continuum mechanics sheet's filter.
+
+- **`ans` drawn as a chip in the preview** (`typst_row.rs`: `request` uses the core's `chain::ans_chipped` in place of `ans_written_out`, and shows the row for a line that uses `ans` even with stacked fractions on; the chip is `anschip` in `typst/src/macros.typ`). Mac: `MathText.swift` and `BarModel.refreshTypeset`. The preview draws `ans` as the number it stands for in a blue box with a small "ans" pill on its edge, as Desmos does, and every line that uses `ans`, typed or chained, gets the row. Edited from the Mac, where `qcalc-win` doesn't build. Test: `cargo test -p qcalc-typst --test render an_ans_chip`, then type `3247*123`, ↵, `sqrt(ans(12))`, in light and dark, with stacked fractions on and off.
 
 ## 3. Not on Windows yet: implement it
 
