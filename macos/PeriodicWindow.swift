@@ -524,6 +524,9 @@ final class PeriodicWindowController: NSObject {
         panel.becomesKeyOnlyIfNeeded = true
         panel.isMovableByWindowBackground = true
         panel.isReleasedWhenClosed = false
+        // no zoom in/out: AppKit runs it as a threaded NSAnimation (_NSWindowTransformAnimation), and a thread was
+        // left waiting forever about once per open and close (64 opens filled the user-interactive dispatch pool)
+        panel.animationBehavior = .none
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.contentAspectRatio = size
         panel.contentMinSize = NSSize(width: size.width * 0.6, height: size.height * 0.6)

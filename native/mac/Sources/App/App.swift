@@ -162,6 +162,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "do": (NSApp.windows.first(where: { $0 is OverlayPanel && $0.isVisible })?.firstResponder as? NSTextView)?
                 .doCommand(by: NSSelectorFromString(arg))
         case "click": DevSnapshot.click(arg)
+        // threads:<file>: every thread's name, queue and stack, grouped (leak hunts; scripts/test-leaks.sh)
+        case "threads": DevSnapshot.threads(to: arg)
         // sheetclick:<title>:<x>,<y>: a click in that sheet, points from its content's top left
         case "sheetclick": DevSnapshot.sheetClick(arg)
         case "sheethover": DevSnapshot.sheetClick(arg, hover: true)

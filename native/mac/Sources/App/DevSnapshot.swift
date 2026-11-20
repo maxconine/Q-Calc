@@ -93,6 +93,72 @@ enum DevSnapshot {
         }
     }
 
+    /// Every thread's name, queue and a short stack (frame pointers, symbols by dladdr) into `path`, grouped by
+    /// stack with a count: a leak hunt sees which threads pile up, which `sample` can't show without Developer Mode.
+    static func threads(to path: String) {
+        var list: thread_act_array_t?
+        var count: mach_msg_type_number_t = 0
+        guard task_threads(mach_task_self_, &list, &count) == KERN_SUCCESS, let list else { return }
+        let me = mach_thread_self()
+        var groups: [String: Int] = [:]
+        for i in 0..<Int(count) {
+            let thread = list[i]
+            var lines: [String] = []
+            if let pt = pthread_from_mach_thread_np(thread) {
+                var name = [CChar](repeating: 0, count: 64)
+                pthread_getname_np(pt, &name, name.count)
+                lines.append("name: \(String(cString: name))")
+            }
+            var ident = thread_identifier_info_data_t()
+            var identCount = mach_msg_type_number_t(MemoryLayout<thread_identifier_info_data_t>.size / MemoryLayout<natural_t>.size)
+            let got = withUnsafeMutablePointer(to: &ident) {
+                $0.withMemoryRebound(to: integer_t.self, capacity: Int(identCount)) {
+                    thread_info(thread, thread_flavor_t(THREAD_IDENTIFIER_INFO), $0, &identCount)
+                }
+            }
+            if got == KERN_SUCCESS, ident.dispatch_qaddr != 0,
+               let queue = UnsafePointer<UnsafeRawPointer?>(bitPattern: UInt(ident.dispatch_qaddr))?.pointee {
+                let label = __dispatch_queue_get_label(unsafeBitCast(queue, to: DispatchQueue.self))
+                lines.append("queue: \(String(cString: label))")
+            }
+            #if arch(arm64)
+            if thread != me, thread_suspend(thread) == KERN_SUCCESS {
+                var state = arm_thread_state64_t()
+                var stateCount = mach_msg_type_number_t(MemoryLayout<arm_thread_state64_t>.size / MemoryLayout<natural_t>.size)
+                let ok = withUnsafeMutablePointer(to: &state) {
+                    $0.withMemoryRebound(to: natural_t.self, capacity: Int(stateCount)) {
+                        thread_get_state(thread, ARM_THREAD_STATE64, $0, &stateCount)
+                    }
+                }
+                if ok == KERN_SUCCESS {
+                    var pcs = [UInt(state.__pc), UInt(state.__lr)]
+                    var fp = UInt(state.__fp)
+                    while fp != 0, fp % 8 == 0, pcs.count < 24, let frame = UnsafePointer<UInt>(bitPattern: fp) {
+                        let next = frame[0], ret = frame[1]
+                        if ret == 0 { break }
+                        pcs.append(ret & 0x0000_FFFF_FFFF_FFFF)
+                        if next <= fp { break }
+                        fp = next
+                    }
+                    for pc in pcs.map({ $0 & 0x0000_FFFF_FFFF_FFFF }) {
+                        var info = Dl_info()
+                        if dladdr(UnsafeRawPointer(bitPattern: pc), &info) != 0, let sym = info.dli_sname {
+                            lines.append("  \(String(cString: sym))")
+                        }
+                    }
+                }
+                thread_resume(thread)
+            }
+            #endif
+            groups[lines.joined(separator: "\n"), default: 0] += 1
+            mach_port_deallocate(mach_task_self_, thread)
+        }
+        mach_port_deallocate(mach_task_self_, me)
+        vm_deallocate(mach_task_self_, vm_address_t(UInt(bitPattern: list)), vm_size_t(Int(count) * MemoryLayout<thread_t>.stride))
+        let text = "\(count) threads\n\n" + groups.sorted { $0.value > $1.value }.map { "x\($0.value)\n\($0.key)" }.joined(separator: "\n\n")
+        try? text.write(toFile: path, atomically: true, encoding: .utf8)
+    }
+
     /// A left click at `x,y` (points from the bar's top-left), sent through the window as a real click is.
     static func click(_ spot: String) {
         let xy = spot.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }

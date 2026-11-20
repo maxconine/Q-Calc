@@ -1229,6 +1229,9 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         panel.becomesKeyOnlyIfNeeded = true
         panel.isMovableByWindowBackground = true
         panel.isReleasedWhenClosed = false
+        // no zoom in/out: AppKit runs it as a threaded NSAnimation (_NSWindowTransformAnimation), and a thread was
+        // left waiting forever about once per open and close (64 opens filled the user-interactive dispatch pool)
+        panel.animationBehavior = .none
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         // only the height changes: the two columns are laid out at one width
         panel.contentMinSize = NSSize(width: width, height: min(full, 220))
