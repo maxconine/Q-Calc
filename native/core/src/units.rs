@@ -484,9 +484,17 @@ pub fn unit_dim(word: &str) -> Option<Dim> {
     if word.is_empty() || word.chars().any(is_space) {
         return None;
     }
-    [word.to_string(), word.replace('µ', "μ"), word.replace(['µ', 'μ'], "u")]
-        .iter()
-        .find_map(|w| match_unit_at_start(&cs(w)).filter(|h| h.rest.is_empty()).map(|h| h.unit.dim))
+    [
+        word.to_string(),
+        word.replace('µ', "μ"),
+        word.replace(['µ', 'μ'], "u"),
+    ]
+    .iter()
+    .find_map(|w| {
+        match_unit_at_start(&cs(w))
+            .filter(|h| h.rest.is_empty())
+            .map(|h| h.unit.dim)
+    })
 }
 
 // the plainest singular name: `meter` for m, `second` not `secs`, `gram` not a generated prefix pile-up,
@@ -1641,15 +1649,28 @@ fn split_ratio(unit: &UnitRef) -> Option<Vec<(UnitRef, f64)>> {
             Some(h) => (h, 2.0),
             None => sym.strip_suffix('³').map_or((sym, 1.0), |h| (h, 3.0)),
         };
+        let plain =
+            |u: &&UnitRef| !u.id.contains('_') && !CONSTANT_UNIT_IDS.contains(&u.id.as_str());
+        // by symbol, else by a name (`km/h`: hour's symbol is `hr`, `h` one of its names)
         tbl()
             .list
             .iter()
-            .find(|u| {
-                u.symbol == head
-                    && !u.id.contains('_')
-                    && !CONSTANT_UNIT_IDS.contains(&u.id.as_str())
+            .find(|u| u.symbol == head && plain(u))
+            .cloned()
+            .or_else(|| {
+                tbl()
+                    .list
+                    .iter()
+                    .find(|u| u.names.iter().any(|n| n == head) && plain(u))
+                    // shown as typed in the ratio: `km²/h²`, not `km²/hr²`
+                    .map(|u| {
+                        std::sync::Arc::new(Unit {
+                            symbol: head.to_string(),
+                            ..(**u).clone()
+                        })
+                    })
             })
-            .map(|u| (u.clone(), power))
+            .map(|u| (u, power))
     };
     let top = find(top)?;
     let (b, e) = find(bottom)?;

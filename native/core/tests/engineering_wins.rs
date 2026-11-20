@@ -21,7 +21,10 @@ fn deg_and_rad_convert_angles() {
 fn mol_beside_other_units() {
     assert_eq!(show("8.314 J/(mol K) * 300 K"), "2.4942 kJ/mol");
     assert_eq!(show("8.314 J/(mol K)"), "8.314 J/(mol·K)");
-    assert_eq!(show("8.314 J/(mol*K) * 300 K / 101325 Pa"), "24.6158401184 L/mol");
+    assert_eq!(
+        show("8.314 J/(mol*K) * 300 K / 101325 Pa"),
+        "24.6158401184 L/mol"
+    );
     assert_eq!(show("1 mol / 22.4 L"), "0.0446428571429 mol/L");
     assert_eq!(show("0.5 mol/L * 2 L"), "1 mol");
     assert_eq!(show("2 kmol * 18 g/mol"), "36000 g");
@@ -44,7 +47,7 @@ fn parallel_resistors() {
 
 #[test]
 fn circuit_quantities_side_by_side_multiply() {
-    assert_eq!(show("60 Hz 100 µF"), "0.006 1/Ω");
+    assert_eq!(show("60 Hz 100 µF"), "0.006 S");
     assert_eq!(show("1/(2 pi 60 Hz 100 µF)"), "26.5258238486 Ω");
     assert_eq!(show("10 kΩ 1 µF"), "10 ms");
     assert_eq!(show("12 V 2 A"), "24 W");
@@ -52,4 +55,3 @@ fn circuit_quantities_side_by_side_multiply() {
     assert_eq!(show("5 ft 10 kg"), "");
     assert_eq!(show("1 h 30 min"), "1.5 hr");
 }
-

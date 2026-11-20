@@ -748,8 +748,13 @@ impl<'o> Sheet<'o> {
             result.raw = raw.to_string();
             return result;
         }
+        // native only (QA 62): `2 T * 3 m^2` is 6 Wb, `… in mT`, the tesla read where the line is magnetic
+        if let Some(result) = self.magnetic_line(raw, &marked) {
+            return result;
+        }
         let mut result = self.line_as_typed(&marked);
-        // native only: `deg(pi)`, `10 Ω || 20 Ω`, `60 Hz 100 µF`, after the web paths left the line blank
+        // native only: `deg(pi)`, `10 Ω || 20 Ω`, `60 Hz 100 µF`, `2 siemens`, `1 Wb`, after the web paths left
+        // the line blank; a conductance reads in siemens there
         if result.display.is_empty()
             && result.value.is_none()
             && let Some(spelled) = crate::engineering::rewrite(&marked)
@@ -758,30 +763,122 @@ impl<'o> Sheet<'o> {
             if !retry.display.is_empty() {
                 result = retry;
                 result.raw = raw.to_string();
+                self.native_unit_label(&mut result, None);
             }
         }
-        // native only: `8.314 J/(mol K) * 300 K`, mol beside other units
-        if result.display.is_empty()
-            && result.value.is_none()
-            && let Some(value) = crate::engineering::with_moles(&marked, |t| {
+        // native only: `8.314 J/(mol K) * 300 K`, mol beside other units (and `ans` after a moles answer, or a
+        // variable set to one, keeps its mol: QA 62)
+        if result.display.is_empty() && result.value.is_none() {
+            let assigned = crate::engineering::assignment(&marked);
+            let rhs = assigned
+                .as_ref()
+                .map_or(marked.as_ref(), |(_, r)| r.as_str());
+            let filled = with_quantities(rhs, &self.quantities);
+            // mol that came in through `ans` or a variable counts as typed beside a unit
+            let mol_carried = filled != rhs;
+            if let Some(value) = crate::engineering::with_moles(&filled, mol_carried, |t| {
                 try_plain_math(t, &self.plain(false))
-            })
-        {
-            self.last_ans = Some(value.n);
-            self.measures.remove("ans");
-            self.quantities.remove("ans");
-            result = LineResult {
-                raw: raw.into(),
-                display: show(&value, false, self.sig_figs),
-                value: Some(value),
-                ..LineResult::blank(raw)
-            };
+            }) {
+                let quantity = crate::engineering::mol_quantity(&value);
+                self.last_ans = Some(value.n);
+                self.measures.remove("ans");
+                set_or_delete(&mut self.quantities, "ans", quantity.clone());
+                let variable = assigned.map(|(name, _)| name);
+                if let Some(v) = &variable {
+                    self.variables.remove(v);
+                    self.measures.remove(v);
+                    set_or_delete(&mut self.quantities, v, quantity.clone());
+                }
+                result = LineResult {
+                    raw: raw.into(),
+                    kind: if variable.is_some() {
+                        LineKind::Assignment
+                    } else {
+                        LineKind::Expression
+                    },
+                    display: show(&value, false, self.sig_figs),
+                    value: Some(value),
+                    quantity,
+                    variable,
+                    ..LineResult::blank(raw)
+                };
+            }
         }
         if matches!(named, Cow::Owned(_)) || matches!(marked, Cow::Owned(_)) {
             result.raw = raw.to_string();
         }
         crate::feet_inches::answer_in_feet_and_inches(&marked, &mut result, self.sig_figs);
         result
+    }
+
+    /// Native only (QA 62): a line where `T` is the tesla, or with a magnetic target (`… in mWb`), answered in
+    /// T or Wb. None when the line isn't magnetic, or its answer isn't a field or a flux.
+    fn magnetic_line(&mut self, raw: &str, marked: &str) -> Option<LineResult> {
+        let target = crate::engineering::magnetic_target(marked);
+        let body = target.as_ref().map_or(marked, |(head, _, _)| head.as_str());
+        let spelled = crate::engineering::magnetic(body, target.is_some())?;
+        let mut result = self.line_as_typed(&spelled);
+        let target = target.map(|(_, label, size)| (label.to_string(), size));
+        if !self.native_unit_label(&mut result, target) {
+            return None;
+        }
+        result.raw = raw.to_string();
+        Some(result)
+    }
+
+    /// Native only (QA 62): an answer in `1/Ω` reads in siemens, one in `N / m A` in T and `N m / A` in Wb (or in
+    /// `target`, a magnetic label and its size). False when there was no such answer, or the target didn't fit.
+    fn native_unit_label(
+        &mut self,
+        result: &mut LineResult,
+        target: Option<(String, f64)>,
+    ) -> bool {
+        let Some(value) = result.value.as_mut() else {
+            return false;
+        };
+        let unit = value.unit.clone().unwrap_or_default();
+        if value.kind != ValueKind::Number || !value.n.is_finite() {
+            return false;
+        }
+        let si = value.n;
+        if let Some(s) = crate::engineering::siemens_unit(&unit)
+            && target.is_none()
+        {
+            value.unit = Some(s.into());
+            value.unit_id = None;
+            // read back as the reciprocal it was (`S` alone reads as seconds)
+            let quantity = format!("{} ({unit})", jsnum::to_string(si));
+            result.quantity = Some(quantity.clone());
+            self.quantities.insert("ans".into(), quantity.clone());
+            if let Some(v) = &result.variable {
+                self.quantities.insert(v.clone(), quantity);
+            }
+        } else if let Some(m) = crate::engineering::magnetic_unit(&unit) {
+            let flux = m == "Wb";
+            match &target {
+                Some((label, size)) => {
+                    if label.ends_with("Wb") != flux {
+                        return false;
+                    }
+                    value.n = si / size;
+                    value.unit = Some(label.clone());
+                }
+                None => value.unit = Some(m.into()),
+            }
+            value.unit_id = None;
+            // read back in base units (the table has no tesla)
+            let base = if flux { "kg m^2/(A s^2)" } else { "kg/(A s^2)" };
+            let quantity = format!("{} {base}", jsnum::to_string(si));
+            result.quantity = Some(quantity.clone());
+            self.quantities.insert("ans".into(), quantity.clone());
+            if let Some(v) = &result.variable {
+                self.quantities.insert(v.clone(), quantity);
+            }
+        } else {
+            return false;
+        }
+        result.display = show(value, false, self.sig_figs);
+        true
     }
 
     fn line_as_typed(&mut self, raw: &str) -> LineResult {
