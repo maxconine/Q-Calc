@@ -10,7 +10,25 @@ struct RadicalText: View {
     var tracking: CGFloat = 0
     var monospaced = false
 
-    private enum Run { case plain(String), root(String, cube: Bool) }
+    private enum Run { case plain(String), root(String, cube: Bool), bounds(String, lower: String, upper: String) }
+
+    /// native only (QA item 92): `∫_0^1` and `Σ_(n=1)^10` as the field draws them, the limits small beside the sign
+    /// (upper over lower, without the `_ ^` and brackets), not typed text in the tape and examples
+    private static func limit(_ chars: [Character], _ from: Int) -> (String, Int)? {
+        guard from < chars.count else { return nil }
+        if chars[from] == "(" {
+            var depth = 0, j = from
+            while j < chars.count {
+                if chars[j] == "(" { depth += 1 }
+                if chars[j] == ")" { depth -= 1; if depth == 0 { return (String(chars[(from + 1)..<j]), j + 1) } }
+                j += 1
+            }
+            return nil
+        }
+        var j = from
+        while j < chars.count, !chars[j].isWhitespace, chars[j] != "^", chars[j] != "_", chars[j] != "(" { j += 1 }
+        return j > from ? (String(chars[from..<j]), j) : nil
+    }
 
     private var runs: [Run] {
         var out: [Run] = []
@@ -18,6 +36,19 @@ struct RadicalText: View {
         var chars = Array(text)
         var i = 0
         while i < chars.count {
+            if "∫∑Σ∏Π".contains(chars[i]), i + 1 < chars.count, chars[i + 1] == "_",
+               let (lower, afterLower) = Self.limit(chars, i + 2) {
+                var upper = "", end = afterLower
+                if afterLower < chars.count, chars[afterLower] == "^", let (u, afterUpper) = Self.limit(chars, afterLower + 1) {
+                    upper = u
+                    end = afterUpper
+                }
+                if !plain.isEmpty { out.append(.plain(plain)) }
+                plain = ""
+                out.append(.bounds(String(chars[i]), lower: lower, upper: upper))
+                i = end
+                continue
+            }
             guard chars[i] == "√" || chars[i] == "∛", i + 1 < chars.count else {
                 plain.append(chars[i]); i += 1; continue
             }
@@ -48,6 +79,17 @@ struct RadicalText: View {
             ForEach(Array(runs.enumerated()), id: \.offset) { _, run in
                 switch run {
                 case let .plain(s): styled(s)
+                case let .bounds(sign, lower, upper):
+                    HStack(alignment: .center, spacing: size * 0.06) {
+                        styled(sign)
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text(upper.isEmpty ? " " : upper)
+                            Text(lower)
+                        }
+                        .font(.system(size: size * 0.5).monospacedDigit())
+                        .fixedSize()
+                    }
+                    .padding(.trailing, size * 0.12)
                 case let .root(s, cube):
                     // never squeezed: a squeezed run shrank or was cut on its own (`√3/6` showed half a 3)
                     styled(s)

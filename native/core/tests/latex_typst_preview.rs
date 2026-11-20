@@ -30,7 +30,7 @@ fn latex_shorthands_evaluate() {
 #[test]
 fn typed_typst_and_latex_preview_as_math() {
     for (t, want) in [
-        ("$frac(1, 2)$", "((1) / (2))"),
+        ("$frac(1, 2)$", "(1) / (2)"), // brackets only the calculator needs (item 92)
         ("$2 dot.c 3$", "2 dot 3"),
         ("2 times 3", "2 dot 3"),
         ("lr(|-5|)", "abs(- 5)"),

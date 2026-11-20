@@ -300,13 +300,47 @@ pub fn native_typst_document(expr: &str, answer: &str, solved_for: &str) -> Opti
             .collect();
         return Some(doc.replacen(" $\n", &format!(" quad ({}) $\n", written.join(", ")), 1));
     }
-    let doc = typst_document(expr, answer, solved_for)?.replace("(#tan1)", "#tan1 ");
+    let doc =
+        raised_digits(&typst_document(expr, answer, solved_for)?.replace("(#tan1)", "#tan1 "));
     Some(
         jsre::replace_all(lazy!(r"(?<![A-Za-z0-9_\x22])sqrt\("), &doc, |_| {
             "sqrt(#box(height: 0.95em);".into()
         })
         .into_owned(),
     )
+}
+
+/// native only: a raised ¹ ² ³ left as its glyph (`3x²`, the answer to `d/dx x^3`) drew as a small digit set
+/// apart (`3x ²`), not a power; outside quoted text (a unit's `"m²"`) it's `^(2)`.
+fn raised_digits(doc: &str) -> String {
+    let mut out = String::with_capacity(doc.len());
+    let mut quoted = false;
+    for ch in doc.chars() {
+        let digit = match ch {
+            '¹' => Some('1'),
+            '²' => Some('2'),
+            '³' => Some('3'),
+            _ => None,
+        };
+        match digit {
+            Some(d) if !quoted => {
+                let base = out.trim_end_matches(' ').len();
+                if out[..base].ends_with(|b: char| b.is_alphanumeric() || ")]}".contains(b)) {
+                    out.truncate(base);
+                    out.push_str(&format!("^({d})"));
+                } else {
+                    out.push(ch);
+                }
+            }
+            _ => {
+                if ch == '"' && !out.ends_with('\\') {
+                    quoted = !quoted;
+                }
+                out.push(ch);
+            }
+        }
+    }
+    out
 }
 
 // names that typeset differently from how they're typed: a function set upright with its own spacing, a big
@@ -538,9 +572,9 @@ pub fn preview_math(expr: &str) -> String {
     // native only: Typst typed or pasted (`$frac(1, 2)$`, `2 dot.c 3`, `3 plus.minus 1`) previews as the math it
     // is, not its words and dollar signs; LaTeX (`10^{-3}`, `\lim_{x \to 0}`) as the calculator reads it
     let s = if crate::typst_input::looks_like_typst(&s) {
-        crate::typst_input::typst_to_ascii(&s)
+        bare_fractions(&crate::typst_input::typst_to_ascii(&s))
     } else if crate::latex::looks_like_latex(&s) {
-        crate::latex::latex_to_ascii(&s)
+        bare_fractions(&crate::latex::latex_to_ascii(&s))
     } else {
         s
     };
@@ -551,6 +585,43 @@ pub fn preview_math(expr: &str) -> String {
         return i;
     }
     to_typst_math(&mark_units(&keyword_math(&s)))
+}
+
+/// native only: `frac(1, 2)` and `\frac{1}{2}` read as `((1)/(2))`, whose outer brackets only keep the
+/// calculator's precedence; Typst drew them (`(½) + √x`). Dropped where the fraction stands alone between
+/// signs, kept beside a power, a call, a number (`2 (½)` isn't 2½) or a factorial.
+fn bare_fractions(s: &str) -> String {
+    let mut c: Vec<char> = s.chars().collect();
+    let edge_before = |c: &[char], i: usize| {
+        let p = c[..i].iter().rev().find(|ch| !ch.is_whitespace());
+        p.is_none_or(|ch| "+-−=,(;<>≤≥≈±*·".contains(*ch))
+    };
+    let edge_after = |c: &[char], i: usize| {
+        let n = c[i..].iter().find(|ch| !ch.is_whitespace());
+        n.is_none_or(|ch| "+-−=,);<>≤≥≈±".contains(*ch))
+    };
+    let mut i = 0;
+    while i + 1 < c.len() {
+        let fits = c[i] == '('
+            && c[i + 1] == '('
+            && match_close(&c, i + 1, c.len()).is_some_and(|j| {
+                c.get(j + 1) == Some(&'/')
+                    && c.get(j + 2) == Some(&'(')
+                    && match_close(&c, j + 2, c.len()).is_some_and(|k| {
+                        c.get(k + 1) == Some(&')') && match_close(&c, i, c.len()) == Some(k + 1)
+                    })
+            });
+        if fits && edge_before(&c, i) {
+            let end = match_close(&c, i, c.len()).unwrap_or(i);
+            if edge_after(&c, end + 1) {
+                c.remove(end);
+                c.remove(i);
+                continue;
+            }
+        }
+        i += 1;
+    }
+    c.into_iter().collect()
 }
 
 /// native only: an integral with no bounds (`int x^2 dx`, `∫ sin x dx`, `integral of e^x`) as ∫ … dx; it had
@@ -1118,7 +1189,10 @@ fn call_fn(word: &str, inner: &str) -> String {
         "anschip" if unary => {
             // a negative answer's minus sits against it (`-3`): `- 3` is spaced as a subtraction in the chip
             let v = slot(0);
-            return format!("anschip({})", v.strip_prefix("- ").map_or(v.clone(), |r| format!("-{r}")));
+            return format!(
+                "anschip({})",
+                v.strip_prefix("- ").map_or(v.clone(), |r| format!("-{r}"))
+            );
         }
         "cbrt" if unary => return format!("root(3, {})", slot(0)),
         "nthroot" if args.len() == 2 => return format!("root({}, {})", slot(1), slot(0)),
