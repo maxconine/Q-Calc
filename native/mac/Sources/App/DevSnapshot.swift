@@ -249,6 +249,40 @@ enum DevSnapshot {
         hit.scrollWheel(with: event)
     }
 
+    /// The bar's accessibility tree as VoiceOver walks it, one element a line, indented by depth:
+    /// `role | label | value | selected` (`axtree:<file>`). Read in the app itself, so no Accessibility permission.
+    static func axTree(to path: String) {
+        guard let panel = NSApp.windows.first(where: { $0 is OverlayPanel && $0.isVisible }),
+              let root = panel.contentView else { try? "none".write(toFile: path, atomically: true, encoding: .utf8); return }
+        // SwiftUI builds its elements only once an assistive app is about; these ask for them as one would
+        for attribute in ["AXEnhancedUserInterface", "AXManualAccessibility"] {
+            NSApp.perform(NSSelectorFromString("accessibilitySetValue:forAttribute:"), with: NSNumber(value: true), with: attribute)
+        }
+        var out = ""
+        var seen = Set<ObjectIdentifier>()
+        func walk(_ e: NSAccessibilityProtocol, _ depth: Int) {
+            guard depth < 40, seen.insert(ObjectIdentifier(e as AnyObject)).inserted else { return }
+            let o = e as AnyObject
+            // SwiftUI's elements answer the old attribute calls, not always the new methods
+            func attr(_ name: String) -> Any? { o.accessibilityAttributeValue?(NSAccessibility.Attribute(rawValue: name)) ?? nil }
+            let role = (o.accessibilityRole?() ?? nil)?.rawValue ?? (attr("AXRole") as? String) ?? ""
+            let label = e.accessibilityLabel() ?? (attr("AXDescription") as? String) ?? (attr("AXTitle") as? String) ?? ""
+            let value = (o.accessibilityValue?() ?? nil).map { "\($0)" } ?? ""
+            let selected = (o.isAccessibilitySelected?() ?? false) ? " | selected" : ""
+            let hidden = (o.isAccessibilityElement?() ?? true) ? "" : " | group"
+            if !role.isEmpty || !label.isEmpty {
+                out += String(repeating: "  ", count: depth) + "\(role) | \(label) | \(value)\(selected)\(hidden)\n"
+            }
+            for c in (o.accessibilityChildren?() ?? nil) ?? (attr("AXChildren") as? [Any]) ?? [] {
+                if let c = c as? NSAccessibilityProtocol { walk(c, depth + 1) }
+            }
+            // a SwiftUI host hands out its elements only to its own view, not its window's content view
+            if let v = e as? NSView { for s in v.subviews { walk(s, depth + 1) } }
+        }
+        walk(root, 0)
+        try? out.write(toFile: path, atomically: true, encoding: .utf8)
+    }
+
     /// The graph panel's window and view, one `key=value` a line, into a file (`graphstate:<file>`)
     static func graphState(_ model: BarModel, to path: String) {
         guard let g = model.graph else { try? "none".write(toFile: path, atomically: true, encoding: .utf8); return }

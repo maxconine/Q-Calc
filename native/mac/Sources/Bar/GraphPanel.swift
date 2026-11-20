@@ -78,6 +78,7 @@ struct GraphPanel: View {
                 .padding(.vertical, -3).padding(.trailing, -8)
                 .onHover { resetHover = $0 }
                 .hoverTip("Reset view")
+                .accessibilityLabel("Reset view")
             }
             // in the bar itself, not a popover: a popover is a window of its own, and the bar hides when it loses the keys
             if exportShown {
@@ -1512,6 +1513,8 @@ private struct HeadIcon: View {
         .onHover { hover = $0 }
         .hoverTip(tip)
         .accessibilityLabel(tip)
+        // the camera and settings icons open a section of the head: VoiceOver says when it's open
+        .accessibilityAddTraits(on ? .isSelected : [])
     }
 }
 

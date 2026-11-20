@@ -80,7 +80,8 @@ Without it the app still builds, and games say the build has none.
     `home=`);
   - messages: `card`, `ask`, `note`, `noteask`, `sendfile:<name>:<path>`, `sendclip:<name>:<text>`, `savefile`,
     `forget:<name>`;
-  - the app: `threads:<file>` (every thread's name, queue and stack, for leak hunts) and `bench:<spec>` (`DevBench`).
+  - the app: `threads:<file>` (every thread's name, queue and stack, for leak hunts), `axtree:<file>` (the bar's
+    accessibility tree as VoiceOver finds it, read in the app) and `bench:<spec>` (`DevBench`).
   `QCALC_DEV_ID=<bundle id>` drives a copy of the dev build re-signed under another id, with its own support folder,
   defaults and shortcut, so checks never touch the Q Calc Dev in use.
 - `scripts/test-*.sh` are the check scripts: headless ones build a file of rules (`TapeRules`, `CardRules`,

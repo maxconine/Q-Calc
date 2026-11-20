@@ -203,6 +203,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "drag": DevSnapshot.drag(arg)
         case "scroll": DevSnapshot.scroll(arg)
         case "graphstate": DevSnapshot.graphState(overlay.model, to: arg)
+        // axtree:<file>: what VoiceOver finds in the bar, one element a line (role, label, value, selected), read in the
+        // app itself, so it needs no Accessibility permission (QA item 110; scripts/test-voiceover.sh)
+        case "axtree": DevSnapshot.axTree(to: arg)
         // pinch:<x>,<y>,<m> a pinch on the graph there (+ spreads, zooms in); dblclick:<x>,<y> a double-click in the bar
         case "pinch": DevSnapshot.pinch(arg)
         case "dblclick": DevSnapshot.click(arg, count: 2)

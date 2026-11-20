@@ -370,9 +370,9 @@ struct LiveAnswerView: View {
                     Text("\(v) =").font(.system(size: Theme.answerPart)).foregroundStyle(Color.qMuted)
                         .padding(.trailing, 0.2 * Theme.answerPart)
                 }
-                AnswerButton(model: model, shown: model.live.matrix == nil ? Pretty.answer(exact) : model.pretty(exact), copy: exact, size: Theme.answerPart, help: "Copy exact value", trailingPad: 8)
+                AnswerButton(model: model, shown: model.live.matrix == nil ? Pretty.answer(exact) : model.pretty(exact), copy: exact, size: Theme.answerPart, help: "Copy exact value", trailingPad: 8, spoken: "Exact value")
                 Text("≈").font(.system(size: Theme.row)).foregroundStyle(Color.qMuted).accessibilityHidden(true)
-                AnswerButton(model: model, shown: model.dualApprox, copy: model.live.display, size: Theme.answerPart, help: "Copy approximation", trailingPad: -8)
+                AnswerButton(model: model, shown: model.dualApprox, copy: model.live.display, size: Theme.answerPart, help: "Copy approximation", trailingPad: -8, spoken: "Approximation")
             }
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Answer")
@@ -402,11 +402,12 @@ private struct SolveRoots: View {
             }
             .buttonStyle(.plain)
             .hoverTip("Copy all the solutions")
+            .accessibilityLabel("Copy all the solutions")
             ForEach(Array(solve.roots.enumerated()), id: \.offset) { k, root in
-                if k > 0 { Text(", ").font(.system(size: Theme.display)).foregroundStyle(Color.qAnswer) }
+                if k > 0 { Text(", ").font(.system(size: Theme.display)).foregroundStyle(Color.qAnswer).accessibilityHidden(true) }
                 RootButton(model: model, shown: Pretty.answer(labels[k]), copy: Self.plain(root))
             }
-            if solve.more { Text(", …").font(.system(size: Theme.display)).foregroundStyle(Color.qAnswer) }
+            if solve.more { Text(", …").font(.system(size: Theme.display)).foregroundStyle(Color.qAnswer).accessibilityHidden(true) }
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Solutions")
@@ -447,6 +448,8 @@ private struct RootButton: View {
                     .padding(.trailing, 3)
                     .contentShape(Rectangle())
                     .hoverTip(model.unitName(forAnswer: shown) ?? "")
+                    // the solution's label already says its unit (VoiceOver read it twice)
+                    .accessibilityHidden(true)
             }
         }
     }
@@ -561,6 +564,8 @@ private struct AnswerButton: View {
     let size: CGFloat
     let help: String
     let trailingPad: CGFloat
+    /// what VoiceOver calls it: the dual's halves say which half they are
+    var spoken = "Answer"
     @State private var hover = false
 
     var body: some View {
@@ -575,6 +580,8 @@ private struct AnswerButton: View {
                     .padding(.trailing, 8)
                     .contentShape(Rectangle())
                     .hoverTip(model.unitName(forAnswer: shown) ?? "")
+                    // the answer's label already says its unit (VoiceOver read it twice)
+                    .accessibilityHidden(true)
             }
         }
         .padding(.trailing, trailingPad < 0 ? trailingPad : 0)
@@ -597,7 +604,7 @@ private struct AnswerButton: View {
         .buttonStyle(.plain)
         .onHover { hover = $0 }
         .hoverTip(help)
-        .accessibilityLabel("Answer \(shown)")
+        .accessibilityLabel("\(spoken) \(shown)")
         .accessibilityHint("Copies it")
         .onDrag { NSItemProvider(object: copy as NSString) }
     }
@@ -845,7 +852,7 @@ private struct HistoryRowView: View, Equatable {
                     answers
                         .frame(minWidth: 120, maxWidth: max(120, (geo.size.width - 16) * 0.46), alignment: .trailing)
                 }
-                RowCopyButton(shown: hover || selected) {
+                RowCopyButton(shown: hover || selected, note: row.kind == .note) {
                     model.copyRow(row, answer: true)
                     model.focusField?()
                 }
@@ -922,7 +929,7 @@ private struct HistoryRowView: View, Equatable {
             if row.hasDual, let exact = row.exact {
                 // .tape-a-dual with RootPicks after the ≈: the exact side inserts the first root, as on the page
                 HStack(spacing: 6) {
-                    answer(Pretty.answer(exact), at: 1, picked: false, tip: "Insert exact value at the cursor")
+                    answer(Pretty.answer(exact), at: 1, picked: false, tip: "Insert exact value at the cursor", spoken: "Exact value")
                     Text("≈").font(.system(size: Theme.body)).foregroundStyle(Color.qMuted).accessibilityHidden(true)
                     rootCells(roots)
                 }
@@ -933,9 +940,9 @@ private struct HistoryRowView: View, Equatable {
             // the page's titles: exact value, then approximation
             // .tape-a-dual: exact ≈ approx, 6 pt apart, the ≈ in 13 pt muted
             HStack(spacing: 6) {
-                answer(Pretty.answer(exact), at: 1, picked: picked == 1, tip: "Insert exact value at the cursor")
+                answer(Pretty.answer(exact), at: 1, picked: picked == 1, tip: "Insert exact value at the cursor", spoken: "Exact value")
                 Text("≈").font(.system(size: Theme.body)).foregroundStyle(Color.qMuted).accessibilityHidden(true)
-                answer(Pretty.answer(row.display), at: 2, picked: picked == 2, tip: "Insert approximation at the cursor")
+                answer(Pretty.answer(row.display), at: 2, picked: picked == 2, tip: "Insert approximation at the cursor", spoken: "Approximation")
             }
         } else {
             // several roots in one cell (`±√2`) insert as shown; ← → pick each at full precision
@@ -951,7 +958,7 @@ private struct HistoryRowView: View, Equatable {
         HStack(spacing: 0) {
             ForEach(Array(labels.enumerated()), id: \.offset) { k, label in
                 if k > 0 { separator(", ") }
-                answer(Pretty.answer(label), at: k + 1, picked: picked == k + 1, tip: "Insert this solution at the cursor")
+                answer(Pretty.answer(label), at: k + 1, picked: picked == k + 1, tip: "Insert this solution at the cursor", spoken: "Solution")
             }
             if row.solve?.more == true { separator(", …") }
         }
@@ -966,11 +973,11 @@ private struct HistoryRowView: View, Equatable {
     /// `at`: the answer this cell is (1 the exact half of a dual, 2 its ≈ half), nil for the one the row reads as.
     /// A click inserts it at full precision; ⇧ keeps the tape open, ⌥ leaves the unit off.
     private func answer(_ text: String, at: Int?, picked: Bool, fill: Bool = false,
-                        tip: String = "Insert the answer at the cursor") -> some View {
+                        tip: String = "Insert the answer at the cursor", spoken: String = "Answer") -> some View {
         let unit = model.numberAndUnit(text)
         let more = row.kind == .definition ? " · ⇧-click keeps the history open"
             : unit != nil ? " · ⇧-click keeps the history open, ⌥-click leaves off the unit" : " · ⇧-click keeps the history open"
-        return AnswerCell(text: text, split: unit, unitName: model.unitName(forAnswer: text), picked: picked, fill: fill, tip: tip + more,
+        return AnswerCell(text: text, split: unit, unitName: model.unitName(forAnswer: text), picked: picked, fill: fill, tip: tip + more, spoken: spoken,
                           hint: unit != nil ? "Inserts it at the cursor; with Shift the history stays open, with Option it goes in without its unit"
                               : "Inserts it at the cursor; with Shift the history stays open") {
             let mods = TapeClick.flags
@@ -984,6 +991,8 @@ private struct HistoryRowView: View, Equatable {
 /// so the row doesn't shift; seen on hover or while the row is selected, and a check for 1.2 s once it copied.
 private struct RowCopyButton: View {
     let shown: Bool
+    /// a note copies its text, any other row its answer (VoiceOver had only "Copy")
+    var note = false
     let action: () -> Void
     @State private var hover = false
     @State private var done = false
@@ -1010,7 +1019,7 @@ private struct RowCopyButton: View {
         .allowsHitTesting(shown || done)
         .onHover { hover = $0 }
         .hoverTip("Copy")
-        .accessibilityLabel("Copy")
+        .accessibilityLabel(done ? "Copied" : note ? "Copy note" : "Copy answer")
     }
 }
 
@@ -1024,6 +1033,8 @@ private struct AnswerCell: View {
     /// a lone answer is the whole column (display: block), so its pick ring is too
     var fill = false
     var tip = "Insert the answer at the cursor"
+    /// what VoiceOver calls it: a dual's halves and a row's roots say which they are
+    var spoken = "Answer"
     var hint = ""
     let action: () -> Void
     @State private var hover = false
@@ -1038,7 +1049,7 @@ private struct AnswerCell: View {
             }
             .buttonStyle(.plain)
             .hoverTip(tip)
-            .accessibilityLabel("Answer \(text)")
+            .accessibilityLabel("\(spoken) \(text)")
             .accessibilityHint(hint)
             if let unit = split?.unit {
                 Button(action: action) {

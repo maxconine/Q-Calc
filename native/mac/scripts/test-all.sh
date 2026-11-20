@@ -20,7 +20,7 @@ headless=(cards compat12 contrast eggs games input placement puzzles share stack
 macos_tests=(dictionary:DictionaryLookup math:MathEval messages:MessageInbox overlay:OverlayHealth rates:ECBRates
   sheet_match:SheetMatch sheet_place:SheetPlace)
 self_copying=(first-run game-drive sheet-links sys)
-on_copy=(graph keys periodic-keys leaks)
+on_copy=(graph keys periodic-keys voiceover leaks)
 # a new script is listed here or it's flagged, so none is left out of the run
 for f in "$here"/scripts/test-*.sh; do
   n="${${f:t}#test-}"; n="${n%.sh}"
