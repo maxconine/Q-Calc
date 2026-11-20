@@ -15,13 +15,34 @@ pub struct ChainAnswer {
     pub unit: bool,
 }
 
+/// native only: a date as the bar answers one (`Wed 11 Nov 2026`), which `+ 1 week` continues from.
+pub fn is_date_answer(plain: &str) -> bool {
+    static DATE: Lazy = Lazy::new(|| {
+        js(
+            r"^(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat) \d{1,2} [A-Z][a-z]{2} -?\d{1,6}$",
+            "",
+        )
+    });
+    jsre::test(&DATE, plain)
+}
+
 /// Whether `q` continues from the last answer. A leading minus never does: `-3` and `- 3` are both negative three.
 pub fn chains_from_answer(q: &str, last: Option<&ChainAnswer>) -> bool {
     static CHAIN_OP: Lazy = Lazy::new(|| js(r"^\s*[*×·/÷^+!]", ""));
     static CHAIN_CONVERT: Lazy = Lazy::new(|| js(r"^\s*(?:in|to)\s+\S", "i"));
+    // native only: a date goes on by a span, back as well as forward; `- 2 days` steps back, `-2` is still minus two
+    static DATE_STEP: Lazy = Lazy::new(|| {
+        js(
+            r"^\s*[+\-−]\s*\(?\s*(?:\d+(?:\.\d+)?|an?|one)\s*[A-Za-z]",
+            "",
+        )
+    });
     let Some(last) = last.filter(|l| !l.plain.is_empty()) else {
         return false;
     };
+    if is_date_answer(&last.plain) {
+        return jsre::test(&DATE_STEP, q);
+    }
     if jsre::test(&CHAIN_OP, q) {
         return true;
     }
@@ -47,7 +68,7 @@ pub fn chained_history_expr(q: &str, plain: &str) -> String {
     static PLAIN_UNSIGNED: Lazy = Lazy::new(|| js(r"^(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$", ""));
     static LOOSE: Lazy = Lazy::new(|| js(r"^[+\-−]", ""));
     let rest = jstr::trim_start(q);
-    if starts_convert(rest) {
+    if starts_convert(rest) || is_date_answer(plain) {
         return format!("{plain} {rest}");
     }
     let base = if jsre::test(&LOOSE, rest) || jsre::test(&PLAIN_UNSIGNED, plain) {

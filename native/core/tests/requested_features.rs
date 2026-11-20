@@ -621,3 +621,52 @@ fn root_of_a_whole_name() {
     assert_eq!(show("√x; x=4"), "2");
 }
 
+// 2026-11-12: `today + 6 days + 10 days` had no answer: a date took only one span after it
+#[test]
+fn a_date_plus_several_spans() {
+    let at = |text: &str| {
+        let mut r = req(text);
+        r.now_ms = 1_794_441_600_000.0; // Wed 11 Nov 2026
+        live(&r).slot
+    };
+    assert_eq!(at("today + 6 days"), "Tue 17 Nov 2026");
+    assert_eq!(at("today + 6 days + 10 days"), at("today + 16 days"));
+    assert_eq!(at("today + 1 week + 2 days"), "Fri 20 Nov 2026");
+    assert_eq!(at("today - 3 days + 1 day"), "Mon 9 Nov 2026");
+    assert_eq!(at("today - (6 days + 10 days)"), "Mon 26 Oct 2026");
+    assert_eq!(at("dec 25 + 1 week + 1 day"), "Sat 2 Jan 2027");
+    assert_eq!(at("9:00 + 1 hr - 15 min"), "9:45 am");
+}
+
+// 2026-11-13: `+ 1 week - 3 days + 12 days - 1 year + 500 days` goes on from a date answer, as from a number
+#[test]
+fn a_date_answer_chains_by_spans() {
+    use qcalc_core::app::answer::AnswerForm;
+    use qcalc_core::app::history_show::HistoryShow;
+    use qcalc_core::app::live::{commit, context_from_history};
+    const NOW: f64 = 1_794_441_600_000.0; // Wed 11 Nov 2026
+    let mut first = req("today + 6 days");
+    first.now_ms = NOW;
+    let tape = commit(&first, &[], "a").history;
+    let ctx = context_from_history(&tape, HistoryShow::Always, NOW, AnswerForm::Exact, 6.0);
+    let next = |text: &str| {
+        let mut r = req(text);
+        r.now_ms = NOW;
+        r.chain_answer = ctx.chain_answer.clone();
+        r.options.ans = ctx.ans;
+        let a = live(&r);
+        (a.slot, a.tape_expr)
+    };
+    assert_eq!(
+        next("+ 1 week - 3 days + 12 days - 1 year + 500 days").0,
+        "Sat 17 Apr 2027"
+    );
+    assert_eq!(
+        next("+ 1 week"),
+        ("Tue 24 Nov 2026".into(), "Tue 17 Nov 2026 + 1 week".into())
+    );
+    assert_eq!(next("- 2 days").0, "Sun 15 Nov 2026");
+    // a bare number is still a number
+    assert_eq!(next("-2").0, "-2");
+    assert_eq!(next("+ 3").0, "3");
+}

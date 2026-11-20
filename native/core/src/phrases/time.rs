@@ -453,6 +453,15 @@ fn parse_day(tz: &TimeZone, s: &str, today: Day, roll: Roll) -> Result<Option<Da
             return Ok(Some(add_days(tz, today, k)));
         }
     }
+    // native only: a date as answers show it, `Wed 11 Nov 2026`, so `+ 1 week` continues from one; the weekday
+    // is the date's own and is skipped
+    static LEAD_WEEKDAY: Lazy = Lazy::new(|| js_re(r"^([a-z]+)\.?,?\s+(?=.*\d)", ""));
+    if let Some(lead) = caps(&LEAD_WEEKDAY, t) {
+        let w = g(&lead, 1);
+        if WEEKDAYS.contains(&w) || short_weekday(w).is_some_and(|i| !i.is_nan()) {
+            return parse_day(tz, &t[g(&lead, 0).len()..], today, roll);
+        }
+    }
     let parts = caps(&MD, t)
         .map(|m| (g(&m, 1), g(&m, 2), m.get(3).map(|y| y.as_str())))
         .or_else(|| caps(&DM, t).map(|m| (g(&m, 2), g(&m, 1), m.get(3).map(|y| y.as_str()))));
@@ -529,6 +538,28 @@ fn shift_now(tz: &TimeZone, now: f64, span: Span, sign: f64) -> Option<String> {
     })
 }
 
+/// native only: the right side of `today + 6 days + 10 days`, `today - 3 days + 1 day` or `9:00 + (1 hr + 30 min)`:
+/// each span with its sign, in order. `op` is the sign before the first one; a bracketed group takes it whole.
+fn span_chain(op: &str, right: &str) -> Option<Vec<(f64, Span)>> {
+    let first = if op == "+" { 1.0 } else { -1.0 };
+    let t = js_trim(right);
+    let (grouped, body) = match t.strip_prefix('(').and_then(|b| b.strip_suffix(')')) {
+        Some(b) if !b.contains(['(', ')']) => (true, b),
+        _ => (false, t),
+    };
+    let mut out = Vec::new();
+    let (mut sign, mut start) = (first, 0);
+    for (i, c) in body.char_indices().chain([(body.len(), '+')]) {
+        if c == '+' || c == '-' {
+            out.push((sign, parse_span(&body[start..i])?));
+            let s = if c == '+' { 1.0 } else { -1.0 };
+            sign = if grouped { first * s } else { s };
+            start = i + 1;
+        }
+    }
+    Some(out)
+}
+
 fn re(p: &str) -> Regex {
     js_re(p, "")
 }
@@ -563,17 +594,12 @@ pub fn answer_time_phrase(s: &str, now: f64, tz: &TimeZone) -> Answered {
         let (left, op, right) = (g(a, 1), g(a, 2), g(a, 3));
         // with a span after it, `10:30` is a time of day whatever the hour
         let t = parse_clock(left).or_else(|| loose_clock(left));
-        let span = parse_span(right);
-        if let (Some(t), Some(span)) = (t, span)
-            && span.minutes != 0.0
-            && span.days == 0.0
-            && span.months == 0.0
+        if let (Some(t), Some(chain)) = (t, span_chain(op, right))
+            && chain
+                .iter()
+                .all(|(_, span)| span.minutes != 0.0 && span.days == 0.0 && span.months == 0.0)
         {
-            let m = if op == "+" {
-                span.minutes
-            } else {
-                -span.minutes
-            };
+            let m: f64 = chain.iter().map(|(sign, span)| sign * span.minutes).sum();
             return shown(format_clock(t + m));
         }
         // `5pm - 9am`: how long from the second to the first
@@ -681,12 +707,11 @@ pub fn answer_time_phrase(s: &str, now: f64, tz: &TimeZone) -> Answered {
     }
     if let Some(a) = &arith {
         let day = parse_day(tz, g(a, 1), today, Roll::Year)?;
-        let span = parse_span(g(a, 3));
-        if let (Some(day), Some(span)) = (day, span) {
-            let sign = if g(a, 2) == "+" { 1.0 } else { -1.0 };
-            return Ok(
-                shift_day(tz, day, span, sign).map(|d| PhraseAnswer::shown(format_date(tz, d)))
-            );
+        if let (Some(day), Some(chain)) = (day, span_chain(g(a, 2), g(a, 3))) {
+            let shifted = chain
+                .into_iter()
+                .try_fold(day, |d, (sign, span)| shift_day(tz, d, span, sign));
+            return Ok(shifted.map(|d| PhraseAnswer::shown(format_date(tz, d))));
         }
     }
     Ok(None)

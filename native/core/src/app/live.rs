@@ -228,11 +228,11 @@ fn merge_live_answer(expr: &str, js_display: &str, js_n: Option<f64>) -> (String
 /// a blank. Returns the phrase's answer when it wins.
 fn phrase_answer(
     req: &LiveRequest,
+    expr: &str,
     js_display: &str,
     enabled: bool,
     sig_figs: f64,
 ) -> Option<(String, Option<f64>)> {
-    let expr = req.text.as_str();
     if !enabled || jstr::trim(expr).is_empty() || crate::stubs::is_calculus_input(expr) {
         return None;
     }
@@ -385,7 +385,14 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
     let native_usable = !a_command && !chained && angle_safe(q, o);
     let (mut merged_display, mut merged_n) = merge_live_answer(q, &js_display, js_n);
     let mut phrase = false;
-    if let Some((d, n)) = phrase_answer(req, &js_display, native_usable && req.phrases, sig_figs) {
+    // native only: `+ 1 week` after a date answer is that date plus a week, which the date phrases answer
+    let date_chain = chained && plain.is_some_and(crate::app::chain::is_date_answer);
+    let phrase_text = match plain {
+        Some(p) if date_chain => format!("{p} {}", jstr::trim(q)),
+        _ => q.to_string(),
+    };
+    let phrase_on = (native_usable || date_chain) && req.phrases;
+    if let Some((d, n)) = phrase_answer(req, &phrase_text, &js_display, phrase_on, sig_figs) {
         (merged_display, merged_n) = (d, n);
         phrase = true;
     }
@@ -717,10 +724,13 @@ pub fn context_from_history(
             .and_then(Json::as_f64)
             .is_some_and(f64::is_finite);
         // a chain needs the last answer row to be the one `ans` means
-        (!plain.is_empty() && (n_ok || hist::is_literal_quantity(quantity))).then(|| ChainAnswer {
-            plain,
-            unit: last.get("quantity").is_some_and(|q| !q.is_null())
-                && !hist::is_literal_quantity(quantity),
+        let date = crate::app::chain::is_date_answer(&plain);
+        (!plain.is_empty() && (n_ok || date || hist::is_literal_quantity(quantity))).then(|| {
+            ChainAnswer {
+                plain,
+                unit: last.get("quantity").is_some_and(|q| !q.is_null())
+                    && !hist::is_literal_quantity(quantity),
+            }
         })
     });
     LiveContext {
