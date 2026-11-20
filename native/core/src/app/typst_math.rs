@@ -1415,8 +1415,10 @@ fn read_symbol(s: &[char], i: usize, to: usize) -> Piece {
     if let Some(m) = caps(lazy!(r"^[⁻⁺]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+"), &rest) {
         let raised: Vec<char> = jsre::group(&m, 0).chars().collect();
         // native only: one raised digit too, unless it's ¹ ² ³: the math font has those (Latin-1) but not
-        // ⁰ ⁴–⁹, so `2.1875 × 10⁵` lost its 5
-        if raised.len() > 1 || !matches!(raised[0], '¹' | '²' | '³') {
+        // ⁰ ⁴–⁹, so `2.1875 × 10⁵` lost its 5. Before a `/` even ¹ ² ³ are the power, or the fraction takes the
+        // glyph alone as its top (`π²/6` drew π · ²⁄₆)
+        let before_bar = caps(lazy!(r"^\s*/"), &sl(s, i + raised.len(), to)).is_some();
+        if raised.len() > 1 || before_bar || !matches!(raised[0], '¹' | '²' | '³') {
             let plain: String = raised
                 .iter()
                 .map(|&c| match "⁻⁺⁰¹²³⁴⁵⁶⁷⁸⁹".chars().position(|d| d == c) {

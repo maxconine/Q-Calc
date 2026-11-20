@@ -303,8 +303,7 @@ final class BarModel: ObservableObject {
         forms = []
         copied = false
         completion = nil
-        upgradedExact = nil
-        closedFormTask?.cancel()
+        dropUpgrade()
         if selected != nil, !text.isEmpty { selected = nil }
         gamesShown = BarCommand.of(text, sheets: sheets) == .games
         if !gamesShown { gamePick = nil }
@@ -321,7 +320,7 @@ final class BarModel: ObservableObject {
         let typed = text
         // a line answered anywhere but the live lane has no working
         var lane = false
-        defer { if !lane { working = nil } }
+        defer { if !lane { working = nil; dropUpgrade() } }
         // the grid stays open only while the line is the one it wrote
         if let g = grid, !writingGrid, typed != g.written { grid = nil; gridFocus = nil }
         if grid == nil, let h = matrixGridHint(text: typed), !storesMat(typed) {
@@ -528,18 +527,36 @@ final class BarModel: ObservableObject {
         }
     }
 
-    // the closed-form search runs on the engine's long-work pool; typing again cancels it (its CancelToken)
+    /// the search job `upgradedExact` (or the search under way) belongs to
+    private var upgradeJob: String?
+
+    // the closed-form search runs on the engine's long-work pool; typing again cancels it (its CancelToken).
+    // An answer again for the same text (a mode toggled, a d/dt chip) keeps the upgrade only when its job is the
+    // same one, so a closed form found under the old mode never stays beside the new decimal, and the same search
+    // isn't run twice.
     private func upgradeClosedForm(_ answer: LiveAnswer, for typed: String) {
-        closedFormTask?.cancel()
-        guard let job = answer.closedFormJob else { return }
+        let job = answer.closedFormJob
+        if job != nil, job == upgradeJob { return }
+        dropUpgrade()
+        guard let job else { return }
+        upgradeJob = job
         let engine = core
         closedFormTask = Task.detached(priority: .utility) { [weak self] in
-            guard let exact = try? await engine.closedForm(jobJson: job), !exact.isEmpty else { return }
+            let exact = try? await engine.closedForm(jobJson: job)
             await MainActor.run {
-                guard let self, self.text == typed else { return }
+                guard let self, self.upgradeJob == job else { return }
+                self.closedFormTask = nil
+                guard self.text == typed, let exact, !exact.isEmpty else { return }
                 self.upgradedExact = exact
             }
         }
+    }
+
+    private func dropUpgrade() {
+        closedFormTask?.cancel()
+        closedFormTask = nil
+        upgradeJob = nil
+        if upgradedExact != nil { upgradedExact = nil }
     }
 
     /// Accept the completion ghost (Tab, or → at the end of the line).

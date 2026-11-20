@@ -57,6 +57,8 @@ The rest is done. (`dx` touching the integrand, halves powers as roots and the f
 
 - **Convert to feet and inches** (core `feet_inches.rs`: `split_target`, `answer_split`, called from `evaluate.rs` `line`; `app/unit_spans.rs` colours the target's inches; native only, QA 20 Nov 2026): a length converted `to ft in`, `in ft and in`, `in feet and inches`, `to ft, in`, `to ft-in`, `to feet & inches` or `to '"` answers split, `1.8 m to ft in` is `5 ft 10.8661417323 in` (fractions of an inch when the line typed one: `50 3/8" to ft in` is `4 ft 2 3/8 in`); its value is in inches, so ⌥↑/⌥↓ step it to feet or inches as before. `to ft-in` was a nonsense `ft − in` quotient before. The `in`/`inches` of such a target is coloured as a unit. Test: `tests/units_feet_inches.rs`, then type `1.8 m to ft in` in the bar, check `in` is coloured and ⌥↑ gives `5.90551181102 ft`.
 
+- **A closed form's power before a `/` in the preview** (core `app/typst_math.rs`: `read_symbol`; QA 20 Nov 2026): the PSLQ upgrade `2 - π²/6` (`integral of ln(x) ln(1-x) from 0 to 1`) typeset as 2 − π·(²⁄₆), the 2 drawn over the 6: a lone ¹ ² ³ stayed a glyph, so the fraction took it alone as its top. Before a `/` it is now the power (`pi ^(2) / 6`); elsewhere the glyph stays. Test: `tests/closed_form_preview.rs`, then type `integral of ln(x) ln(1-x) from 0 to 1` and check the preview row.
+
 ## 2. Edited on Windows but never run: test it
 
 - **Sheet filter: greek spelled in latin** (`sheet_page.rs`: `latin`, used in `matches`; the Mac's `IdentityWindow.swift` does the same with ICU's Greek-Latin). `tmax` finds `τ_max`, `sx` finds `σ_x`, and a typed `τ` still finds only τ. Edited from the Mac, where `qcalc-win` doesn't build (`stacked.rs` calls the Windows-only `crate::input`); the logic was tested on its own. Test: `cargo test -p qcalc-win a_filter_word`, then type `tmax` in the continuum mechanics sheet's filter.
@@ -116,6 +118,14 @@ Mac file: `native/mac/Sources/Bar/InputField.swift` (`pastePlain`, `cut`, `inser
 - **Whole-line swaps record the caret where it lands**: the caret was set after the change was recorded, so undo/redo back to such a step (a `[` pair, a stacked `/`, a bounds key) put it at the end of the line.
 
 To test on Windows: type `12`, paste `+34` at once, ⌘Z (Ctrl+Z) leaves `12`; type `v=[1 2` then Ctrl+Z, Ctrl+Shift+Z, and the caret comes back inside the brackets.
+
+### Live answer: a stale closed form after a mode toggle (20 Nov 2026)
+
+Mac file: `native/mac/Sources/Bar/BarModel.swift` (`upgradeClosedForm`, `dropUpgrade`, `upgradeJob`).
+
+- **The upgraded exact form belongs to its search job**: only typing cleared it, so a line answered again without a text change (⌃D degrees/radians, the sig-figs or fraction toggles, a d/dt chip) kept the closed form found under the old mode beside the new decimal until a new search replaced it, or for good when the new answer had none. It is now dropped when the new answer's `closedFormJob` differs, and kept, without searching again, when it is the same job. A line answered outside the live lane (a command, a hint) drops it too.
+
+To test on Windows: type `integral of ln(x) ln(1-x) from 0 to 1` (shows `2 - π²/6 ≈ 0.355066`), toggle degrees/radians: the exact form stays and no second search runs; with a trig integrand whose closed form exists in one mode only, toggle and check no old exact form stays beside the new decimal.
 
 ### Already ported
 
