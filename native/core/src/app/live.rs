@@ -37,7 +37,7 @@ use crate::app::answer::{
 use crate::app::answer_forms::{FormSource, answer_forms};
 use crate::app::blank_reason::{EnterFacts, Names, Span, blank_reason, enter_hint};
 use crate::app::chain::{
-    ChainAnswer, ans_written_out, chained_expr, chained_history_expr, chains_from_answer,
+    ChainAnswer, ans_written_out, chained_expr, chained_tape_expr, chains_from_answer,
 };
 use crate::app::completion::{CompletionNames, completion_for};
 use crate::app::games::{
@@ -399,7 +399,7 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
         !graph_cmd && isolated.is_none() && chains_from_answer(q, req.chain_answer.as_ref());
     let plain = req.chain_answer.as_ref().map(|c| c.plain.as_str());
     let tape = match plain {
-        Some(p) if chained => chained_history_expr(q, p),
+        Some(p) if chained => chained_tape_expr(q, p),
         _ => q.to_string(),
     };
     let tape_expr = isolated.clone().unwrap_or_else(|| match plain {

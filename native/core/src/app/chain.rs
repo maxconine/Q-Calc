@@ -81,6 +81,22 @@ pub fn chained_history_expr(q: &str, plain: &str) -> String {
     format!("{base}{rest}")
 }
 
+/// native only: the tape row and its copy, spaced evenly. `* 2` after 84 reads `84 * 2`, not `84* 2`
+/// (the page's `chainedHistoryExpr`, kept for the goldens, glues the answer to the operator).
+pub fn chained_tape_expr(q: &str, plain: &str) -> String {
+    static SPACED_OP: Lazy = Lazy::new(|| js(r"^[*×·/÷^+\-−]\s", ""));
+    let out = chained_history_expr(q, plain);
+    let rest = jstr::trim_start(q);
+    if !jsre::test(&SPACED_OP, rest) || !out.ends_with(rest) {
+        return out;
+    }
+    let base = &out[..out.len() - rest.len()];
+    if base.is_empty() || base.ends_with(char::is_whitespace) {
+        return out;
+    }
+    format!("{base} {rest}")
+}
+
 /// A typed `ans` is written out in the tape too; a function body keeps it, since it reads ans when called.
 pub fn ans_written_out(expr: &str, plain: &str) -> String {
     static ANS: Lazy = Lazy::new(|| js(r"\bans\b", "i"));

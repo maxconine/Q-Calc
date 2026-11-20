@@ -22,11 +22,11 @@ fn live_line_copies_as_the_tape_reads() {
     // a chain: the answer it continues written out
     assert_eq!(
         live_line_copy("+ 2", true, Some("5"), "7", None, None, f),
-        "5+ 2 = 7"
+        "5 + 2 = 7"
     );
     assert_eq!(
         live_line_copy("* 2", true, Some("-3"), "-6", None, None, f),
-        "(-3)* 2 = -6"
+        "(-3) * 2 = -6"
     );
     // a typed ans as its number
     assert_eq!(
@@ -154,6 +154,6 @@ fn the_mac_reaches_them_by_name() {
             "liveLineCopy",
             json!(["+ 2", true, "5", {"display": "7", "exact": null}, "exact"])
         ),
-        json!("5+ 2 = 7")
+        json!("5 + 2 = 7")
     );
 }

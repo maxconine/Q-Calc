@@ -78,7 +78,7 @@ pub fn live_line_copy(
     }
     let plain = ans_plain.filter(|p| !p.is_empty());
     let expr = match plain {
-        Some(p) if chained => crate::app::chain::chained_history_expr(text, p),
+        Some(p) if chained => crate::app::chain::chained_tape_expr(text, p),
         Some(p) => crate::app::chain::ans_written_out(text, p),
         None => text.to_string(),
     };
