@@ -364,7 +364,9 @@ struct GraphPanel: View {
         let head = 10 + heights.reduce(0, +)
         let key = PlotKey(state: state, prefs: model.graphPrefs, hover: nil, spot: nil, scale: 1)
         let view = PlotCanvas.PlotNSView(frame: CGRect(x: 0, y: 0, width: w, height: h + head))
-        view.appearance = NSApp.keyWindow?.effectiveAppearance ?? NSApp.effectiveAppearance
+        // the bar's look (its theme, CRT, high contrast): q calc isn't the active app while the bar is up, so
+        // NSApp.keyWindow was nil and the picture took the system's light/dark instead (QA item 91)
+        view.appearance = (OverlayPanel.shown ?? NSApp.windowWithKeys)?.effectiveAppearance ?? NSApp.effectiveAppearance
         view.key = key
         let layers = state.layers.filter { !$0.isBlank }
         view.drawing = { cg in

@@ -191,8 +191,10 @@ private struct NumbersGame: View {
         }
     }
 
-    private var fieldEditor: NSTextView? { NSApp.keyWindow?.firstResponder as? NSTextView }
-    // the game window's field editor, key window or not
+    // the game window's field editor, key window or not: keys reach handle() from that window, and NSApp.keyWindow is
+    // nil whenever q calc isn't the active app (QA item 91: Tab/→ didn't close the parens, and typed keys went on the
+    // end of the expression wherever the caret was)
+    private var fieldEditor: NSTextView? { gameFieldEditor }
     private var gameFieldEditor: NSTextView? { NSApp.windows.first { $0 is GameNSWindow && $0.isVisible }?.firstResponder as? NSTextView }
 
     private func handle(_ key: GameKey) -> Bool {

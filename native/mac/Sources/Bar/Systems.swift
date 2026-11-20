@@ -344,7 +344,7 @@ final class PasteWatch {
     /// q calc needn't be the active app while it's up and NSApp.keyWindow can be nil there; read from that alone, ⌘Z,
     /// ⌘⌫ and → filling parens in an equation or cell found no editor and did nothing (QA item 86)
     static var keyEditor: NSTextView? {
-        (NSApp.keyWindow ?? NSApp.windows.first { $0 is OverlayPanel && $0.isVisible })?.firstResponder as? NSTextView
+        (NSApp.windowWithKeys ?? OverlayPanel.shown)?.firstResponder as? NSTextView
     }
 
     /// the field editor's text and selection, when it's showing `value`

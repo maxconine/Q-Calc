@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Driven checks for the native games (QA item 84), on a copy of the dev build re-signed under its own id (a running
+# Driven checks for the native games (QA items 84, 91), on a copy of the dev build re-signed under its own id (a running
 # Q Calc Dev is left alone); keys go straight to the game's window (gamekey:), so this runs with q calc in the
 # background or the screen locked. Solo only, nothing goes online.
 #   zsh native/mac/scripts/test-game-drive.sh [snap dir]   (after zsh native/mac/build.sh)
@@ -45,6 +45,11 @@ check "24 in the big window" "$(state big)" "1"
 drive gamekey:escape sleep:0.8 "gamekeys:*8" sleep:0.3
 [[ -n "$1" ]] && drive "snap:$1/24-back"
 check "back from the big window the round goes on, typing carries on" "$(state field)" "(1+2)*8"
+# QA item 91: q calc isn't the active app here (NSApp.keyWindow nil); Tab closes the parens, a key goes in at the caret
+drive "gamekeys:*(4" gamekey:tab sleep:0.4
+check "24: Tab closes the open paren" "$(state field)" "(1+2)*8*(4)"
+drive gamekey:left sleep:0.2 gamekey:5 sleep:0.4
+check "24: a key goes in at the caret, not on the end" "$(state field)" "(1+2)*8*(45)"
 drive theme:light sleep:0.5
 check "the theme follows settings" "$(state dark)" "0"
 drive theme:system closegame

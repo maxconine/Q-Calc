@@ -64,6 +64,17 @@ final class OverlayPanel: NSPanel {
     }
 }
 
+extension OverlayPanel {
+    /// the bar's panel while it's up
+    static var shown: OverlayPanel? { NSApp.windows.first { $0 is OverlayPanel && $0.isVisible } as? OverlayPanel }
+}
+
+extension NSApplication {
+    /// The window with the keys. The bar and the sheets are non-activating panels, so while one has them q calc needn't
+    /// be the active app and NSApp.keyWindow is nil (QA items 86, 91): then the visible window that says it's key.
+    var windowWithKeys: NSWindow? { keyWindow ?? windows.first { $0.isVisible && $0.isKeyWindow } }
+}
+
 /// The panel's content: clear and rounded as the web view was; the SwiftUI bar sits on it.
 private final class BarBackground: NSView {
     override var mouseDownCanMoveWindow: Bool { true }
@@ -456,7 +467,7 @@ final class OverlayController: NSObject {
     private func lostFocus() {
         guard wantVisible, panel?.isVisible == true, !gameOpen, !model.holdsOpen else { return }
         // the keys went to a sheet's search field: the bar stays up beside it
-        if Self.isSheetWindow(NSApp.keyWindow) { return }
+        if Self.isSheetWindow(NSApp.windowWithKeys) { return }
         let since = uptime() - shownAt
         if OverlayHealth.focusLossHides(sinceShow: since) {
             hide(because: "lost focus")
