@@ -39,5 +39,11 @@ check("blank answer not read", TapeRules.liveSpoken(answer: " ", text: "2^", las
 check("empty line not read", TapeRules.liveSpoken(answer: "1024", text: "", last: ""), Optional<String>.none)
 check("answer that repeats the line not read", TapeRules.liveSpoken(answer: "5", text: "5", last: ""), Optional<String>.none)
 
+// an answer put in from the tape among other text (answerAmong)
+check("empty line: the answer alone", TapeRules.answerAlone(line: "  ", selection: ""), true)
+check("text on the line: among it", TapeRules.answerAlone(line: "5", selection: ""), false)
+check("the whole line selected goes: alone", TapeRules.answerAlone(line: "5 + 2", selection: "5 + 2"), true)
+check("part selected: among the rest", TapeRules.answerAlone(line: "5 + 2", selection: "2"), false)
+
 print(failures == 0 ? "all tape checks pass" : "\(failures) failed")
 exit(failures == 0 ? 0 : 1)

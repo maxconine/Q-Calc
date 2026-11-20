@@ -21,6 +21,13 @@ enum TapeRules {
         return count - 1
     }
 
+    /// Whether an answer put in from the tape stands alone on the line (the page's `!rest.trim()`): nothing else is
+    /// there, or all of it is selected and goes. Otherwise it goes in as `answerAmong` wraps it (`5(-2)`, not `5-2`).
+    static func answerAlone(line: String, selection: String) -> Bool {
+        let rest = line.trimmingCharacters(in: .whitespaces)
+        return rest.isEmpty || (!selection.isEmpty && rest == selection.trimmingCharacters(in: .whitespaces))
+    }
+
     /// What VoiceOver hears as ↑ ↓ land on a row, as the row reads: a note has no answer, so no "equals".
     static func spoken(expr: String, display: String, note: Bool) -> String {
         note || display.isEmpty ? (note ? "Note \(expr)" : expr) : "\(expr) equals \(display)"

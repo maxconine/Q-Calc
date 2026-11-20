@@ -1232,7 +1232,7 @@ final class BarModel: ObservableObject {
         }
         let answers = picks(row).answers
         if pick > 0, !answers.isEmpty {
-            finishRowInsert(answers[min(pick, answers.count) - 1])
+            finishRowInsert(amongLine(answers[min(pick, answers.count) - 1], row))
         } else {
             insertFromRow(i, answer: false)
         }
@@ -1247,7 +1247,7 @@ final class BarModel: ObservableObject {
             return
         }
         let piece = answer && row.kind != .definition ? (settings.answerForm == "exact" ? (row.exact ?? row.display) : row.display) : row.expr
-        finishRowInsert(piece)
+        finishRowInsert(answer ? amongLine(piece, row) : piece)
     }
 
     private func finishRowInsert(_ piece: String) {
@@ -1264,6 +1264,13 @@ final class BarModel: ObservableObject {
 
     func insert(_ piece: String) {
         if let insertIntoField { insertIntoField(piece) } else { text += piece }
+    }
+
+    /// An answer from the tape among other text on the line keeps its value (the page's insertPlain → answerAmong):
+    /// `5` then a root `-2` is `5(-2)`, not `5-2`; `±2` is `(±2)`. Alone on the line, or a word's value, as it is.
+    private func amongLine(_ piece: String, _ row: HistoryRow) -> String {
+        guard row.kind != .definition, !TapeRules.answerAlone(line: text, selection: fieldSelection?() ?? "") else { return piece }
+        return logic.string("lib/answer", "answerAmong", [piece, false]) ?? piece
     }
 
     /// the line under the bar follows a file it just offered: waiting, sending, then sent (or declined, cancelled…)

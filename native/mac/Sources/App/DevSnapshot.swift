@@ -328,6 +328,25 @@ enum DevSnapshot {
         }
     }
 
+    /// A key handed straight to the bar's line, as AppKit would hand it on (⌘ chords as key equivalents first), so the
+    /// tape can be driven while q calc isn't the active app and the bar has no key window for `key:` to reach
+    static func barKey(_ chord: String) {
+        guard let window = NSApp.windows.first(where: { $0 is OverlayPanel && $0.isVisible }) else { return }
+        for event in keyEvents(chord, window) {
+            if event.type == .keyDown, event.modifierFlags.contains(.command), window.performKeyEquivalent(with: event) { return }
+            window.sendEvent(event)
+        }
+    }
+
+    /// The tape as the keys left it: open, the picked row and part, each row (`expr = display`), the line, the clipboard
+    static func tapeState(_ model: BarModel, to file: String) {
+        let lines = ["open=\(model.tapeOpen)", "selected=\(model.selected.map(String.init) ?? "nil")", "pick=\(model.pick)",
+                     "rows=\(model.rows.count)", "line=\(model.text)", "copied=\(model.copied)",
+                     "clip=\(NSPasteboard.general.string(forType: .string) ?? "")"]
+            + model.rows.map { "row=\($0.expr) = \($0.display)" }
+        try? lines.joined(separator: "\n").write(toFile: file, atomically: true, encoding: .utf8)
+    }
+
     /// The front sheet window, or its explanation popover while one is up: a key handed straight to it, as AppKit
     /// would hand it on (⌘ chords as key equivalents first), so a sheet can be driven while q calc isn't the
     /// active app (a locked screen, another app in front) and has no key window for `key:` to reach
