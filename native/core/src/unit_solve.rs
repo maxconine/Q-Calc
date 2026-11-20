@@ -131,6 +131,9 @@ pub fn isolate_with_units(
         return None;
     }
     let marked = &prep.marked[0];
+    if letter_formula(marked, &prep.texts, variable) {
+        return None;
+    }
     let used: Vec<char> = LETTER
         .find_iter(marked)
         .flatten()
@@ -162,6 +165,20 @@ pub fn isolate_with_units(
     )
 }
 
+/// `s = u t + 0.5 a t^2 for u`: each "quantity" a number and one letter among other letters is a
+/// formula's coefficient and letter (a for acceleration, not years), so isolate reads it as letters.
+fn letter_formula(marked: &str, texts: &[String], variable: &str) -> bool {
+    static ONE: Lazy = Lazy::new(|| js(r"^[\d.]+(?:e[+-]?\d+)?\s*[A-Za-z]$", "i"));
+    static WORD: Lazy = Lazy::new(|| js(r"(?<![A-Za-z0-9_])[A-Za-z][A-Za-z0-9_]*(?!\s*\()", ""));
+    !texts.is_empty()
+        && texts.iter().all(|t| jsre::test(&ONE, t.trim()))
+        && WORD
+            .find_iter(marked)
+            .flatten()
+            .map(|m| m.as_str())
+            .any(|w| w != variable && !w.starts_with("__q") && !["pi", "e", "tau"].contains(&w))
+}
+
 /// Whether the quantities are unmistakably units: two letters or more, a compound, or a decimal amount.
 pub fn clearly_units(texts: &[String]) -> bool {
     static SPLIT: Lazy = Lazy::new(|| js(r"(?s)^([\d.]+(?:e[+-]?\d+)?)\s*(.*)$", "i"));
@@ -178,5 +195,8 @@ pub fn clearly_units(texts: &[String]) -> bool {
 
 /// The evaluate pipeline's check: clear units that won't rearrange stay blank.
 pub fn clearly_units_blank(eq: &str, names: &[String]) -> bool {
-    prep_units(&[eq.to_string()], names).is_some_and(|p| clearly_units(&p.texts))
+    let variable = names.first().map_or("", String::as_str);
+    prep_units(&[eq.to_string()], names).is_some_and(|p| {
+        clearly_units(&p.texts) && !letter_formula(&p.marked[0], &p.texts, variable)
+    })
 }

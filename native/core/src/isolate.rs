@@ -189,12 +189,17 @@ pub fn isolate_previous(text: &str, previous: Option<&str>) -> Option<String> {
     })
 }
 
+/// Physics names written as one word, never a product: `KE = 0.5 m v^2` is kinetic energy, not K·E.
+const NAMED_WORDS: [&str; 12] = [
+    "KE", "PE", "GPE", "EPE", "SPE", "Ek", "Ep", "Eg", "vi", "vf", "Vi", "Vf",
+];
+
 /// Letters written together are a product in a formula (`PV = nRT`).
 pub fn split_short_words(side: &str, keep: &str) -> String {
     static RE: Lazy = Lazy::new(|| js(r"(?<![A-Za-z_.])[A-Za-z]{2,3}(?![A-Za-z0-9_]|\s*\()", ""));
     jsre::replace_all(&RE, side, |c| {
         let w = jsre::group(c, 0);
-        if w == keep || isolate_names(w) {
+        if w == keep || isolate_names(w) || NAMED_WORDS.contains(&w) {
             w.to_string()
         } else {
             w.chars().map(String::from).collect::<Vec<_>>().join(" ")
@@ -660,7 +665,7 @@ fn poly_solve(f: &N, v: &str) -> Option<Found> {
     if cs.len() == 3 {
         let (c0, c1, c2) = (cs[0].clone(), cs[1].clone(), cs[2].clone());
         if is_zero(&c1) {
-            let sq = simp(&bin('/', neg(c0), c2));
+            let sq = prefer(&simp(&bin('/', neg(c0), c2)));
             let root = call("sqrt", vec![sq]);
             let text = format!("±{}", show(&root));
             return Some(Found {
@@ -828,7 +833,7 @@ fn show(n: &N) -> String {
     static LOG: Lazy = Lazy::new(|| js(r"\blog\(", ""));
     static NUM_TIMES: Lazy = Lazy::new(|| {
         js(
-            r"(?<![A-Za-z_\d.])(\d+(?:\.\d+)?)(?: \* | )(?=[A-Za-z(])",
+            r"(?<![A-Za-z_\d.]|\^ )(\d+(?:\.\d+)?)(?: \* | )(?=[A-Za-z(])",
             "",
         )
     });
@@ -888,6 +893,185 @@ fn plus_minus(a: &N, b: &N, sa: &str, sb: &str) -> Option<String> {
     }
     let text = format!("{} ± {}", show(&mid), show(&half));
     (js_len(&text) <= js_len(&format!("{sa}, {sb}"))).then_some(text)
+}
+
+// ---------- polish: a product's numbers and powers gathered ----------
+
+/// A finite decimal as a reduced fraction (0.5 → 1/2); `true` when it had decimals.
+fn fraction(x: f64) -> Option<(f64, f64, bool)> {
+    for k in 0..=6 {
+        let d = 10f64.powi(k);
+        let n = (x * d).round();
+        if (x * d - n).abs() <= 1e-9 * d.max(1.0) && n.abs() < 1e9 {
+            let (mut a, mut b) = (n.abs(), d);
+            while b != 0.0 {
+                (a, b) = (b, a % b);
+            }
+            return Some((n / a, d / a, k > 0));
+        }
+    }
+    None
+}
+
+#[derive(Default)]
+struct Monomial {
+    p: f64,
+    q: f64,
+    decimal: bool,
+    factors: Vec<(String, N, i32)>,
+}
+
+impl Monomial {
+    fn collect(&mut self, n: &N, e: i32) -> Option<()> {
+        let n = strip(n);
+        if let Some(x) = symbolic::number_value(n) {
+            let (a, b, dec) = fraction(x)?;
+            if a == 0.0 || e.unsigned_abs() > 8 {
+                return None;
+            }
+            self.decimal |= dec;
+            let (a, b) = (a.powi(e.abs()), b.powi(e.abs()));
+            if e > 0 {
+                self.p *= a;
+                self.q *= b;
+            } else {
+                self.p *= b * a.signum();
+                self.q *= a.abs();
+            }
+            return (self.p.abs() < 1e9 && self.q < 1e9).then_some(());
+        }
+        match op_of(n) {
+            Some((Op::Multiply, args)) => {
+                for a in args {
+                    self.collect(a, e)?;
+                }
+                return Some(());
+            }
+            Some((Op::Divide, [a, b])) => {
+                self.collect(a, e)?;
+                return self.collect(b, -e);
+            }
+            Some((Op::UnaryMinus, [a])) => {
+                if e % 2 != 0 {
+                    self.p = -self.p;
+                }
+                return self.collect(a, e);
+            }
+            Some((Op::Pow, [base, k])) => {
+                if let Some(k) = const_value(k)
+                    && crate::jsnum::is_integer(k)
+                    && k != 0.0
+                    && (k * f64::from(e)).abs() <= 12.0
+                {
+                    return self.collect(base, e * k as i32);
+                }
+            }
+            _ => {}
+        }
+        // a product's own parts are polished; polishing it whole would come straight back here
+        let base = match op_of(n) {
+            Some((Op::Multiply | Op::Divide | Op::Pow | Op::UnaryMinus, _)) => {
+                symbolic::map_children(n, &mut |a| polish(a))
+            }
+            _ => polish(n),
+        };
+        let key = symbolic::to_string(&base, &PrintOptions::default());
+        match self.factors.iter_mut().find(|f| f.0 == key) {
+            Some(f) => f.2 += e,
+            None => self.factors.push((key, base, e)),
+        }
+        Some(())
+    }
+
+    fn build(mut self) -> N {
+        let neg_sign = self.p < 0.0;
+        self.p = self.p.abs();
+        let constant = |k: &str| ["pi", "tau", "e"].contains(&k);
+        self.factors
+            .sort_by_key(|f| (!constant(&f.0), f.2.abs() != 1));
+        let power = |b: &N, k: i32| {
+            if k == 1 {
+                b.clone()
+            } else {
+                bin('^', b.clone(), c(f64::from(k)))
+            }
+        };
+        let product = |xs: Vec<N>| xs.into_iter().reduce(|a, b| bin('*', a, b));
+        let mut top: Vec<N> = Vec::new();
+        let mut bottom: Vec<N> = Vec::new();
+        if self.q != 1.0 && self.decimal {
+            top.push(c(self.p / self.q));
+        } else {
+            if self.p != 1.0 {
+                top.push(c(self.p));
+            }
+            if self.q != 1.0 {
+                bottom.push(c(self.q));
+            }
+        }
+        for (_, b, k) in &self.factors {
+            if *k > 0 {
+                top.push(power(b, *k));
+            } else if *k < 0 {
+                bottom.push(power(b, -k));
+            }
+        }
+        let top = product(top).unwrap_or_else(|| c(1.0));
+        let out = match product(bottom) {
+            Some(b) => bin('/', top, b),
+            None => top,
+        };
+        if neg_sign { neg(out) } else { out }
+    }
+}
+
+/// `L*(1/(2pi))^(-2)/T^2` → `4pi^2*L/T^2`, `E/(0.5 m)` → `2E/m`: each product or quotient
+/// rebuilt as number × top / bottom with like powers merged, sums and function arguments alike.
+fn polish(n: &N) -> N {
+    let st = strip(n);
+    match op_of(st) {
+        Some((Op::Multiply | Op::Divide | Op::Pow | Op::UnaryMinus, _)) => {
+            let mut m = Monomial {
+                p: 1.0,
+                q: 1.0,
+                ..Default::default()
+            };
+            if m.collect(st, 1).is_some() {
+                return m.build();
+            }
+            symbolic::map_children(st, &mut |a| polish(a))
+        }
+        Some((o @ (Op::Add | Op::Subtract), [a, b])) => {
+            let (a, b) = (polish(a), polish(b));
+            match op_of(&b) {
+                Some((Op::UnaryMinus, [inner])) => {
+                    let flip = if o == Op::Add { '-' } else { '+' };
+                    bin(flip, a, inner.clone())
+                }
+                _ => bin(if o == Op::Add { '+' } else { '-' }, a, b),
+            }
+        }
+        Some(_) => symbolic::map_children(st, &mut |a| polish(a)),
+        None => match st {
+            Node::Function { .. } => symbolic::map_children(st, &mut |a| polish(a)),
+            _ => st.clone(),
+        },
+    }
+}
+
+fn untidiness(n: &N) -> usize {
+    let st = show(n);
+    js_len(&st) + 2 * st.matches('(').count() + 3 * st.matches("^(-").count()
+}
+
+/// The polished form when it reads shorter.
+fn prefer(n: &N) -> N {
+    let p = polish(n);
+    if untidiness(&p) < untidiness(n) {
+        p
+    } else {
+        n.clone()
+    }
 }
 
 /// `isolateVariable`'s answer.
@@ -963,7 +1147,11 @@ pub fn isolate(text: &str, variables: Option<&BTreeMap<String, f64>>) -> Option<
             .position(|c| *c == Check::Everywhere)
             .or_else(|| verdicts.iter().position(|c| *c == Check::Somewhere));
         match at {
-            Some(i) => good.push(tries[i].clone()),
+            Some(i) => {
+                let p = prefer(&tries[i]);
+                let keep = p == tries[i] || checks(&lhs, &rhs, &p, &v) == verdicts[i];
+                good.push(if keep { p } else { tries[i].clone() });
+            }
             None => all = false,
         }
     }

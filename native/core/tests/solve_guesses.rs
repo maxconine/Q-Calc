@@ -36,7 +36,7 @@ fn solve_call_with_a_third_argument_guess() {
 fn named_letters_beat_a_unit_mismatch() {
     for (t, want) in [
         ("E = 1/2 m v^2 for v", "v = ±sqrt(2E/m)"),
-        ("E = 0.5 m v^2 for v", "v = ±sqrt(E/(0.5 m))"),
+        ("E = 0.5 m v^2 for v", "v = ±sqrt(2E/m)"),
         ("E = 1/2 k x^2 for x", "x = ±sqrt(2E/k)"),
         ("E = m v^2 / 2 for v", "v = ±sqrt(2E/m)"),
     ] {
