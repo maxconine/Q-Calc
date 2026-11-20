@@ -113,6 +113,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             // settings:<tab index> opens that tab (2 is Messages)
             if let i = Int(arg), let tabs = NSApp.windows.lazy.compactMap({ $0.contentViewController as? NSTabViewController }).first,
                tabs.tabViewItems.indices.contains(i) { tabs.selectedTabViewItemIndex = i }
+        // keybinds: settings at General with the keybinds sheet open
+        case "keybinds":
+            showSettings()
+            if let tabs = NSApp.windows.lazy.compactMap({ $0.contentViewController as? NSTabViewController }).first { tabs.selectedTabViewItemIndex = 0 }
+            DispatchQueue.main.async { NotificationCenter.default.post(name: .qcalcShowKeybinds, object: nil) }
         case "theme": AppSettings.shared.setTheme(arg, notifyWeb: true)
         case "type": overlay.model.setField?(arg)
         case "enter": overlay.model.enter()

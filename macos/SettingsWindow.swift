@@ -32,6 +32,7 @@ struct GeneralSettingsView: View {
                 .sheet(isPresented: $choosingKeys) {
                     KeybindsSheet(settings: settings)
                 }
+                .onReceive(NotificationCenter.default.publisher(for: .qcalcShowKeybinds)) { _ in choosingKeys = true }
                 Toggle(isOn: $loginItem.enabled) {
                     Text("Open at login")
                     Text("Keeps the shortcut working after a restart")
@@ -182,6 +183,11 @@ struct GeneralSettingsView: View {
     }
 }
 
+extension Notification.Name {
+    /// opens the keybinds sheet over the General tab (the dev build's `keybinds` command)
+    static let qcalcShowKeybinds = Notification.Name("QCalc.showKeybinds")
+}
+
 // a row per action; clicking a row's key listens for the next chord pressed. same rules as the page's KeybindSettings
 struct KeybindsSheet: View {
     @ObservedObject var settings: AppSettings
@@ -190,46 +196,59 @@ struct KeybindsSheet: View {
     @State private var note = ""
     @State private var monitor: Any?
 
+    // a grouped form from edge to edge with the buttons in a bar under it, as System Settings' sheets are; tall
+    // enough for every row (it had sat inset in a padded box, cut off after the eleventh row)
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Keybinds").font(.headline)
-            Text(hint)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+        VStack(spacing: 0) {
             Form {
-                ForEach(KeyActions.all, id: \.id) { action in
-                    QLabeled(action.label) {
-                        HStack(spacing: 6) {
-                            if chord(action.id) != KeyActions.defaults[action.id] {
-                                Button {
-                                    pick(action.id, KeyActions.defaults[action.id] ?? "")
-                                } label: {
-                                    Image(systemName: "arrow.uturn.backward")
+                Section {
+                    ForEach(KeyActions.all, id: \.id) { action in
+                        QLabeled(action.label) {
+                            HStack(spacing: 6) {
+                                if chord(action.id) != KeyActions.defaults[action.id] {
+                                    Button {
+                                        pick(action.id, KeyActions.defaults[action.id] ?? "")
+                                    } label: {
+                                        Image(systemName: "arrow.uturn.backward")
+                                    }
+                                    .buttonStyle(.borderless)
+                                    .help("Back to \(KeyActions.title(KeyActions.defaults[action.id] ?? ""))")
+                                    .accessibilityLabel("Back to \(KeyActions.title(KeyActions.defaults[action.id] ?? ""))")
                                 }
-                                .buttonStyle(.borderless)
-                                .help("Back to \(KeyActions.title(KeyActions.defaults[action.id] ?? ""))")
-                            }
-                            Button {
-                                toggleRecording(action.id)
-                            } label: {
-                                Text(buttonTitle(action.id))
-                                    .frame(minWidth: 96)
-                                    .foregroundStyle(recording == action.id ? Color.accentColor : .primary)
+                                Button {
+                                    toggleRecording(action.id)
+                                } label: {
+                                    Text(buttonTitle(action.id))
+                                        .frame(minWidth: 96)
+                                        .foregroundStyle(recording == action.id ? Color.accentColor : .primary)
+                                }
+                                .accessibilityLabel(action.label)
+                                .accessibilityValue(buttonTitle(action.id))
                             }
                         }
                     }
+                } header: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Keybinds").font(.headline).foregroundStyle(.primary)
+                        Text(hint)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .textCase(nil)
                 }
             }
             .groupedForm()
+            Divider()
             HStack {
                 Button("Reset All", action: resetAll).disabled(!changed)
                 Spacer()
                 Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)
             }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
         }
-        .padding(20)
-        .frame(width: 460)
+        .frame(width: 460, height: 660)
         .onDisappear { stopRecording() }
     }
 
@@ -296,7 +315,11 @@ struct KeybindsSheet: View {
             return nil
         }
         // the page's keys follow the layout's letters; show / hide is a carbon hotkey, so it stays physical
-        guard let chord = Chord(event: event, typed: action != "show") else { return nil }
+        guard let chord = Chord(event: event, typed: action != "show") else {
+            // a key the chords can't name (the keypad's digits, a media key): say so rather than wait in silence
+            note = "That key can’t be used. Try a letter, number or F-key"
+            return nil
+        }
         if let why = KeyActions.problem(chord, for: action, binds: allBinds) {
             note = why
             return nil
@@ -397,17 +420,32 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         return item
     }
 
-    // only while the window is open: the overlay has no menu bar, so ⌘Q there must stay a no-op
+    // only while the window is open: the overlay has no menu bar, so ⌘Q there must stay a no-op. The Edit menu is
+    // what gives the name field ⌘C, ⌘V, ⌘X, ⌘A and ⌘Z: AppKit's text fields take those from the menu's key equivalents
     private static func mainMenu() -> NSMenu {
         let main = NSMenu()
         let app = NSMenu(title: "Q Calc")
-        app.addItem(withTitle: "Settings…", action: #selector(AppDelegate.showSettings), keyEquivalent: ",").target = QCalc.delegate
+        // the key chosen for settings, as the menu bar item's menu shows it
+        let settingsKey = GlobalHotKey(KeyActions.chord("settings", in: AppSettings.shared.keybinds))
+        let settings = app.addItem(withTitle: "Settings…", action: #selector(AppDelegate.showSettings), keyEquivalent: settingsKey?.menuKey ?? "")
+        settings.keyEquivalentModifierMask = settingsKey?.menuModifiers ?? []
+        settings.target = QCalc.delegate
+        app.addItem(.separator())
+        app.addItem(withTitle: "Hide Q Calc", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         app.addItem(.separator())
         app.addItem(withTitle: "Quit Q Calc", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let edit = NSMenu(title: "Edit")
+        edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+        edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
+        edit.addItem(.separator())
+        edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
         let window = NSMenu(title: "Window")
         window.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         window.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
-        for submenu in [app, window] {
+        for submenu in [app, edit, window] {
             let item = NSMenuItem()
             item.submenu = submenu
             main.addItem(item)
@@ -424,6 +462,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             queue: .main
         ) { [weak self] _ in
             self?.applyAppearance()
+            // a new key for Open settings shows beside the menu's Settings… at once
+            if self?.window != nil { NSApp.mainMenu = Self.mainMenu() }
         }
     }
 
