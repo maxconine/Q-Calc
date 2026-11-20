@@ -161,6 +161,16 @@ QA item 16, Mac only (`mac/Sources/Bar/TapeRules.swift`, new; `BarModel.swift` `
 
 To test on Windows: ↑ to a mid-tape row of a long tape, ⌫: the tape stays there and the next row is picked; type `12`, right-click another row › Delete, then ⌫: the line reads `1`, the tape keeps its rows. Mac check: `mac/scripts/test-tape.sh`.
 
+### Bar across displays; the tray icon's name (20 Nov 2026)
+
+QA item 19, Mac only (`mac/Sources/App/BarPlacement.swift`, new; `OverlayController.swift` `position`, `keepOnScreen`, `environmentChanged`; `App.swift` `refreshStatusItem`). Check the Windows bar for the same:
+
+- A width dragged out on a big display spilled off a smaller one: the bar now opens at the width the pointer's screen fits (its visible width less 40, never under 340), and the saved width is kept for the big screen.
+- Displays changing while the bar is up (one unplugged, the taskbar/Dock grown, a resolution switch) left it off screen or hanging over an edge: it's pulled onto the screen it is mostly on, narrowed if need be, or opens at the usual spot on the pointer's screen when its display is gone (Windows: `WM_DISPLAYCHANGE`, `WM_SETTINGCHANGE` for the work area).
+- The menu bar icon had no accessible name (only a tooltip): it now reads `Q Calc`, or `Q Calc, no shortcut set` when the shortcut is taken. Give the tray icon's tooltip/name the same.
+
+To test: `native/mac/scripts/test-placement.sh` (15 checks). On Windows, drag the bar wide on a big monitor, show it on a laptop screen; then unplug the monitor with the bar up.
+
 ### Cards and reply lines in dark: the page's dark shadows (20 Nov 2026)
 
 QA item 21, Mac only (`mac/Sources/Bar/Surfaces.swift`, new; used in `Systems.swift`, `Matrices.swift`, the message card's reply line in `BarView.swift` and the thread's in `MessageThreads.swift`). The `sys` panel's card, the matrix grid and steps cards and the reply lines drew the light `--shadow-card` / `--control-shadow` in dark too: a black 10% ring on a #252527 card (no edge) and a 6% drop. They now take the page's dark values: card ring white 10%, drop black 30%; control ring black 30%, drop black 25% (light unchanged).
