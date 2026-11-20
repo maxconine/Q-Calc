@@ -226,6 +226,8 @@ struct GraphPanel: View {
                             model.copyAnswer(model.logic.string("engine/format", "formatNumber", [copied, 8]) ?? fmt(copied))
                         }, highlight: { on in
                             if on { spot = here } else if spot == here { spot = nil }
+                            // for dev `graphstate:`: the chip the pointer or keys are on
+                            if on { DevSnapshot.graphChip = "\(kindName(c.kind)) \(coords(c))" } else if DevSnapshot.graphChip == "\(kindName(c.kind)) \(coords(c))" { DevSnapshot.graphChip = nil }
                         })
                     }
                     // native only: a zoomed-out sin(x) has hundreds; the dozen nearest the middle show, the rest
@@ -289,14 +291,16 @@ struct GraphPanel: View {
                     },
                     scroll: { [model] event, size, p in
                         guard !state.shows3D else { return model.scrollGraph(event, size: size) }
-                        let left = Self.pad.left * scale, w = (Self.svgW - Self.pad.left - Self.pad.right) * scale
-                        let at = min(1, max(0, (p.x - left) / w))
-                        // and up the plot (the view is flipped), so the point under the pointer stays put in y too
-                        let top = Self.pad.top * scale, h = (plotH - Self.pad.top - Self.pad.bottom) * scale
-                        let atY = h > 0 ? min(1, max(0, 1 - (p.y - top) / h)) : 0.5
+                        let (at, atY) = pivot(p, scale: scale)
+                        let w = (Self.svgW - Self.pad.left - Self.pad.right) * scale
                         return model.scrollGraph(event, size: CGSize(width: w, height: size.height), at: at, atY: atY)
                     },
-                    magnify: { [model] m in model.zoomGraph(1 / (1 + m)) },
+                    // a pinch zooms about the pointer in 2D, as the wheel and two fingers do (it zoomed about the
+                    // middle); e^-m, so a pinch out and back in puts the window back (1/(1+m) didn't)
+                    magnify: { [model] m, p in
+                        let (at, atY) = state.shows3D ? (0.5, 0.5) : pivot(p, scale: scale)
+                        model.zoomGraph(exp(-Double(m)), at: at, atY: atY)
+                    },
                     hover: { p in hover = p.map { CGPoint(x: $0.x / scale, y: $0.y / scale) } },
                     home: { [model] in model.homeGraph() })
             }
@@ -304,6 +308,16 @@ struct GraphPanel: View {
         }
         .aspectRatio(Self.svgW / plotH, contentMode: .fit)
         .frame(maxHeight: plotH)
+    }
+
+    /// The pointer's fraction across the 2D plot and up it (the view is flipped), clamped to the plot: the pivot a
+    /// wheel, two fingers or a pinch zoom about, so the point under the pointer stays put both ways
+    private func pivot(_ p: CGPoint, scale: CGFloat) -> (Double, Double) {
+        let left = Self.pad.left * scale, w = (Self.svgW - Self.pad.left - Self.pad.right) * scale
+        let top = Self.pad.top * scale, h = (plotH - Self.pad.top - Self.pad.bottom) * scale
+        let at = w > 0 ? min(1, max(0, (p.x - left) / w)) : 0.5
+        let atY = h > 0 ? min(1, max(0, 1 - (p.y - top) / h)) : 0.5
+        return (at, atY)
     }
 
     /// Native only: the graph as a picture, its equations over the plot in their colours, at 3 pixels a point:
@@ -1387,6 +1401,11 @@ private struct CriticalChip: View {
     }
 }
 
+/// The plot's input view, for dev `pinch:` (a magnify event can't be made by hand): a pinch of `m` at a point in it
+@MainActor protocol GraphPinchable: NSView {
+    func devPinch(_ m: CGFloat, at p: NSPoint)
+}
+
 /// The 3D view's input, native only: a clear AppKit view over the plot that takes the mouse and trackpad itself.
 /// As Onshape: a two-finger press-drag (a right-drag) orbits, two fingers up/down zoom and shift + two-finger
 /// drag pans (`scrollGraph`); a plain drag orbits too, shift/option-drag or a middle-drag pans, a wheel or pinch zooms, a double-click resets, and the pointer is reported for the marks' labels. It never lets a
@@ -1395,7 +1414,8 @@ private struct PlotInput: NSViewRepresentable {
     /// the pointer moved this far while pressed; true to pan rather than orbit
     let drag: (CGSize, Bool) -> Void
     let scroll: (NSEvent, CGSize, CGPoint) -> Bool
-    let magnify: (CGFloat) -> Void
+    /// a pinch's magnification and where the pointer is
+    let magnify: (CGFloat, CGPoint) -> Void
     let hover: (CGPoint?) -> Void
     let home: () -> Void
 
@@ -1403,7 +1423,7 @@ private struct PlotInput: NSViewRepresentable {
 
     func updateNSView(_ view: InputView, context: Context) { view.input = self }
 
-    final class InputView: NSView {
+    final class InputView: NSView, GraphPinchable {
         var input: PlotInput?
         private var last: NSPoint?
 
@@ -1461,7 +1481,10 @@ private struct PlotInput: NSViewRepresentable {
             if input?.scroll(event, bounds.size, local(event)) != true { super.scrollWheel(with: event) }
         }
 
-        override func magnify(with event: NSEvent) { input?.magnify(event.magnification) }
+        override func magnify(with event: NSEvent) { input?.magnify(event.magnification, local(event)) }
+
+        /// dev `pinch:`: a pinch at a point in this view (a magnify event can't be made by hand)
+        func devPinch(_ m: CGFloat, at p: NSPoint) { input?.magnify(m, p) }
     }
 }
 

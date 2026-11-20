@@ -196,6 +196,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "drag": DevSnapshot.drag(arg)
         case "scroll": DevSnapshot.scroll(arg)
         case "graphstate": DevSnapshot.graphState(overlay.model, to: arg)
+        // pinch:<x>,<y>,<m> a pinch on the graph there (+ spreads, zooms in); dblclick:<x>,<y> a double-click in the bar
+        case "pinch": DevSnapshot.pinch(arg)
+        case "dblclick": DevSnapshot.click(arg, count: 2)
         // what settings' Remove / Unblock does for a name
         case "forget": Messages.shared.forget(arg)
         case "closegame": overlay.closeGame()

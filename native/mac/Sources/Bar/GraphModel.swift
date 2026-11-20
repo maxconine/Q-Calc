@@ -30,6 +30,9 @@ struct GraphState: Equatable {
     /// Native only: the y a plot of x and y centres on (an implicit curve or a contour plot pans in y too).
     var yCenter: Double?
     var homeYCenter: Double?
+    /// native: the fitted y window a curve had at home when a zoom from there held it, so zooming back to home
+    /// (out then in) is home again
+    var heldHomeY: ClosedRange<Double>?
     /// A surface drawn in 3D (the default) rather than as level curves; nil until the engine says it's a surface.
     var view3D: Bool?
     /// The 3D view's turn about the vertical and its tilt, in radians.
@@ -440,6 +443,7 @@ extension BarModel {
     /// stays put both ways, as Desmos zooms
     func zoomGraph(_ factor: Double, at: Double = 0.5, atY: Double = 0.5) {
         guard var g = graph, factor.isFinite, factor > 0, !graphPrefs.lockViewport else { return }
+        if g.atHome { g.heldHomeY = g.kind == .curve && !g.shows3D && g.yMax > g.yMin ? g.yMin...g.yMax : nil }
         let (lo, hi) = Self.scaled(g.xMin, g.xMax, by: factor, at: at, log: g.logX)
         guard hi - lo >= 1e-6, hi - lo <= 1e6 || g.logX else { return }
         (g.xMin, g.xMax) = (lo, hi)
@@ -457,9 +461,25 @@ extension BarModel {
             let (a, b) = Self.scaled(fz.lowerBound, fz.upperBound, by: factor, at: 0.5, log: false)
             g.fixedZ = a...b
         }
+        // native: zoomed back to where it opened (out then in with the head's buttons, a pinch out and back), it is
+        // home again, so "reset" greys; the window drifted a few ulps from home and the reset stayed lit
+        if let homeLo = g.homeLo, let homeHi = g.homeHi, g.fixedZ == nil {
+            let w = homeHi - homeLo
+            let xHome = Self.near(g.xMin, homeLo, w) && Self.near(g.xMax, homeHi, w)
+            let yHome = g.fixedY.map { fy in g.heldHomeY.map { Self.near(fy.lowerBound, $0.lowerBound, w) && Self.near(fy.upperBound, $0.upperBound, w) } ?? false } ?? true
+            let cHome = g.yCenter.map { c in g.homeYCenter.map { Self.near(c, $0, w) } ?? false } ?? (g.homeYCenter == nil)
+            if xHome, yHome, cHome {
+                (g.xMin, g.xMax) = (homeLo, homeHi)
+                g.yCenter = g.homeYCenter
+                if let held = g.heldHomeY, g.fixedY != nil { (g.yMin, g.yMax) = (held.lowerBound, held.upperBound) }
+                g.fixedY = nil
+            }
+        }
         graph = g
         sampleGraph()
     }
+
+    private static func near(_ a: Double, _ b: Double, _ span: Double) -> Bool { abs(a - b) <= abs(span) * 1e-9 }
 
     func homeGraph() {
         guard var g = graph, let lo = g.homeLo, let hi = g.homeHi else { return }

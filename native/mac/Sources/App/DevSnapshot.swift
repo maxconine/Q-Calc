@@ -160,17 +160,35 @@ enum DevSnapshot {
     }
 
     /// A left click at `x,y` (points from the bar's top-left), sent through the window as a real click is.
-    static func click(_ spot: String) {
+    static func click(_ spot: String, count: Int = 1) {
         let xy = spot.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
         guard xy.count == 2, let window = NSApp.windows.first(where: { $0 is OverlayPanel && $0.isVisible }) else { return }
         let point = NSPoint(x: xy[0], y: window.frame.height - xy[1])
-        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
-            guard let event = NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
-                                                 windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1,
-                                                 pressure: type == .leftMouseDown ? 1 : 0) else { continue }
-            window.sendEvent(event)
+        // a double-click (`dblclick:`) is two clicks, the second with a click count of 2, as AppKit sends them
+        for n in 1...max(1, count) {
+            for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+                guard let event = NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                     windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: n,
+                                                     pressure: type == .leftMouseDown ? 1 : 0) else { continue }
+                window.sendEvent(event)
+            }
         }
     }
+
+    /// A pinch of `m` (a magnify event's magnification, + spreads the fingers) at x,y in the bar: `pinch:<x>,<y>,<m>`,
+    /// to the graph's plot under it (a magnify event can't be made by hand)
+    static func pinch(_ spec: String) {
+        let nums = spec.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
+        guard nums.count == 3, let window = NSApp.windows.first(where: { $0 is OverlayPanel && $0.isVisible }),
+              let content = window.contentView else { return }
+        let local = NSPoint(x: nums[0], y: window.frame.height - nums[1])
+        guard let plot = content.hitTest(content.superview?.convert(local, from: nil) ?? local) as? GraphPinchable else { return }
+        let at = plot.convert(local, from: nil)
+        MainActor.assumeIsolated { plot.devPinch(CGFloat(nums[2]), at: at) }
+    }
+
+    /// the critical point chip the pointer or keys are on (`chip=` in `graphstate:`), set by the graph panel
+    static var graphChip: String?
 
     /// A press, a drag in `steps` moves and a release from x1,y1 to x2,y2 in the bar (points from its top-left):
     /// `drag:<x1>,<y1>,<x2>,<y2>[,shift][,right][,steps]`, the graph's pan (2D) or orbit (3D; shift pans), sent to the
@@ -229,7 +247,8 @@ enum DevSnapshot {
             "curves=\(g.curves.count)", "points=\(g.curves.map(\.points.count))", "contours=\(g.contours.count)",
             "critical=\(g.critical.count)", "roots=\(g.roots)", "intersections=\(g.intersections.count)",
             "layers=\(g.layers.map { "\($0.expression)|\($0.kind)|\($0.points.count)|\($0.contours.count)|\($0.error ?? "")" })",
-            "error=\(g.error ?? "")", "failed=\(g.failed)",
+            "error=\(g.error ?? "")", "failed=\(g.failed)", "chip=\(graphChip ?? "")",
+            "home=\(g.homeLo.map { "\($0)" } ?? "nil")…\(g.homeHi.map { "\($0)" } ?? "nil")|\(g.homeYCenter.map { "\($0)" } ?? "nil")|\(g.heldHomeY.map { "\($0)" } ?? "nil")",
         ]
         try? lines.joined(separator: "\n").write(toFile: path, atomically: true, encoding: .utf8)
     }
