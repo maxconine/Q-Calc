@@ -108,10 +108,37 @@ pub fn parse_function_def(trimmed: &str) -> Option<(String, Vec<String>, String)
         return None;
     }
     let body = jsre::group(&c, 3).trim();
-    if body.is_empty() {
+    // native only: `g(x)=x^2; g(4)` defines g for its line (`split_line_definitions`), the body isn't `x^2; g(4)`
+    if body.is_empty() || has_top_level_semicolon(body) {
         return None;
     }
     Some((name.to_string(), params, body.to_string()))
+}
+
+fn has_top_level_semicolon(text: &str) -> bool {
+    let mut depth = 0_i32;
+    text.chars().any(|c| {
+        match c {
+            '(' | '[' | '{' => depth += 1,
+            ')' | ']' | '}' => depth -= 1,
+            _ => {}
+        }
+        c == ';' && depth == 0
+    })
+}
+
+/// Native only: `f(x) = f(x) + 1` calls itself with its own parameters, so it never finishes (`n * fact(n-1)`
+/// with a base case is fine).
+pub fn calls_itself(name: &str, params: &[String], body: &str) -> bool {
+    // names are letters and digits, nothing to escape
+    let re = jsre::js_cached(
+        &format!(
+            r"(?<![A-Za-z0-9_]){name}\s*\(\s*{}\s*\)",
+            params.join(r"\s*,\s*")
+        ),
+        "",
+    );
+    jsre::test(&re, body)
 }
 
 fn with_unit(text: &str, unit: Option<&str>) -> String {
@@ -475,6 +502,27 @@ pub fn split_line_definitions(text: &str) -> Option<(&str, Vec<(String, String)>
         }
     }
     parts.push(&text[start..]);
+    // native only: definitions written first, `x = 3; x^2` or `g(x)=x^2; g(4)`: the one part that defines nothing
+    // is the expression, read with every definition on the line
+    let defines: Vec<bool> = parts
+        .iter()
+        .map(|p| part_definitions(p).is_some())
+        .collect();
+    if defines[0] && defines.iter().filter(|d| !**d).count() == 1 {
+        let at = defines.iter().position(|d| !*d)?;
+        let head = parts[at].trim();
+        if head.is_empty() {
+            return None;
+        }
+        let definitions = parts
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| *i != at)
+            .filter_map(|(_, d)| part_definitions(d))
+            .flatten()
+            .collect();
+        return Some((head, definitions));
+    }
     let (head, rest) = parts.split_first()?;
     if rest.is_empty() || head.trim().is_empty() {
         return None;

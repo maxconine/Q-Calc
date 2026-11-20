@@ -56,7 +56,7 @@ use crate::app::needs::{
 };
 use crate::app::onboarding::{HintFacts, is_help_command};
 use crate::app::tour::{TUTORIAL_HINT, TourFacts, is_tutorial_command, tour_used};
-use crate::evaluate::parse_function_def;
+use crate::evaluate::{calls_itself, parse_function_def};
 use crate::format::{DEFAULT_SIG_FIGS, format_value};
 use crate::jsre::{self, Lazy, js};
 use crate::simplify::dual_label;
@@ -829,6 +829,16 @@ pub fn commit(req: &LiveRequest, rows: &[Json], row_id: &str) -> Commit {
         facts: facts.clone(),
         tour_bits: 0,
     };
+    // native only: `f(x) = f(x) + 1` would never finish, so it isn't saved (it was, and every f answered undefined)
+    if let Some(f) = fn_def
+        .as_ref()
+        .filter(|f| calls_itself(&f.name, &f.params, &f.body))
+    {
+        return unsaved(Some(format!(
+            "{} can’t use itself in its own definition · write it with other names",
+            f.name
+        )));
+    }
     if jstr::trim(&expr).is_empty() || shown.is_empty() || is_improper_unit_conversion(&shown) {
         let graph = is_graph_command(q);
         let span = if graph || jstr::trim(q).is_empty() {

@@ -391,7 +391,10 @@ pub fn persistable_history(rows: &[Json]) -> Vec<Json> {
 }
 
 fn assignment_of(row: &Json) -> Option<String> {
-    parse_assignment(jsstr::trim(str_of(row, "expr").unwrap_or(""))).map(|(v, _)| v)
+    let expr = jsstr::trim(str_of(row, "expr").unwrap_or(""));
+    // native only: `x = 3; x^2` answers x², its x is for that line; `x = y^2; y = 3` still sets x
+    let head = crate::evaluate::split_line_definitions(expr).map_or(expr, |(head, _)| head);
+    parse_assignment(head).map(|(v, _)| v)
 }
 
 /// `historyVariables`, as `[name, value]` pairs in the JS object's insertion order.
