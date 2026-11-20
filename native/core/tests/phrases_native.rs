@@ -102,3 +102,28 @@ fn negative_amounts_and_several_currencies() {
     assert_eq!(say("x-5"), "");
     assert_eq!(say("10 eur in usd and apples"), "");
 }
+
+#[test]
+fn date_arithmetic_leftovers() {
+    // all blank before (QA item 48); now is Thu 26 Nov 2026, 4:00 am in Los Angeles
+    assert_eq!(say("now + 2 hours"), "6:00 am");
+    assert_eq!(say("now - 30 minutes"), "3:30 am");
+    assert_eq!(say("now - 5 hours"), "Wed 25 Nov 2026, 11:00 pm");
+    assert_eq!(say("now + 3 days"), "Sun 29 Nov 2026, 4:00 am");
+    assert_eq!(say("now + 1 day + 3 hr"), "Fri 27 Nov 2026, 7:00 am");
+    assert_eq!(say("now in tokyo"), "Thu 26 Nov 2026, 9:00 pm");
+    assert_eq!(say("tomorrow 3pm"), "Fri 27 Nov 2026, 3:00 pm");
+    assert_eq!(say("3pm tomorrow"), "Fri 27 Nov 2026, 3:00 pm");
+    assert_eq!(say("tomorrow 3pm in tokyo"), "Sat 28 Nov 2026, 8:00 am");
+    assert_eq!(say("tomorrow at 3pm in tokyo"), "Sat 28 Nov 2026, 8:00 am");
+    assert_eq!(say("friday 9am est in london"), "Fri 27 Nov 2026, 2:00 pm");
+    assert_eq!(say("tomorrow 3pm tokyo time"), "Thu 26 Nov 2026, 10:00 pm");
+    assert_eq!(say("2027-01-01 - today"), "36 days");
+    assert_eq!(say("today - 2026-01-01"), "329 days");
+    assert_eq!(say("2026-01-01 - today"), "-329 days");
+    assert_eq!(say("today - christmas"), "-29 days");
+    // not dates: left to the engine
+    assert_eq!(say("x - y"), "");
+    assert_eq!(say("march 3 - 2"), "");
+    assert_eq!(say("tomorrow in tokyo"), "");
+}

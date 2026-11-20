@@ -393,30 +393,34 @@ fn city_time(s: &str, now: f64) -> Option<PhraseAnswer> {
     )))
 }
 
+static ZONE_PAIR: Lazy =
+    Lazy::new(|| js_re(r"^(.+?)\s+(?:in|to|into|as)\s+(.+?)(?:\s+time)?$", ""));
+
+/// `3pm est` / `9am london time` / `3pm`: the clock and the zone after it, if any.
+fn said_clock(t: &str) -> Option<(f64, Option<TimeZone>)> {
+    static FROM: Lazy = Lazy::new(|| js_re(r"^(.+?)(?:\s+time)?$", ""));
+    let t = js_trim(t);
+    if let Some(c) = parse_clock(t).or_else(|| loose_clock(t)) {
+        return Some((c, None));
+    }
+    let body = g(&caps(&FROM, t)?, 1);
+    // `3pm new york`, `3:30 pm est`: the first split that reads as a clock and then a place
+    body.match_indices(' ').find_map(|(i, _)| {
+        let c = parse_clock(&body[..i]).or_else(|| loose_clock(&body[..i]))?;
+        Some((c, Some(any_zone(&body[i + 1..])?)))
+    })
+}
+
 /// Native only: a clock time in one zone read in another. `3pm est in pst`, `9am london time to tokyo`, `3pm in
 /// tokyo` (from the user's own zone), `3pm tokyo time` (into it). Today's date in the zone it was said in; when
 /// the other zone is on another day, the answer says which (`8:00 am next day`).
 pub fn zone_convert(s: &str, now: f64, here: &TimeZone) -> Option<PhraseAnswer> {
-    static BOTH: Lazy = Lazy::new(|| js_re(r"^(.+?)\s+(?:in|to|into|as)\s+(.+?)(?:\s+time)?$", ""));
-    static FROM: Lazy = Lazy::new(|| js_re(r"^(.+?)(?:\s+time)?$", ""));
     let place = |t: &str| any_zone(t);
-    // `3pm est` / `9am london time` / `3pm`: the clock and the zone after it, if any
-    let said = |t: &str| -> Option<(f64, Option<TimeZone>)> {
-        let t = js_trim(t);
-        if let Some(c) = parse_clock(t).or_else(|| loose_clock(t)) {
-            return Some((c, None));
-        }
-        let body = g(&caps(&FROM, t)?, 1);
-        // `3pm new york`, `3:30 pm est`: the first split that reads as a clock and then a place
-        body.match_indices(' ').find_map(|(i, _)| {
-            let c = parse_clock(&body[..i]).or_else(|| loose_clock(&body[..i]))?;
-            Some((c, Some(place(&body[i + 1..])?)))
-        })
-    };
+    let said = said_clock;
     if now.is_nan() {
         return None;
     }
-    let (clock, from, to) = if let Some(m) = caps(&BOTH, s) {
+    let (clock, from, to) = if let Some(m) = caps(&ZONE_PAIR, s) {
         let (clock, from) = said(g(&m, 1))?;
         (
             clock,
@@ -593,9 +597,132 @@ pub fn native_time(s: &str, now: f64, tz: &TimeZone) -> Option<PhraseAnswer> {
             at.hour() as f64 * 60.0 + at.minute() as f64,
         )));
     }
+    if let Some(a) = now_shift(s, now, tz)
+        .or_else(|| now_in(s, now))
+        .or_else(|| day_at_clock(s, now, tz))
+        .or_else(|| day_minus_day(s, now, tz))
+    {
+        return Some(a);
+    }
     // `days until 2027-01-01`: the web's own phrase, with the date written as it reads one
     iso.as_deref()
         .and_then(|t| answer_time_phrase(t, now, tz).ok().flatten())
+}
+
+/// A moment as the phrases show one: the clock alone when it is on `today`, else the date and the clock.
+fn moment(tz: &TimeZone, at: f64, today: Option<Day>) -> Option<String> {
+    if at.is_nan() {
+        return None;
+    }
+    let f = local_fields(tz, at);
+    let clock = format_clock(f.hours * 60.0 + f.minutes);
+    let day = day_of(tz, at);
+    Some(match today {
+        Some(t) if compare_days(day, t) == 0.0 => clock,
+        _ => format!("{}, {clock}", format_date(tz, day)),
+    })
+}
+
+/// Native only (QA item 48): `now + 2 hours`, `now - 30 min`, `now + 1 day + 3 hr`: the moment after the spans,
+/// shown as `2 hours from now` is (the clock today, else the date too); calendar spans alone keep the clock.
+fn now_shift(s: &str, now: f64, tz: &TimeZone) -> Option<PhraseAnswer> {
+    static RE: Lazy = Lazy::new(|| js_re(r"^(?:right )?now\s*([+-])\s*(.+)$", ""));
+    let m = caps(&RE, s)?;
+    let chain = span_chain(g(&m, 1), g(&m, 2))?;
+    let mut at = now;
+    for (sign, span) in &chain {
+        let f = local_fields(tz, at);
+        let day = shift_day(
+            tz,
+            day_of(tz, at),
+            Span {
+                minutes: 0.0,
+                ..*span
+            },
+            *sign,
+        )?;
+        at = local_date(
+            tz,
+            day.y,
+            day.m,
+            day.d,
+            f.hours,
+            f.minutes + sign * span.minutes + f.seconds / 60.0,
+        );
+    }
+    let today = day_of(tz, now);
+    let clocked = chain.iter().any(|(_, span)| span.minutes != 0.0);
+    moment(tz, at, clocked.then_some(today)).map(PhraseAnswer::shown)
+}
+
+/// Native only (QA item 48): `now in tokyo`: the date and the clock there.
+fn now_in(s: &str, now: f64) -> Option<PhraseAnswer> {
+    static RE: Lazy = Lazy::new(|| js_re(r"^(?:right )?now\s+(?:in|at)\s+(.+?)(?:\s+time)?$", ""));
+    let there = any_zone(g(&caps(&RE, s)?, 1))?;
+    moment(&there, now, None).map(PhraseAnswer::shown)
+}
+
+/// Native only (QA item 48): a day and a clock time, `tomorrow 3pm`, `3pm tomorrow`, `friday at 9:30 am est`,
+/// optionally read in another zone (`tomorrow 3pm in tokyo`). Shown with its date (in the zone it is read in).
+fn day_at_clock(s: &str, now: f64, here: &TimeZone) -> Option<PhraseAnswer> {
+    static AT: Lazy = Lazy::new(|| js_re(r"^(?:on\s+)?(.+?)(?:,?\s+at)?$", ""));
+    let today = day_of(here, now);
+    let day_clock = |t: &str| -> Option<(Day, f64, Option<TimeZone>)> {
+        let t = js_trim(t);
+        t.match_indices(' ').find_map(|(i, _)| {
+            let (a, b) = (&t[..i], js_trim(&t[i + 1..]));
+            let b = b.strip_prefix("at ").unwrap_or(b);
+            let day = |d: &str| {
+                let d = g(&caps(&AT, js_trim(d))?, 1);
+                parse_day(here, d, today, Roll::Future).ok().flatten()
+            };
+            if let (Some(d), Some((c, z))) = (day(a), said_clock(b)) {
+                return Some((d, c, z));
+            }
+            // `3pm tomorrow`, `9am est on friday`
+            let (c, z) = said_clock(a)?;
+            let b = b.strip_prefix("on ").unwrap_or(b);
+            Some((day(b)?, c, z))
+        })
+    };
+    let (day, clock, from, to) = match caps(&ZONE_PAIR, s)
+        .and_then(|m| Some((day_clock(g(&m, 1))?, any_zone(g(&m, 2))?)))
+    {
+        Some(((day, clock, from), to)) => (day, clock, from.unwrap_or_else(|| here.clone()), to),
+        None => {
+            // `tomorrow 3pm` here, or `tomorrow 3pm tokyo time` into the user's zone
+            let (day, clock, from) = day_clock(s)?;
+            (
+                day,
+                clock,
+                from.unwrap_or_else(|| here.clone()),
+                here.clone(),
+            )
+        }
+    };
+    if !(day.y.is_finite() && day.m.is_finite() && day.d.is_finite()) {
+        return None;
+    }
+    let at = local_date(&from, day.y, day.m, day.d, 0.0, clock);
+    moment(&to, at, None).map(PhraseAnswer::shown)
+}
+
+/// Native only (QA item 48): `2027-01-01 - today`, `today - march 1`: the signed days from the second to the
+/// first.
+fn day_minus_day(s: &str, now: f64, tz: &TimeZone) -> Option<PhraseAnswer> {
+    static RE: Lazy = Lazy::new(|| js_re(r"^(.+?)\s*-\s*(.+)$", ""));
+    let m = caps(&RE, s)?;
+    let today = day_of(tz, now);
+    let day = |t: &str| match js_trim(t) {
+        "now" | "right now" => Some(today),
+        t => parse_day(tz, t, today, Roll::Year).ok().flatten(),
+    };
+    let (a, b) = (day(g(&m, 1))?, day(g(&m, 2))?);
+    let n = day_diff(b, a);
+    n.is_finite().then(|| PhraseAnswer {
+        display: plural(n, "day"),
+        n: Some(n),
+    })
 }
 
 // `10:30` or `9:05` as a time of day, which parseClock leaves alone because on its own it could be a duration
