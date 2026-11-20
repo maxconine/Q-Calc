@@ -752,7 +752,22 @@ impl<'o> Sheet<'o> {
         if let Some(result) = self.magnetic_line(raw, &marked) {
             return result;
         }
+        // native only (QA 70): `2 mS`, `5 µS * 3 V`, a prefixed siemens (a bare `S` stays seconds)
+        if let Some(result) = self.conductance_line(raw, &marked) {
+            return result;
+        }
         let mut result = self.line_as_typed(&marked);
+        // native only (QA 70): a field or flux the web left in base units (`ans * 2` after 5 mT, `2 ms * 3 V`)
+        // reads in T or Wb; no golden has `N / m A` or `N m / A`
+        if result
+            .value
+            .as_ref()
+            .and_then(|v| v.unit.as_deref())
+            .and_then(crate::engineering::magnetic_unit)
+            .is_some()
+        {
+            self.native_unit_label(&mut result, None);
+        }
         // native only: `deg(pi)`, `10 Ω || 20 Ω`, `60 Hz 100 µF`, `2 siemens`, `1 Wb`, after the web paths left
         // the line blank; a conductance reads in siemens there
         if result.display.is_empty()
@@ -818,8 +833,45 @@ impl<'o> Sheet<'o> {
         let body = target.as_ref().map_or(marked, |(head, _, _)| head.as_str());
         let spelled = crate::engineering::magnetic(body, target.is_some())?;
         let mut result = self.line_as_typed(&spelled);
-        let target = target.map(|(_, label, size)| (label.to_string(), size));
+        // a field typed in one prefixed tesla answers in it (`5 mT + 1 mT` is 6 mT, QA 70)
+        let field = result
+            .value
+            .as_ref()
+            .and_then(|v| v.unit.as_deref())
+            .and_then(crate::engineering::magnetic_unit)
+            == Some("T");
+        let typed = crate::engineering::tesla_in(body).filter(|_| field);
+        let target = target
+            .map(|(_, label, size)| (label.to_string(), size))
+            .or_else(|| typed.map(|(label, size)| (label.to_string(), size)));
         if !self.native_unit_label(&mut result, target) {
+            return None;
+        }
+        result.raw = raw.to_string();
+        Some(result)
+    }
+
+    /// Native only (QA 70): a line with a prefixed siemens symbol (`2 mS`, `5 µS * 3 V`, `3 kS in S`), read as
+    /// the reciprocal ohm it is, and a conductance `in mS`; a bare `S` stays the second. None when it has none, or
+    /// its answer is blank or mixes units (the web's reading as milliseconds is kept then: `2 mS + 3 s`).
+    fn conductance_line(&mut self, raw: &str, marked: &str) -> Option<LineResult> {
+        // a bare `in S` is siemens only beside a prefixed siemens; `in mS` is always
+        let target = crate::engineering::siemens_target(marked).filter(|(head, label, _)| {
+            *label != "S" || crate::engineering::siemens_symbols(head).is_some()
+        });
+        let body = target.as_ref().map_or(marked, |(head, _, _)| head.as_str());
+        let spelled = match crate::engineering::siemens_symbols(body) {
+            Some(spelled) => spelled,
+            None if target.is_some() => body.to_string(),
+            None => return None,
+        };
+        let mut result = self.line_as_typed(&spelled);
+        let target = target.map(|(_, label, size)| (label.to_string(), size));
+        let labelled = self.native_unit_label(&mut result, target.clone());
+        if result.display.is_empty()
+            || is_improper_unit_conversion(&result.display)
+            || (target.is_some() && !labelled)
+        {
             return None;
         }
         result.raw = raw.to_string();
@@ -841,10 +893,20 @@ impl<'o> Sheet<'o> {
             return false;
         }
         let si = value.n;
+        let siemens_target = target
+            .as_ref()
+            .and_then(|(label, _)| crate::engineering::siemens_size(label));
         if let Some(s) = crate::engineering::siemens_unit(&unit)
-            && target.is_none()
+            && (target.is_none() || siemens_target.is_some())
         {
-            value.unit = Some(s.into());
+            match &target {
+                // `2 mS in S`: the answer in siemens, then in the target's size
+                Some((label, size)) => {
+                    value.n = si * crate::engineering::siemens_size(s).unwrap_or(1.0) / size;
+                    value.unit = Some(label.clone());
+                }
+                None => value.unit = Some(s.into()),
+            }
             value.unit_id = None;
             // read back as the reciprocal it was (`S` alone reads as seconds)
             let quantity = format!("{} ({unit})", jsnum::to_string(si));
@@ -857,7 +919,7 @@ impl<'o> Sheet<'o> {
             let flux = m == "Wb";
             match &target {
                 Some((label, size)) => {
-                    if label.ends_with("Wb") != flux {
+                    if label.ends_with("Wb") != flux || siemens_target.is_some() {
                         return false;
                     }
                     value.n = si / size;
