@@ -33,8 +33,8 @@ pub use crate::units::{
 
 // ---- WP-CHEM (chem.ts) ----
 
-/// The units `chem R …` takes, in completion's order (a constant of chem.ts).
-pub const GAS_CONSTANT_UNITS: [&str; 6] = ["atm", "bar", "torr", "mmhg", "cal", "si"];
+/// The units `chem R …` takes, in completion's order (a constant of chem.ts, plus the native kJ/kcal/kPa).
+pub use crate::chem::GAS_CONSTANT_UNITS;
 
 /// `isMolarMassInput` (chem.ts).
 pub fn is_molar_mass_input(text: &str) -> bool {

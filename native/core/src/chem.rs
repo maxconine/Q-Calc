@@ -346,6 +346,9 @@ fn species(sc: &mut Scanner) -> Option<Species> {
     if !coef.is_empty() {
         sc.ws();
     }
+    if let Some(e) = electron(sc, &coef) {
+        return Some(e);
+    }
     let f = formula(sc)?;
     let last = sc.i.checked_sub(1).and_then(|i| sc.s.get(i).copied());
     let q = charge(sc, last)?;
@@ -377,6 +380,43 @@ fn species(sc: &mut Scanner) -> Option<Species> {
         atoms: f.atoms,
         marked: f.marked || !q.is_zero() || !state.is_empty(),
         charge: q,
+        typed: if coef.is_empty() {
+            None
+        } else {
+            coef.parse().ok()
+        },
+    })
+}
+
+/// Native only (QA item 60): an electron in a half-reaction, `e^-`, `e^{-}`, `e⁻` or a bare `e-` that ends the
+/// species. No atoms, charge −1, so only the charge row balances it.
+fn electron(sc: &mut Scanner, coef: &str) -> Option<Species> {
+    if sc.peek(0) != Some('e') {
+        return None;
+    }
+    let rest = sc.rest();
+    let tail = &rest[1..];
+    let len = ["^{-}", "^(-)", "^-", "⁻", "-"]
+        .iter()
+        .find(|m| tail.starts_with(*m))?
+        .chars()
+        .count();
+    // a bare `-` must end the species: `e- ->`, `e- +`, `e-` at the end; never `e-x`
+    let after: String = tail.chars().skip(len).collect();
+    let next = jsstr::trim_start(&after).chars().next();
+    let ends = next.is_none_or(|c| c == '+' || c == '=' || c == '→' || c == '⟶')
+        || jsstr::trim_start(&after).starts_with("->");
+    if !ends || (len == 1 && tail.starts_with('-') && after.starts_with('>')) {
+        return None;
+    }
+    sc.i += 1 + len;
+    Some(Species {
+        key: "e^-".into(),
+        base: "e".into(),
+        display: "e⁻".into(),
+        atoms: Counts::new(),
+        charge: -BigInt::one(),
+        marked: true,
         typed: if coef.is_empty() {
             None
         } else {
@@ -802,8 +842,10 @@ pub fn chem_copy_text(shown: &str) -> String {
 // R = N_A·k, both exact since 2019
 const R: f64 = 6.02214076e23 * 1.380649e-23;
 
-/// The words `chem R` takes after it, offered by completion.
-pub const GAS_CONSTANT_UNITS: [&str; 6] = ["atm", "bar", "torr", "mmhg", "cal", "si"];
+/// The words `chem R` takes after it, offered by completion; the last three are native only (QA item 60).
+pub const GAS_CONSTANT_UNITS: [&str; 9] = [
+    "atm", "bar", "torr", "mmhg", "cal", "si", "kj", "kcal", "kpa",
+];
 
 #[derive(Clone, Debug)]
 pub struct GasConstant {
