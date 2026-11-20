@@ -959,6 +959,37 @@ fn steps_in<F: Cells>(
     }
 }
 
+/// `m^-1` (or `m^(-1)`): the m.
+fn inverse_of(node: &Node) -> Option<&Node> {
+    fn bare(n: &Node) -> &Node {
+        match n {
+            Node::Parenthesis(inner) => bare(inner),
+            _ => n,
+        }
+    }
+    let Node::Operator {
+        op: Op::Pow, args, ..
+    } = bare(node)
+    else {
+        return None;
+    };
+    let [m, e] = args.as_slice() else { return None };
+    let Node::Operator {
+        op: Op::UnaryMinus,
+        args: neg,
+        ..
+    } = bare(e)
+    else {
+        return None;
+    };
+    match neg.as_slice() {
+        [one] if matches!(bare(one), Node::Constant(Constant::Number { value, .. }) if *value == 1.0) => {
+            Some(m)
+        }
+        _ => None,
+    }
+}
+
 /// The row operations behind a line like `rref(A)` or `A \ b`, in the most exact field that holds its entries.
 /// `bar` is where a typed `[A | b]` divides its columns.
 pub(super) fn steps(
@@ -966,6 +997,18 @@ pub(super) fn steps(
     opts: &MatrixOptions<'_>,
     bar: Option<usize>,
 ) -> Vec<crate::types::MatrixStep> {
+    // `A^-1`, `A⁻¹` and `A inverse` show the same working as `inv(A)` (native only)
+    let inverse;
+    let node = match inverse_of(node) {
+        Some(m) => {
+            inverse = Node::Function {
+                callee: Box::new(Node::Symbol("inv".into())),
+                args: vec![m.clone()],
+            };
+            &inverse
+        }
+        None => node,
+    };
     let Node::Function { callee, args } = node else {
         return Vec::new();
     };

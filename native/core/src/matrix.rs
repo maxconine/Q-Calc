@@ -1399,24 +1399,30 @@ fn identity_symbol(expr: &str) -> String {
 /// `A[2, 1]` is an entry, `A[2, :]` a row, `A[:, 1]` a column, `v[3]` one entry of a vector (native only): a
 /// bracket of one or two indices right after a matrix or a call, with nothing between. A stored `A` is its literal
 /// by now (`[[1, 2], [3, 4]][2, 1]`); a bracket with a `;`, another bracket or a space before it is a matrix.
+/// `A(2, 1)` (MATLAB's way) is an entry too: two indices in parentheses can't be a factor; `A(2)` still multiplies.
 fn indexing(expr: &str) -> String {
     let mut out = expr.to_string();
     for _ in 0..4 {
         let bytes = out.as_bytes();
         let mut found = None;
         for i in 1..bytes.len() {
-            if bytes[i] != b'[' || !matches!(bytes[i - 1], b']' | b')') {
+            let paren = bytes[i] == b'(';
+            if !(bytes[i] == b'[' || paren) || !matches!(bytes[i - 1], b']' | b')') {
                 continue;
             }
             let Some(end) = operand_end(&out, i) else {
                 continue;
             };
             let inner = &out[i + 1..end - 1];
-            if inner.contains(['[', ';', '|']) {
+            if inner.contains(['[', ';', '|']) || (paren && inner.contains('(')) {
                 continue;
             }
             let items: Vec<&str> = inner.split(',').map(str::trim).collect();
             if items.is_empty() || items.len() > 2 || items.iter().any(|t| t.is_empty()) {
+                continue;
+            }
+            // `(…)(2, 1)` only after a matrix: its bracket, or a stored one's `([[…]])`
+            if paren && (items.len() != 2 || !(bytes[i - 1] == b']' || out[..i].ends_with("]])"))) {
                 continue;
             }
             // where the indexed thing starts: its bracket, or its call's name
@@ -1688,6 +1694,25 @@ fn literal_of(a: &Grid) -> String {
     format!("[{}]", rows.join(", "))
 }
 
+/// Some outermost `[…]` in the line doesn't parse on its own (`[1 2; 3]`): its rows differ.
+fn has_ragged(expr: &str) -> bool {
+    let bytes = expr.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'['
+            && let Some(end) = operand_end(expr, i)
+        {
+            if crate::syntax::parse(&prep(&expr[i..end])).is_err() {
+                return true;
+            }
+            i = end;
+        } else {
+            i += 1;
+        }
+    }
+    false
+}
+
 /// `matrixAnswer`: None when the line isn't the matrix reader's.
 pub fn matrix_answer(expr: &str, opts: &MatrixOptions<'_>) -> Option<MatrixAnswer> {
     static OPEN: Lazy = Lazy::new(|| js(r"\[[^\]]*$", ""));
@@ -1695,26 +1720,28 @@ pub fn matrix_answer(expr: &str, opts: &MatrixOptions<'_>) -> Option<MatrixAnswe
         return None;
     }
     let Ok(node) = crate::syntax::parse(&prep(expr)) else {
-        // `[1, 2; 3]` fails in the parser; a bracket that doesn't close is still being typed
-        return (jsre::test(&TWO_D, expr) && !jsre::test(&OPEN, expr)).then(|| MatrixAnswer {
-            display: "rows differ in length".into(),
-            message: true,
-            ..MatrixAnswer::default()
-        });
+        // `[1, 2; 3]` fails in the parser; a bracket that doesn't close is still being typed. Only a matrix that
+        // fails on its own is ragged: `A == A` failing elsewhere said its rows differ.
+        return (jsre::test(&TWO_D, expr) && !jsre::test(&OPEN, expr) && has_ragged(expr)).then(
+            || MatrixAnswer {
+                display: "rows differ in length".into(),
+                message: true,
+                ..MatrixAnswer::default()
+            },
+        );
     };
     // a matrix typed on its own answers with itself; its exact form would only repeat the line
     let bare = matches!(&node, Node::Array(_));
     let mut ans = node_answer(&node, bare, opts)?;
-    if !ans.message {
-        if ans.parts.is_empty() && !ans.display.is_empty() {
-            ans.parts = vec![show::single_part(
-                &ans.display,
-                ans.exact.as_deref(),
-                ans.to_store().map(String::as_str),
-            )];
-        }
-        ans.steps = exact_eval::steps(&node, opts, bar_of(expr));
+    if !ans.message && ans.parts.is_empty() && !ans.display.is_empty() {
+        ans.parts = vec![show::single_part(
+            &ans.display,
+            ans.exact.as_deref(),
+            ans.to_store().map(String::as_str),
+        )];
     }
+    // a singular `inv(A)` or `A \ b` says why in its steps too (`no inverse: the left side can't become I`)
+    ans.steps = exact_eval::steps(&node, opts, bar_of(expr));
     Some(ans)
 }
 

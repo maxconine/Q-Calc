@@ -241,11 +241,25 @@ fn literals(text: &str) -> Vec<(usize, usize)> {
     out
 }
 
+/// `A[2, 1]`, `A[:, 1]`, `v[3]`: a bracket glued to a name or a closing bracket that picks entries, not a matrix
+/// (the reader's `indexing`).
+fn is_index(text: &str, s: usize, e: usize) -> bool {
+    let glued = text[..s]
+        .chars()
+        .next_back()
+        .is_some_and(|c| c.is_alphabetic() || c == '_' || c == ')' || c == ']');
+    let inner = &text[s + 1..e - 1];
+    glued
+        && !inner.contains([';', '['])
+        && (inner.contains(',') || inner.contains(':') || !inner.trim().contains(' '))
+}
+
 /// The matrix the caret is in or just after, else the last one in the line, read into cells to edit.
 pub fn grid_at(text: &str, caret: usize) -> Option<GridSpot> {
     let caret = byte_at(text, caret);
     let all: Vec<(usize, usize, Vec<Vec<String>>)> = literals(text)
         .into_iter()
+        .filter(|&(s, e)| !is_index(text, s, e))
         .filter_map(|(s, e)| Some((s, e, cells_of(&text[s..e])?)))
         .collect();
     let (s, e, cells) = all
@@ -350,6 +364,16 @@ mod tests {
         assert!(grid_at("[1 2 | 3]", 0).is_none());
         assert!(grid_at("[1 2; 3]", 0).is_none());
         assert!(grid_at("2 + 2", 0).is_none());
+        // an index isn't a matrix: `A[1, 2]` opens the matrix before it, or none
+        assert!(grid_at("A[1, 2]", 3).is_none());
+        assert!(grid_at("v[3] + 1", 2).is_none());
+        let s = grid_at("[1 2; 3 4][2, 1]", 12).expect("a grid");
+        assert_eq!((s.start, s.end), (0, 10));
+        // `k [1 2]` scales: still a matrix
+        assert_eq!(
+            grid_at("k [1 2]", 4).map(|s| (s.start, s.end)),
+            Some((2, 7))
+        );
         // offsets in UTF-16 units
         assert_eq!(
             grid_at("π·[1 2]", 7).map(|s| (s.start, s.end)),

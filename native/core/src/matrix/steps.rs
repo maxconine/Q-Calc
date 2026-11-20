@@ -127,6 +127,41 @@ impl<F: Cells> Log<'_, F> {
         });
     }
 
+    /// After a system's elimination over `n` columns with `pivots` pivots: a row reading `0 = 1` has no solution,
+    /// a column with no pivot is a free variable. Nothing when the solution is unique (the steps show it). Native only.
+    fn solve_remark(&mut self, m: &G<F::C>, n: usize, pivots: usize) {
+        let f = self.f;
+        // cut short, the matrix isn't reduced yet
+        if self.steps.len() >= MAX_STEPS {
+            return;
+        }
+        let bad = m.iter().enumerate().find_map(|(i, r)| {
+            (r[..n].iter().all(|x| f.is_zero(x)))
+                .then(|| r[n..].iter().find(|x| !f.is_zero(x)))
+                .flatten()
+                .map(|x| (i, x))
+        });
+        if let Some((i, x)) = bad {
+            let v = self.show(x);
+            self.remark(
+                format!("R{} reads 0 = {v}: no solution", sub(i)),
+                format!(
+                    "R_{} : 0 = {} quad \"no solution\"",
+                    i + 1,
+                    to_typst_math(&v)
+                ),
+            );
+        } else if pivots < n {
+            let free = n - pivots;
+            let words = if free == 1 {
+                "a free variable: infinitely many solutions".to_string()
+            } else {
+                format!("{free} free variables: infinitely many solutions")
+            };
+            self.remark(words.clone(), format!("{words:?}"));
+        }
+    }
+
     fn show(&self, c: &F::C) -> String {
         let cell = self.fmt.cell(self.f, c);
         Self::cell_text(&cell)
@@ -371,7 +406,8 @@ pub(super) fn run<F: Cells>(
                 .collect();
             log.bar = Some(n);
             start(&mut log, &m);
-            log.eliminate(&mut m, n, true);
+            let (_, pivots) = log.eliminate(&mut m, n, true);
+            log.solve_remark(&m, n, pivots.len());
         }
         ("solve", [a]) => {
             // an augmented matrix typed whole: the last column is the right side
@@ -382,7 +418,8 @@ pub(super) fn run<F: Cells>(
             let mut m = a.clone();
             log.bar = Some(cols - 1);
             start(&mut log, &m);
-            log.eliminate(&mut m, cols - 1, true);
+            let (_, pivots) = log.eliminate(&mut m, cols - 1, true);
+            log.solve_remark(&m, cols - 1, pivots.len());
         }
         _ => return Ok(Vec::new()),
     }
