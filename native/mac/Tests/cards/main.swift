@@ -50,6 +50,21 @@ check("the same file isn't put back twice", CardRules.putBack("a.pdf", to: "max"
 check("a line typed on since is left alone", CardRules.putBack("a.pdf", to: "max", line: "2+3", waiting: [String]()) == nil)
 check("a line for someone else is left alone", CardRules.putBack("a.pdf", to: "max", line: "send file to sam", waiting: ["c.pdf"]) == nil)
 
+// ---- a `message max words` line with a drop keeps its words when they weren't sent (QA item 80) ----
+
+let typed = "message max here you go"
+let words = CardRules.putBack([String](), to: "max", typed: typed, wordsUnsent: true, line: "", waiting: [String]())
+check("unsent words come back as the whole line", words?.line == typed && words?.waiting == [])
+let thenFile = CardRules.putBack(["a.pdf"], to: "max", typed: typed, line: typed, waiting: [String]())
+check("a file failing after the words joins their line", thenFile?.line == typed && thenFile?.waiting == ["a.pdf"])
+let fileFirst = CardRules.putBack(["a.pdf"], to: "max", typed: typed, line: "", waiting: [String]())
+check("a file failing first waits as send file to", fileFirst?.line == "send file to max" && fileFirst?.waiting == ["a.pdf"])
+let thenWords = CardRules.putBack([String](), to: "max", typed: typed, wordsUnsent: true, line: "send file to max", waiting: ["a.pdf"])
+check("words failing after a file bring the whole line back, the file still waiting", thenWords?.line == typed && thenWords?.waiting == ["a.pdf"])
+let sentWords = CardRules.putBack(["b.pdf"], to: "max", typed: typed, line: "", waiting: [String]())
+check("words that went leave the files alone on the line", sentWords?.line == "send file to max")
+check("a line typed on since keeps its words", CardRules.putBack([String](), to: "max", typed: typed, wordsUnsent: true, line: "2+3", waiting: [String]()) == nil)
+
 // ---- Copied ----
 
 var flash = FlashTicket()

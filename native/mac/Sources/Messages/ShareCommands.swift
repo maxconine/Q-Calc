@@ -178,16 +178,22 @@ extension BarModel {
         dragHint = nil
         if let target, !target.name.isEmpty {
             // `message max2 here you go` and a drop: the words go as a message, and each file as it would by
-            // `send file to max2`
+            // `send file to max2`; what doesn't go comes back on the line (the words with their whole line)
+            let typed = target.text.isEmpty ? "" : text
             clearLine()
             if !target.text.isEmpty {
-                Messages.shared.send(to: target.name, text: target.text) { status in
+                Messages.shared.send(to: target.name, text: target.text) { [weak self] status in
                     if status == "delivered" { Messages.shared.noteSent(target.name) }
-                    if status != "delivered" { say(Messages.sendStatusText(status, to: target.name)) }
+                    if status != "delivered" {
+                        say(Messages.sendStatusText(status, to: target.name))
+                        self?.putBack([], to: target.name, typed: typed, wordsUnsent: true)
+                    }
                 }
             }
             files.forEach { url in
-                MessageFiles.shared.sendFile(url, to: target.name, done: say) { [weak self] in self?.putBack(url, to: target.name) }
+                MessageFiles.shared.sendFile(url, to: target.name, done: say) { [weak self] in
+                    self?.putBack([url], to: target.name, typed: typed)
+                }
             }
             return true
         }
@@ -208,12 +214,17 @@ extension BarModel {
     /// a dropped file whose send never started (the relay couldn't be reached, no key for them) waits on the line
     /// again as `send file to <name>`, so ↵ tries again, as a `message` line keeps its words when not sent (the
     /// line had been cleared and the drop lost); a line typed on since is left alone, the hint saying why
-    func putBack(_ url: URL, to name: String) {
-        guard let back = CardRules.putBack(url, to: name, line: text, waiting: MessageFiles.shared.pendingDrop) else { return }
+    /// `typed` is a `message <name> words` line the drop went from: when its words weren't sent (`wordsUnsent`)
+    /// the whole line comes back with the files waiting on it, ↵ sending both (QA item 80; the words were lost)
+    func putBack(_ url: URL, to name: String) { putBack([url], to: name) }
+
+    func putBack(_ urls: [URL], to name: String, typed: String = "", wordsUnsent: Bool = false) {
+        guard let back = CardRules.putBack(urls, to: name, typed: typed, wordsUnsent: wordsUnsent, line: text,
+                                           waiting: MessageFiles.shared.pendingDrop) else { return }
         MessageFiles.shared.pendingDrop = back.waiting
         if text != back.line { text = back.line }
         // the hint counts what waits (`offers 2 files to max`): a second file put back doesn't change the line
-        shareLine(back.line)
+        if shareCommand(back.line) != nil { shareLine(back.line) }
         focusField?()
     }
 

@@ -394,8 +394,9 @@ final class BarModel: ObservableObject {
             engine.cancel(.live)
             return
         }
-        // a file dropped on the bar waits only while the line asks for its name
-        MessageFiles.shared.pendingDrop = []
+        // a file dropped on the bar waits only while the line asks for its name, or names who on a `message` line
+        // (a `message max words` line put back with its files when the relay was out of reach, QA item 80)
+        if case .message = barCommand(typed) {} else { MessageFiles.shared.pendingDrop = [] }
         // the Konami code typed out says what ↵ does, as a command does
         if isKonamiLine(text: typed) {
             nameCheckTimer?.invalidate()
@@ -975,6 +976,17 @@ final class BarModel: ObservableObject {
             let m = Messages.shared
             if m.name.isEmpty {
                 (onMessagesSettings ?? onSettings)?()
+                return
+            }
+            // files waiting on the line (put back when the relay was out of reach) go with the words, as a drop
+            // on it would (QA item 80)
+            let waiting = MessageFiles.shared.pendingDrop
+            if !name.isEmpty, !waiting.isEmpty {
+                MessageFiles.shared.pendingDrop = []
+                let before = text
+                dropFiles(waiting, to: nil)
+                // a name that can't take them yet leaves the line as it was, the files still on it
+                if text == before { MessageFiles.shared.pendingDrop = waiting }
                 return
             }
             guard !name.isEmpty, !said.isEmpty else { return }

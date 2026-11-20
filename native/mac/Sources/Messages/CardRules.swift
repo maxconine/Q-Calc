@@ -45,10 +45,25 @@ enum CardRules {
     /// `send file to <name>` with any others put back already, so ↵ sends them again; nil when the line holds
     /// something else by then (typed on since), which is left alone.
     static func putBack<T: Equatable>(_ file: T, to name: String, line: String, waiting: [T]) -> (line: String, waiting: [T])? {
-        let back = "send file to \(name)"
-        if line.trimmingCharacters(in: .whitespaces).isEmpty { return (back, [file]) }
-        guard line == back else { return nil }
-        return (back, waiting.contains(file) ? waiting : waiting + [file])
+        putBack([file], to: name, line: line, waiting: waiting)
+    }
+
+    /// The same for a drop sent from a `message <name> words` line (`typed`, QA item 80): when its words weren't
+    /// sent (`wordsUnsent`, any status but delivered, as a plain `message` line keeps them) the whole line comes
+    /// back, with the files that didn't go waiting on it, so ↵ sends both again; words that went leave
+    /// `send file to <name>` for the files alone. `files` may be empty (only the words failed). Either failure can
+    /// come first: a `send file to <name>` line already put back grows into the words line, and a words line
+    /// already back takes the files.
+    static func putBack<T: Equatable>(_ files: [T], to name: String, typed: String = "", wordsUnsent: Bool = false,
+                                      line: String, waiting: [T]) -> (line: String, waiting: [T])? {
+        let fileLine = "send file to \(name)"
+        let back = wordsUnsent && !typed.isEmpty ? typed : fileLine
+        var merged = waiting
+        for f in files where !merged.contains(f) { merged.append(f) }
+        if line.trimmingCharacters(in: .whitespaces).isEmpty { return (back, files) }
+        if line == fileLine { return (back, merged) }
+        if !typed.isEmpty, line == typed { return (typed, merged) }
+        return nil
     }
 }
 
