@@ -91,9 +91,11 @@ fn other_panel(m: &BarModel) -> bool {
 /// The request for the bar as it is, or none when the row hides.
 pub fn request(m: &BarModel) -> Option<Request> {
     let text = m.field.text();
-    // native only: with "stacked fractions and powers" on the line is already typeset, so no preview under it
+    // native only: with "stacked fractions and powers" on the line is already typeset, so no preview under it,
+    // unless it uses `ans`: the preview shows the number that stands for
+    let uses_ans = m.ans_value.is_some() && (m.chained || qcalc_core::app::chain::mentions_ans(&text));
     if !m.settings.typst_preview
-        || m.settings.stacked_math
+        || (m.settings.stacked_math && !uses_ans)
         || text.trim().is_empty()
         || other_panel(m)
     {
@@ -128,9 +130,9 @@ pub fn request(m: &BarModel) -> Option<Request> {
         text.to_string()
     };
     Some(Request {
-        // with the number `ans` stands for in place of the word
+        // with the number `ans` stands for in place of the word, in its blue chip (`anschip`, native only)
         expr: match &m.ans_value {
-            Some(plain) => qcalc_core::app::chain::ans_written_out(&line, plain),
+            Some(plain) => qcalc_core::app::chain::ans_chipped(&line, plain),
             None => line,
         },
         display: if tabbed {

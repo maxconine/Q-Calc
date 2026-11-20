@@ -73,3 +73,14 @@
 #let ip(x, y) = $lr(chevron.l #x, #y chevron.r)$
 #let ict = math.op("ict")
 #let cross = $times$
+
+// native only: ans in the preview, the number it stands for boxed in blue with an "ans" pill on its edge, as desmos
+// draws it; the number keeps the text colour, so it reads in light and dark
+#let ansblue = rgb("#3478f6")
+#let anschip(body) = box(inset: (bottom: 4.5pt), box(inset: (x: 2.5pt, top: 2pt, bottom: 3pt), radius: 3pt,
+  stroke: 0.9pt + ansblue, fill: ansblue.transparentize(85%), {
+    body
+    place(bottom + center, dy: 7.5pt, box(inset: (x: 2pt, y: 1.2pt), radius: 2pt, fill: ansblue,
+      text(size: 6.5pt, fill: white, top-edge: "x-height", bottom-edge: "baseline")[ans]))
+  }))
+

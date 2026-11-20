@@ -627,8 +627,10 @@ final class BarModel: ObservableObject {
     /// the bar doesn't (`typstPreviewUseful`). The answer beside it is the one the slot shows, nothing for a message.
     func refreshTypeset() {
         let command = BarCommand.of(text, sheets: sheets)
-        // native only: with "Stacked fractions and powers" on the line is already typeset, so no preview under it
-        guard settings.typstPreview, !settings.stackedMath, !text.trimmingCharacters(in: .whitespaces).isEmpty, command == nil,
+        // native only: with "Stacked fractions and powers" on the line is already typeset, so no preview under it,
+        // unless it uses `ans`: the preview shows the number that stands for
+        let usesAns = decorations.ans != nil && (chained || text.range(of: #"\bans\b"#, options: [.regularExpression, .caseInsensitive]) != nil)
+        guard settings.typstPreview, !settings.stackedMath || usesAns, !text.trimmingCharacters(in: .whitespaces).isEmpty, command == nil,
               SysCommand.of(text) == nil, sysLines == nil, graph == nil, !helpShown, !gamesShown else {
             typesetAsked = nil
             typeset = nil

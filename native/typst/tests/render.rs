@@ -317,3 +317,20 @@ fn vector_paths_match_the_pixmap() {
     );
     assert!(checked > 250);
 }
+
+#[test]
+fn an_ans_chip_compiles_and_keeps_its_blue_in_dark_mode() {
+    use qcalc_core::app::chain::ans_chipped;
+    use qcalc_core::app::typst_math::{TYPST_PREAMBLE, native_typst_document};
+    // the macros the apps' renderer loads (the core's copy)
+    let r = Renderer::with_macros(TYPST_PREAMBLE);
+    for (line, plain) in [("sqrt(ans(12))", "399381"), ("ans^2 + 1", "3 km"), ("√ans", "-4"), ("ans * (10^5)/30", "3,333.33")] {
+        let src = native_typst_document(&ans_chipped(line, plain), "1", "").unwrap();
+        let opts = RenderOptions { pixel_per_pt: 2.0, max_width_pt: 0.0, max_height_pt: 0.0, color: DARK };
+        let img = r.render(&src, &opts).unwrap_or_else(|e| panic!("{line}: {e:?}"));
+        // the chip's blue (#3478f6, the "ans" pill is solid) is drawn as itself, not recoloured as text
+        let blue = img.rgba.chunks(4).any(|p| p[3] == 255 && p[0] < 0x50 && p[2] > 0xa0 && p[1] > 0x60 && p[1] < 0x80);
+        assert!(blue, "{line}: no chip blue");
+    }
+}
+

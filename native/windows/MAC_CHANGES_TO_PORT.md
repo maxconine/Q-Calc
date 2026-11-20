@@ -46,6 +46,8 @@ On Windows (branch `win-port-302`) all three pass, with the golden floors as set
 
 - **A minus before a bracket of units** (core `units.rs` `Parser::parse_primary`): `-(2 m) * 3` is -6 m, `-(1 V / 10 kΩ) * 33 kΩ` is -3.3 V and `-(2 m)^2` is -4 m²; the unit reader took a sign only as part of a number, so these were blank. Test: `a_minus_before_a_bracket_of_units` in `tests/native_fixes.rs`, then type `-(2 m) * 3` in the bar.
 
+- **`√ans` answers** (core `scientific/preprocess.rs`, `ROOT_NAME`): a root sign takes a whole `ans`, `pi` or `tau`, where it read `sqrtans` and left the line blank. After 4, `√ans` is 2, `3√ans` is 6 and `√ans+1` is 3. Test: `a_root_sign_takes_a_whole_ans_pi_or_tau` in `tests/native_fixes.rs`, then type `4`, ↵, `√ans` in the bar.
+
 The rest is done. (`dx` touching the integrand, halves powers as roots and the faster intersections were checked in the app on 8 Nov 2026, with the linear algebra tables.)
 - **Imaginary roots instead of "no real solution"** (core `solve.rs`: `ComplexRoots`, `complex_pairs`, `format_complex`; native only, user request 18 Nov 2026): a polynomial equation with no real root answers with its complex roots. `x^(2)=-1` is `±i`, `x^2=-4` is `±2i`, `x^2+2x+5=0` is `-1 ± 2i`, `x^2+x+1=0` is `-0.5 ± 0.866025403784i` (exact `(-1 ± sqrt(3)i)/2`), `x^4=-1` lists both pairs. Real roots are unchanged. The solve has a new outcome, `SolveOutcome::Complex` (`"complex"` in saved history), so the answer is drawn full size with its `x =` like real roots, not as a muted message; `ans` isn't set from it. Already done on Windows, not yet built or run there: `answer.rs` and `history.rs` (message checks and `x =` labels) and `typst_row.rs` (`solved_for`). The steps now say the roots are imaginary or complex. Golden floors: `eval.solve` is now 449 and `eval.sheet` 4487, since 20 recordings want `no real solution`. Test: `tests/complex_roots.rs`, then type `x^2=-1` in the bar and check the row's copy button copies `±i`.
 
@@ -54,6 +56,8 @@ The rest is done. (`dx` touching the integrand, halves powers as roots and the f
 ## 2. Edited on Windows but never run: test it
 
 - **Sheet filter: greek spelled in latin** (`sheet_page.rs`: `latin`, used in `matches`; the Mac's `IdentityWindow.swift` does the same with ICU's Greek-Latin). `tmax` finds `τ_max`, `sx` finds `σ_x`, and a typed `τ` still finds only τ. Edited from the Mac, where `qcalc-win` doesn't build (`stacked.rs` calls the Windows-only `crate::input`); the logic was tested on its own. Test: `cargo test -p qcalc-win a_filter_word`, then type `tmax` in the continuum mechanics sheet's filter.
+
+- **`ans` drawn as a chip in the preview** (`typst_row.rs`: `request` uses the core's `chain::ans_chipped` in place of `ans_written_out`, and shows the row for a line that uses `ans` even with stacked fractions on; the chip is `anschip` in `typst/src/macros.typ`). Mac: `MathText.swift` and `BarModel.refreshTypeset`. The preview draws `ans` as the number it stands for in a blue box with a small "ans" pill on its edge, as Desmos does, and every line that uses `ans`, typed or chained, gets the row. Edited from the Mac, where `qcalc-win` doesn't build. Test: `cargo test -p qcalc-typst --test render an_ans_chip`, then type `3247*123`, ↵, `sqrt(ans(12))`, in light and dark, with stacked fractions on and off.
 
 ## 3. Not on Windows yet: implement it
 
