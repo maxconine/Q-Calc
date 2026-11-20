@@ -56,7 +56,8 @@ pub fn blank_reason(expr: &str, ok: &dyn Fn(&str) -> bool, names: &Names) -> Opt
 }
 
 fn reason(expr: &str, ok: &dyn Fn(&str) -> bool, names: &Names) -> Option<Span> {
-    if jstr::trim(expr).is_empty() || ok(expr) {
+    // native only: a reaction that won't balance has no wrong word to underline (`H2 + O2 -> CO2` marked the O)
+    if jstr::trim(expr).is_empty() || ok(expr) || crate::chem::is_reaction_input(expr) {
         return None;
     }
     // `2x+3==11` would solve without its second `=`, so that's what's wrong, not the x
@@ -224,6 +225,9 @@ pub fn enter_hint(f: &EnterFacts) -> String {
     }
     if flag(f.bare_graph) {
         return "graph needs something to plot, like graph x^2".into();
+    }
+    if f.span.is_none() && crate::chem::is_reaction_input(expr) {
+        return "that reaction can’t balance · each element needs to be on both sides".into();
     }
     if flag(f.improper) {
         return "those units measure different things".into();

@@ -143,7 +143,7 @@ private final class PeriodicTile: NSView {
     var onDrop: ((PeriodicElement) -> Void)?
     var onHover: ((PeriodicElement, Bool) -> Void)?
     // how many are in the formula: a picked tile is tinted deeper and ringed, and says ×2 past one
-    var count = 0 { didSet { if count != oldValue { fill(); needsDisplay = true } } }
+    var count = 0 { didSet { if count != oldValue { fill(); needsDisplay = true; describeCount() } } }
     private var hovered = false { didSet { if hovered != oldValue { fill() } } }
     private var pressed = false { didSet { if pressed != oldValue { fill() } } }
     private let number: NSAttributedString
@@ -171,7 +171,8 @@ private final class PeriodicTile: NSView {
         toolTip = "\(element.name) · \(element.symbol) · \(element.n)"
         setAccessibilityElement(true)
         setAccessibilityRole(.button)
-        setAccessibilityLabel("\(element.name), \(element.n), \(element.mass)")
+        setAccessibilityLabel("\(element.name), \(element.symbol), \(element.n), \(element.mass) grams per mole")
+        setAccessibilityHelp("Adds one \(element.symbol) to the formula")
         addTrackingArea(NSTrackingArea(
             rect: .zero,
             options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
@@ -220,6 +221,16 @@ private final class PeriodicTile: NSView {
         return true
     }
 
+    // VoiceOver hears how many are in the formula, and gets the right click (take one away) as an action
+    private func describeCount() {
+        setAccessibilityValue(count > 0 ? "\(count) in formula" : nil)
+        setAccessibilityCustomActions(count > 0 ? [NSAccessibilityCustomAction(name: "Take one away") { [weak self] in
+            guard let self else { return false }
+            self.onDrop?(self.element)
+            return true
+        }] : nil)
+    }
+
     override func viewDidChangeEffectiveAppearance() {
         super.viewDidChangeEffectiveAppearance()
         fill()
@@ -240,7 +251,9 @@ private final class PeriodicTile: NSView {
         }
         layer?.backgroundColor = color
         layer?.borderColor = ring
-        layer?.borderWidth = count > 0 ? 1.5 : 0
+        // Increase Contrast edges every tile, as the system's own controls get one
+        let contrast = NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
+        layer?.borderWidth = count > 0 ? 1.5 : contrast ? 1 : 0
         layer?.cornerRadius = 6
     }
 

@@ -729,6 +729,57 @@ pub fn molar_mass_answer(text: &str, is_name: &dyn Fn(&str) -> bool) -> Option<M
     })
 }
 
+/// A mass of a formula turned into moles, or moles into a mass (native only): the number and the unit it is in.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Amount {
+    pub n: f64,
+    pub unit: &'static str,
+}
+
+/// `10 g H2O in mol`, `10 g of NaCl to mmol`, `2 mol H2O in g`, `0.5 mol of CO2 to kg`: grams and moles of one
+/// formula through its molar mass. None for anything else, so the line goes on to the math engine.
+pub fn amount_answer(text: &str) -> Option<Amount> {
+    static ASK: Lazy = Lazy::new(|| {
+        jsre::js(
+            &jsstr::spaces(
+                r"^([0-9]*\.?[0-9]+(?:e[+-]?[0-9]+)?)\s*(kg|mg|g|grams?|kilograms?|milligrams?|mmol|mol|moles?|millimoles?)\s+(?:of\s+)?(\S+)\s+(?:in|to|as)\s+(kg|mg|g|grams?|kilograms?|milligrams?|mmol|mol|moles?|millimoles?)$",
+            ),
+            "i",
+        )
+    });
+    // grams per unit for a mass, moles per unit for an amount
+    fn unit_of(word: &str) -> Option<(bool, f64, &'static str)> {
+        Some(match word.to_lowercase().as_str() {
+            "g" | "gram" | "grams" => (true, 1.0, "g"),
+            "kg" | "kilogram" | "kilograms" => (true, 1000.0, "kg"),
+            "mg" | "milligram" | "milligrams" => (true, 1e-3, "mg"),
+            "mol" | "mole" | "moles" => (false, 1.0, "mol"),
+            "mmol" | "millimole" | "millimoles" => (false, 1e-3, "mmol"),
+            _ => return None,
+        })
+    }
+    let m = ASK.captures(jsstr::trim(text)).ok().flatten()?;
+    let n = crate::jsnum::parse(jsre::group(&m, 1))?;
+    let (from_mass, from_scale, _) = unit_of(jsre::group(&m, 2))?;
+    let (to_mass, to_scale, unit) = unit_of(jsre::group(&m, 4))?;
+    let f = parse_formula(jsre::group(&m, 3))?;
+    let found = elements::formula_of(f.atoms.iter().map(|(el, k)| (el.as_str(), *k)))?;
+    let molar = crate::jsnum::parse(&found.mass)?;
+    if !n.is_finite() || !(molar > 0.0) {
+        return None;
+    }
+    let base = n * from_scale; // grams or moles
+    let converted = match (from_mass, to_mass) {
+        (true, false) => base / molar,
+        (false, true) => base * molar,
+        _ => base, // g to kg, mol to mmol: the formula doesn't matter
+    };
+    Some(Amount {
+        n: converted / to_scale,
+        unit,
+    })
+}
+
 /// Copy text for a shown balanced reaction: ascii digits, caret charges and `->`. Anything else is unchanged.
 pub fn chem_copy_text(shown: &str) -> String {
     static CHARGE: Lazy = Lazy::new(|| jsre::js(r"([⁰¹²³⁴⁵⁶⁷⁸⁹]*)([⁺⁻])", ""));
@@ -798,6 +849,22 @@ pub fn gas_constant(text: &str) -> Option<GasConstant> {
                     jsre::js(r"^(?:cal|calories?)$", ""),
                     R / 4.184,
                     "cal·mol⁻¹·K⁻¹",
+                ),
+                // native only: the energies and kPa a chemistry course also uses
+                (
+                    jsre::js(r"^(?:kj|kilojoules?)$", ""),
+                    R / 1000.0,
+                    "kJ·mol⁻¹·K⁻¹",
+                ),
+                (
+                    jsre::js(r"^(?:kcal|kilocalories?)$", ""),
+                    R / 4184.0,
+                    "kcal·mol⁻¹·K⁻¹",
+                ),
+                (
+                    jsre::js(&jsstr::spaces(r"^(?:l\s*)?kpa$"), ""),
+                    R,
+                    "L·kPa·mol⁻¹·K⁻¹",
                 ),
             ]
         });

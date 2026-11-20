@@ -792,6 +792,23 @@ impl<'o> Sheet<'o> {
                 ..LineResult::blank(raw)
             };
         }
+        // native only: `10 g H2O in mol`, `2 mol NaCl in g`
+        if let Some(amount) = crate::chem::amount_answer(&trimmed_line) {
+            let value = Value {
+                unit: Some(amount.unit.to_string()),
+                ..Value::number(amount.n)
+            };
+            self.last_ans = Some(amount.n);
+            self.measures.remove("ans");
+            self.quantities.remove("ans");
+            let display = show(&value, false, self.sig_figs);
+            return LineResult {
+                raw: raw.into(),
+                display,
+                value: Some(value),
+                ..LineResult::blank(raw)
+            };
+        }
         if let Some(chem) = stubs::chem_answer(&trimmed_line, &is_name) {
             let value = (!chem.is_empty()).then(|| Value::text(chem.clone()));
             return LineResult {
