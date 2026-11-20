@@ -375,6 +375,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         s.onActiveSpace = panel.isOnActiveSpace
         s.windowServerOnScreen = Self.windowServerShows(panel)
         s.occlusionVisible = panel.occlusionState.contains(.visible)
+        s.screenUnseen = OverlayHealth.screenUnseen(display: Self.displayID(panel.screen))
         s.alpha = Double(panel.alphaValue)
         s.frame = panel.frame
         s.targetScreen = targetScreen
@@ -386,6 +387,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         s.pageLoadingFor = webReady ? 0 : uptime() - pageLoadStartedAt
         s.painted = paintedShow == showCount
         return s
+    }
+
+    private static func displayID(_ screen: NSScreen?) -> CGDirectDisplayID {
+        (screen?.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber).map { CGDirectDisplayID($0.uint32Value) }
+            ?? CGMainDisplayID()
     }
 
     private static func windowServerShows(_ panel: NSPanel) -> Bool {

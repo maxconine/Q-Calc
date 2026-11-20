@@ -12,6 +12,8 @@ struct OverlaySnapshot {
     var windowServerOnScreen = true
     // NSWindow.occlusionState contains .visible
     var occlusionVisible = true
+    // the screen is locked or its display asleep: every window reads occluded then, and no new panel changes that
+    var screenUnseen = false
     var alpha: Double = 1
     var frame = CGRect.zero
     // the screen picked when the show began, the one with the pointer
@@ -76,6 +78,13 @@ enum OverlayHealth {
     // checks after the last recovery only log
     static let attempts = 3
 
+    // a locked session (CGSessionCopyCurrentDictionary) or a sleeping display shows no window at all
+    static func screenUnseen(display: CGDirectDisplayID) -> Bool {
+        let session = CGSessionCopyCurrentDictionary() as? [String: Any]
+        if (session?["CGSSessionScreenIsLocked"] as? Bool) == true { return true }
+        return CGDisplayIsAsleep(display) != 0
+    }
+
     static func problems(_ s: OverlaySnapshot) -> [OverlayProblem] {
         var out: [OverlayProblem] = []
         if !s.ordered { out.append(.orderedOut) }
@@ -84,7 +93,7 @@ enum OverlayHealth {
         guard s.ordered else { return out }
         if !s.onActiveSpace { out.append(.offActiveSpace) }
         if !s.windowServerOnScreen { out.append(.windowServerOff) }
-        if !s.occlusionVisible { out.append(.occluded) }
+        if !s.occlusionVisible, !s.screenUnseen { out.append(.occluded) }
         if s.alpha < 0.99 { out.append(.transparent) }
         if let target = s.targetScreen, !mostlyOn(s.frame, target) {
             out.append(s.screens.contains { mostlyOn(s.frame, $0) } ? .wrongScreen : .offScreen)

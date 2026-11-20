@@ -337,6 +337,7 @@ final class OverlayController: NSObject {
         targetScreen = Self.screenWithPointer()?.frame
         resetPlaceIfIdle()
         model.willShow()
+        model.engine.shown()
         showOnce()
         // what's highlighted in the app in front comes into the line, once it's read (the bar doesn't wait for it)
         let token = showCount
@@ -383,6 +384,7 @@ final class OverlayController: NSObject {
         guard panel?.isVisible == true else { return }
         OverlayLog.note("hide \(showCount) (\(why)) after \(String(format: "%.2fs", uptime() - shownAt))")
         model.willHide()
+        model.engine.hidden()
         effects.stop()
         panel?.ignoreResignKey = true
         panel?.orderOut(nil)
@@ -399,6 +401,7 @@ final class OverlayController: NSObject {
             s.onActiveSpace = panel.isOnActiveSpace
             s.windowServerOnScreen = Self.windowServerShows(panel)
             s.occlusionVisible = panel.occlusionState.contains(.visible)
+            s.screenUnseen = OverlayHealth.screenUnseen(display: Self.displayID(panel.screen))
             s.alpha = Double(panel.alphaValue)
             s.frame = panel.frame
             s.targetScreen = self.targetScreen
@@ -422,6 +425,11 @@ final class OverlayController: NSObject {
             self.showOnce()
             self.verify(self.showCount, attempt: attempt + 1)
         }
+    }
+
+    private static func displayID(_ screen: NSScreen?) -> CGDirectDisplayID {
+        (screen?.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber).map { CGDirectDisplayID($0.uint32Value) }
+            ?? CGMainDisplayID()
     }
 
     private static func windowServerShows(_ panel: NSPanel) -> Bool {

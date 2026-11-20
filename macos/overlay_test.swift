@@ -57,6 +57,12 @@ enum OverlayTest {
         elsewhere.windowServerOnScreen = false
         check(OverlayHealth.problems(elsewhere) == [.offActiveSpace, .windowServerOff], "on another space")
 
+        var covered = shown()
+        covered.occlusionVisible = false
+        check(OverlayHealth.problems(covered) == [.occluded], "covered by something")
+        covered.screenUnseen = true
+        check(OverlayHealth.problems(covered).isEmpty, "a locked screen or sleeping display hides every window; no fresh panel")
+
         var moved = shown()
         moved.frame.origin.x = 2000
         check(OverlayHealth.problems(moved) == [.wrongScreen], "on the other display")
