@@ -1,0 +1,5003 @@
+{
+  "dy/dt + p y = q": {
+    "title": "First-order linear ODE in standard form",
+    "about": "Any first-order equation that is linear in y and y′ can be put in this form by dividing through by the coefficient of dy/dt. It models RC and RL circuits, Newton cooling, mixing tanks and first-order sensor lag, and it is always solvable with an integrating factor.",
+    "assumptions": [
+      "y and dy/dt appear only to the first power and are not multiplied together; a y^{2} or sin(y) term makes it nonlinear",
+      "p(t) and q(t) are continuous on the interval of interest; the solution exists and is unique there for any initial value",
+      "Divide by the leading coefficient first: 3y′ + 6y = 12 becomes y′ + 2y = 4",
+      "q = 0 is the homogeneous case, which is also separable"
+    ],
+    "vars": [
+      [
+        "y",
+        "the unknown function of t",
+        ""
+      ],
+      [
+        "t",
+        "independent variable, often time",
+        "s"
+      ],
+      [
+        "p(t)",
+        "coefficient of y; 1/p is the time constant when p is constant",
+        "1/s"
+      ],
+      [
+        "q(t)",
+        "forcing or input term",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "μ = e^{∫ p dt}",
+        "integrating factor"
+      ],
+      [
+        "y = (1/μ)(∫ μ q dt + C)",
+        "general solution"
+      ],
+      [
+        "y = q/p + (y_{0} − q/p) e^{−pt}",
+        "constant p and q: final value plus decaying transient"
+      ],
+      [
+        "τ = 1/p",
+        "time constant; 63.2% of the way to the final value after one τ"
+      ]
+    ],
+    "example": {
+      "problem": "Solve dy/dt + 2y = 4 with y(0) = 0 and find y at t = 1.",
+      "steps": [
+        "p = 2 and q = 4 are constant, so the final value is q/p = 2",
+        "y = 2 + (0 − 2) e^{−2t} = 2(1 − e^{−2t})",
+        "y(1) = 2(1 − e^{−2}) = 2(1 − 0.1353) = 1.729"
+      ],
+      "answer": "y(1) ≈ 1.729"
+    },
+    "try": "2(1 - e^-2)"
+  },
+  "μ = e^{∫ p dt}": {
+    "title": "Integrating factor for a linear first-order ODE",
+    "about": "Multiplying y′ + p y = q by μ turns the left side into the derivative of a product, (μy)′ = μq, which can then be integrated directly. Any antiderivative of p works; the constant of integration can be dropped.",
+    "assumptions": [
+      "The equation must be in standard form y′ + p y = q, with a leading coefficient of 1",
+      "p(t) must be integrable on the interval; μ is then positive and never zero",
+      "Drop the constant in ∫ p dt; it only scales μ and cancels out",
+      "Watch signs: for y′ − 3y = q, p = −3 and μ = e^{−3t}"
+    ],
+    "vars": [
+      [
+        "μ",
+        "integrating factor",
+        ""
+      ],
+      [
+        "p(t)",
+        "coefficient of y in standard form",
+        "1/s"
+      ],
+      [
+        "t",
+        "independent variable",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "(μ y)′ = μ q",
+        "why it works: μ′ = p μ"
+      ],
+      [
+        "y = (1/μ)(∫ μ q dt + C)",
+        "solution"
+      ],
+      [
+        "μ = e^{pt}",
+        "constant p"
+      ],
+      [
+        "μ = t^{k}",
+        "when p = k/t, since e^{k ln t} = t^{k}"
+      ]
+    ],
+    "example": {
+      "problem": "Find the integrating factor for y′ + 2t y = t and evaluate it at t = 1.",
+      "steps": [
+        "p = 2t, so ∫ p dt = t^{2} (constant dropped)",
+        "μ = e^{t^{2}}",
+        "Check: (e^{t^{2}} y)′ = e^{t^{2}}(y′ + 2t y) ✓",
+        "μ(1) = e^{1} = 2.718"
+      ],
+      "answer": "μ = e^{t^{2}}, μ(1) ≈ 2.718"
+    },
+    "try": "e^(integral(2x, x, 0, 1))"
+  },
+  "y = (1/μ)(∫ μ q dt + C)": {
+    "title": "General solution of a linear first-order ODE",
+    "about": "After multiplying by the integrating factor, integrate both sides of (μy)′ = μq and divide by μ. The C term is the homogeneous (transient) part; the rest is a particular solution. One initial condition fixes C.",
+    "assumptions": [
+      "Valid wherever p and q are continuous; the solution can blow up only where they do",
+      "Include C before dividing by μ; adding it afterwards is a common mistake",
+      "If ∫ μ q dt has no closed form, leave it as a definite integral from t_{0} to t"
+    ],
+    "vars": [
+      [
+        "y",
+        "solution",
+        ""
+      ],
+      [
+        "μ",
+        "integrating factor e^{∫ p dt}",
+        ""
+      ],
+      [
+        "q(t)",
+        "forcing term",
+        ""
+      ],
+      [
+        "C",
+        "constant fixed by the initial condition",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "μ = e^{∫ p dt}",
+        "integrating factor"
+      ],
+      [
+        "y = (1/μ(t))(∫_{t_{0}}^{t} μ q ds + μ(t_{0}) y_{0})",
+        "same thing with the initial value built in"
+      ]
+    ],
+    "example": {
+      "problem": "Solve y′ + y = t with y(0) = 1 and find y(1).",
+      "steps": [
+        "p = 1, so μ = e^{t}",
+        "∫ e^{t} t dt = (t − 1)e^{t} (by parts)",
+        "y = e^{−t}((t − 1)e^{t} + C) = t − 1 + C e^{−t}",
+        "y(0) = −1 + C = 1, so C = 2",
+        "y(1) = 0 + 2e^{−1} = 0.7358"
+      ],
+      "answer": "y = t − 1 + 2e^{−t}, y(1) ≈ 0.7358"
+    },
+    "try": "1 - 1 + 2 e^-1"
+  },
+  "∫ dy/g(y) = ∫ f(t) dt": {
+    "title": "Separation of variables for dy/dt = f(t) g(y)",
+    "about": "When the right side factors into a function of t times a function of y, move every y to one side and every t to the other and integrate both. It covers growth and decay, logistic growth, draining tanks (Torricelli) and many rate laws.",
+    "assumptions": [
+      "The right side must factor as f(t)·g(y); t + y does not separate",
+      "Dividing by g(y) loses any constant solution where g(y) = 0; check those separately",
+      "Only one constant of integration is needed, on one side",
+      "The result is often implicit; solve for y when possible and pick the sign that fits the initial value"
+    ],
+    "vars": [
+      [
+        "y",
+        "dependent variable",
+        ""
+      ],
+      [
+        "t",
+        "independent variable",
+        "s"
+      ],
+      [
+        "f(t)",
+        "factor depending only on t",
+        ""
+      ],
+      [
+        "g(y)",
+        "factor depending only on y",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "y = y_{0} e^{kt}",
+        "dy/dt = k y"
+      ],
+      [
+        "y = K/(1 + ((K − y_{0})/y_{0}) e^{−rt})",
+        "logistic, dy/dt = r y (1 − y/K)"
+      ],
+      [
+        "dh/dt = −(a/A)√(2gh)",
+        "draining tank, separable in h"
+      ]
+    ],
+    "example": {
+      "problem": "Solve dy/dt = t/y with y(0) = 2 and find y(1.5).",
+      "steps": [
+        "Separate: y dy = t dt",
+        "Integrate: y^{2}/2 = t^{2}/2 + C",
+        "y(0) = 2 gives C = 2, so y^{2} = t^{2} + 4",
+        "Take the positive root (y(0) > 0): y = √(t^{2} + 4)",
+        "y(1.5) = √(2.25 + 4) = √6.25 = 2.5"
+      ],
+      "answer": "y(1.5) = 2.5"
+    },
+    "try": "sqrt(1.5^2 + 4)"
+  },
+  "y = y_{0} e^{kt}": {
+    "title": "Exponential growth and decay",
+    "about": "The solution of dy/dt = k y: the rate of change is proportional to the amount present. k > 0 grows (bacteria, compound interest), k < 0 decays (radioactivity, RC discharge, a cooling temperature difference).",
+    "assumptions": [
+      "The rate constant k stays fixed over the whole time span",
+      "Nothing else adds or removes y; with a constant source use y′ = k y + q instead",
+      "Real growth saturates eventually; for large t a logistic model is usually better"
+    ],
+    "vars": [
+      [
+        "y",
+        "amount at time t",
+        ""
+      ],
+      [
+        "y_{0}",
+        "amount at t = 0",
+        ""
+      ],
+      [
+        "k",
+        "rate constant (negative for decay)",
+        "1/s"
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "t_{1/2} = ln 2/|k|",
+        "half-life (decay)"
+      ],
+      [
+        "t_{d} = ln 2/k",
+        "doubling time (growth)"
+      ],
+      [
+        "τ = 1/|k|",
+        "time constant; e^{−1} = 36.8% left after one τ"
+      ],
+      [
+        "T − T_{∞} = (T_{0} − T_{∞}) e^{−kt}",
+        "Newton cooling"
+      ]
+    ],
+    "example": {
+      "problem": "Carbon-14 has a half-life of 5730 years. How much of a 100 g sample remains after 2000 years?",
+      "steps": [
+        "k = −ln 2/5730 = −1.2097 × 10^{−4} per year",
+        "kt = −1.2097 × 10^{−4} × 2000 = −0.2419",
+        "y = 100 e^{−0.2419} = 100 × 0.7851"
+      ],
+      "answer": "y ≈ 78.51 g"
+    },
+    "try": "100 e^(-ln(2)*2000/5730)"
+  },
+  "a y′′ + b y′ + c y = 0": {
+    "title": "Homogeneous second-order linear ODE with constant coefficients",
+    "about": "The model for unforced mass-spring-damper systems (m x′′ + c x′ + k x = 0) and series RLC circuits. Trying y = e^{rt} reduces it to the characteristic equation, and the kind of roots decides whether the response is overdamped, critically damped or oscillating.",
+    "assumptions": [
+      "a, b, c are constants, with a ≠ 0; variable coefficients need other methods",
+      "Homogeneous: no forcing term. With forcing, add a particular solution to this one",
+      "Linear: in a real system this holds for small motions (small angles, linear springs and dampers)"
+    ],
+    "vars": [
+      [
+        "y",
+        "displacement, charge or other response",
+        ""
+      ],
+      [
+        "a",
+        "inertia term (mass m, inductance L)",
+        ""
+      ],
+      [
+        "b",
+        "damping term (damping c, resistance R)",
+        ""
+      ],
+      [
+        "c",
+        "stiffness term (k, 1/C)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "a r^{2} + b r + c = 0",
+        "characteristic equation"
+      ],
+      [
+        "ω_{n} = √(k/m), ζ = c/(2√(km))",
+        "natural frequency and damping ratio"
+      ],
+      [
+        "ω_{d} = ω_{n} √(1 − ζ^{2})",
+        "damped frequency, ζ < 1"
+      ],
+      [
+        "ζ > 1, ζ = 1, ζ < 1",
+        "overdamped, critically damped, underdamped"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 kg mass on a 50 N/m spring has damping 8 N·s/m. Find ζ and the damped frequency.",
+      "steps": [
+        "ω_{n} = √(50/2) = 5 rad/s",
+        "ζ = 8/(2√(50 × 2)) = 8/20 = 0.4, so it is underdamped",
+        "ω_{d} = 5 √(1 − 0.4^{2}) = 5 × 0.9165 = 4.583 rad/s"
+      ],
+      "answer": "ζ = 0.4, ω_{d} ≈ 4.583 rad/s"
+    },
+    "try": "5 sqrt(1 - 0.4^2)"
+  },
+  "a r^{2} + b r + c = 0": {
+    "title": "Characteristic equation of a constant-coefficient ODE",
+    "about": "Substituting y = e^{rt} into a y′′ + b y′ + c y = 0 and dividing out e^{rt} leaves this quadratic. Its two roots set the form of the solution and the system's behaviour.",
+    "assumptions": [
+      "Only for linear ODEs with constant coefficients",
+      "The discriminant b^{2} − 4ac decides the case: > 0 real distinct, = 0 repeated, < 0 complex pair",
+      "For stability (decay to zero) both roots need negative real parts; with a > 0 that means b > 0 and c > 0"
+    ],
+    "vars": [
+      [
+        "r",
+        "characteristic root (growth or decay rate)",
+        "1/s"
+      ],
+      [
+        "a, b, c",
+        "the ODE's coefficients",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "r = (−b ± √(b^{2} − 4ac))/(2a)",
+        "quadratic formula"
+      ],
+      [
+        "r = −ζω_{n} ± ω_{n}√(ζ^{2} − 1)",
+        "in terms of damping ratio and natural frequency"
+      ],
+      [
+        "r^{n} + … = 0",
+        "an nth-order ODE gives an nth-degree polynomial"
+      ]
+    ],
+    "example": {
+      "problem": "Find the characteristic roots of y′′ + 5y′ + 6y = 0.",
+      "steps": [
+        "r^{2} + 5r + 6 = 0",
+        "Discriminant 25 − 24 = 1 > 0: real and distinct",
+        "r = (−5 ± 1)/2, so r = −2 and r = −3",
+        "Both negative: the response decays without oscillating (overdamped)"
+      ],
+      "answer": "r = −2, −3"
+    },
+    "try": "r^2 + 5r + 6 = 0"
+  },
+  "Real and distinct ‖ y = c_{1} e^{r_{1}t} + c_{2} e^{r_{2}t}": {
+    "title": "Solution for real, distinct characteristic roots",
+    "about": "When b^{2} − 4ac > 0 the solution is a sum of two exponentials. With both roots negative the system is overdamped: it returns to rest without overshooting, more slowly than with critical damping.",
+    "assumptions": [
+      "r_{1} ≠ r_{2}, both real (b^{2} > 4ac)",
+      "Two initial conditions, y(0) and y′(0), fix c_{1} and c_{2}",
+      "Long-term behaviour is set by the root closest to zero (the slowest mode)"
+    ],
+    "vars": [
+      [
+        "y",
+        "response",
+        ""
+      ],
+      [
+        "r_{1}, r_{2}",
+        "characteristic roots",
+        "1/s"
+      ],
+      [
+        "c_{1}, c_{2}",
+        "constants from initial conditions",
+        ""
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "c_{1} + c_{2} = y(0)",
+        "first initial condition"
+      ],
+      [
+        "r_{1}c_{1} + r_{2}c_{2} = y′(0)",
+        "second initial condition"
+      ],
+      [
+        "ζ > 1",
+        "overdamped"
+      ]
+    ],
+    "example": {
+      "problem": "Solve y′′ + 5y′ + 6y = 0 with y(0) = 1, y′(0) = 0 and find y(1).",
+      "steps": [
+        "Roots r = −2, −3",
+        "c_{1} + c_{2} = 1 and −2c_{1} − 3c_{2} = 0, so c_{1} = 3, c_{2} = −2",
+        "y = 3e^{−2t} − 2e^{−3t}",
+        "y(1) = 3(0.13534) − 2(0.04979) = 0.4060 − 0.0996 = 0.3064"
+      ],
+      "answer": "y(1) ≈ 0.3064"
+    },
+    "try": "3 e^-2 - 2 e^-3"
+  },
+  "Repeated ‖ y = (c_{1} + c_{2} t) e^{rt}": {
+    "title": "Solution for a repeated characteristic root",
+    "about": "When b^{2} = 4ac there is only one root r = −b/(2a), and the second independent solution is t e^{rt}. For a damped system this is critical damping: the fastest return to rest without overshoot.",
+    "assumptions": [
+      "Exactly b^{2} − 4ac = 0; in practice this is a design target and real systems are slightly over or under",
+      "The t e^{rt} term can make the response rise briefly before decaying, but it crosses zero at most once"
+    ],
+    "vars": [
+      [
+        "y",
+        "response",
+        ""
+      ],
+      [
+        "r",
+        "the repeated root, −b/(2a)",
+        "1/s"
+      ],
+      [
+        "c_{1}, c_{2}",
+        "constants from initial conditions",
+        ""
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "c_{1} = y(0)",
+        "first initial condition"
+      ],
+      [
+        "c_{2} = y′(0) − r y(0)",
+        "second initial condition"
+      ],
+      [
+        "c_{cr} = 2√(km)",
+        "critical damping coefficient, ζ = 1"
+      ]
+    ],
+    "example": {
+      "problem": "Solve y′′ + 4y′ + 4y = 0 with y(0) = 1, y′(0) = 0 and find y(1).",
+      "steps": [
+        "r^{2} + 4r + 4 = (r + 2)^{2} = 0, so r = −2 (repeated)",
+        "c_{1} = y(0) = 1",
+        "c_{2} = y′(0) − r y(0) = 0 + 2 = 2",
+        "y = (1 + 2t) e^{−2t}",
+        "y(1) = 3e^{−2} = 0.4060"
+      ],
+      "answer": "y(1) ≈ 0.4060"
+    },
+    "try": "3 e^-2"
+  },
+  "Complex, α ± jβ ‖ y = e^{αt} (c_{1} cos(βt) + c_{2} sin(βt))": {
+    "title": "Solution for complex characteristic roots",
+    "about": "When b^{2} < 4ac the roots are α ± jβ and the response oscillates at β rad/s inside an exponential envelope e^{αt}. This is the underdamped case: a ringing spring, an RLC circuit, a pendulum with friction.",
+    "assumptions": [
+      "b^{2} − 4ac < 0; α = −b/(2a), β = √(4ac − b^{2})/(2a)",
+      "α < 0 decays, α = 0 oscillates forever (no damping), α > 0 grows (unstable)",
+      "Use radians in cos and sin"
+    ],
+    "vars": [
+      [
+        "y",
+        "response",
+        ""
+      ],
+      [
+        "α",
+        "real part: decay rate (−ζω_{n})",
+        "1/s"
+      ],
+      [
+        "β",
+        "imaginary part: damped frequency ω_{d}",
+        "rad/s"
+      ],
+      [
+        "c_{1}, c_{2}",
+        "constants from initial conditions",
+        ""
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "c_{1} = y(0), c_{2} = (y′(0) − α y(0))/β",
+        "constants from initial conditions"
+      ],
+      [
+        "y = A e^{αt} cos(βt − φ)",
+        "amplitude-phase form, A = √(c_{1}^{2} + c_{2}^{2})"
+      ],
+      [
+        "T_{d} = 2π/β",
+        "period of the oscillation"
+      ]
+    ],
+    "example": {
+      "problem": "Solve y′′ + 2y′ + 5y = 0 with y(0) = 1, y′(0) = 0 and find y(1).",
+      "steps": [
+        "r = (−2 ± √(4 − 20))/2 = −1 ± 2j, so α = −1, β = 2",
+        "c_{1} = 1, c_{2} = (0 − (−1)(1))/2 = 0.5",
+        "y = e^{−t}(cos 2t + 0.5 sin 2t)",
+        "y(1) = e^{−1}(cos 2 + 0.5 sin 2) = 0.3679 × (−0.4161 + 0.4546) = 0.01416"
+      ],
+      "answer": "y(1) ≈ 0.01416"
+    },
+    "try": "e^-1 (cos(2 rad) + 0.5 sin(2 rad))"
+  },
+  "W = y_{1} y′_{2} − y_{2} y′_{1}": {
+    "title": "Wronskian: test for independent solutions",
+    "about": "The Wronskian checks whether two solutions of a second-order linear ODE are independent, so that c_{1}y_{1} + c_{2}y_{2} is the general solution. It is also the denominator in variation of parameters.",
+    "assumptions": [
+      "For solutions of the same linear ODE, W is either zero everywhere or never zero (Abel's theorem)",
+      "W ≠ 0 at one point means independent; for arbitrary functions W = 0 does not by itself prove dependence",
+      "For n solutions it is the determinant of the n × n matrix of the functions and their derivatives"
+    ],
+    "vars": [
+      [
+        "W",
+        "Wronskian",
+        ""
+      ],
+      [
+        "y_{1}, y_{2}",
+        "two solutions",
+        ""
+      ],
+      [
+        "y′_{1}, y′_{2}",
+        "their derivatives",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "W = det[y_{1} y_{2}; y′_{1} y′_{2}]",
+        "determinant form"
+      ],
+      [
+        "W = C e^{−∫ (b/a) dt}",
+        "Abel's formula"
+      ],
+      [
+        "y_{p} = −y_{1}∫ y_{2} g/W dt + y_{2}∫ y_{1} g/W dt",
+        "variation of parameters, y′′ + p y′ + q y = g"
+      ]
+    ],
+    "example": {
+      "problem": "Show that y_{1} = e^{−2t} and y_{2} = e^{−3t} are independent solutions of y′′ + 5y′ + 6y = 0.",
+      "steps": [
+        "y′_{1} = −2e^{−2t}, y′_{2} = −3e^{−3t}",
+        "W = e^{−2t}(−3e^{−3t}) − e^{−3t}(−2e^{−2t})",
+        "W = −3e^{−5t} + 2e^{−5t} = −e^{−5t}",
+        "e^{−5t} is never zero, so W ≠ 0 everywhere"
+      ],
+      "answer": "W = −e^{−5t} ≠ 0: independent"
+    }
+  },
+  "x′ = A x": {
+    "title": "Linear system of first-order ODEs",
+    "about": "Any nth-order linear ODE, and any set of coupled linear ODEs, can be written as one vector equation x′ = A x. This is the state-space form used in controls and vibration; the eigenvalues of A decide stability and the natural modes.",
+    "assumptions": [
+      "A is a constant n × n matrix; linearize a nonlinear system about an equilibrium first",
+      "Stable (all solutions decay) when every eigenvalue of A has a negative real part",
+      "With an input, x′ = A x + B u, add a particular solution"
+    ],
+    "vars": [
+      [
+        "x",
+        "state vector",
+        ""
+      ],
+      [
+        "x′",
+        "its time derivative",
+        "1/s"
+      ],
+      [
+        "A",
+        "system matrix",
+        "1/s"
+      ]
+    ],
+    "related": [
+      [
+        "x = v e^{λt}",
+        "modal solution, A v = λ v"
+      ],
+      [
+        "x(t) = e^{At} x(0)",
+        "matrix exponential"
+      ],
+      [
+        "x_{1} = y, x_{2} = y′",
+        "turning y′′ + b y′ + c y = 0 into a system"
+      ],
+      [
+        "A = [0 1; −c −b]",
+        "companion matrix for that ODE"
+      ]
+    ],
+    "example": {
+      "problem": "Write y′′ + 5y′ + 6y = 0 as a first-order system and find the eigenvalues of A.",
+      "steps": [
+        "Let x_{1} = y and x_{2} = y′; then x′_{1} = x_{2} and x′_{2} = −6x_{1} − 5x_{2}",
+        "A = [0 1; −6 −5]",
+        "det(A − λI) = λ^{2} + 5λ + 6 = 0",
+        "λ = −2, −3: both negative, so the system is stable"
+      ],
+      "answer": "A = [0 1; −6 −5], λ = −2, −3"
+    },
+    "try": "eig([0 1; -6 -5])"
+  },
+  "x = v e^{λt}": {
+    "title": "Modal solution of x′ = A x",
+    "about": "Each eigenpair (λ, v) of A gives a solution that keeps the shape v and grows or decays as e^{λt}. With n independent eigenvectors the general solution is the sum c_{1}v_{1}e^{λ_{1}t} + … + c_{n}v_{n}e^{λ_{n}t}, with the c's set by x(0).",
+    "assumptions": [
+      "A must have n independent eigenvectors (true when the eigenvalues are distinct); otherwise generalized eigenvectors are needed",
+      "Complex λ = α ± jβ gives oscillating real solutions e^{αt}(cos, sin) combinations",
+      "The eigenvector's scale is arbitrary; the constants c_{i} absorb it"
+    ],
+    "vars": [
+      [
+        "x",
+        "state vector",
+        ""
+      ],
+      [
+        "v",
+        "eigenvector (mode shape)",
+        ""
+      ],
+      [
+        "λ",
+        "eigenvalue (mode rate)",
+        "1/s"
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "A v = λ v",
+        "eigenvalue problem"
+      ],
+      [
+        "x = Σ c_{i} v_{i} e^{λ_{i}t}",
+        "general solution"
+      ],
+      [
+        "V c = x(0)",
+        "solve for the constants, V = [v_{1} … v_{n}]"
+      ]
+    ],
+    "example": {
+      "problem": "Solve x′ = [1 2; 2 1] x with x(0) = (2, 0) and find x_{1} at t = 0.5.",
+      "steps": [
+        "Eigenvalues: (1 − λ)^{2} − 4 = 0, so λ = 3 and −1",
+        "v_{1} = (1, 1) for λ = 3; v_{2} = (1, −1) for λ = −1",
+        "c_{1}(1, 1) + c_{2}(1, −1) = (2, 0) gives c_{1} = c_{2} = 1",
+        "x_{1} = e^{3t} + e^{−t}; at t = 0.5: e^{1.5} + e^{−0.5} = 4.4817 + 0.6065"
+      ],
+      "answer": "x_{1}(0.5) ≈ 5.088"
+    },
+    "try": "e^1.5 + e^-0.5"
+  },
+  "∂u/∂t = α ∂^{2}u/∂x^{2}": {
+    "title": "Heat (diffusion) equation",
+    "about": "Temperature in a rod changes at a rate proportional to its curvature in x: hot spots flatten out over time. The same equation describes diffusion of a chemical and other smoothing processes. Separation of variables gives sine modes that decay exponentially, the short wavelengths fastest.",
+    "assumptions": [
+      "One-dimensional conduction: the rod is insulated along its sides, heat flows only along x",
+      "Constant properties: α = k/(ρ c_{p}) does not change with temperature",
+      "No internal heat generation (add a source term otherwise)",
+      "Needs an initial temperature profile and a condition at each end"
+    ],
+    "vars": [
+      [
+        "u",
+        "temperature",
+        "K"
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "x",
+        "position along the rod",
+        "m"
+      ],
+      [
+        "α",
+        "thermal diffusivity, k/(ρ c_{p})",
+        "m^{2}/s"
+      ]
+    ],
+    "related": [
+      [
+        "u = Σ b_{n} sin(nπx/L) e^{−α(nπ/L)^{2} t}",
+        "solution with both ends held at 0"
+      ],
+      [
+        "b_{n} = (2/L)∫_{0}^{L} f(x) sin(nπx/L) dx",
+        "Fourier coefficients of the initial profile f(x)"
+      ],
+      [
+        "t ~ L^{2}/α",
+        "diffusion time scale"
+      ]
+    ],
+    "example": {
+      "problem": "An aluminium rod 0.5 m long (α = 9.7 × 10^{−5} m^{2}/s) starts with temperature sin(πx/L) above ambient, ends held at ambient. What fraction of the peak remains after 60 s?",
+      "steps": [
+        "The first mode decays as e^{−α(π/L)^{2} t}",
+        "(π/0.5)^{2} = 39.48 m^{−2}",
+        "α(π/L)^{2} t = 9.7 × 10^{−5} × 39.48 × 60 = 0.2298",
+        "e^{−0.2298} = 0.795"
+      ],
+      "answer": "≈ 0.795 of the initial peak"
+    },
+    "try": "e^(-9.7e-5 * (pi/0.5)^2 * 60)"
+  },
+  "∂^{2}u/∂t^{2} = c^{2} ∂^{2}u/∂x^{2}": {
+    "title": "Wave equation",
+    "about": "Describes small vibrations of strings, sound in pipes, waves on a beam's axis and electrical signals on lossless lines. Disturbances travel at speed c in both directions without changing shape (d'Alembert).",
+    "assumptions": [
+      "Small displacements, so slopes are small and the equation stays linear",
+      "Uniform medium: constant tension and mass per length (string), so c is constant",
+      "No damping and no stiffness effects; real strings and beams lose energy and disperse",
+      "Needs initial displacement and velocity, plus a condition at each end"
+    ],
+    "vars": [
+      [
+        "u",
+        "displacement",
+        "m"
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "x",
+        "position",
+        "m"
+      ],
+      [
+        "c",
+        "wave speed",
+        "m/s"
+      ]
+    ],
+    "related": [
+      [
+        "c = √(T/μ)",
+        "string, tension T and mass per length μ"
+      ],
+      [
+        "f_{n} = n c/(2L)",
+        "natural frequencies of a string fixed at both ends"
+      ],
+      [
+        "u = F(x − ct) + G(x + ct)",
+        "d'Alembert's general solution"
+      ]
+    ],
+    "example": {
+      "problem": "A 0.65 m guitar string has tension 70 N and mass 0.4 g/m. Find its fundamental frequency.",
+      "steps": [
+        "c = √(T/μ) = √(70/0.0004) = √175000 = 418.3 m/s",
+        "f_{1} = c/(2L) = 418.3/(2 × 0.65)"
+      ],
+      "answer": "f_{1} ≈ 321.8 Hz"
+    },
+    "try": "sqrt(70/0.0004)/(2*0.65)"
+  },
+  "∂^{2}u/∂x^{2} + ∂^{2}u/∂y^{2} = 0": {
+    "title": "Laplace equation",
+    "about": "The steady-state form of the heat equation in 2-D: temperature with no more change in time. It also governs electrostatic potential in charge-free space, ideal (potential) flow and seepage. A solution has no local maximum or minimum inside the region; each value is the average of its neighbours.",
+    "assumptions": [
+      "Steady state: no time dependence, no sources inside the region (with sources it becomes Poisson's equation)",
+      "Homogeneous, isotropic medium",
+      "Fully determined by the values (or fluxes) on the boundary"
+    ],
+    "vars": [
+      [
+        "u",
+        "potential, steady temperature or similar",
+        ""
+      ],
+      [
+        "x, y",
+        "position",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "∇^{2}u = 0",
+        "short form, any number of dimensions"
+      ],
+      [
+        "u = Σ b_{n} sin(nπx/a) sinh(nπy/a)/sinh(nπb/a)",
+        "rectangle a × b, top edge u = f(x), other edges 0"
+      ],
+      [
+        "(u_{E} + u_{W} + u_{N} + u_{S} − 4u_{P})/h^{2} = 0",
+        "finite-difference form: each node is the mean of its neighbours"
+      ]
+    ],
+    "example": {
+      "problem": "A 1 × 1 square plate has its top edge held at u = sin(πx) and the other three edges at 0. Find u at the centre.",
+      "steps": [
+        "u = sin(πx) sinh(πy)/sinh(π)",
+        "At (0.5, 0.5): sin(π/2) = 1",
+        "sinh(π/2)/sinh(π) = 2.3013/11.5487"
+      ],
+      "answer": "u(0.5, 0.5) ≈ 0.1993"
+    },
+    "try": "sinh(pi/2)/sinh(pi)"
+  },
+  "x_{n+1} = x_{n} − f(x_{n})/f′(x_{n})": {
+    "title": "Newton's method for roots",
+    "about": "Follow the tangent line at x_{n} down to where it crosses zero, and repeat. Near a simple root the number of correct digits roughly doubles each step (quadratic convergence), so a few iterations usually suffice.",
+    "assumptions": [
+      "Needs the derivative f′ and a starting guess reasonably close to the root",
+      "Fails or jumps away where f′(x_{n}) ≈ 0 (flat spots, local extrema)",
+      "At a repeated root convergence slows to linear",
+      "Can cycle or diverge from a bad start; bracket with bisection first if unsure"
+    ],
+    "vars": [
+      [
+        "x_{n}",
+        "current estimate",
+        ""
+      ],
+      [
+        "x_{n+1}",
+        "next estimate",
+        ""
+      ],
+      [
+        "f",
+        "function whose root is wanted",
+        ""
+      ],
+      [
+        "f′",
+        "its derivative",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "|e_{n+1}| ≈ |f′′/(2f′)| e_{n}^{2}",
+        "quadratic convergence"
+      ],
+      [
+        "x_{n+1} = (x_{n} + a/x_{n})/2",
+        "Newton for √a (f = x^{2} − a)"
+      ],
+      [
+        "x_{n+1} = x_{n} − J^{−1} f(x_{n})",
+        "systems, with the Jacobian J"
+      ]
+    ],
+    "example": {
+      "problem": "Use Newton's method on f(x) = x^{2} − 2 from x_{0} = 1 to estimate √2.",
+      "steps": [
+        "f′(x) = 2x",
+        "x_{1} = 1 − (1 − 2)/2 = 1.5",
+        "x_{2} = 1.5 − (2.25 − 2)/3 = 1.416667",
+        "x_{3} = 1.416667 − (2.006944 − 2)/2.833333 = 1.414216",
+        "True √2 = 1.414214: 6 digits after 3 steps"
+      ],
+      "answer": "x_{3} ≈ 1.414216"
+    },
+    "try": "17/12 - ((17/12)^2 - 2)/(2*17/12)"
+  },
+  "x_{n+1} = x_{n} − f(x_{n})(x_{n} − x_{n−1})/(f(x_{n}) − f(x_{n−1}))": {
+    "title": "Secant method for roots",
+    "about": "Newton's method with the derivative replaced by the slope through the last two points. It needs no derivative and only one new function value per step, and converges superlinearly (order ≈ 1.618).",
+    "assumptions": [
+      "Needs two starting points; they don't have to bracket the root",
+      "Fails when f(x_{n}) = f(x_{n−1}) (division by zero) and can diverge from poor starts",
+      "Unlike bisection and false position, it does not keep the root bracketed"
+    ],
+    "vars": [
+      [
+        "x_{n}, x_{n−1}",
+        "the two latest estimates",
+        ""
+      ],
+      [
+        "x_{n+1}",
+        "next estimate",
+        ""
+      ],
+      [
+        "f",
+        "function whose root is wanted",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "x_{n+1} = x_{n} − f(x_{n})/f′(x_{n})",
+        "Newton, which the secant approximates"
+      ],
+      [
+        "|e_{n+1}| ≈ C|e_{n}|^{1.618}",
+        "convergence order"
+      ],
+      [
+        "false position",
+        "same formula, but keeps one point on each side of the root"
+      ]
+    ],
+    "example": {
+      "problem": "Apply the secant method to f(x) = x^{2} − 2 with x_{0} = 1, x_{1} = 2. Find x_{3}.",
+      "steps": [
+        "f(1) = −1, f(2) = 2",
+        "x_{2} = 2 − 2(2 − 1)/(2 − (−1)) = 2 − 2/3 = 1.3333",
+        "f(1.3333) = −0.2222",
+        "x_{3} = 1.3333 − (−0.2222)(1.3333 − 2)/(−0.2222 − 2) = 1.3333 + 0.0667"
+      ],
+      "answer": "x_{3} = 1.4"
+    },
+    "try": "4/3 - (-2/9)(4/3 - 2)/(-2/9 - 2)"
+  },
+  "|e_{n}| ≤ (b − a)/2^{n}": {
+    "title": "Bisection method error bound",
+    "about": "Bisection halves a bracketing interval [a, b] each step, keeping the half where f changes sign. It is slow (one binary digit per step) but it always converges, and this bound tells you in advance how many steps you need.",
+    "assumptions": [
+      "f is continuous on [a, b] and f(a), f(b) have opposite signs",
+      "Finds one root in the bracket; with several roots inside, which one is not controlled",
+      "Can't find roots where f touches zero without crossing (even multiplicity)",
+      "Here the estimate is the midpoint of the interval after n halvings; some texts bound by (b − a)/2^{n+1}"
+    ],
+    "vars": [
+      [
+        "e_{n}",
+        "error after n steps",
+        ""
+      ],
+      [
+        "a, b",
+        "initial bracket",
+        ""
+      ],
+      [
+        "n",
+        "number of halvings",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "n ≥ log_{2}((b − a)/tol)",
+        "steps needed for a tolerance"
+      ],
+      [
+        "c = (a + b)/2",
+        "midpoint tested each step"
+      ],
+      [
+        "f(a) f(c) < 0",
+        "keep [a, c]; otherwise keep [c, b]"
+      ]
+    ],
+    "example": {
+      "problem": "How many bisection steps on [1, 2] guarantee the root of x^{2} − 2 to within 10^{−6}?",
+      "steps": [
+        "Need (2 − 1)/2^{n} ≤ 10^{−6}",
+        "n ≥ log_{2}(10^{6}) = 19.93",
+        "Round up"
+      ],
+      "answer": "n = 20 steps (log_{2} 10^{6} ≈ 19.93)"
+    },
+    "try": "log(1e6, 2)"
+  },
+  "f′(x) ≈ (f(x + h) − f(x))/h": {
+    "title": "Forward difference for the first derivative",
+    "about": "The slope of the secant line from x to x + h. It is the simplest derivative estimate, used at the start of a data set and in explicit time stepping, but its error is first order in h.",
+    "assumptions": [
+      "f is smooth (twice differentiable) near x",
+      "Truncation error ≈ (h/2) f′′(x): halving h only halves the error",
+      "h can't be too small: rounding error grows like ε/h, so h ≈ √ε ≈ 10^{−8} is the practical floor in double precision",
+      "With measured data, noise is amplified by 1/h"
+    ],
+    "vars": [
+      [
+        "f′(x)",
+        "derivative estimate",
+        ""
+      ],
+      [
+        "h",
+        "step size",
+        ""
+      ],
+      [
+        "f",
+        "function or sampled data",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "f′(x) ≈ (f(x) − f(x − h))/h",
+        "backward difference, also O(h)"
+      ],
+      [
+        "f′(x) ≈ (f(x + h) − f(x − h))/(2h)",
+        "central difference, O(h^{2})"
+      ],
+      [
+        "f′(x) ≈ (−3f(x) + 4f(x + h) − f(x + 2h))/(2h)",
+        "one-sided, O(h^{2})"
+      ]
+    ],
+    "example": {
+      "problem": "Estimate the derivative of e^{x} at x = 0 with h = 0.1.",
+      "steps": [
+        "f(0.1) = e^{0.1} = 1.10517, f(0) = 1",
+        "f′(0) ≈ (1.10517 − 1)/0.1 = 1.0517",
+        "Exact value 1: error 0.0517 ≈ h/2 × f′′ = 0.05, as predicted"
+      ],
+      "answer": "f′(0) ≈ 1.0517"
+    },
+    "try": "(e^0.1 - 1)/0.1"
+  },
+  "f′(x) ≈ (f(x + h) − f(x − h))/(2h)": {
+    "title": "Central difference for the first derivative",
+    "about": "The slope between points on either side of x. The leading error terms cancel by symmetry, so it is second-order accurate: halving h cuts the error by four. It is the default choice for interior points.",
+    "assumptions": [
+      "f is smooth (three times differentiable) near x",
+      "Truncation error ≈ (h^{2}/6) f′′′(x)",
+      "Needs data on both sides, so it can't be used at the ends of a data set",
+      "Rounding error still grows as h shrinks; h ≈ 10^{−5} is a good choice in double precision"
+    ],
+    "vars": [
+      [
+        "f′(x)",
+        "derivative estimate",
+        ""
+      ],
+      [
+        "h",
+        "step size",
+        ""
+      ],
+      [
+        "f",
+        "function or sampled data",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "f′(x) ≈ (f(x + h) − f(x))/h",
+        "forward, O(h)"
+      ],
+      [
+        "f′′(x) ≈ (f(x + h) − 2f(x) + f(x − h))/h^{2}",
+        "second derivative"
+      ],
+      [
+        "f′(x) ≈ (−f_{2} + 8f_{1} − 8f_{−1} + f_{−2})/(12h)",
+        "five-point, O(h^{4})"
+      ]
+    ],
+    "example": {
+      "problem": "Estimate the derivative of e^{x} at x = 0 with h = 0.1.",
+      "steps": [
+        "e^{0.1} = 1.105171, e^{−0.1} = 0.904837",
+        "f′(0) ≈ (1.105171 − 0.904837)/0.2 = 1.001668",
+        "Error 0.00167 ≈ h^{2}/6 = 0.00167, 30 times smaller than the forward difference"
+      ],
+      "answer": "f′(0) ≈ 1.001668"
+    },
+    "try": "(e^0.1 - e^-0.1)/0.2"
+  },
+  "f′′(x) ≈ (f(x + h) − 2f(x) + f(x − h))/h^{2}": {
+    "title": "Central difference for the second derivative",
+    "about": "Estimates curvature from three equally spaced points. It is the building block for finite-difference solutions of beam, heat, wave and Laplace equations.",
+    "assumptions": [
+      "f is smooth (four times differentiable) near x; points equally spaced",
+      "Truncation error ≈ (h^{2}/12) f^{(4)}(x)",
+      "Very sensitive to noise and rounding (divides by h^{2}); don't make h too small"
+    ],
+    "vars": [
+      [
+        "f′′(x)",
+        "second derivative estimate",
+        ""
+      ],
+      [
+        "h",
+        "step size",
+        ""
+      ],
+      [
+        "f",
+        "function or sampled data",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "(u_{i+1} − 2u_{i} + u_{i−1})/h^{2}",
+        "the same stencil on a grid"
+      ],
+      [
+        "f′(x) ≈ (f(x + h) − f(x − h))/(2h)",
+        "first derivative"
+      ],
+      [
+        "a ≈ (x_{i+1} − 2x_{i} + x_{i−1})/Δt^{2}",
+        "acceleration from position data"
+      ]
+    ],
+    "example": {
+      "problem": "Estimate the second derivative of e^{x} at x = 0 with h = 0.1.",
+      "steps": [
+        "f(0.1) + f(−0.1) = 1.105171 + 0.904837 = 2.010008",
+        "(2.010008 − 2)/0.01 = 1.000834",
+        "Exact value 1; error ≈ h^{2}/12 = 0.00083"
+      ],
+      "answer": "f′′(0) ≈ 1.000834"
+    },
+    "try": "(e^0.1 - 2 + e^-0.1)/0.01"
+  },
+  "∫ f dx ≈ (h/2)(f_{0} + 2f_{1} + 2f_{2} + … + f_{n})": {
+    "title": "Trapezoid rule",
+    "about": "Joins the sample points with straight lines and adds up the trapezoids. It works with any number of equal intervals and with measured data, and is exact for straight lines.",
+    "assumptions": [
+      "Equal spacing h = (b − a)/n; for unequal spacing sum (x_{i+1} − x_{i})(f_{i} + f_{i+1})/2 instead",
+      "Error ≈ −(b − a) h^{2} f′′/12: second order, so halving h cuts the error by four",
+      "Overestimates concave-up functions, underestimates concave-down ones",
+      "Very accurate for smooth periodic functions over a whole period"
+    ],
+    "vars": [
+      [
+        "h",
+        "spacing, (b − a)/n",
+        ""
+      ],
+      [
+        "f_{i}",
+        "f at x_{i} = a + ih",
+        ""
+      ],
+      [
+        "n",
+        "number of intervals",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "E ≈ −(b − a) h^{2} f′′(ξ)/12",
+        "error"
+      ],
+      [
+        "∫ f dx ≈ (h/3)(f_{0} + 4f_{1} + 2f_{2} + … + f_{n})",
+        "Simpson's rule, more accurate"
+      ],
+      [
+        "R = T_{2n} + (T_{2n} − T_{n})/3",
+        "Richardson extrapolation (Romberg)"
+      ]
+    ],
+    "example": {
+      "problem": "Estimate ∫_{0}^{1} x^{2} dx with 4 intervals.",
+      "steps": [
+        "h = 0.25; f = 0, 0.0625, 0.25, 0.5625, 1",
+        "Sum = 0 + 2(0.0625 + 0.25 + 0.5625) + 1 = 2.75",
+        "Integral ≈ (0.25/2)(2.75) = 0.34375",
+        "Exact value 1/3: error 0.0104, an overestimate because x^{2} is concave up"
+      ],
+      "answer": "≈ 0.34375"
+    },
+    "try": "0.25/2 * (0 + 2(0.0625 + 0.25 + 0.5625) + 1)"
+  },
+  "∫ f dx ≈ (h/3)(f_{0} + 4f_{1} + 2f_{2} + 4f_{3} + … + f_{n})": {
+    "title": "Simpson's 1/3 rule",
+    "about": "Fits parabolas through each pair of intervals. It is exact for cubics and fourth-order accurate, so it is far more accurate than the trapezoid rule for the same number of points.",
+    "assumptions": [
+      "n must be even (an odd number of points); use Simpson's 3/8 rule on the last three intervals otherwise",
+      "Equal spacing h = (b − a)/n",
+      "Error ≈ −(b − a) h^{4} f^{(4)}/180: halving h cuts the error by 16",
+      "f must be smooth; a kink or noisy data loses most of the advantage"
+    ],
+    "vars": [
+      [
+        "h",
+        "spacing, (b − a)/n",
+        ""
+      ],
+      [
+        "f_{i}",
+        "f at x_{i} = a + ih",
+        ""
+      ],
+      [
+        "n",
+        "number of intervals (even)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "E ≈ −(b − a) h^{4} f^{(4)}(ξ)/180",
+        "error"
+      ],
+      [
+        "(3h/8)(f_{0} + 3f_{1} + 3f_{2} + f_{3})",
+        "Simpson's 3/8 rule, three intervals"
+      ],
+      [
+        "(h/2)(f_{0} + 2f_{1} + … + f_{n})",
+        "trapezoid rule"
+      ]
+    ],
+    "example": {
+      "problem": "Estimate ∫_{0}^{π} sin x dx with 4 intervals.",
+      "steps": [
+        "h = π/4; f = 0, 0.7071, 1, 0.7071, 0",
+        "Weighted sum = 4(0.7071) + 2(1) + 4(0.7071) = 7.6569",
+        "Integral ≈ (π/12)(7.6569) = 2.0046",
+        "Exact value 2: error 0.0046 (the trapezoid rule gives 1.896)"
+      ],
+      "answer": "≈ 2.0046"
+    },
+    "try": "pi/12 * (4 sqrt(2)/2 + 2 + 4 sqrt(2)/2)"
+  },
+  "y_{n+1} = y_{n} + h f(t_{n}, y_{n})": {
+    "title": "Euler's method for ODEs",
+    "about": "Steps forward along the tangent line: the new value is the old one plus the step size times the current slope. It is the simplest ODE solver and the easiest to code, but only first-order accurate.",
+    "assumptions": [
+      "Global error O(h): halving h only halves the error",
+      "Explicit: becomes unstable if h is too large (for y′ = λy with λ < 0 it needs h < 2/|λ|)",
+      "Fine for rough estimates and teaching; use RK4 or an adaptive solver for real work"
+    ],
+    "vars": [
+      [
+        "y_{n}",
+        "solution at step n",
+        ""
+      ],
+      [
+        "t_{n}",
+        "time at step n",
+        "s"
+      ],
+      [
+        "h",
+        "step size",
+        "s"
+      ],
+      [
+        "f(t, y)",
+        "right side of y′ = f(t, y)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "y_{n+1} = y_{n} + h f(t_{n+1}, y_{n+1})",
+        "backward (implicit) Euler, stable for stiff problems"
+      ],
+      [
+        "y_{n+1} = y_{n} + (h/2)(f(t_{n}, y_{n}) + f(t_{n+1}, ỹ))",
+        "Heun (improved Euler), O(h^{2})"
+      ],
+      [
+        "y_{n+1} = y_{n} + (k_{1} + 2k_{2} + 2k_{3} + k_{4})/6",
+        "RK4, O(h^{4})"
+      ]
+    ],
+    "example": {
+      "problem": "Use Euler's method with h = 0.1 to estimate y(0.5) for y′ = y, y(0) = 1.",
+      "steps": [
+        "Each step multiplies by (1 + h) = 1.1",
+        "After 5 steps: y = 1.1^{5} = 1.61051",
+        "Exact e^{0.5} = 1.64872: error 0.038, about 2.3%"
+      ],
+      "answer": "y(0.5) ≈ 1.6105"
+    },
+    "try": "(1 + 0.1)^5"
+  },
+  "k_{1} = h f(t_{n}, y_{n})": {
+    "title": "RK4, stage 1: slope at the start of the step",
+    "about": "The first of the four slope samples in the classical Runge–Kutta method: the plain Euler increment from the current point.",
+    "assumptions": [
+      "Classical fourth-order Runge–Kutta: global error O(h^{4}), so halving h cuts the error about 16×",
+      "f must be smooth; jumps or discontinuities in f wreck the accuracy near them",
+      "Explicit method: for stiff systems (very fast and very slow modes together) h must stay tiny; use an implicit solver",
+      "Works the same for systems: y and each k become vectors"
+    ],
+    "vars": [
+      [
+        "y_{n}",
+        "solution at step n",
+        ""
+      ],
+      [
+        "t_{n}",
+        "time at step n",
+        "s"
+      ],
+      [
+        "h",
+        "step size",
+        "s"
+      ],
+      [
+        "f(t, y)",
+        "right side of y′ = f(t, y)",
+        ""
+      ],
+      [
+        "k_{1} … k_{4}",
+        "slope estimates times h",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "k_{1} = h f(t_{n}, y_{n})",
+        "slope at the start"
+      ],
+      [
+        "k_{2} = h f(t_{n} + h/2, y_{n} + k_{1}/2)",
+        "midpoint slope using k_{1}"
+      ],
+      [
+        "k_{3} = h f(t_{n} + h/2, y_{n} + k_{2}/2)",
+        "midpoint slope using k_{2}"
+      ],
+      [
+        "k_{4} = h f(t_{n} + h, y_{n} + k_{3})",
+        "slope at the end"
+      ],
+      [
+        "y_{n+1} = y_{n} + (k_{1} + 2k_{2} + 2k_{3} + k_{4})/6",
+        "weighted average step"
+      ]
+    ],
+    "example": {
+      "problem": "Take one RK4 step of h = 0.5 for y′ = y, y(0) = 1 (exact y(0.5) = e^{0.5} = 1.648721).",
+      "steps": [
+        "f(t, y) = y, so f(0, 1) = 1",
+        "k_{1} = 0.5 × 1"
+      ],
+      "answer": "k_{1} = 0.5"
+    },
+    "try": "0.5 * 1"
+  },
+  "k_{2} = h f(t_{n} + h/2, y_{n} + k_{1}/2)": {
+    "title": "RK4, stage 2: midpoint slope using k_{1}",
+    "about": "Use k_{1} to step half-way across the interval and sample the slope there.",
+    "assumptions": [
+      "Classical fourth-order Runge–Kutta: global error O(h^{4}), so halving h cuts the error about 16×",
+      "f must be smooth; jumps or discontinuities in f wreck the accuracy near them",
+      "Explicit method: for stiff systems (very fast and very slow modes together) h must stay tiny; use an implicit solver",
+      "Works the same for systems: y and each k become vectors"
+    ],
+    "vars": [
+      [
+        "y_{n}",
+        "solution at step n",
+        ""
+      ],
+      [
+        "t_{n}",
+        "time at step n",
+        "s"
+      ],
+      [
+        "h",
+        "step size",
+        "s"
+      ],
+      [
+        "f(t, y)",
+        "right side of y′ = f(t, y)",
+        ""
+      ],
+      [
+        "k_{1} … k_{4}",
+        "slope estimates times h",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "k_{1} = h f(t_{n}, y_{n})",
+        "slope at the start"
+      ],
+      [
+        "k_{2} = h f(t_{n} + h/2, y_{n} + k_{1}/2)",
+        "midpoint slope using k_{1}"
+      ],
+      [
+        "k_{3} = h f(t_{n} + h/2, y_{n} + k_{2}/2)",
+        "midpoint slope using k_{2}"
+      ],
+      [
+        "k_{4} = h f(t_{n} + h, y_{n} + k_{3})",
+        "slope at the end"
+      ],
+      [
+        "y_{n+1} = y_{n} + (k_{1} + 2k_{2} + 2k_{3} + k_{4})/6",
+        "weighted average step"
+      ]
+    ],
+    "example": {
+      "problem": "Take one RK4 step of h = 0.5 for y′ = y, y(0) = 1 (exact y(0.5) = e^{0.5} = 1.648721).",
+      "steps": [
+        "k_{1} = 0.5",
+        "Midpoint estimate y = 1 + 0.5/2 = 1.25",
+        "k_{2} = 0.5 × 1.25"
+      ],
+      "answer": "k_{2} = 0.625"
+    },
+    "try": "0.5 (1 + 0.5/2)"
+  },
+  "k_{3} = h f(t_{n} + h/2, y_{n} + k_{2}/2)": {
+    "title": "RK4, stage 3: midpoint slope again, using k_{2}",
+    "about": "A second, better midpoint sample: step half-way with the improved slope k_{2} and evaluate f again.",
+    "assumptions": [
+      "Classical fourth-order Runge–Kutta: global error O(h^{4}), so halving h cuts the error about 16×",
+      "f must be smooth; jumps or discontinuities in f wreck the accuracy near them",
+      "Explicit method: for stiff systems (very fast and very slow modes together) h must stay tiny; use an implicit solver",
+      "Works the same for systems: y and each k become vectors"
+    ],
+    "vars": [
+      [
+        "y_{n}",
+        "solution at step n",
+        ""
+      ],
+      [
+        "t_{n}",
+        "time at step n",
+        "s"
+      ],
+      [
+        "h",
+        "step size",
+        "s"
+      ],
+      [
+        "f(t, y)",
+        "right side of y′ = f(t, y)",
+        ""
+      ],
+      [
+        "k_{1} … k_{4}",
+        "slope estimates times h",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "k_{1} = h f(t_{n}, y_{n})",
+        "slope at the start"
+      ],
+      [
+        "k_{2} = h f(t_{n} + h/2, y_{n} + k_{1}/2)",
+        "midpoint slope using k_{1}"
+      ],
+      [
+        "k_{3} = h f(t_{n} + h/2, y_{n} + k_{2}/2)",
+        "midpoint slope using k_{2}"
+      ],
+      [
+        "k_{4} = h f(t_{n} + h, y_{n} + k_{3})",
+        "slope at the end"
+      ],
+      [
+        "y_{n+1} = y_{n} + (k_{1} + 2k_{2} + 2k_{3} + k_{4})/6",
+        "weighted average step"
+      ]
+    ],
+    "example": {
+      "problem": "Take one RK4 step of h = 0.5 for y′ = y, y(0) = 1 (exact y(0.5) = e^{0.5} = 1.648721).",
+      "steps": [
+        "k_{2} = 0.625",
+        "Midpoint estimate y = 1 + 0.625/2 = 1.3125",
+        "k_{3} = 0.5 × 1.3125"
+      ],
+      "answer": "k_{3} = 0.65625"
+    },
+    "try": "0.5 (1 + 0.625/2)"
+  },
+  "k_{4} = h f(t_{n} + h, y_{n} + k_{3})": {
+    "title": "RK4, stage 4: slope at the end of the step",
+    "about": "Use k_{3} to step across the whole interval and sample the slope at the far end.",
+    "assumptions": [
+      "Classical fourth-order Runge–Kutta: global error O(h^{4}), so halving h cuts the error about 16×",
+      "f must be smooth; jumps or discontinuities in f wreck the accuracy near them",
+      "Explicit method: for stiff systems (very fast and very slow modes together) h must stay tiny; use an implicit solver",
+      "Works the same for systems: y and each k become vectors"
+    ],
+    "vars": [
+      [
+        "y_{n}",
+        "solution at step n",
+        ""
+      ],
+      [
+        "t_{n}",
+        "time at step n",
+        "s"
+      ],
+      [
+        "h",
+        "step size",
+        "s"
+      ],
+      [
+        "f(t, y)",
+        "right side of y′ = f(t, y)",
+        ""
+      ],
+      [
+        "k_{1} … k_{4}",
+        "slope estimates times h",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "k_{1} = h f(t_{n}, y_{n})",
+        "slope at the start"
+      ],
+      [
+        "k_{2} = h f(t_{n} + h/2, y_{n} + k_{1}/2)",
+        "midpoint slope using k_{1}"
+      ],
+      [
+        "k_{3} = h f(t_{n} + h/2, y_{n} + k_{2}/2)",
+        "midpoint slope using k_{2}"
+      ],
+      [
+        "k_{4} = h f(t_{n} + h, y_{n} + k_{3})",
+        "slope at the end"
+      ],
+      [
+        "y_{n+1} = y_{n} + (k_{1} + 2k_{2} + 2k_{3} + k_{4})/6",
+        "weighted average step"
+      ]
+    ],
+    "example": {
+      "problem": "Take one RK4 step of h = 0.5 for y′ = y, y(0) = 1 (exact y(0.5) = e^{0.5} = 1.648721).",
+      "steps": [
+        "k_{3} = 0.65625",
+        "End estimate y = 1 + 0.65625 = 1.65625",
+        "k_{4} = 0.5 × 1.65625"
+      ],
+      "answer": "k_{4} = 0.828125"
+    },
+    "try": "0.5 (1 + 0.65625)"
+  },
+  "y_{n+1} = y_{n} + (k_{1} + 2k_{2} + 2k_{3} + k_{4})/6": {
+    "title": "RK4 update: weighted average of the four slopes",
+    "about": "Combines the four stage increments with weights 1, 2, 2, 1 (Simpson's rule in time). The result matches the Taylor series through h^{4}, which is why RK4 is the workhorse fixed-step ODE solver.",
+    "assumptions": [
+      "Classical fourth-order Runge–Kutta: global error O(h^{4}), so halving h cuts the error about 16×",
+      "f must be smooth; jumps or discontinuities in f wreck the accuracy near them",
+      "Explicit method: for stiff systems (very fast and very slow modes together) h must stay tiny; use an implicit solver",
+      "Works the same for systems: y and each k become vectors"
+    ],
+    "vars": [
+      [
+        "y_{n}",
+        "solution at step n",
+        ""
+      ],
+      [
+        "t_{n}",
+        "time at step n",
+        "s"
+      ],
+      [
+        "h",
+        "step size",
+        "s"
+      ],
+      [
+        "f(t, y)",
+        "right side of y′ = f(t, y)",
+        ""
+      ],
+      [
+        "k_{1} … k_{4}",
+        "slope estimates times h",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "k_{1} = h f(t_{n}, y_{n})",
+        "slope at the start"
+      ],
+      [
+        "k_{2} = h f(t_{n} + h/2, y_{n} + k_{1}/2)",
+        "midpoint slope using k_{1}"
+      ],
+      [
+        "k_{3} = h f(t_{n} + h/2, y_{n} + k_{2}/2)",
+        "midpoint slope using k_{2}"
+      ],
+      [
+        "k_{4} = h f(t_{n} + h, y_{n} + k_{3})",
+        "slope at the end"
+      ],
+      [
+        "y_{n+1} = y_{n} + (k_{1} + 2k_{2} + 2k_{3} + k_{4})/6",
+        "weighted average step"
+      ]
+    ],
+    "example": {
+      "problem": "Take one RK4 step of h = 0.5 for y′ = y, y(0) = 1 (exact y(0.5) = e^{0.5} = 1.648721).",
+      "steps": [
+        "k_{1} = 0.5, k_{2} = 0.625, k_{3} = 0.65625, k_{4} = 0.828125",
+        "Weighted sum = 0.5 + 1.25 + 1.3125 + 0.828125 = 3.890625",
+        "y_{1} = 1 + 3.890625/6 = 1.648438",
+        "Error 0.00028 against e^{0.5}, compared with 0.15 for one Euler step"
+      ],
+      "answer": "y(0.5) ≈ 1.648438"
+    },
+    "try": "1 + (0.5 + 2*0.625 + 2*0.65625 + 0.828125)/6"
+  },
+  "x = (A^{T} A)^{−1} A^{T} b": {
+    "title": "Least-squares solution (normal equations)",
+    "about": "When A x = b has more equations than unknowns (more data points than parameters) there is usually no exact solution. This x minimizes the sum of squared residuals ‖A x − b‖^{2}. It is how a straight line or polynomial is fitted to data.",
+    "assumptions": [
+      "A has independent columns (full column rank), so A^{T}A is invertible",
+      "Every equation is weighted equally and errors are only in b, not in A",
+      "Outliers pull the fit strongly, since errors are squared",
+      "Forming A^{T}A squares the condition number; QR or SVD is more accurate for ill-conditioned fits"
+    ],
+    "vars": [
+      [
+        "x",
+        "fitted parameters",
+        ""
+      ],
+      [
+        "A",
+        "design matrix (m × n, m > n)",
+        ""
+      ],
+      [
+        "b",
+        "measured data",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "A^{T}A x = A^{T}b",
+        "normal equations, solved without forming the inverse"
+      ],
+      [
+        "r = b − A x",
+        "residuals, orthogonal to the columns of A"
+      ],
+      [
+        "m = (nΣxy − ΣxΣy)/(nΣx^{2} − (Σx)^{2})",
+        "slope of a fitted line"
+      ],
+      [
+        "A = [1 t_{1}; 1 t_{2}; …]",
+        "design matrix for y = c_{0} + c_{1}t"
+      ]
+    ],
+    "example": {
+      "problem": "Fit y = c_{0} + c_{1}t to the points (0, 1), (1, 3), (2, 4).",
+      "steps": [
+        "A = [1 0; 1 1; 1 2], b = (1, 3, 4)",
+        "A^{T}A = [3 3; 3 5], A^{T}b = (8, 11)",
+        "det(A^{T}A) = 15 − 9 = 6",
+        "x = (1/6)[5 −3; −3 3](8, 11) = (1/6)(7, 9) = (1.1667, 1.5)"
+      ],
+      "answer": "y ≈ 1.1667 + 1.5t"
+    },
+    "try": "inv([3 3; 3 5]) * [8; 11]"
+  },
+  "κ(A) = ‖A‖ ‖A^{−1}‖": {
+    "title": "Condition number of a matrix",
+    "about": "Measures how much relative errors in the data b (or in A) can be magnified in the solution of A x = b. κ near 1 is well conditioned; a large κ means the answer can lose about log_{10} κ significant digits.",
+    "assumptions": [
+      "Depends on the norm used; the 2-norm gives κ = σ_{max}/σ_{min} (ratio of singular values)",
+      "κ ≥ 1 always; κ = ∞ for a singular matrix",
+      "A small determinant does not by itself mean ill conditioning (scaling changes det but not κ)",
+      "It is a worst-case bound; a particular b may fare better"
+    ],
+    "vars": [
+      [
+        "κ(A)",
+        "condition number",
+        ""
+      ],
+      [
+        "A",
+        "square matrix",
+        ""
+      ],
+      [
+        "‖·‖",
+        "matrix norm",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "‖δx‖/‖x‖ ≤ κ(A) ‖δb‖/‖b‖",
+        "error amplification"
+      ],
+      [
+        "κ_{2} = σ_{max}/σ_{min}",
+        "2-norm, from singular values"
+      ],
+      [
+        "κ_{2} = |λ|_{max}/|λ|_{min}",
+        "symmetric matrices"
+      ],
+      [
+        "digits lost ≈ log_{10} κ",
+        "rule of thumb"
+      ]
+    ],
+    "example": {
+      "problem": "Find the 2-norm condition number of A = [1 1; 1 1.0001].",
+      "steps": [
+        "A is symmetric: λ = (2.0001 ± √(0.0001^{2} + 4))/2",
+        "λ_{max} ≈ 2.00005, λ_{min} ≈ 0.00005",
+        "κ ≈ 2.00005/0.00005 ≈ 40002",
+        "About 4.6 significant digits can be lost solving A x = b"
+      ],
+      "answer": "κ ≈ 4.0 × 10^{4}"
+    },
+    "try": "cond([1 1; 1 1.0001])"
+  },
+  "|x − x_{a}|/|x|": {
+    "title": "Relative error",
+    "about": "The size of the error compared with the size of the true value. It is the right measure for comparing accuracy across quantities of different sizes, and its negative log_{10} is roughly the number of correct significant digits.",
+    "assumptions": [
+      "Undefined (or meaningless) when the true value x is zero or very near it; use absolute error there",
+      "When x is unknown, the best estimate or a reference value stands in for it",
+      "Multiply by 100 for percent error"
+    ],
+    "vars": [
+      [
+        "x",
+        "true value",
+        ""
+      ],
+      [
+        "x_{a}",
+        "approximate value",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "|x − x_{a}|",
+        "absolute error"
+      ],
+      [
+        "significant digits ≈ −log_{10}(relative error)",
+        "rule of thumb"
+      ],
+      [
+        "ε ≈ 2.2 × 10^{−16}",
+        "machine epsilon, double precision"
+      ]
+    ],
+    "example": {
+      "problem": "How accurate is 22/7 as an approximation of π?",
+      "steps": [
+        "22/7 = 3.142857",
+        "|π − 22/7| = 0.0012645",
+        "0.0012645/3.141593 = 4.025 × 10^{−4}, about 0.04%",
+        "Roughly 3 correct significant digits"
+      ],
+      "answer": "≈ 4.025 × 10^{−4}"
+    },
+    "try": "abs(pi - 22/7)/pi"
+  },
+  "|x − x_{a}|": {
+    "title": "Absolute error",
+    "about": "The size of the difference between the true value and the approximation, in the same units as the quantity. Tolerances on drawings and instrument accuracies are usually stated this way.",
+    "assumptions": [
+      "Carries units, so it can't compare accuracy between quantities of very different size; use relative error for that",
+      "When the true value is unknown, compare against a more accurate reference"
+    ],
+    "vars": [
+      [
+        "x",
+        "true value",
+        ""
+      ],
+      [
+        "x_{a}",
+        "approximate value",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "|x − x_{a}|/|x|",
+        "relative error"
+      ],
+      [
+        "|x − x_{a}| ≤ 0.5 × 10^{−d}",
+        "x_{a} is correct to d decimal places"
+      ]
+    ],
+    "example": {
+      "problem": "What is the absolute error of 22/7 as an approximation of π?",
+      "steps": [
+        "22/7 = 3.1428571",
+        "π = 3.1415927",
+        "Difference = 0.0012645"
+      ],
+      "answer": "≈ 1.2645 × 10^{−3}"
+    },
+    "try": "abs(pi - 22/7)"
+  },
+  "A = πr^{2}": {
+    "title": "Area of a circle",
+    "about": "The area enclosed by a circle of radius r. In engineering it is the cross-section of rods, bolts, pipes and wires, used for stress (σ = F/A) and flow (Q = vA).",
+    "assumptions": [
+      "Use the radius, not the diameter; with diameter d, A = πd^{2}/4",
+      "For a tube, subtract the inner area: π(r_{o}^{2} − r_{i}^{2})"
+    ],
+    "vars": [
+      [
+        "A",
+        "area",
+        "m^{2}"
+      ],
+      [
+        "r",
+        "radius",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "A = πd^{2}/4",
+        "in terms of diameter"
+      ],
+      [
+        "C = 2πr",
+        "circumference"
+      ],
+      [
+        "A = π(r_{o}^{2} − r_{i}^{2})",
+        "annulus (tube wall)"
+      ],
+      [
+        "I = πr^{4}/4",
+        "second moment of area"
+      ]
+    ],
+    "example": {
+      "problem": "Find the cross-sectional area of a 50 mm diameter rod.",
+      "steps": [
+        "r = 25 mm",
+        "A = π(25 mm)^{2} = 1963.5 mm^{2}"
+      ],
+      "answer": "A ≈ 1963.5 mm^{2}"
+    },
+    "try": "pi (25 mm)^2 to mm^2"
+  },
+  "C = 2πr": {
+    "title": "Circumference of a circle",
+    "about": "The distance around a circle. It gives wheel travel per revolution, belt lengths on pulleys and the surface speed of a rotating part (v = ωr).",
+    "assumptions": [
+      "Uses the radius; with diameter C = πd",
+      "A wheel's effective rolling radius is a little less than its unloaded radius"
+    ],
+    "vars": [
+      [
+        "C",
+        "circumference",
+        "m"
+      ],
+      [
+        "r",
+        "radius",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "C = πd",
+        "in terms of diameter"
+      ],
+      [
+        "s = rθ",
+        "arc length for part of a turn"
+      ],
+      [
+        "v = ωr",
+        "surface speed"
+      ]
+    ],
+    "example": {
+      "problem": "A wheel has a radius of 0.35 m. How far does it roll in one revolution, and how many turns per kilometre?",
+      "steps": [
+        "C = 2π(0.35 m) = 2.199 m",
+        "Turns per km = 1000/2.199 = 454.7"
+      ],
+      "answer": "C ≈ 2.199 m (≈ 455 turns per km)"
+    },
+    "try": "2 pi * 0.35 m"
+  },
+  "A = (1/2) r^{2} θ": {
+    "title": "Area of a circular sector",
+    "about": "The area of a pie slice of angle θ. It comes from the circle's area scaled by the fraction θ/(2π) of a full turn.",
+    "assumptions": [
+      "θ in radians; in degrees use (θ/360°) πr^{2}",
+      "A segment (the region between chord and arc) is the sector minus the triangle: (1/2) r^{2}(θ − sin θ)"
+    ],
+    "vars": [
+      [
+        "A",
+        "sector area",
+        "m^{2}"
+      ],
+      [
+        "r",
+        "radius",
+        "m"
+      ],
+      [
+        "θ",
+        "central angle",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "s = rθ",
+        "arc length"
+      ],
+      [
+        "A = (1/2) r s",
+        "same area from the arc length"
+      ],
+      [
+        "A = (1/2) r^{2}(θ − sin θ)",
+        "circular segment"
+      ]
+    ],
+    "example": {
+      "problem": "Find the area of a 120° sector of radius 0.3 m.",
+      "steps": [
+        "θ = 120° = 2π/3 = 2.0944 rad",
+        "A = 0.5 × 0.09 × 2.0944"
+      ],
+      "answer": "A ≈ 0.09425 m^{2}"
+    },
+    "try": "0.5 * 0.3^2 * 2pi/3"
+  },
+  "s = rθ": {
+    "title": "Arc length",
+    "about": "The length along a circle subtended by a central angle θ. This is the definition of the radian, and it links rotation to travel: a pulley turning θ moves its belt rθ.",
+    "assumptions": [
+      "θ in radians; in degrees use s = (θ/360°) 2πr",
+      "Rolling without slipping assumed when used for wheels and gears"
+    ],
+    "vars": [
+      [
+        "s",
+        "arc length",
+        "m"
+      ],
+      [
+        "r",
+        "radius",
+        "m"
+      ],
+      [
+        "θ",
+        "central angle",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "v = rω",
+        "differentiate: tangential speed"
+      ],
+      [
+        "a_{t} = rα",
+        "tangential acceleration"
+      ],
+      [
+        "A = (1/2) r^{2} θ",
+        "sector area"
+      ]
+    ],
+    "example": {
+      "problem": "Find the arc length of a 120° arc of radius 0.3 m.",
+      "steps": [
+        "θ = 2π/3 = 2.0944 rad",
+        "s = 0.3 × 2.0944"
+      ],
+      "answer": "s ≈ 0.6283 m"
+    },
+    "try": "0.3 * 2pi/3"
+  },
+  "A = πab": {
+    "title": "Area of an ellipse",
+    "about": "The area of an ellipse with semi-axes a and b. It reduces to πr^{2} when a = b, and appears in elliptical tanks, ducts and orbits.",
+    "assumptions": [
+      "a and b are semi-axes (half the full widths)",
+      "The perimeter has no simple exact formula; Ramanujan's approximation is π(3(a + b) − √((3a + b)(a + 3b)))"
+    ],
+    "vars": [
+      [
+        "A",
+        "area",
+        "m^{2}"
+      ],
+      [
+        "a",
+        "semi-major axis",
+        "m"
+      ],
+      [
+        "b",
+        "semi-minor axis",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "x^{2}/a^{2} + y^{2}/b^{2} = 1",
+        "the ellipse"
+      ],
+      [
+        "P ≈ π(3(a + b) − √((3a + b)(a + 3b)))",
+        "perimeter, Ramanujan"
+      ],
+      [
+        "e = √(1 − b^{2}/a^{2})",
+        "eccentricity"
+      ]
+    ],
+    "example": {
+      "problem": "An elliptical duct is 6 m by 4 m across. Find its cross-sectional area.",
+      "steps": [
+        "a = 3 m, b = 2 m",
+        "A = π × 3 × 2"
+      ],
+      "answer": "A ≈ 18.85 m^{2}"
+    },
+    "try": "pi*3*2"
+  },
+  "A = (1/2) b h": {
+    "title": "Area of a triangle",
+    "about": "Half the base times the height. The height must be perpendicular to the chosen base; any side can serve as the base.",
+    "assumptions": [
+      "h is measured at right angles to b, possibly outside the triangle for an obtuse one",
+      "With three sides known use Heron's formula; with two sides and the included angle use (1/2) a b sin C"
+    ],
+    "vars": [
+      [
+        "A",
+        "area",
+        "m^{2}"
+      ],
+      [
+        "b",
+        "base",
+        "m"
+      ],
+      [
+        "h",
+        "height perpendicular to the base",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "A = (1/2) a b sin(C)",
+        "two sides and the included angle"
+      ],
+      [
+        "A = √(s(s − a)(s − b)(s − c))",
+        "Heron, three sides"
+      ],
+      [
+        "A = (1/2)|x_{1}(y_{2} − y_{3}) + x_{2}(y_{3} − y_{1}) + x_{3}(y_{1} − y_{2})|",
+        "from vertex coordinates"
+      ],
+      [
+        "centroid at h/3 from the base",
+        "for area moments"
+      ]
+    ],
+    "example": {
+      "problem": "A triangular gusset plate has a 6 cm base and a 4 cm height. Find its area.",
+      "steps": [
+        "A = (1/2)(6)(4)"
+      ],
+      "answer": "A = 12 cm^{2}"
+    },
+    "try": "0.5*6*4"
+  },
+  "A = √(s(s − a)(s − b)(s − c))": {
+    "title": "Heron's formula",
+    "about": "The area of a triangle from its three side lengths alone, with no angles or heights. Useful for surveying and for a truss panel where only the member lengths are known.",
+    "assumptions": [
+      "s = (a + b + c)/2 is half the perimeter",
+      "The sides must satisfy the triangle inequality, or s − a etc. goes negative",
+      "For a very thin (needle-like) triangle it loses accuracy to rounding; sort a ≥ b ≥ c and use the stable form"
+    ],
+    "vars": [
+      [
+        "A",
+        "area",
+        "m^{2}"
+      ],
+      [
+        "a, b, c",
+        "side lengths",
+        "m"
+      ],
+      [
+        "s",
+        "semi-perimeter, (a + b + c)/2",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "s = (a + b + c)/2",
+        "semi-perimeter"
+      ],
+      [
+        "A = (1/2) a b sin(C)",
+        "two sides and the angle between"
+      ],
+      [
+        "c^{2} = a^{2} + b^{2} − 2ab cos(C)",
+        "law of cosines, to get the angles"
+      ]
+    ],
+    "example": {
+      "problem": "Find the area of a triangle with sides 5, 6 and 7 m.",
+      "steps": [
+        "s = (5 + 6 + 7)/2 = 9",
+        "A = √(9 × 4 × 3 × 2) = √216"
+      ],
+      "answer": "A ≈ 14.70 m^{2}"
+    },
+    "try": "sqrt(9*4*3*2)"
+  },
+  "A = (1/2) a b sin(C)": {
+    "title": "Triangle area from two sides and the included angle",
+    "about": "When you know two sides and the angle between them (SAS), the height on side a is b sin C, so the area is half of a × b sin C. The same expression is half the magnitude of a cross product.",
+    "assumptions": [
+      "C must be the angle between sides a and b",
+      "sin is the same for C and 180° − C, so an obtuse angle works without change"
+    ],
+    "vars": [
+      [
+        "A",
+        "area",
+        "m^{2}"
+      ],
+      [
+        "a, b",
+        "two sides",
+        "m"
+      ],
+      [
+        "C",
+        "angle between them",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "A = (1/2)|a × b|",
+        "vector form"
+      ],
+      [
+        "A = (1/2) b h",
+        "base and height"
+      ],
+      [
+        "c^{2} = a^{2} + b^{2} − 2ab cos(C)",
+        "third side"
+      ]
+    ],
+    "example": {
+      "problem": "Two sides of a triangular plate are 5 cm and 7 cm with 40° between them. Find the area.",
+      "steps": [
+        "sin 40° = 0.6428",
+        "A = 0.5 × 5 × 7 × 0.6428"
+      ],
+      "answer": "A ≈ 11.25 cm^{2}"
+    },
+    "try": "0.5*5*7*sin(40 deg)"
+  },
+  "A = (1/2)(a + b) h": {
+    "title": "Area of a trapezoid",
+    "about": "The average of the two parallel sides times the distance between them. It is the basis of the trapezoid rule for integration and of channel and embankment cross-sections.",
+    "assumptions": [
+      "a and b are the two parallel sides",
+      "h is perpendicular to them, not the slant side"
+    ],
+    "vars": [
+      [
+        "A",
+        "area",
+        "m^{2}"
+      ],
+      [
+        "a, b",
+        "parallel sides",
+        "m"
+      ],
+      [
+        "h",
+        "perpendicular distance between them",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "ȳ = (h/3)(2a + b)/(a + b)",
+        "centroid height above side b"
+      ],
+      [
+        "∫ f dx ≈ (h/2)(f_{0} + f_{1})",
+        "trapezoid rule"
+      ]
+    ],
+    "example": {
+      "problem": "A channel cross-section is 8 m wide at the top, 5 m at the bottom and 3 m deep. Find its area.",
+      "steps": [
+        "A = 0.5 × (8 + 5) × 3"
+      ],
+      "answer": "A = 19.5 m^{2}"
+    },
+    "try": "0.5*(8 + 5)*3"
+  },
+  "A = b h": {
+    "title": "Area of a parallelogram",
+    "about": "Base times perpendicular height; shearing a rectangle sideways doesn't change its area. It equals the magnitude of the cross product of the two edge vectors.",
+    "assumptions": [
+      "h is perpendicular to the base, not the slanted side length",
+      "With side lengths and angle: A = a b sin θ"
+    ],
+    "vars": [
+      [
+        "A",
+        "area",
+        "m^{2}"
+      ],
+      [
+        "b",
+        "base",
+        "m"
+      ],
+      [
+        "h",
+        "perpendicular height",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "A = a b sin(θ)",
+        "two sides and the angle between"
+      ],
+      [
+        "A = |u × v|",
+        "edge vectors"
+      ],
+      [
+        "A = det[u v]",
+        "2-D vectors, absolute value"
+      ]
+    ],
+    "example": {
+      "problem": "A parallelogram has sides 10 cm and 5 cm meeting at 30°. Find its area.",
+      "steps": [
+        "h = 5 sin 30° = 2.5 cm",
+        "A = 10 × 2.5"
+      ],
+      "answer": "A = 25 cm^{2}"
+    },
+    "try": "10*5 sin(30 deg)"
+  },
+  "V = (4/3) πr^{3}": {
+    "title": "Volume of a sphere",
+    "about": "The volume of a ball of radius r. Used for tanks, bearings, droplets and particle mass (m = ρV).",
+    "assumptions": [
+      "Uses the radius; with diameter V = πd^{3}/6",
+      "Volume scales with r^{3}: doubling the radius gives 8× the volume"
+    ],
+    "vars": [
+      [
+        "V",
+        "volume",
+        "m^{3}"
+      ],
+      [
+        "r",
+        "radius",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "S = 4πr^{2}",
+        "surface area"
+      ],
+      [
+        "V = πd^{3}/6",
+        "from diameter"
+      ],
+      [
+        "V = πh^{2}(3r − h)/3",
+        "spherical cap of height h"
+      ],
+      [
+        "I = (2/5) m r^{2}",
+        "moment of inertia of a solid sphere"
+      ]
+    ],
+    "example": {
+      "problem": "Find the volume of a sphere of radius 0.1 m, and the mass if it is steel (7850 kg/m^{3}).",
+      "steps": [
+        "V = (4/3)π(0.1)^{3} = 4.189 × 10^{−3} m^{3} (4.19 L)",
+        "m = 7850 × 4.189 × 10^{−3} = 32.9 kg"
+      ],
+      "answer": "V ≈ 4.189 × 10^{−3} m^{3} (m ≈ 32.9 kg)"
+    },
+    "try": "4/3 pi 0.1^3"
+  },
+  "V = πr^{2} h": {
+    "title": "Volume of a cylinder",
+    "about": "Circular base area times height. Used for tanks, pipes, hydraulic cylinders and shafts.",
+    "assumptions": [
+      "A right or oblique cylinder; h is the perpendicular height",
+      "For a pipe wall use π(r_{o}^{2} − r_{i}^{2})h"
+    ],
+    "vars": [
+      [
+        "V",
+        "volume",
+        "m^{3}"
+      ],
+      [
+        "r",
+        "radius",
+        "m"
+      ],
+      [
+        "h",
+        "height",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "S = 2πr^{2} + 2πrh",
+        "surface area"
+      ],
+      [
+        "V = π(r_{o}^{2} − r_{i}^{2}) h",
+        "hollow tube"
+      ],
+      [
+        "V = B h",
+        "any prism or cylinder"
+      ]
+    ],
+    "example": {
+      "problem": "A cylindrical tank is 1 m in diameter and 2 m tall. How much does it hold?",
+      "steps": [
+        "r = 0.5 m",
+        "V = π(0.5)^{2}(2) = 1.5708 m^{3} (about 1571 L)"
+      ],
+      "answer": "V ≈ 1.5708 m^{3}"
+    },
+    "try": "pi 0.5^2 * 2"
+  },
+  "V = (1/3) πr^{2} h": {
+    "title": "Volume of a cone",
+    "about": "One third of the cylinder with the same base and height. Used for hoppers, funnels and stockpiles.",
+    "assumptions": [
+      "h is the perpendicular height from base to apex, not the slant height",
+      "For a frustum (cut-off cone) use (πh/3)(R^{2} + Rr + r^{2})"
+    ],
+    "vars": [
+      [
+        "V",
+        "volume",
+        "m^{3}"
+      ],
+      [
+        "r",
+        "base radius",
+        "m"
+      ],
+      [
+        "h",
+        "height",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "V = (πh/3)(R^{2} + Rr + r^{2})",
+        "frustum"
+      ],
+      [
+        "S = πr^{2} + πr√(r^{2} + h^{2})",
+        "surface area"
+      ],
+      [
+        "centroid at h/4 above the base",
+        "solid cone"
+      ]
+    ],
+    "example": {
+      "problem": "A conical hopper is 0.6 m across the top and 0.9 m deep. Find its volume.",
+      "steps": [
+        "r = 0.3 m",
+        "V = (1/3)π(0.3)^{2}(0.9) = 0.0848 m^{3}"
+      ],
+      "answer": "V ≈ 0.08482 m^{3}"
+    },
+    "try": "pi 0.3^2 * 0.9/3"
+  },
+  "V = (1/3) B h": {
+    "title": "Volume of a pyramid",
+    "about": "One third of the base area times the height, for any base shape (square, triangle, polygon). A cone is the special case with a circular base.",
+    "assumptions": [
+      "h is the perpendicular height from the base plane to the apex",
+      "Works for any base shape and for an apex not directly above the centre"
+    ],
+    "vars": [
+      [
+        "V",
+        "volume",
+        "m^{3}"
+      ],
+      [
+        "B",
+        "base area",
+        "m^{2}"
+      ],
+      [
+        "h",
+        "height",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "V = (h/3)(B_{1} + B_{2} + √(B_{1}B_{2}))",
+        "frustum, base areas B_{1}, B_{2}"
+      ],
+      [
+        "V = (1/3) πr^{2} h",
+        "cone"
+      ],
+      [
+        "centroid at h/4 above the base",
+        "solid pyramid"
+      ]
+    ],
+    "example": {
+      "problem": "The Great Pyramid had a square base 230 m on a side and a height of 146 m. Estimate its volume.",
+      "steps": [
+        "B = 230^{2} = 52 900 m^{2}",
+        "V = 52 900 × 146/3"
+      ],
+      "answer": "V ≈ 2.574 × 10^{6} m^{3}"
+    },
+    "try": "230^2 * 146/3"
+  },
+  "V = B h": {
+    "title": "Volume of a prism",
+    "about": "Base area times height, for any shape of constant cross-section extruded straight: beams, rods, extrusions, channels.",
+    "assumptions": [
+      "The cross-section is constant along the length",
+      "h is perpendicular to the base"
+    ],
+    "vars": [
+      [
+        "V",
+        "volume",
+        "m^{3}"
+      ],
+      [
+        "B",
+        "cross-sectional area",
+        "m^{2}"
+      ],
+      [
+        "h",
+        "length or height",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "V = πr^{2} h",
+        "cylinder"
+      ],
+      [
+        "V = (1/3) B h",
+        "pyramid with the same base"
+      ],
+      [
+        "m = ρ B L",
+        "mass of a bar"
+      ]
+    ],
+    "example": {
+      "problem": "A triangular-prism block has a triangular end of base 0.4 m and height 0.3 m, and is 2 m long. Find its volume.",
+      "steps": [
+        "B = 0.5 × 0.4 × 0.3 = 0.06 m^{2}",
+        "V = 0.06 × 2"
+      ],
+      "answer": "V = 0.12 m^{3}"
+    },
+    "try": "0.5*0.4*0.3*2"
+  },
+  "S = 4πr^{2}": {
+    "title": "Surface area of a sphere",
+    "about": "The area of a sphere's surface: exactly four times the area of its great circle. Needed for heat loss, coating and drag estimates, and for radiation spreading over a sphere (intensity ∝ 1/(4πr^{2})).",
+    "assumptions": [
+      "Uses the radius; with diameter S = πd^{2}",
+      "Surface scales as r^{2} while volume scales as r^{3}, so S/V = 3/r"
+    ],
+    "vars": [
+      [
+        "S",
+        "surface area",
+        "m^{2}"
+      ],
+      [
+        "r",
+        "radius",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "V = (4/3) πr^{3}",
+        "volume"
+      ],
+      [
+        "S = 2πrh",
+        "spherical cap or zone of height h"
+      ],
+      [
+        "I = P/(4πr^{2})",
+        "intensity at distance r from a point source"
+      ]
+    ],
+    "example": {
+      "problem": "Find the surface area of a sphere of radius 0.1 m.",
+      "steps": [
+        "S = 4π(0.1)^{2} = 4π(0.01)"
+      ],
+      "answer": "S ≈ 0.1257 m^{2}"
+    },
+    "try": "4 pi 0.1^2"
+  },
+  "S = 2πr^{2} + 2πrh": {
+    "title": "Surface area of a closed cylinder",
+    "about": "Two circular ends plus the curved side, which unrolls into a rectangle 2πr by h. Used for sheet-metal, paint and heat-transfer area of tanks and cans.",
+    "assumptions": [
+      "Closed at both ends; drop one 2πr^{2} term for an open top, both for a tube",
+      "For the volume-optimal can (least area for a given V), h = 2r"
+    ],
+    "vars": [
+      [
+        "S",
+        "surface area",
+        "m^{2}"
+      ],
+      [
+        "r",
+        "radius",
+        "m"
+      ],
+      [
+        "h",
+        "height",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "S_{side} = 2πrh",
+        "curved surface only"
+      ],
+      [
+        "V = πr^{2} h",
+        "volume"
+      ],
+      [
+        "h = 2r",
+        "minimum area for a fixed volume"
+      ]
+    ],
+    "example": {
+      "problem": "A drink can has radius 3.3 cm and height 12.2 cm. Find the area of aluminium in it.",
+      "steps": [
+        "Ends: 2π(0.033)^{2} = 0.006842 m^{2}",
+        "Side: 2π(0.033)(0.122) = 0.025296 m^{2}",
+        "Total = 0.032138 m^{2}"
+      ],
+      "answer": "S ≈ 0.03214 m^{2} (321 cm^{2})"
+    },
+    "try": "2 pi 0.033^2 + 2 pi 0.033*0.122"
+  },
+  "S = πr^{2} + πr√(r^{2} + h^{2})": {
+    "title": "Surface area of a right circular cone",
+    "about": "The base disc plus the lateral surface πrℓ, where ℓ = √(r^{2} + h^{2}) is the slant height. The lateral part unrolls into a circular sector of radius ℓ.",
+    "assumptions": [
+      "Right cone: apex directly above the centre of the base",
+      "Drop the πr^{2} term for an open cone (funnel, hopper)"
+    ],
+    "vars": [
+      [
+        "S",
+        "surface area",
+        "m^{2}"
+      ],
+      [
+        "r",
+        "base radius",
+        "m"
+      ],
+      [
+        "h",
+        "perpendicular height",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "ℓ = √(r^{2} + h^{2})",
+        "slant height"
+      ],
+      [
+        "S_{lateral} = πrℓ",
+        "curved surface only"
+      ],
+      [
+        "V = (1/3) πr^{2} h",
+        "volume"
+      ]
+    ],
+    "example": {
+      "problem": "Find the total surface area of a cone with base radius 3 cm and height 4 cm.",
+      "steps": [
+        "ℓ = √(9 + 16) = 5 cm",
+        "S = π(9) + π(3)(5) = 24π"
+      ],
+      "answer": "S ≈ 75.40 cm^{2}"
+    },
+    "try": "pi 3^2 + pi 3 sqrt(3^2 + 4^2)"
+  },
+  "a^{2} + b^{2} = c^{2}": {
+    "title": "Pythagorean theorem",
+    "about": "In a right triangle the square on the hypotenuse equals the sum of the squares on the other two sides. It is behind distances, vector magnitudes, resultant forces and RMS sums of perpendicular components.",
+    "assumptions": [
+      "Only for right triangles (the 90° angle is opposite c); otherwise use the law of cosines",
+      "c is always the longest side"
+    ],
+    "vars": [
+      [
+        "a, b",
+        "the legs (sides forming the right angle)",
+        "m"
+      ],
+      [
+        "c",
+        "hypotenuse",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "c^{2} = a^{2} + b^{2} − 2ab cos(C)",
+        "law of cosines, any triangle"
+      ],
+      [
+        "|v| = √(v_{x}^{2} + v_{y}^{2} + v_{z}^{2})",
+        "vector magnitude"
+      ],
+      [
+        "d = √((x_{2} − x_{1})^{2} + (y_{2} − y_{1})^{2})",
+        "distance formula"
+      ]
+    ],
+    "example": {
+      "problem": "A 5 m ladder stands with its foot 1.4 m from a wall. How high up the wall does it reach?",
+      "steps": [
+        "b = √(c^{2} − a^{2}) = √(25 − 1.96) = √23.04"
+      ],
+      "answer": "b = 4.8 m"
+    },
+    "try": "sqrt(5^2 - 1.4^2)"
+  },
+  "c^{2} = a^{2} + b^{2} − 2ab cos(C)": {
+    "title": "Law of cosines",
+    "about": "Relates the three sides of any triangle to one angle. Use it to find the third side from two sides and the included angle (SAS), or any angle from three sides (SSS). It is how force resultants and truss geometry are found.",
+    "assumptions": [
+      "Any triangle; C is the angle opposite side c, between a and b",
+      "Reduces to Pythagoras when C = 90°",
+      "For an angle: cos C = (a^{2} + b^{2} − c^{2})/(2ab), always unambiguous (unlike the law of sines)"
+    ],
+    "vars": [
+      [
+        "a, b, c",
+        "sides",
+        "m"
+      ],
+      [
+        "C",
+        "angle opposite c",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "cos(C) = (a^{2} + b^{2} − c^{2})/(2ab)",
+        "angle from three sides"
+      ],
+      [
+        "a/sin(A) = b/sin(B) = c/sin(C)",
+        "law of sines"
+      ],
+      [
+        "|F_{1} + F_{2}|^{2} = F_{1}^{2} + F_{2}^{2} + 2F_{1}F_{2} cos θ",
+        "resultant of two forces θ apart"
+      ]
+    ],
+    "example": {
+      "problem": "Two sides of a triangle are 5 m and 7 m with 40° between them. Find the third side.",
+      "steps": [
+        "c^{2} = 25 + 49 − 2(5)(7) cos 40°",
+        "= 74 − 70(0.7660) = 20.377",
+        "c = √20.377"
+      ],
+      "answer": "c ≈ 4.514 m"
+    },
+    "try": "sqrt(5^2 + 7^2 - 2*5*7 cos(40 deg))"
+  },
+  "a/sin(A) = b/sin(B) = c/sin(C)": {
+    "title": "Law of sines",
+    "about": "In any triangle each side is proportional to the sine of its opposite angle. Use it when you know two angles and a side (AAS, ASA), or two sides and a non-included angle (SSA). It is the basis of a force triangle with known directions.",
+    "assumptions": [
+      "Any triangle; each angle is opposite its side",
+      "SSA case is ambiguous: sin B = x has two angles B and 180° − B, so there may be two triangles (or none)",
+      "The common ratio equals 2R, the diameter of the circumscribed circle"
+    ],
+    "vars": [
+      [
+        "a, b, c",
+        "sides",
+        "m"
+      ],
+      [
+        "A, B, C",
+        "opposite angles",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "A + B + C = 180°",
+        "angle sum"
+      ],
+      [
+        "a/sin(A) = 2R",
+        "circumradius"
+      ],
+      [
+        "c^{2} = a^{2} + b^{2} − 2ab cos(C)",
+        "law of cosines"
+      ]
+    ],
+    "example": {
+      "problem": "In a triangle A = 40°, B = 60° and a = 10 m. Find b.",
+      "steps": [
+        "b = a sin B/sin A = 10 × 0.8660/0.6428"
+      ],
+      "answer": "b ≈ 13.47 m"
+    },
+    "try": "10 sin(60 deg)/sin(40 deg)"
+  },
+  "d = √((x_{2} − x_{1})^{2} + (y_{2} − y_{1})^{2})": {
+    "title": "Distance between two points",
+    "about": "Pythagoras applied to the coordinate differences. In 3-D add (z_{2} − z_{1})^{2}. Used for member lengths in trusses, cable lengths and position errors.",
+    "assumptions": [
+      "Straight-line (Euclidean) distance in a flat, Cartesian coordinate system",
+      "Both points in the same units; on the Earth's surface over long distances use great-circle formulas"
+    ],
+    "vars": [
+      [
+        "d",
+        "distance",
+        "m"
+      ],
+      [
+        "x_{1}, y_{1}",
+        "first point",
+        "m"
+      ],
+      [
+        "x_{2}, y_{2}",
+        "second point",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "d = √(Δx^{2} + Δy^{2} + Δz^{2})",
+        "3-D"
+      ],
+      [
+        "((x_{1} + x_{2})/2, (y_{1} + y_{2})/2)",
+        "midpoint"
+      ],
+      [
+        "m = Δy/Δx",
+        "slope"
+      ],
+      [
+        "u = (Δx, Δy)/d",
+        "unit vector from point 1 to point 2"
+      ]
+    ],
+    "example": {
+      "problem": "A truss member runs from joint (1, 2) m to joint (4, 6) m. How long is it?",
+      "steps": [
+        "Δx = 3, Δy = 4",
+        "d = √(9 + 16) = √25"
+      ],
+      "answer": "d = 5 m"
+    },
+    "try": "sqrt((4-1)^2 + (6-2)^2)"
+  },
+  "((x_{1} + x_{2})/2, (y_{1} + y_{2})/2)": {
+    "title": "Midpoint of a segment",
+    "about": "The point half-way between two points: the average of their coordinates. It is also the centroid of a uniform rod, where its weight acts.",
+    "assumptions": [
+      "Cartesian coordinates; works the same in 3-D with z",
+      "A weighted average gives the point dividing a segment in another ratio: ((1 − t)x_{1} + t x_{2}, …)"
+    ],
+    "vars": [
+      [
+        "x_{1}, y_{1}",
+        "first point",
+        "m"
+      ],
+      [
+        "x_{2}, y_{2}",
+        "second point",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "(1 − t)P_{1} + t P_{2}",
+        "point a fraction t of the way along"
+      ],
+      [
+        "d = √((x_{2} − x_{1})^{2} + (y_{2} − y_{1})^{2})",
+        "distance"
+      ],
+      [
+        "m_{⊥} = −1/m",
+        "slope of the perpendicular bisector"
+      ]
+    ],
+    "example": {
+      "problem": "A uniform rod lies from (1, 2) m to (4, 6) m. Where does its weight act?",
+      "steps": [
+        "x = (1 + 4)/2 = 2.5",
+        "y = (2 + 6)/2 = 4"
+      ],
+      "answer": "(2.5, 4) m"
+    }
+  },
+  "m = (y_{2} − y_{1})/(x_{2} − x_{1})": {
+    "title": "Slope of a line",
+    "about": "Rise over run between two points. It is the rate of change of a straight-line relationship: a road grade, a calibration line's gain, the stiffness from a force-displacement plot.",
+    "assumptions": [
+      "x_{1} ≠ x_{2}; a vertical line has undefined slope",
+      "For a curve this is the average rate between the two points, not the derivative at either one",
+      "The angle of the line is atan(m)"
+    ],
+    "vars": [
+      [
+        "m",
+        "slope (units of y per unit of x)",
+        ""
+      ],
+      [
+        "x_{1}, y_{1}",
+        "first point",
+        ""
+      ],
+      [
+        "x_{2}, y_{2}",
+        "second point",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "y − y_{1} = m(x − x_{1})",
+        "point-slope form of the line"
+      ],
+      [
+        "θ = atan(m)",
+        "angle of the line"
+      ],
+      [
+        "m_{1} m_{2} = −1",
+        "perpendicular lines"
+      ],
+      [
+        "grade = 100 m %",
+        "road grade"
+      ]
+    ],
+    "example": {
+      "problem": "A road rises from elevation 120 m to 132 m over a horizontal distance of 400 m. Find its slope.",
+      "steps": [
+        "m = (132 − 120)/(400 − 0) = 12/400"
+      ],
+      "answer": "m = 0.03 (a 3% grade)"
+    },
+    "try": "(132 - 120)/400"
+  },
+  "x̄ = (1/n) Σ x_{i}": {
+    "title": "Sample mean",
+    "about": "The arithmetic average of n measurements: the usual best estimate of the true value or of the population mean μ. Averaging n independent readings reduces random scatter by √n.",
+    "assumptions": [
+      "Measurements should be independent and from the same process",
+      "Sensitive to outliers; the median is more robust for skewed data",
+      "Averaging does not remove a systematic (bias) error"
+    ],
+    "vars": [
+      [
+        "x̄",
+        "sample mean",
+        ""
+      ],
+      [
+        "n",
+        "number of observations",
+        ""
+      ],
+      [
+        "x_{i}",
+        "individual observations",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "s^{2} = Σ (x_{i} − x̄)^{2}/(n − 1)",
+        "sample variance"
+      ],
+      [
+        "σ_{x̄} = σ/√n",
+        "standard error of the mean"
+      ],
+      [
+        "x̄ ± z σ/√n",
+        "confidence interval for μ"
+      ]
+    ],
+    "example": {
+      "problem": "Five length measurements are 9.8, 10.1, 10.0, 9.9 and 10.2 mm. Find the mean.",
+      "steps": [
+        "Σ x_{i} = 9.8 + 10.1 + 10.0 + 9.9 + 10.2 = 50.0",
+        "x̄ = 50.0/5"
+      ],
+      "answer": "x̄ = 10.0 mm"
+    },
+    "try": "mean(9.8, 10.1, 10.0, 9.9, 10.2)"
+  },
+  "s^{2} = Σ (x_{i} − x̄)^{2} / (n − 1)": {
+    "title": "Sample variance",
+    "about": "The average squared deviation from the mean, the basic measure of scatter. Dividing by n − 1 (Bessel's correction) makes it an unbiased estimate of the population variance σ^{2}, because x̄ was fitted from the same data.",
+    "assumptions": [
+      "Data are a sample from a larger population; divide by n instead when you have the whole population",
+      "Units are the square of the data's units; take the square root for the standard deviation",
+      "Sensitive to outliers (deviations are squared)"
+    ],
+    "vars": [
+      [
+        "s^{2}",
+        "sample variance",
+        ""
+      ],
+      [
+        "x_{i}",
+        "observations",
+        ""
+      ],
+      [
+        "x̄",
+        "sample mean",
+        ""
+      ],
+      [
+        "n",
+        "number of observations",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "s^{2} = (Σ x_{i}^{2} − n x̄^{2})/(n − 1)",
+        "shortcut form (less accurate numerically)"
+      ],
+      [
+        "s = √(s^{2})",
+        "standard deviation"
+      ],
+      [
+        "σ^{2} = Σ (x_{i} − μ)^{2}/N",
+        "population variance"
+      ]
+    ],
+    "example": {
+      "problem": "Find the sample variance of 9.8, 10.1, 10.0, 9.9, 10.2 mm.",
+      "steps": [
+        "x̄ = 10.0",
+        "Deviations −0.2, 0.1, 0, −0.1, 0.2; squares 0.04, 0.01, 0, 0.01, 0.04",
+        "Sum = 0.10",
+        "s^{2} = 0.10/4"
+      ],
+      "answer": "s^{2} = 0.025 mm^{2}"
+    },
+    "try": "var(9.8, 10.1, 10.0, 9.9, 10.2)"
+  },
+  "s = √(s^{2})": {
+    "title": "Sample standard deviation",
+    "about": "The square root of the variance, in the same units as the data. For roughly normal data about 68% of values fall within x̄ ± s and 95% within x̄ ± 2s.",
+    "assumptions": [
+      "Same assumptions as the sample variance (n − 1 divisor)",
+      "s is a slightly biased estimate of σ even though s^{2} is unbiased; it doesn't matter for moderate n",
+      "The 68-95-99.7 rule only holds if the data are close to normal"
+    ],
+    "vars": [
+      [
+        "s",
+        "sample standard deviation",
+        ""
+      ],
+      [
+        "s^{2}",
+        "sample variance",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "s^{2} = Σ (x_{i} − x̄)^{2}/(n − 1)",
+        "variance"
+      ],
+      [
+        "CV = s/x̄",
+        "coefficient of variation"
+      ],
+      [
+        "s/√n",
+        "standard error of the mean"
+      ]
+    ],
+    "example": {
+      "problem": "Find the standard deviation of 9.8, 10.1, 10.0, 9.9, 10.2 mm.",
+      "steps": [
+        "s^{2} = 0.025 mm^{2}",
+        "s = √0.025"
+      ],
+      "answer": "s ≈ 0.1581 mm"
+    },
+    "try": "stdev(9.8, 10.1, 10.0, 9.9, 10.2)"
+  },
+  "z = (x − μ)/σ": {
+    "title": "z-score (standardized value)",
+    "about": "How many standard deviations a value lies from the mean. It turns any normal variable into the standard normal so one table (or Φ) gives probabilities, and it flags unusual values (|z| > 3 is rare).",
+    "assumptions": [
+      "μ and σ are the population values; with sample estimates and small n use the t distribution",
+      "Probabilities from z assume the data are normal"
+    ],
+    "vars": [
+      [
+        "z",
+        "standard score",
+        ""
+      ],
+      [
+        "x",
+        "value",
+        ""
+      ],
+      [
+        "μ",
+        "mean",
+        ""
+      ],
+      [
+        "σ",
+        "standard deviation",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "x = μ + zσ",
+        "back to the original units"
+      ],
+      [
+        "P(X ≤ x) = Φ(z)",
+        "normal probability"
+      ],
+      [
+        "z = (x̄ − μ)/(σ/√n)",
+        "for a sample mean"
+      ]
+    ],
+    "example": {
+      "problem": "Resistors average 1.00 kΩ with σ = 0.02 kΩ. How unusual is one measuring 1.05 kΩ?",
+      "steps": [
+        "z = (1.05 − 1.00)/0.02",
+        "z = 2.5: only about 0.6% of resistors are that high or higher"
+      ],
+      "answer": "z = 2.5"
+    },
+    "try": "(1.05 - 1.00)/0.02"
+  },
+  "E[X] = Σ x p(x)": {
+    "title": "Expected value of a discrete random variable",
+    "about": "The probability-weighted average of the values X can take: the long-run mean over many trials. Used for expected cost, expected number of defects and mean load.",
+    "assumptions": [
+      "Discrete X: the p(x) sum to 1; for continuous X use E[X] = ∫ x f(x) dx",
+      "The expected value need not be a possible value (a die averages 3.5)"
+    ],
+    "vars": [
+      [
+        "E[X]",
+        "expected value (mean μ)",
+        ""
+      ],
+      [
+        "x",
+        "possible values",
+        ""
+      ],
+      [
+        "p(x)",
+        "probability of each value",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "E[g(X)] = Σ g(x) p(x)",
+        "expected value of a function"
+      ],
+      [
+        "E[X] = ∫ x f(x) dx",
+        "continuous case"
+      ],
+      [
+        "Var(X) = E[X^{2}] − E[X]^{2}",
+        "variance"
+      ],
+      [
+        "E[X + Y] = E[X] + E[Y]",
+        "always, even if dependent"
+      ]
+    ],
+    "example": {
+      "problem": "A machined part has 0 defects with probability 0.7, 1 with 0.2 and 2 with 0.1. Find the expected number of defects.",
+      "steps": [
+        "E[X] = 0(0.7) + 1(0.2) + 2(0.1)"
+      ],
+      "answer": "E[X] = 0.4"
+    },
+    "try": "0*0.7 + 1*0.2 + 2*0.1"
+  },
+  "Var(X) = E[X^{2}] − E[X]^{2}": {
+    "title": "Variance from moments",
+    "about": "The variance equals the mean of the square minus the square of the mean. It is usually the quickest way to compute variance from a probability table or density.",
+    "assumptions": [
+      "Holds for any random variable with finite variance",
+      "Prone to cancellation in floating point when the mean is large compared with the spread; use Σ(x − μ)^{2}p(x) then"
+    ],
+    "vars": [
+      [
+        "Var(X)",
+        "variance σ^{2}",
+        ""
+      ],
+      [
+        "E[X^{2}]",
+        "mean of the square",
+        ""
+      ],
+      [
+        "E[X]",
+        "mean",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Var(X) = E[(X − μ)^{2}]",
+        "definition"
+      ],
+      [
+        "σ = √Var(X)",
+        "standard deviation"
+      ],
+      [
+        "Var(X + Y) = Var(X) + Var(Y)",
+        "independent X and Y"
+      ]
+    ],
+    "example": {
+      "problem": "For the defect count with p(0) = 0.7, p(1) = 0.2, p(2) = 0.1, find the variance.",
+      "steps": [
+        "E[X] = 0.4",
+        "E[X^{2}] = 0(0.7) + 1(0.2) + 4(0.1) = 0.6",
+        "Var(X) = 0.6 − 0.4^{2} = 0.6 − 0.16"
+      ],
+      "answer": "Var(X) = 0.44"
+    },
+    "try": "0.6 - 0.4^2"
+  },
+  "E[aX + b] = a E[X] + b": {
+    "title": "Linearity of expectation",
+    "about": "Scaling and shifting a random variable scales and shifts its mean the same way. Use it for unit conversions, calibrations and linear cost models.",
+    "assumptions": [
+      "a and b are constants",
+      "Holds for any distribution; no independence is needed",
+      "Only for linear functions: E[g(X)] ≠ g(E[X]) in general (E[X^{2}] ≠ E[X]^{2})"
+    ],
+    "vars": [
+      [
+        "X",
+        "random variable",
+        ""
+      ],
+      [
+        "a",
+        "scale factor",
+        ""
+      ],
+      [
+        "b",
+        "offset",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Var(aX + b) = a^{2} Var(X)",
+        "the variance ignores b"
+      ],
+      [
+        "E[X + Y] = E[X] + E[Y]",
+        "sums"
+      ]
+    ],
+    "example": {
+      "problem": "A room's temperature has mean 20 °C. What is its mean in °F?",
+      "steps": [
+        "F = 1.8C + 32",
+        "E[F] = 1.8 × 20 + 32"
+      ],
+      "answer": "E[F] = 68 °F"
+    },
+    "try": "1.8*20 + 32"
+  },
+  "Var(aX + b) = a^{2} Var(X)": {
+    "title": "Variance of a linear transformation",
+    "about": "Shifting a variable doesn't change its spread; scaling by a multiplies the variance by a^{2} (and the standard deviation by |a|).",
+    "assumptions": [
+      "a and b are constants",
+      "Holds for any distribution"
+    ],
+    "vars": [
+      [
+        "X",
+        "random variable",
+        ""
+      ],
+      [
+        "a",
+        "scale factor",
+        ""
+      ],
+      [
+        "b",
+        "offset (no effect on spread)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "σ_{aX+b} = |a| σ_{X}",
+        "standard deviation"
+      ],
+      [
+        "E[aX + b] = a E[X] + b",
+        "mean"
+      ],
+      [
+        "Var(aX + bY) = a^{2}Var(X) + b^{2}Var(Y)",
+        "independent X and Y"
+      ]
+    ],
+    "example": {
+      "problem": "A temperature has standard deviation 2 °C (variance 4 °C^{2}). Find its variance in °F.",
+      "steps": [
+        "F = 1.8C + 32: the 32 doesn't matter",
+        "Var(F) = 1.8^{2} × 4 = 12.96 °F^{2}",
+        "σ_{F} = 3.6 °F"
+      ],
+      "answer": "Var(F) = 12.96 °F^{2}"
+    },
+    "try": "1.8^2 * 4"
+  },
+  "P(A ∪ B) = P(A) + P(B) − P(A ∩ B)": {
+    "title": "Addition rule for probabilities",
+    "about": "The probability that A or B (or both) happens. The overlap is subtracted because adding P(A) and P(B) counts it twice.",
+    "assumptions": [
+      "Holds for any two events",
+      "For mutually exclusive events P(A ∩ B) = 0 and it reduces to P(A) + P(B)",
+      "For independent events P(A ∩ B) = P(A)P(B)"
+    ],
+    "vars": [
+      [
+        "P(A), P(B)",
+        "probabilities of each event",
+        ""
+      ],
+      [
+        "P(A ∩ B)",
+        "probability of both",
+        ""
+      ],
+      [
+        "P(A ∪ B)",
+        "probability of at least one",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "P(A ∪ B ∪ C) = ΣP − ΣP(pairs) + P(A ∩ B ∩ C)",
+        "three events (inclusion-exclusion)"
+      ],
+      [
+        "P(A^{c}) = 1 − P(A)",
+        "complement"
+      ],
+      [
+        "P(A ∩ B) = P(A | B) P(B)",
+        "multiplication rule"
+      ]
+    ],
+    "example": {
+      "problem": "A part has a scratch with probability 0.3, a dent with 0.2, and both with 0.05. What is the chance it has at least one flaw?",
+      "steps": [
+        "P = 0.3 + 0.2 − 0.05"
+      ],
+      "answer": "P(A ∪ B) = 0.45"
+    },
+    "try": "0.3 + 0.2 - 0.05"
+  },
+  "P(A | B) = P(A ∩ B)/P(B)": {
+    "title": "Conditional probability",
+    "about": "The probability of A given that B is known to have happened: restrict attention to the outcomes where B is true. It is the basis of reliability given a symptom and of Bayes' rule.",
+    "assumptions": [
+      "P(B) > 0",
+      "A and B are independent exactly when P(A | B) = P(A)",
+      "P(A | B) and P(B | A) are generally different; mixing them up is a classic error"
+    ],
+    "vars": [
+      [
+        "P(A | B)",
+        "probability of A given B",
+        ""
+      ],
+      [
+        "P(A ∩ B)",
+        "probability of both",
+        ""
+      ],
+      [
+        "P(B)",
+        "probability of B",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "P(A ∩ B) = P(A | B) P(B)",
+        "multiplication rule"
+      ],
+      [
+        "P(A | B) = P(B | A) P(A)/P(B)",
+        "Bayes"
+      ],
+      [
+        "P(B) = Σ P(B | A_{i}) P(A_{i})",
+        "total probability"
+      ]
+    ],
+    "example": {
+      "problem": "A part has a dent with probability 0.2 and both a dent and a scratch with probability 0.05. Given it has a dent, what is the chance it is also scratched?",
+      "steps": [
+        "P(scratch | dent) = 0.05/0.2"
+      ],
+      "answer": "P(A | B) = 0.25"
+    },
+    "try": "0.05/0.2"
+  },
+  "P(A | B) = P(B | A) P(A)/P(B)": {
+    "title": "Bayes' theorem",
+    "about": "Reverses a conditional probability: from how likely the evidence is under a hypothesis to how likely the hypothesis is given the evidence. It explains why a positive result on a good test for a rare condition is often a false alarm.",
+    "assumptions": [
+      "P(B) > 0, usually found by total probability: P(B) = P(B | A)P(A) + P(B | A^{c})P(A^{c})",
+      "The prior P(A) matters a lot when it is small (base-rate effect)"
+    ],
+    "vars": [
+      [
+        "P(A | B)",
+        "posterior: probability of A after seeing B",
+        ""
+      ],
+      [
+        "P(B | A)",
+        "likelihood of B if A is true",
+        ""
+      ],
+      [
+        "P(A)",
+        "prior probability of A",
+        ""
+      ],
+      [
+        "P(B)",
+        "total probability of B",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "P(B) = P(B | A)P(A) + P(B | A^{c})(1 − P(A))",
+        "total probability"
+      ],
+      [
+        "P(A | B) = P(A ∩ B)/P(B)",
+        "conditional probability"
+      ]
+    ],
+    "example": {
+      "problem": "A fault affects 1% of units. A test catches 99% of faulty units but also flags 5% of good ones. If a unit is flagged, how likely is it faulty?",
+      "steps": [
+        "P(B) = 0.99(0.01) + 0.05(0.99) = 0.0099 + 0.0495 = 0.0594",
+        "P(A | B) = 0.0099/0.0594",
+        "Only 1 in 6 flagged units is actually faulty"
+      ],
+      "answer": "P(faulty | flagged) ≈ 0.1667"
+    },
+    "try": "0.99*0.01/(0.99*0.01 + 0.05*0.99)"
+  },
+  "nPr = n!/(n − r)!": {
+    "title": "Permutations: ordered selections",
+    "about": "The number of ways to pick r items from n distinct items when the order matters (first, second, third…): a podium, a sequence of operations, a code with no repeated digits.",
+    "assumptions": [
+      "Items are distinct and each is used at most once (no repetition)",
+      "With repetition allowed the count is n^{r}",
+      "0! = 1, so nPn = n!"
+    ],
+    "vars": [
+      [
+        "n",
+        "number of items to choose from",
+        ""
+      ],
+      [
+        "r",
+        "number chosen",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "nCr = n!/(r!(n − r)!)",
+        "order doesn't matter"
+      ],
+      [
+        "n^{r}",
+        "ordered, with repetition"
+      ],
+      [
+        "n!/(n_{1}! n_{2}! …)",
+        "arrangements with repeated items"
+      ]
+    ],
+    "example": {
+      "problem": "Ten runners compete. How many ways can gold, silver and bronze be awarded?",
+      "steps": [
+        "10P3 = 10!/7! = 10 × 9 × 8"
+      ],
+      "answer": "720"
+    },
+    "try": "nPr(10, 3)"
+  },
+  "nCr = n!/(r!(n − r)!)": {
+    "title": "Combinations: unordered selections",
+    "about": "The number of ways to choose r items from n distinct items when order doesn't matter: a committee, a sample of parts, a hand of cards. It is also the binomial coefficient in (a + b)^{n}.",
+    "assumptions": [
+      "Items are distinct and each is used at most once",
+      "nCr = nC(n − r)",
+      "nCr = nPr/r!, since each unordered group can be ordered r! ways"
+    ],
+    "vars": [
+      [
+        "n",
+        "number of items to choose from",
+        ""
+      ],
+      [
+        "r",
+        "number chosen",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "nPr = n!/(n − r)!",
+        "order matters"
+      ],
+      [
+        "(n + r − 1)Cr",
+        "unordered, with repetition"
+      ],
+      [
+        "nCk p^{k}(1 − p)^{n−k}",
+        "binomial probability"
+      ]
+    ],
+    "example": {
+      "problem": "How many different 5-card hands can be dealt from a 52-card deck?",
+      "steps": [
+        "52C5 = 52!/(5! 47!) = (52 × 51 × 50 × 49 × 48)/120"
+      ],
+      "answer": "2 598 960"
+    },
+    "try": "nCr(52, 5)"
+  },
+  "Binomial ‖ nCk p^{k} (1 − p)^{n−k} ‖ np, np(1 − p)": {
+    "title": "Binomial distribution",
+    "about": "The probability of exactly k successes in n independent trials, each succeeding with probability p. Used for defective parts in a batch, pass/fail tests and acceptance sampling.",
+    "assumptions": [
+      "A fixed number n of trials",
+      "Each trial is independent with the same probability p",
+      "Only two outcomes per trial",
+      "Sampling without replacement from a small lot breaks independence (use hypergeometric)",
+      "For large n and small p it approaches Poisson with λ = np"
+    ],
+    "vars": [
+      [
+        "n",
+        "number of trials",
+        ""
+      ],
+      [
+        "k",
+        "number of successes, 0 … n",
+        ""
+      ],
+      [
+        "p",
+        "success probability per trial",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "μ = np, σ^{2} = np(1 − p)",
+        "mean and variance"
+      ],
+      [
+        "P(X ≥ 1) = 1 − (1 − p)^{n}",
+        "at least one"
+      ],
+      [
+        "Poisson with λ = np",
+        "approximation for large n, small p"
+      ]
+    ],
+    "example": {
+      "problem": "5% of parts are defective. In a sample of 10, what is the chance of exactly one defective?",
+      "steps": [
+        "P(1) = 10C1 (0.05)^{1}(0.95)^{9}",
+        "= 10 × 0.05 × 0.6302",
+        "Mean 0.5, variance 0.475"
+      ],
+      "answer": "P(X = 1) ≈ 0.3151"
+    },
+    "try": "10 * 0.05 * 0.95^9"
+  },
+  "Poisson ‖ λ^{k} e^{−λ}/k! ‖ λ, λ": {
+    "title": "Poisson distribution",
+    "about": "The probability of k events in a fixed interval when events happen independently at a constant average rate. Used for arrivals, failures, defects per area and radioactive counts.",
+    "assumptions": [
+      "Events are independent and occur one at a time",
+      "The average rate is constant over the interval",
+      "λ is the mean count for the whole interval (rate × time)",
+      "Mean equals variance; if the data's variance is much larger, the model is wrong (over-dispersion)"
+    ],
+    "vars": [
+      [
+        "k",
+        "number of events, 0, 1, 2, …",
+        ""
+      ],
+      [
+        "λ",
+        "mean number of events in the interval",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "λ = r t",
+        "rate times interval length"
+      ],
+      [
+        "P(0) = e^{−λ}",
+        "no events"
+      ],
+      [
+        "Exponential with rate r",
+        "time between events"
+      ],
+      [
+        "Binomial n, p → Poisson λ = np",
+        "rare events"
+      ]
+    ],
+    "example": {
+      "problem": "A help desk gets an average of 3 calls per minute. What is the probability of exactly 5 calls in a minute?",
+      "steps": [
+        "P(5) = 3^{5} e^{−3}/5!",
+        "= 243 × 0.04979/120"
+      ],
+      "answer": "P(X = 5) ≈ 0.1008"
+    },
+    "try": "3^5 e^-3 / 5!"
+  },
+  "Geometric ‖ (1 − p)^{k−1} p ‖ 1/p, (1 − p)/p^{2}": {
+    "title": "Geometric distribution",
+    "about": "The probability that the first success happens on trial k, after k − 1 failures. Used for the number of attempts until a connection succeeds, a part fails, or a test passes.",
+    "assumptions": [
+      "Independent trials with the same success probability p",
+      "Here k counts the trial of the first success (k = 1, 2, …); some texts count failures instead, which shifts the mean to (1 − p)/p",
+      "Memoryless: past failures don't change the chance of success on the next trial"
+    ],
+    "vars": [
+      [
+        "k",
+        "trial on which the first success occurs",
+        ""
+      ],
+      [
+        "p",
+        "success probability per trial",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "μ = 1/p",
+        "mean number of trials"
+      ],
+      [
+        "P(X > k) = (1 − p)^{k}",
+        "first k trials all fail"
+      ],
+      [
+        "Exponential",
+        "continuous-time counterpart"
+      ]
+    ],
+    "example": {
+      "problem": "Each attempt to start an engine succeeds with probability 0.2. What is the chance the first success is on the third attempt?",
+      "steps": [
+        "P(3) = 0.8^{2} × 0.2",
+        "Mean number of attempts = 1/0.2 = 5"
+      ],
+      "answer": "P(X = 3) = 0.128"
+    },
+    "try": "0.8^2 * 0.2"
+  },
+  "Uniform ‖ 1/(b − a) ‖ (a + b)/2, (b − a)^{2}/12": {
+    "title": "Continuous uniform distribution",
+    "about": "Every value between a and b is equally likely. It models rounding and quantization error, a random phase, or a quantity known only to lie within limits. The probability of an interval is its length over b − a.",
+    "assumptions": [
+      "X is continuous and confined to [a, b], with constant density there",
+      "Quantization error of step Δ is uniform on ±Δ/2, so its standard deviation is Δ/√12"
+    ],
+    "vars": [
+      [
+        "a, b",
+        "lower and upper limits",
+        ""
+      ],
+      [
+        "x",
+        "value, a ≤ x ≤ b",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "P(c ≤ X ≤ d) = (d − c)/(b − a)",
+        "probability of a sub-interval"
+      ],
+      [
+        "σ = (b − a)/√12",
+        "standard deviation"
+      ],
+      [
+        "F(x) = (x − a)/(b − a)",
+        "cumulative distribution"
+      ]
+    ],
+    "example": {
+      "problem": "A delay is uniform between 2 and 8 ms. Find the chance it is at most 3.5 ms, and its mean and variance.",
+      "steps": [
+        "Density f = 1/(8 − 2) = 1/6 per ms",
+        "P(X ≤ 3.5) = (3.5 − 2)/6 = 0.25",
+        "Mean (2 + 8)/2 = 5 ms; variance 36/12 = 3 ms^{2}"
+      ],
+      "answer": "P(X ≤ 3.5) = 0.25 (mean 5 ms, variance 3 ms^{2})"
+    },
+    "try": "(3.5 - 2)/(8 - 2)"
+  },
+  "Exponential ‖ λ e^{−λx} ‖ 1/λ, 1/λ^{2}": {
+    "title": "Exponential distribution",
+    "about": "The waiting time between events of a Poisson process, and the lifetime of a part with a constant failure rate. The chance of surviving past x is e^{−λx}.",
+    "assumptions": [
+      "Constant rate λ: no wear-out and no infant mortality (use Weibull otherwise)",
+      "Memoryless: a unit that has survived so far is as good as new",
+      "x ≥ 0; λ is the rate, 1/λ the mean (MTBF)"
+    ],
+    "vars": [
+      [
+        "x",
+        "waiting time or lifetime",
+        "s"
+      ],
+      [
+        "λ",
+        "rate (failures or events per unit time)",
+        "1/s"
+      ]
+    ],
+    "related": [
+      [
+        "R(x) = P(X > x) = e^{−λx}",
+        "reliability (survival)"
+      ],
+      [
+        "F(x) = 1 − e^{−λx}",
+        "cumulative distribution"
+      ],
+      [
+        "MTBF = 1/λ",
+        "mean time between failures"
+      ],
+      [
+        "t_{med} = ln 2/λ",
+        "median"
+      ]
+    ],
+    "example": {
+      "problem": "A pump has a mean time between failures of 1000 h. What is the chance it runs 500 h without failing?",
+      "steps": [
+        "λ = 1/1000 per hour",
+        "R(500) = e^{−500/1000} = e^{−0.5}"
+      ],
+      "answer": "R ≈ 0.6065"
+    },
+    "try": "e^(-500/1000)"
+  },
+  "Normal ‖ e^{−(x − μ)^{2}/(2σ^{2})} / (σ√(2π)) ‖ μ, σ^{2}": {
+    "title": "Normal (Gaussian) distribution",
+    "about": "The bell curve. Sums and averages of many small independent effects tend toward it (central limit theorem), so it models measurement error, manufacturing variation and noise. Probabilities come from areas under the curve, through z = (x − μ)/σ.",
+    "assumptions": [
+      "Symmetric, unbounded tails; a quantity that can't be negative or is strongly skewed may fit poorly",
+      "The density value is not a probability; integrate it over an interval (or use Φ)",
+      "Real data often have heavier tails than normal, so extreme events are underestimated"
+    ],
+    "vars": [
+      [
+        "x",
+        "value",
+        ""
+      ],
+      [
+        "μ",
+        "mean",
+        ""
+      ],
+      [
+        "σ",
+        "standard deviation",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "z = (x − μ)/σ",
+        "standardize"
+      ],
+      [
+        "P(X ≤ x) = Φ(z) = (1 + erf(z/√2))/2",
+        "cumulative probability"
+      ],
+      [
+        "68.27%, 95.45%, 99.73%",
+        "within 1σ, 2σ, 3σ"
+      ],
+      [
+        "peak 1/(σ√(2π))",
+        "height at x = μ"
+      ]
+    ],
+    "example": {
+      "problem": "A quantity is normal with μ = 100 and σ = 15. Find the density at x = 115.",
+      "steps": [
+        "z = (115 − 100)/15 = 1",
+        "f = e^{−0.5}/(15√(2π)) = 0.60653/37.599",
+        "For comparison, P(X ≤ 115) = Φ(1) = 0.8413"
+      ],
+      "answer": "f(115) ≈ 0.01613"
+    },
+    "try": "e^(-(115-100)^2/(2*15^2))/(15 sqrt(2pi))"
+  },
+  "x̄ ± z σ/√n": {
+    "title": "Confidence interval for a mean",
+    "about": "A range that captures the true mean μ with the chosen confidence (for example 95% of such intervals contain μ). The half-width z σ/√n is the margin of error; it shrinks with more samples as 1/√n.",
+    "assumptions": [
+      "σ is known, or n is large (about 30+) so s can stand in for σ; for small n with s use t instead of z",
+      "Observations are independent and either normal or numerous enough for the central limit theorem",
+      "It covers random error only, not bias in the measurement"
+    ],
+    "vars": [
+      [
+        "x̄",
+        "sample mean",
+        ""
+      ],
+      [
+        "z",
+        "critical value for the confidence level",
+        ""
+      ],
+      [
+        "σ",
+        "population standard deviation",
+        ""
+      ],
+      [
+        "n",
+        "sample size",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "z = 1.645, 1.960, 2.576",
+        "90%, 95%, 99%"
+      ],
+      [
+        "n = (zσ/E)^{2}",
+        "sample size for a margin E"
+      ],
+      [
+        "x̄ ± t_{n−1} s/√n",
+        "small sample, σ unknown"
+      ]
+    ],
+    "example": {
+      "problem": "25 measurements average 50.2 mm and σ = 1.5 mm is known. Find the 95% confidence interval for the mean.",
+      "steps": [
+        "Margin = 1.96 × 1.5/√25 = 1.96 × 0.3 = 0.588 mm",
+        "Interval: 50.2 ± 0.588"
+      ],
+      "answer": "margin 0.588 mm: 49.61 to 50.79 mm"
+    },
+    "try": "1.96 * 1.5/sqrt(25)"
+  },
+  "z = 1.645": {
+    "title": "Critical z for 90% confidence",
+    "about": "The standard normal value with 5% of the area beyond it in each tail, so 90% lies between −1.645 and +1.645. It is also the critical value for a one-sided test at 5% significance.",
+    "assumptions": [
+      "Assumes the statistic is (approximately) normal",
+      "Two-sided 90%, or one-sided 95%",
+      "With a small sample and an estimated σ, use the t value, which is larger"
+    ],
+    "vars": [
+      [
+        "z",
+        "standard normal critical value",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Φ(1.645) = 0.95",
+        "cumulative area"
+      ],
+      [
+        "x̄ ± 1.645 σ/√n",
+        "90% interval"
+      ],
+      [
+        "z = 1.960",
+        "95%"
+      ]
+    ],
+    "example": {
+      "problem": "16 readings average 30.0 with σ = 4. Find the 90% confidence interval.",
+      "steps": [
+        "Margin = 1.645 × 4/√16 = 1.645 × 1",
+        "Interval 30.0 ± 1.645"
+      ],
+      "answer": "margin 1.645: 28.36 to 31.65"
+    },
+    "try": "1.645 * 4/sqrt(16)"
+  },
+  "z = 1.960": {
+    "title": "Critical z for 95% confidence",
+    "about": "The standard normal value with 2.5% in each tail, so 95% of the area lies within ±1.96. It is the most common confidence level and the two-sided 5% significance threshold.",
+    "assumptions": [
+      "Assumes the statistic is (approximately) normal",
+      "Two-sided 95%; one-sided 97.5%",
+      "Often rounded to 2, which is the 95.45% (2σ) level"
+    ],
+    "vars": [
+      [
+        "z",
+        "standard normal critical value",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Φ(1.960) = 0.975",
+        "cumulative area"
+      ],
+      [
+        "n = (1.96σ/E)^{2}",
+        "sample size for a margin E"
+      ],
+      [
+        "x̄ ± 1.96 σ/√n",
+        "95% interval"
+      ]
+    ],
+    "example": {
+      "problem": "σ = 2 mm. How many samples are needed for a 95% margin of error of 0.5 mm?",
+      "steps": [
+        "n = (1.96 × 2/0.5)^{2} = 7.84^{2} = 61.47",
+        "Round up to 62 samples"
+      ],
+      "answer": "n ≈ 61.47, so 62 samples"
+    },
+    "try": "(1.96*2/0.5)^2"
+  },
+  "z = 2.576": {
+    "title": "Critical z for 99% confidence",
+    "about": "The standard normal value with 0.5% in each tail, so 99% of the area lies within ±2.576. Used when a missed effect would be costly.",
+    "assumptions": [
+      "Assumes the statistic is (approximately) normal",
+      "Two-sided 99%; one-sided 99.5%",
+      "Higher confidence means a wider interval for the same data"
+    ],
+    "vars": [
+      [
+        "z",
+        "standard normal critical value",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Φ(2.576) = 0.995",
+        "cumulative area"
+      ],
+      [
+        "x̄ ± 2.576 σ/√n",
+        "99% interval"
+      ],
+      [
+        "z = 1.960",
+        "95%"
+      ]
+    ],
+    "example": {
+      "problem": "Nine readings average 12.0 with σ = 0.3. Find the 99% confidence interval.",
+      "steps": [
+        "Margin = 2.576 × 0.3/√9 = 2.576 × 0.1 = 0.2576",
+        "Interval 12.0 ± 0.258"
+      ],
+      "answer": "margin 0.2576: 11.74 to 12.26"
+    },
+    "try": "2.576 * 0.3/sqrt(9)"
+  },
+  "within 1σ: 68.27%": {
+    "title": "Normal curve: share within one standard deviation",
+    "about": "For normally distributed data, 68.27% of values lie within μ ± σ, so about one value in three falls outside.",
+    "assumptions": [
+      "Only for a normal distribution; for any distribution Chebyshev guarantees only that at least 1 − 1/k^{2} lies within kσ",
+      "Equals erf(1/√2) = 2Φ(1) − 1"
+    ],
+    "vars": [
+      [
+        "μ",
+        "mean",
+        ""
+      ],
+      [
+        "σ",
+        "standard deviation",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "P(|X − μ| ≤ kσ) = erf(k/√2)",
+        "any k"
+      ],
+      [
+        "within 2σ: 95.45%",
+        "two standard deviations"
+      ],
+      [
+        "within 3σ: 99.73%",
+        "three standard deviations"
+      ]
+    ],
+    "example": {
+      "problem": "Shaft diameters are normal with μ = 50.0 mm and σ = 0.1 mm. What fraction lie between 49.9 and 50.1 mm?",
+      "steps": [
+        "The range is μ ± 1σ",
+        "Fraction = erf(1/√2) = 0.6827",
+        "About 31.73% fall outside"
+      ],
+      "answer": "≈ 0.6827 (68.27%)"
+    },
+    "try": "integral(e^(-x^2/2)/sqrt(2pi), x, -1, 1)"
+  },
+  "within 2σ: 95.45%": {
+    "title": "Normal curve: share within two standard deviations",
+    "about": "For normally distributed data, 95.45% of values lie within μ ± 2σ. This is why ±2σ is used as a rough 95% band (the exact 95% value is 1.96σ).",
+    "assumptions": [
+      "Only for a normal distribution",
+      "Equals erf(2/√2) = 2Φ(2) − 1"
+    ],
+    "vars": [
+      [
+        "μ",
+        "mean",
+        ""
+      ],
+      [
+        "σ",
+        "standard deviation",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "P(|X − μ| ≤ kσ) = erf(k/√2)",
+        "any k"
+      ],
+      [
+        "z = 1.960",
+        "exactly 95%"
+      ],
+      [
+        "within 3σ: 99.73%",
+        "three standard deviations"
+      ]
+    ],
+    "example": {
+      "problem": "With μ = 50.0 mm and σ = 0.1 mm, what fraction of shafts lie between 49.8 and 50.2 mm?",
+      "steps": [
+        "The range is μ ± 2σ",
+        "Fraction = erf(2/√2) = 0.9545",
+        "About 4.55% (1 in 22) fall outside"
+      ],
+      "answer": "≈ 0.9545 (95.45%)"
+    },
+    "try": "integral(e^(-x^2/2)/sqrt(2pi), x, -2, 2)"
+  },
+  "within 3σ: 99.73%": {
+    "title": "Normal curve: share within three standard deviations",
+    "about": "For normally distributed data, 99.73% of values lie within μ ± 3σ: only about 27 in 10 000 fall outside. Control charts use ±3σ limits, and process capability is judged against them.",
+    "assumptions": [
+      "Only for a normal distribution; real processes often have heavier tails, so more fall outside",
+      "Equals erf(3/√2) = 2Φ(3) − 1"
+    ],
+    "vars": [
+      [
+        "μ",
+        "mean",
+        ""
+      ],
+      [
+        "σ",
+        "standard deviation",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "P(|X − μ| ≤ kσ) = erf(k/√2)",
+        "any k"
+      ],
+      [
+        "C_{p} = (USL − LSL)/(6σ)",
+        "process capability"
+      ],
+      [
+        "within 2σ: 95.45%",
+        "two standard deviations"
+      ]
+    ],
+    "example": {
+      "problem": "A process makes 10 000 parts with tolerance limits at μ ± 3σ. About how many are out of tolerance?",
+      "steps": [
+        "Fraction outside = 1 − erf(3/√2) = 1 − 0.9973 = 0.0027",
+        "10 000 × 0.0027"
+      ],
+      "answer": "≈ 27 parts"
+    },
+    "try": "10000 (1 - integral(e^(-x^2/2)/sqrt(2pi), x, -3, 3))"
+  },
+  "det A = ad − bc": {
+    "title": "Determinant of a 2 × 2 matrix",
+    "about": "The product of the main diagonal minus the product of the other diagonal. It is zero exactly when the matrix is singular (no inverse, no unique solution of A x = b), and |det A| is the area scale factor of the transformation.",
+    "assumptions": [
+      "A is square; here A = [a b; c d]",
+      "det A = 0: columns are parallel (dependent); the system has no or infinitely many solutions",
+      "A sign change means the transformation flips orientation"
+    ],
+    "vars": [
+      [
+        "A",
+        "2 × 2 matrix [a b; c d]",
+        ""
+      ],
+      [
+        "a, b, c, d",
+        "entries",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "A^{−1} = (1/det A) [d −b; −c a]",
+        "inverse"
+      ],
+      [
+        "x = (de − bf)/(ad − bc)",
+        "Cramer's rule for ax + by = e, cx + dy = f"
+      ],
+      [
+        "det(A) = λ_{1} λ_{2}",
+        "product of eigenvalues"
+      ]
+    ],
+    "example": {
+      "problem": "Find the determinant of A = [4 3; 6 3].",
+      "steps": [
+        "det A = 4(3) − 3(6) = 12 − 18"
+      ],
+      "answer": "det A = −6"
+    },
+    "try": "det([4 3; 6 3])"
+  },
+  "A^{−1} = (1/det A) [d −b; −c a]": {
+    "title": "Inverse of a 2 × 2 matrix",
+    "about": "Swap the diagonal entries, negate the off-diagonal ones, and divide by the determinant. Then x = A^{−1} b solves A x = b, though for computation solving directly is usually better than inverting.",
+    "assumptions": [
+      "det A = ad − bc ≠ 0",
+      "A nearly singular matrix (det small relative to its entries) gives a large, error-sensitive inverse",
+      "Check: A A^{−1} = I"
+    ],
+    "vars": [
+      [
+        "A",
+        "2 × 2 matrix [a b; c d]",
+        ""
+      ],
+      [
+        "det A",
+        "determinant, ad − bc",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "det A = ad − bc",
+        "determinant"
+      ],
+      [
+        "x = A^{−1} b",
+        "solution of A x = b"
+      ],
+      [
+        "(AB)^{−1} = B^{−1} A^{−1}",
+        "inverse of a product"
+      ],
+      [
+        "det(A^{−1}) = 1/det(A)",
+        "determinant of the inverse"
+      ]
+    ],
+    "example": {
+      "problem": "Invert A = [4 7; 2 6].",
+      "steps": [
+        "det A = 24 − 14 = 10",
+        "A^{−1} = (1/10)[6 −7; −2 4]",
+        "Check: [4 7; 2 6][0.6 −0.7; −0.2 0.4] = [1 0; 0 1]"
+      ],
+      "answer": "A^{−1} = [0.6 −0.7; −0.2 0.4]"
+    },
+    "try": "inv([4 7; 2 6])"
+  },
+  "det A = a(ei − fh) − b(di − fg) + c(dh − eg)": {
+    "title": "Determinant of a 3 × 3 matrix (cofactor expansion)",
+    "about": "Expand along the first row: each entry times the determinant of the 2 × 2 matrix left when its row and column are removed, with signs + − +. |det A| is the volume scale factor; zero means singular.",
+    "assumptions": [
+      "A = [a b c; d e f; g h i]",
+      "Any row or column can be used, with the checkerboard sign pattern; pick one with zeros to save work",
+      "For larger matrices use row reduction: det = product of the pivots (times −1 per row swap)"
+    ],
+    "vars": [
+      [
+        "A",
+        "3 × 3 matrix",
+        ""
+      ],
+      [
+        "a … i",
+        "entries, row by row",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "det A = aei + bfg + cdh − ceg − bdi − afh",
+        "rule of Sarrus (3 × 3 only)"
+      ],
+      [
+        "det A = a · (b × c)",
+        "scalar triple product of the rows"
+      ],
+      [
+        "det(AB) = det(A) det(B)",
+        "product rule"
+      ]
+    ],
+    "example": {
+      "problem": "Find the determinant of A = [2 1 3; 0 4 1; 5 2 0].",
+      "steps": [
+        "2(4·0 − 1·2) = 2(−2) = −4",
+        "−1(0·0 − 1·5) = −1(−5) = 5",
+        "+3(0·2 − 4·5) = 3(−20) = −60",
+        "Sum: −4 + 5 − 60"
+      ],
+      "answer": "det A = −59"
+    },
+    "try": "det([2 1 3; 0 4 1; 5 2 0])"
+  },
+  "(AB)^{T} = B^{T} A^{T}": {
+    "title": "Transpose of a product",
+    "about": "The transpose of a product is the product of the transposes in reverse order. The reversal is needed for the dimensions to match, and it shows up in stiffness matrices (K = B^{T} D B) and least squares.",
+    "assumptions": [
+      "A is m × n and B is n × p, so AB is defined",
+      "Order reverses; A^{T} B^{T} is generally a different matrix or not even defined",
+      "Extends to more factors: (ABC)^{T} = C^{T} B^{T} A^{T}"
+    ],
+    "vars": [
+      [
+        "A, B",
+        "matrices with matching inner dimensions",
+        ""
+      ],
+      [
+        "T",
+        "transpose (rows become columns)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "(AB)^{−1} = B^{−1} A^{−1}",
+        "inverse also reverses"
+      ],
+      [
+        "(A^{T})^{T} = A",
+        "double transpose"
+      ],
+      [
+        "(A^{T}A)^{T} = A^{T}A",
+        "so A^{T}A is symmetric"
+      ]
+    ],
+    "example": {
+      "problem": "A is 2 × 3 and B is 3 × 4. Check that the dimensions work, and verify the rule for A = [1 2], B = [3; 4] (a 1 × 2 times a 2 × 1).",
+      "steps": [
+        "AB is 2 × 4, so (AB)^{T} is 4 × 2",
+        "B^{T} is 4 × 3 and A^{T} is 3 × 2, so B^{T} A^{T} is 4 × 2 ✓ (A^{T} B^{T} would be 3 × 2 times 4 × 3: undefined)",
+        "Numbers: AB = 1·3 + 2·4 = 11, a 1 × 1 matrix, and B^{T} A^{T} = [3 4][1; 2] = 11 ✓"
+      ],
+      "answer": "(AB)^{T} is 4 × 2 = B^{T} A^{T}; both equal 11 in the small case"
+    }
+  },
+  "(AB)^{−1} = B^{−1} A^{−1}": {
+    "title": "Inverse of a product",
+    "about": "In AB x, B acts on x first and A second, so undoing the product means undoing A first and then B, the same way shoes come off before socks.",
+    "assumptions": [
+      "A and B are square and both invertible (det ≠ 0)",
+      "Order reverses; A^{−1} B^{−1} is wrong unless A and B commute"
+    ],
+    "vars": [
+      [
+        "A, B",
+        "invertible square matrices",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "(AB)^{T} = B^{T} A^{T}",
+        "transpose also reverses"
+      ],
+      [
+        "det(AB) = det(A) det(B)",
+        "so AB is invertible iff both are"
+      ],
+      [
+        "A^{−1} = (1/det A) [d −b; −c a]",
+        "2 × 2 inverse"
+      ]
+    ],
+    "example": {
+      "problem": "With A = [2 0; 0 1] and B = [1 1; 0 1], find (AB)^{−1} both ways.",
+      "steps": [
+        "AB = [2 2; 0 1], det = 2, so (AB)^{−1} = (1/2)[1 −2; 0 2] = [0.5 −1; 0 1]",
+        "A^{−1} = [0.5 0; 0 1], B^{−1} = [1 −1; 0 1]",
+        "B^{−1} A^{−1} = [1 −1; 0 1][0.5 0; 0 1] = [0.5 −1; 0 1] ✓"
+      ],
+      "answer": "(AB)^{−1} = [0.5 −1; 0 1]"
+    },
+    "try": "inv([2 0; 0 1] * [1 1; 0 1])"
+  },
+  "det(AB) = det(A) det(B)": {
+    "title": "Determinant of a product",
+    "about": "Area or volume scale factors multiply when transformations are combined. A product is singular if either factor is.",
+    "assumptions": [
+      "A and B are square and the same size",
+      "There is no such rule for sums: det(A + B) ≠ det(A) + det(B) in general"
+    ],
+    "vars": [
+      [
+        "A, B",
+        "square matrices of the same size",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "det(A^{−1}) = 1/det(A)",
+        "from A A^{−1} = I"
+      ],
+      [
+        "det(kA) = k^{n} det(A)",
+        "scaling an n × n matrix"
+      ],
+      [
+        "det(A^{T}) = det(A)",
+        "transpose"
+      ]
+    ],
+    "example": {
+      "problem": "A = [2 1; 0 1] has det 2 and B = [3 0; 1 1] has det 3. Find det(AB).",
+      "steps": [
+        "det(AB) = 2 × 3 = 6",
+        "Check: AB = [7 1; 1 1], det = 7 − 1 = 6 ✓"
+      ],
+      "answer": "det(AB) = 6"
+    },
+    "try": "det([2 1; 0 1] * [3 0; 1 1])"
+  },
+  "det(A^{T}) = det(A)": {
+    "title": "Determinant of a transpose",
+    "about": "Transposing doesn't change the determinant, so everything true about rows of a determinant is also true about columns (swapping, scaling, adding multiples).",
+    "assumptions": [
+      "A is square"
+    ],
+    "vars": [
+      [
+        "A",
+        "square matrix",
+        ""
+      ],
+      [
+        "A^{T}",
+        "its transpose",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "det(AB) = det(A) det(B)",
+        "product rule"
+      ],
+      [
+        "det(A^{−1}) = 1/det(A)",
+        "inverse"
+      ],
+      [
+        "det(A) = a(ei − fh) − b(di − fg) + c(dh − eg)",
+        "3 × 3 cofactor expansion"
+      ]
+    ],
+    "example": {
+      "problem": "Check the rule for A = [4 3; 6 3].",
+      "steps": [
+        "det A = 12 − 18 = −6",
+        "A^{T} = [4 6; 3 3], det = 12 − 18 = −6 ✓"
+      ],
+      "answer": "det(A^{T}) = −6"
+    },
+    "try": "det(transpose([4 3; 6 3]))"
+  },
+  "det(A^{−1}) = 1/det(A)": {
+    "title": "Determinant of an inverse",
+    "about": "If A scales areas or volumes by det A, its inverse must scale them back by 1/det A. It follows from det(A) det(A^{−1}) = det(I) = 1.",
+    "assumptions": [
+      "A is square and invertible (det A ≠ 0)",
+      "A tiny det A means a huge det(A^{−1}), a hint (not proof) of an ill-conditioned matrix"
+    ],
+    "vars": [
+      [
+        "A",
+        "invertible square matrix",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "det(AB) = det(A) det(B)",
+        "product rule"
+      ],
+      [
+        "A^{−1} = (1/det A) [d −b; −c a]",
+        "2 × 2 inverse"
+      ]
+    ],
+    "example": {
+      "problem": "A = [4 7; 2 6]. Find det(A^{−1}).",
+      "steps": [
+        "det A = 24 − 14 = 10",
+        "det(A^{−1}) = 1/10",
+        "Check: A^{−1} = [0.6 −0.7; −0.2 0.4], det = 0.24 − 0.14 = 0.1 ✓"
+      ],
+      "answer": "det(A^{−1}) = 0.1"
+    },
+    "try": "det(inv([4 7; 2 6]))"
+  },
+  "a · b = Σ a_{i} b_{i} = |a| |b| cos(θ)": {
+    "title": "Dot product",
+    "about": "Multiply matching components and add. It equals the product of the lengths times the cosine of the angle between them, so it gives angles between vectors, work done by a force (W = F · d) and tests for perpendicularity (a · b = 0).",
+    "assumptions": [
+      "Both vectors have the same number of components, in the same coordinate system",
+      "The result is a scalar",
+      "θ is between 0 and 180°; a negative dot product means θ > 90°"
+    ],
+    "vars": [
+      [
+        "a, b",
+        "vectors",
+        ""
+      ],
+      [
+        "a_{i}, b_{i}",
+        "components",
+        ""
+      ],
+      [
+        "θ",
+        "angle between them",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "θ = acos(a · b/(|a| |b|))",
+        "angle between vectors"
+      ],
+      [
+        "W = F · d",
+        "work"
+      ],
+      [
+        "proj_{b} a = ((a · b)/(b · b)) b",
+        "projection"
+      ],
+      [
+        "|a| = √(a · a)",
+        "length"
+      ]
+    ],
+    "example": {
+      "problem": "Find the angle between a = (1, 2, 2) and b = (3, 0, 4).",
+      "steps": [
+        "a · b = 3 + 0 + 8 = 11",
+        "|a| = 3, |b| = 5",
+        "cos θ = 11/15 = 0.7333",
+        "θ = acos(0.7333)"
+      ],
+      "answer": "θ ≈ 42.83°"
+    },
+    "try": "acos(11/15) to deg"
+  },
+  "|a × b| = |a| |b| sin(θ)": {
+    "title": "Magnitude of the cross product",
+    "about": "The length of a × b equals the area of the parallelogram spanned by a and b. In mechanics it gives the size of a moment (|r × F| = rF sin θ) and of the force on a current in a magnetic field.",
+    "assumptions": [
+      "3-D vectors",
+      "θ is the angle between the vectors (0 to 180°); parallel vectors give zero",
+      "Only the perpendicular part of F produces a moment: r F sin θ = r F_{⊥}"
+    ],
+    "vars": [
+      [
+        "a, b",
+        "vectors",
+        ""
+      ],
+      [
+        "θ",
+        "angle between them",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "a × b = (a_{2}b_{3} − a_{3}b_{2}, …)",
+        "components"
+      ],
+      [
+        "M = r × F",
+        "moment of a force"
+      ],
+      [
+        "A = (1/2)|a × b|",
+        "triangle area"
+      ]
+    ],
+    "example": {
+      "problem": "A 40 N force acts at the end of a 0.25 m wrench, at 60° to the handle. Find the moment about the bolt.",
+      "steps": [
+        "|M| = r F sin θ = 0.25 × 40 × sin 60°",
+        "= 10 × 0.8660"
+      ],
+      "answer": "|M| ≈ 8.66 N·m"
+    },
+    "try": "0.25 m * 40 N * sin(60 deg)"
+  },
+  "a × b = (a_{2}b_{3} − a_{3}b_{2}, a_{3}b_{1} − a_{1}b_{3}, a_{1}b_{2} − a_{2}b_{1})": {
+    "title": "Cross product in components",
+    "about": "A vector perpendicular to both a and b, with direction from the right-hand rule and length |a||b| sin θ. Used for moments (M = r × F), normals to surfaces, angular velocity (v = ω × r) and magnetic force.",
+    "assumptions": [
+      "3-D vectors only",
+      "Not commutative: b × a = −(a × b)",
+      "Right-handed coordinate system (x × y = z)"
+    ],
+    "vars": [
+      [
+        "a, b",
+        "3-D vectors",
+        ""
+      ],
+      [
+        "a_{i}, b_{i}",
+        "components",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "a × b = det[i j k; a_{1} a_{2} a_{3}; b_{1} b_{2} b_{3}]",
+        "determinant mnemonic"
+      ],
+      [
+        "|a × b| = |a| |b| sin(θ)",
+        "magnitude"
+      ],
+      [
+        "(a × b) · a = 0",
+        "check: perpendicular to a"
+      ]
+    ],
+    "example": {
+      "problem": "Find a × b for a = (1, 2, 3) and b = (4, 5, 6).",
+      "steps": [
+        "x: 2·6 − 3·5 = 12 − 15 = −3",
+        "y: 3·4 − 1·6 = 12 − 6 = 6",
+        "z: 1·5 − 2·4 = 5 − 8 = −3",
+        "Check: (−3, 6, −3) · (1, 2, 3) = −3 + 12 − 9 = 0 ✓"
+      ],
+      "answer": "a × b = (−3, 6, −3)"
+    },
+    "try": "cross([1, 2, 3], [4, 5, 6])"
+  },
+  "|a| = √(a · a)": {
+    "title": "Length (magnitude) of a vector",
+    "about": "The square root of the sum of the squared components: Pythagoras in any number of dimensions. Gives the size of a force, velocity or displacement, and dividing by it gives a unit vector.",
+    "assumptions": [
+      "Cartesian (orthonormal) components",
+      "All components in the same units"
+    ],
+    "vars": [
+      [
+        "a",
+        "vector",
+        ""
+      ],
+      [
+        "|a|",
+        "its length",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "|a| = √(a_{1}^{2} + a_{2}^{2} + a_{3}^{2})",
+        "in components"
+      ],
+      [
+        "â = a/|a|",
+        "unit vector"
+      ],
+      [
+        "cos α = a_{1}/|a|",
+        "direction cosines"
+      ]
+    ],
+    "example": {
+      "problem": "A force is F = (3, 4, 12) N. Find its magnitude.",
+      "steps": [
+        "F · F = 9 + 16 + 144 = 169",
+        "|F| = √169"
+      ],
+      "answer": "|F| = 13 N"
+    },
+    "try": "sqrt(3^2 + 4^2 + 12^2)"
+  },
+  "proj_{b} a = ((a · b)/(b · b)) b": {
+    "title": "Vector projection",
+    "about": "The component of a that points along b, as a vector. Used to resolve a force along and across an incline or a member, and it is the idea behind least squares (the closest point on a line).",
+    "assumptions": [
+      "b ≠ 0",
+      "The scalar projection (signed length) is (a · b)/|b|",
+      "a − proj_{b} a is the part of a perpendicular to b"
+    ],
+    "vars": [
+      [
+        "a",
+        "vector being projected",
+        ""
+      ],
+      [
+        "b",
+        "direction to project onto",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "comp_{b} a = (a · b)/|b|",
+        "scalar projection"
+      ],
+      [
+        "a_{⊥} = a − proj_{b} a",
+        "perpendicular component"
+      ],
+      [
+        "a · b = |a| |b| cos(θ)",
+        "dot product"
+      ]
+    ],
+    "example": {
+      "problem": "A force F = (30, 40) N acts on a slider whose track runs along b = (4, 3). Find the force component along the track.",
+      "steps": [
+        "F · b = 120 + 120 = 240, b · b = 25",
+        "proj = (240/25)(4, 3) = 9.6(4, 3) = (38.4, 28.8) N",
+        "Its magnitude: 240/|b| = 240/5 = 48 N"
+      ],
+      "answer": "48 N along the track: (38.4, 28.8) N"
+    },
+    "try": "(30*4 + 40*3)/sqrt(4^2 + 3^2)"
+  },
+  "A v = λ v": {
+    "title": "Eigenvalue equation",
+    "about": "An eigenvector v is a direction that A only stretches, by the factor λ. Eigenvalues give natural frequencies and mode shapes in vibration, principal stresses and axes, stability of x′ = A x, and growth rates of iterated systems.",
+    "assumptions": [
+      "A is square; v ≠ 0",
+      "An n × n matrix has n eigenvalues counting repeats, possibly complex",
+      "Real symmetric matrices (stress tensors, stiffness) have real eigenvalues and perpendicular eigenvectors",
+      "Eigenvectors are defined only up to scale"
+    ],
+    "vars": [
+      [
+        "A",
+        "square matrix",
+        ""
+      ],
+      [
+        "v",
+        "eigenvector",
+        ""
+      ],
+      [
+        "λ",
+        "eigenvalue",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "det(A − λI) = 0",
+        "characteristic equation for λ"
+      ],
+      [
+        "(A − λI) v = 0",
+        "solve for v"
+      ],
+      [
+        "tr(A) = Σ λ_{i}, det(A) = Π λ_{i}",
+        "checks"
+      ],
+      [
+        "x = v e^{λt}",
+        "modal solution of x′ = A x"
+      ]
+    ],
+    "example": {
+      "problem": "Show that v = (1, 1) is an eigenvector of A = [2 1; 1 2] and find its eigenvalue.",
+      "steps": [
+        "A v = (2 + 1, 1 + 2) = (3, 3)",
+        "(3, 3) = 3(1, 1), so A v = 3v"
+      ],
+      "answer": "λ = 3"
+    },
+    "try": "[2 1; 1 2] * [1; 1]"
+  },
+  "det(A − λI) = 0": {
+    "title": "Characteristic equation for eigenvalues",
+    "about": "A v = λ v has a nonzero solution only when A − λI is singular. Setting its determinant to zero gives a polynomial whose roots are the eigenvalues.",
+    "assumptions": [
+      "A is n × n, giving a degree-n polynomial",
+      "For 2 × 2: λ^{2} − tr(A) λ + det(A) = 0",
+      "By hand only for small matrices; numerically use the QR algorithm (the polynomial's roots are ill-conditioned)"
+    ],
+    "vars": [
+      [
+        "A",
+        "square matrix",
+        ""
+      ],
+      [
+        "λ",
+        "eigenvalue",
+        ""
+      ],
+      [
+        "I",
+        "identity matrix",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "λ^{2} − tr(A)λ + det(A) = 0",
+        "2 × 2 shortcut"
+      ],
+      [
+        "A v = λ v",
+        "eigenvalue equation"
+      ],
+      [
+        "(A − λI) v = 0",
+        "eigenvectors"
+      ]
+    ],
+    "example": {
+      "problem": "Find the eigenvalues of A = [2 1; 1 2].",
+      "steps": [
+        "det[2 − λ, 1; 1, 2 − λ] = (2 − λ)^{2} − 1 = 0",
+        "2 − λ = ±1",
+        "λ = 1 and λ = 3"
+      ],
+      "answer": "λ = 1, 3"
+    },
+    "try": "eig([2 1; 1 2])"
+  },
+  "tr(A) = Σ λ_{i}": {
+    "title": "Trace equals the sum of the eigenvalues",
+    "about": "The sum of the diagonal entries equals the sum of the eigenvalues (with repeats). It is a fast check on computed eigenvalues, and for a stress tensor it is the first invariant (σ_{1} + σ_{2} + σ_{3}).",
+    "assumptions": [
+      "A is square; complex eigenvalues are included and come in conjugate pairs for real A"
+    ],
+    "vars": [
+      [
+        "tr(A)",
+        "trace: sum of the diagonal entries",
+        ""
+      ],
+      [
+        "λ_{i}",
+        "eigenvalues",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "det(A) = Π λ_{i}",
+        "product check"
+      ],
+      [
+        "λ^{2} − tr(A)λ + det(A) = 0",
+        "2 × 2 characteristic equation"
+      ],
+      [
+        "I_{1} = σ_{x} + σ_{y} + σ_{z}",
+        "first stress invariant"
+      ]
+    ],
+    "example": {
+      "problem": "A = [4 1; 2 3]. Find its eigenvalues and check the trace.",
+      "steps": [
+        "λ^{2} − 7λ + 10 = 0, so λ = 2 and 5",
+        "tr(A) = 4 + 3 = 7 = 2 + 5 ✓"
+      ],
+      "answer": "tr(A) = 7"
+    },
+    "try": "trace([4 1; 2 3])"
+  },
+  "det(A) = Π λ_{i}": {
+    "title": "Determinant equals the product of the eigenvalues",
+    "about": "The determinant is the product of all eigenvalues. So a matrix is singular exactly when it has a zero eigenvalue, and this is a quick check on computed eigenvalues.",
+    "assumptions": [
+      "A is square; include repeated and complex eigenvalues"
+    ],
+    "vars": [
+      [
+        "det(A)",
+        "determinant",
+        ""
+      ],
+      [
+        "λ_{i}",
+        "eigenvalues",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "tr(A) = Σ λ_{i}",
+        "sum check"
+      ],
+      [
+        "det(A − λI) = 0",
+        "characteristic equation"
+      ],
+      [
+        "λ = 0 ⇔ det(A) = 0",
+        "singular matrices"
+      ]
+    ],
+    "example": {
+      "problem": "A = [4 1; 2 3] has eigenvalues 2 and 5. Check the determinant.",
+      "steps": [
+        "det(A) = 4·3 − 1·2 = 10",
+        "2 × 5 = 10 ✓"
+      ],
+      "answer": "det(A) = 10"
+    },
+    "try": "det([4 1; 2 3])"
+  }
+}

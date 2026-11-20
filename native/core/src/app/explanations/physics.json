@@ -1,0 +1,5212 @@
+{
+  "Σ F = 0": {
+    "title": "Force equilibrium: forces on a body at rest balance",
+    "about": "A body in static equilibrium has no net force on it, so the vector sum of every external force is zero. In 2D it gives two scalar equations, ΣF_{x} = 0 and ΣF_{y} = 0; in 3D three. Use it with a free-body diagram to find unknown support reactions and member forces.",
+    "assumptions": [
+      "The body is at rest or moving at constant velocity (no acceleration); otherwise use ΣF = ma",
+      "Every external force, including weight and support reactions, is on the free-body diagram; internal forces cancel",
+      "Force equilibrium alone does not stop rotation: a rigid body also needs ΣM = 0",
+      "Rigid-body statics: deformations are small enough that geometry doesn't change under load"
+    ],
+    "vars": [
+      [
+        "F",
+        "each external force (vector)",
+        "N"
+      ],
+      [
+        "F_{x}, F_{y}, F_{z}",
+        "components of the forces along each axis",
+        "N"
+      ]
+    ],
+    "related": [
+      [
+        "ΣF_{x} = 0, ΣF_{y} = 0, ΣF_{z} = 0",
+        "scalar form, one per axis"
+      ],
+      [
+        "ΣM = 0",
+        "moment equilibrium, needed for a rigid body"
+      ],
+      [
+        "ΣF = m a",
+        "when the body accelerates"
+      ]
+    ],
+    "example": {
+      "problem": "A 50 kg crate hangs from two cables, each 30° from the vertical. Find the tension in each cable.",
+      "steps": [
+        "Weight W = mg = 50 × 9.81 = 490.5 N",
+        "By symmetry the tensions are equal, T",
+        "ΣF_{y} = 0: 2T cos(30°) − 490.5 N = 0",
+        "T = 490.5/(2 × 0.866) = 283.2 N"
+      ],
+      "answer": "T ≈ 283 N in each cable"
+    },
+    "try": "50 kg * 9.81 m/s^2 / (2 cos(30 deg)) to N"
+  },
+  "Σ M = 0": {
+    "title": "Moment equilibrium: moments about any point balance",
+    "about": "A body that is not rotating, or rotating at constant rate, has zero net moment about every point. Picking the point where unknown forces act removes them from the equation, so one moment equation can give an unknown directly.",
+    "assumptions": [
+      "The body is in equilibrium (no angular acceleration); otherwise ΣM = Iα",
+      "If ΣF = 0 holds, ΣM = 0 about one point means it holds about every point",
+      "Moments must include couples as well as forces times their perpendicular distances",
+      "Sign convention: counterclockwise positive in 2D (or follow the right-hand rule)"
+    ],
+    "vars": [
+      [
+        "M",
+        "moment of each force or couple about the chosen point",
+        "N·m"
+      ]
+    ],
+    "related": [
+      [
+        "M = F d",
+        "moment of a force, d its perpendicular distance"
+      ],
+      [
+        "M = r × F",
+        "vector form"
+      ],
+      [
+        "Σ F = 0",
+        "force equilibrium alongside it"
+      ]
+    ],
+    "example": {
+      "problem": "A 4 m simply supported beam carries a 10 kN load 1 m from the left support A. Find the reaction at the right support B.",
+      "steps": [
+        "Take moments about A, counterclockwise positive",
+        "ΣM_{A} = B_{y}(4 m) − (10 kN)(1 m) = 0",
+        "B_{y} = 10/4 = 2.5 kN",
+        "Then ΣF_{y} = 0 gives A_{y} = 10 − 2.5 = 7.5 kN"
+      ],
+      "answer": "B_{y} = 2.5 kN (and A_{y} = 7.5 kN)"
+    },
+    "try": "10 kN * 1 m / 4 m"
+  },
+  "M = F d": {
+    "title": "Moment of a force about a point",
+    "about": "A force tends to turn a body about a point with a strength equal to the force times its perpendicular distance from the point (the moment arm). Only the perpendicular distance counts: a force whose line of action passes through the point has no moment about it.",
+    "assumptions": [
+      "d is the perpendicular distance from the point to the force's line of action, not the distance to where the force is applied",
+      "In 3D use the vector form M = r × F",
+      "The moment's sense (clockwise or counterclockwise) has to be tracked by a sign convention"
+    ],
+    "vars": [
+      [
+        "M",
+        "moment about the point",
+        "N·m"
+      ],
+      [
+        "F",
+        "magnitude of the force",
+        "N"
+      ],
+      [
+        "d",
+        "perpendicular distance (moment arm)",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "M = r × F",
+        "vector form, r from the point to any spot on the line of action"
+      ],
+      [
+        "M = r F sin(θ)",
+        "with θ the angle between r and F"
+      ],
+      [
+        "Σ M = 0",
+        "equilibrium"
+      ]
+    ],
+    "example": {
+      "problem": "A 200 N force pushes on a wrench handle 0.3 m from the bolt, at 90° to the handle. Find the moment on the bolt.",
+      "steps": [
+        "The force is perpendicular to the handle, so d = 0.3 m",
+        "M = (200 N)(0.3 m) = 60 N·m"
+      ],
+      "answer": "M = 60 N·m"
+    },
+    "try": "200 N * 0.3 m"
+  },
+  "f ≤ μ N": {
+    "title": "Coulomb (dry) friction",
+    "about": "Friction resists sliding between two surfaces, up to a limit set by the normal force. Before slipping the friction force is whatever equilibrium needs, up to μ_{s}N; once sliding it is about μ_{k}N, opposing the relative motion.",
+    "assumptions": [
+      "Dry, unlubricated surfaces; lubricated or fluid contact follows different laws",
+      "μ is roughly independent of contact area and sliding speed (an approximation)",
+      "Equality f = μ_{s}N only at impending slip; below that, find f from equilibrium",
+      "Static μ_{s} is usually larger than kinetic μ_{k}"
+    ],
+    "vars": [
+      [
+        "f",
+        "friction force along the surface",
+        "N"
+      ],
+      [
+        "μ",
+        "coefficient of friction (μ_{s} static, μ_{k} kinetic)",
+        ""
+      ],
+      [
+        "N",
+        "normal force between the surfaces",
+        "N"
+      ]
+    ],
+    "related": [
+      [
+        "f_{k} = μ_{k} N",
+        "while sliding"
+      ],
+      [
+        "tan(θ_{s}) = μ_{s}",
+        "angle of repose on an incline"
+      ],
+      [
+        "T_{2} = T_{1} e^{μβ}",
+        "belt friction over a wrap angle β"
+      ]
+    ],
+    "example": {
+      "problem": "A 20 kg box rests on a level floor with μ_{s} = 0.4. What horizontal push starts it sliding?",
+      "steps": [
+        "N = mg = 20 × 9.81 = 196.2 N",
+        "f_{max} = μ_{s} N = 0.4 × 196.2 = 78.5 N",
+        "A push just over 78.5 N starts it moving"
+      ],
+      "answer": "P ≈ 78.5 N"
+    },
+    "try": "0.4 * 20 kg * 9.81 m/s^2 to N"
+  },
+  "x̄ = (Σ A_{i} x_{i})/(Σ A_{i})": {
+    "title": "Centroid of a composite area",
+    "about": "Split a shape into simple parts (rectangles, triangles, circles) whose centroids are known, then take the area-weighted average of their positions. Holes count as negative areas. The same formula with y_{i} gives ȳ.",
+    "assumptions": [
+      "Each part's own centroid x_{i} is measured from the same reference axis",
+      "Cut-outs are subtracted: give them negative A_{i}",
+      "For a body of uniform thickness and density the centroid is also the centre of mass; otherwise weight by mass"
+    ],
+    "vars": [
+      [
+        "x̄",
+        "centroid location of the whole area",
+        "m"
+      ],
+      [
+        "A_{i}",
+        "area of part i (negative for holes)",
+        "m^{2}"
+      ],
+      [
+        "x_{i}",
+        "centroid of part i from the reference axis",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "ȳ = (Σ A_{i} y_{i})/(Σ A_{i})",
+        "the other coordinate"
+      ],
+      [
+        "x̄ = ∫x dA/∫dA",
+        "continuous form"
+      ],
+      [
+        "x_{cm} = (Σ m_{i} x_{i})/(Σ m_{i})",
+        "centre of mass"
+      ]
+    ],
+    "example": {
+      "problem": "An L-shape is a 100 × 20 mm horizontal bar (centroid at x = 50 mm) plus a 20 × 80 mm vertical leg at the left end (centroid at x = 10 mm). Find x̄.",
+      "steps": [
+        "A_{1} = 2000 mm^{2}, x_{1} = 50 mm",
+        "A_{2} = 1600 mm^{2}, x_{2} = 10 mm",
+        "x̄ = (2000 × 50 + 1600 × 10)/(2000 + 1600) = 116 000/3600"
+      ],
+      "answer": "x̄ ≈ 32.2 mm"
+    },
+    "try": "(2000 * 50 + 1600 * 10) / (2000 + 1600)"
+  },
+  "I = Ī + A d^{2}": {
+    "title": "Parallel-axis theorem (area moment of inertia)",
+    "about": "Moves an area moment of inertia from an axis through the centroid to any parallel axis a distance d away. It is how the I of a built-up beam section (an I-beam, a T) is assembled from its rectangles.",
+    "assumptions": [
+      "Ī must be about an axis through the part's own centroid; the theorem only runs from the centroidal axis outward",
+      "The two axes are parallel",
+      "For mass moments of inertia the same form holds: I = I_{G} + m d^{2}"
+    ],
+    "vars": [
+      [
+        "I",
+        "moment of inertia about the new axis",
+        "m^{4}"
+      ],
+      [
+        "Ī",
+        "moment of inertia about the parallel centroidal axis",
+        "m^{4}"
+      ],
+      [
+        "A",
+        "area of the shape",
+        "m^{2}"
+      ],
+      [
+        "d",
+        "distance between the two axes",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "Ī = b h^{3}/12",
+        "rectangle about its centroid"
+      ],
+      [
+        "I = I_{G} + m d^{2}",
+        "mass version for rigid bodies"
+      ],
+      [
+        "I_{total} = Σ(Ī_{i} + A_{i} d_{i}^{2})",
+        "composite section"
+      ]
+    ],
+    "example": {
+      "problem": "A 100 mm wide by 20 mm tall flange has its centroid 90 mm above a beam's neutral axis. Find its I about the neutral axis.",
+      "steps": [
+        "Ī = b h^{3}/12 = 100 × 20^{3}/12 = 66 667 mm^{4}",
+        "A d^{2} = (100 × 20)(90)^{2} = 16 200 000 mm^{4}",
+        "I = 66 667 + 16 200 000 = 16 266 667 mm^{4}"
+      ],
+      "answer": "I ≈ 1.627 × 10^{7} mm^{4}"
+    },
+    "try": "100*20^3/12 + 100*20*90^2"
+  },
+  "Solid sphere ‖ (2/5) m r^{2}": {
+    "title": "Mass moment of inertia: solid sphere",
+    "about": "The resistance of a uniform solid sphere to angular acceleration about any axis through its centre. Mass near the centre contributes little, so the factor 2/5 is smaller than for a hollow sphere of the same mass and radius.",
+    "assumptions": [
+      "Uniform density throughout",
+      "Axis passes through the centre (any diameter, by symmetry)",
+      "Rigid body"
+    ],
+    "vars": [
+      [
+        "I",
+        "mass moment of inertia about the stated axis",
+        "kg·m^{2}"
+      ],
+      [
+        "m",
+        "mass of the body",
+        "kg"
+      ],
+      [
+        "r",
+        "radius",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "Hollow sphere ‖ (2/3) m r^{2}",
+        "thin spherical shell"
+      ],
+      [
+        "I = I_{G} + m d^{2}",
+        "parallel-axis theorem, to move to another axis"
+      ],
+      [
+        "KE = (1/2) I ω^{2}",
+        "rotational kinetic energy"
+      ],
+      [
+        "Σ M = I α",
+        "rotational equation of motion"
+      ]
+    ],
+    "example": {
+      "problem": "A 7.26 kg bowling-type ball of radius 0.109 m spins about a diameter. Find I.",
+      "steps": [
+        "I = (2/5)(7.26 kg)(0.109 m)^{2}",
+        "I = 0.4 × 7.26 × 0.011881 = 0.0345 kg·m^{2}"
+      ],
+      "answer": "I ≈ 0.0345 kg·m^{2}"
+    },
+    "try": "2/5 * 7.26 kg * (0.109 m)^2"
+  },
+  "Hollow sphere ‖ (2/3) m r^{2}": {
+    "title": "Mass moment of inertia: thin hollow sphere",
+    "about": "A thin spherical shell has all its mass at radius r, so it resists spinning more than a solid sphere of the same mass: 2/3 against 2/5.",
+    "assumptions": [
+      "Thin shell: wall thickness much smaller than r (a thick shell needs (2/5) m (r_{o}^{5} − r_{i}^{5})/(r_{o}^{3} − r_{i}^{3}))",
+      "Uniform wall, axis through the centre"
+    ],
+    "vars": [
+      [
+        "I",
+        "mass moment of inertia about the stated axis",
+        "kg·m^{2}"
+      ],
+      [
+        "m",
+        "mass of the body",
+        "kg"
+      ],
+      [
+        "r",
+        "radius",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "Solid sphere ‖ (2/5) m r^{2}",
+        "solid sphere"
+      ],
+      [
+        "I = I_{G} + m d^{2}",
+        "parallel-axis theorem, to move to another axis"
+      ],
+      [
+        "KE = (1/2) I ω^{2}",
+        "rotational kinetic energy"
+      ],
+      [
+        "Σ M = I α",
+        "rotational equation of motion"
+      ]
+    ],
+    "example": {
+      "problem": "A basketball of mass 0.62 kg and radius 0.12 m spins on a fingertip. Treat it as a thin shell and find I.",
+      "steps": [
+        "I = (2/3)(0.62 kg)(0.12 m)^{2}",
+        "I = 0.6667 × 0.62 × 0.0144 = 0.00595 kg·m^{2}"
+      ],
+      "answer": "I ≈ 5.95 × 10^{−3} kg·m^{2}"
+    },
+    "try": "2/3 * 0.62 kg * (0.12 m)^2"
+  },
+  "Solid cylinder ‖ (1/2) m r^{2}": {
+    "title": "Mass moment of inertia: solid cylinder or disk",
+    "about": "A uniform solid cylinder or disk spinning about its own axis. The length does not appear: a thin disk and a long rod-like cylinder of equal mass and radius have the same I about the axis.",
+    "assumptions": [
+      "Uniform density",
+      "Axis is the cylinder's long (symmetry) axis; about a diameter through the centre it is m(3r^{2} + L^{2})/12",
+      "Hollow tube: (1/2) m (r_{o}^{2} + r_{i}^{2})"
+    ],
+    "vars": [
+      [
+        "I",
+        "mass moment of inertia about the stated axis",
+        "kg·m^{2}"
+      ],
+      [
+        "m",
+        "mass of the body",
+        "kg"
+      ],
+      [
+        "r",
+        "radius",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "I = (1/2) m (r_{o}^{2} + r_{i}^{2})",
+        "thick-walled tube about its axis"
+      ],
+      [
+        "Hoop ‖ m r^{2}",
+        "thin ring"
+      ],
+      [
+        "I = I_{G} + m d^{2}",
+        "parallel-axis theorem, to move to another axis"
+      ],
+      [
+        "KE = (1/2) I ω^{2}",
+        "rotational kinetic energy"
+      ],
+      [
+        "Σ M = I α",
+        "rotational equation of motion"
+      ]
+    ],
+    "example": {
+      "problem": "A 10 kg flywheel disk of radius 0.25 m spins about its axle. Find I.",
+      "steps": [
+        "I = (1/2)(10 kg)(0.25 m)^{2} = 0.5 × 10 × 0.0625"
+      ],
+      "answer": "I = 0.3125 kg·m^{2}"
+    },
+    "try": "1/2 * 10 kg * (0.25 m)^2"
+  },
+  "Hoop ‖ m r^{2}": {
+    "title": "Mass moment of inertia: thin hoop or ring",
+    "about": "Every bit of a thin hoop sits at the same distance r from its axis, so I is simply m r^{2}: the largest possible for a given mass and radius.",
+    "assumptions": [
+      "Thin ring: the radial thickness is small compared with r",
+      "Axis through the centre, perpendicular to the plane of the hoop; about a diameter it is (1/2) m r^{2}"
+    ],
+    "vars": [
+      [
+        "I",
+        "mass moment of inertia about the stated axis",
+        "kg·m^{2}"
+      ],
+      [
+        "m",
+        "mass of the body",
+        "kg"
+      ],
+      [
+        "r",
+        "radius",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "Solid cylinder ‖ (1/2) m r^{2}",
+        "solid disk"
+      ],
+      [
+        "I = I_{G} + m d^{2}",
+        "parallel-axis theorem, to move to another axis"
+      ],
+      [
+        "KE = (1/2) I ω^{2}",
+        "rotational kinetic energy"
+      ],
+      [
+        "Σ M = I α",
+        "rotational equation of motion"
+      ]
+    ],
+    "example": {
+      "problem": "A 1.2 kg bicycle rim of radius 0.31 m is treated as a hoop. Find I about the axle.",
+      "steps": [
+        "I = (1.2 kg)(0.31 m)^{2} = 1.2 × 0.0961"
+      ],
+      "answer": "I ≈ 0.115 kg·m^{2}"
+    },
+    "try": "1.2 kg * (0.31 m)^2"
+  },
+  "Rod ‖ m L^{2}/12": {
+    "title": "Mass moment of inertia: slender rod about its centre",
+    "about": "A thin uniform rod rotating about an axis through its midpoint, perpendicular to the rod.",
+    "assumptions": [
+      "Slender: the thickness is negligible compared with L",
+      "Uniform mass per length",
+      "Axis perpendicular to the rod through its centre"
+    ],
+    "vars": [
+      [
+        "I",
+        "mass moment of inertia about the stated axis",
+        "kg·m^{2}"
+      ],
+      [
+        "m",
+        "mass of the body",
+        "kg"
+      ],
+      [
+        "L",
+        "length of the rod",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "Rod, about one end ‖ m L^{2}/3",
+        "axis at one end"
+      ],
+      [
+        "I = I_{G} + m d^{2}",
+        "parallel-axis theorem, to move to another axis"
+      ],
+      [
+        "KE = (1/2) I ω^{2}",
+        "rotational kinetic energy"
+      ],
+      [
+        "Σ M = I α",
+        "rotational equation of motion"
+      ]
+    ],
+    "example": {
+      "problem": "A 1.5 kg, 1.2 m long uniform bar spins about its midpoint. Find I.",
+      "steps": [
+        "I = (1.5 kg)(1.2 m)^{2}/12 = 1.5 × 1.44/12"
+      ],
+      "answer": "I = 0.18 kg·m^{2}"
+    },
+    "try": "1.5 kg * (1.2 m)^2 / 12"
+  },
+  "Rod, about one end ‖ m L^{2}/3": {
+    "title": "Mass moment of inertia: slender rod about one end",
+    "about": "A thin uniform rod pivoting about one end. It follows from the centre value by the parallel-axis theorem: m L^{2}/12 + m(L/2)^{2} = m L^{2}/3.",
+    "assumptions": [
+      "Slender, uniform rod",
+      "Axis perpendicular to the rod through one end"
+    ],
+    "vars": [
+      [
+        "I",
+        "mass moment of inertia about the stated axis",
+        "kg·m^{2}"
+      ],
+      [
+        "m",
+        "mass of the body",
+        "kg"
+      ],
+      [
+        "L",
+        "length of the rod",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "Rod ‖ m L^{2}/12",
+        "axis at the centre"
+      ],
+      [
+        "T = 2π√(I/(m g d))",
+        "physical pendulum, d from pivot to centre of mass"
+      ],
+      [
+        "I = I_{G} + m d^{2}",
+        "parallel-axis theorem, to move to another axis"
+      ],
+      [
+        "KE = (1/2) I ω^{2}",
+        "rotational kinetic energy"
+      ],
+      [
+        "Σ M = I α",
+        "rotational equation of motion"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 kg, 0.9 m uniform bar hangs from a pivot at one end. Find I about the pivot.",
+      "steps": [
+        "I = (2 kg)(0.9 m)^{2}/3 = 2 × 0.81/3"
+      ],
+      "answer": "I = 0.54 kg·m^{2}"
+    },
+    "try": "2 kg * (0.9 m)^2 / 3"
+  },
+  "a = v dv/ds": {
+    "title": "Acceleration in terms of position (chain rule)",
+    "about": "When acceleration is given as a function of position (a spring, drag that depends on distance), a = v dv/ds lets you separate variables and integrate: ∫a ds = ∫v dv, giving speed as a function of position without involving time.",
+    "assumptions": [
+      "Motion along a path, with s the distance along it and v = ds/dt",
+      "Follows from a = dv/dt = (dv/ds)(ds/dt); valid as long as v is a smooth function of s",
+      "For constant a it integrates to v^{2} = v_{0}^{2} + 2a(s − s_{0})"
+    ],
+    "vars": [
+      [
+        "a",
+        "tangential acceleration",
+        "m/s^{2}"
+      ],
+      [
+        "v",
+        "speed",
+        "m/s"
+      ],
+      [
+        "s",
+        "position along the path",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "a = dv/dt",
+        "definition"
+      ],
+      [
+        "v = ds/dt",
+        "definition"
+      ],
+      [
+        "v^{2} = v_{0}^{2} + 2a Δx",
+        "constant-acceleration result"
+      ]
+    ],
+    "example": {
+      "problem": "A particle's acceleration is a = −4s (m/s^{2}, s in m). It starts at s = 0 with v = 6 m/s. How far does it go before stopping?",
+      "steps": [
+        "v dv = −4s ds; integrate: (v^{2} − 36)/2 = −2s^{2}",
+        "Stopping, v = 0: 18 = 2s^{2}",
+        "s = √9 = 3 m"
+      ],
+      "answer": "s = 3 m"
+    },
+    "try": "sqrt(36/4)"
+  },
+  "a_{n} = v^{2}/ρ": {
+    "title": "Normal acceleration on a curved path",
+    "about": "A particle moving along a curve has an acceleration component toward the centre of curvature, even at constant speed, because its direction keeps changing. It sits beside the tangential component a_{t} = dv/dt.",
+    "assumptions": [
+      "ρ is the instantaneous radius of curvature of the path (for y(x): ρ = [1 + (dy/dx)^{2}]^{3/2}/|d^{2}y/dx^{2}|)",
+      "Points toward the centre of curvature",
+      "The total acceleration is a = √(a_{t}^{2} + a_{n}^{2})"
+    ],
+    "vars": [
+      [
+        "a_{n}",
+        "normal (centripetal) acceleration",
+        "m/s^{2}"
+      ],
+      [
+        "v",
+        "speed",
+        "m/s"
+      ],
+      [
+        "ρ",
+        "radius of curvature",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "a_{t} = dv/dt",
+        "tangential component"
+      ],
+      [
+        "a = √(a_{t}^{2} + a_{n}^{2})",
+        "magnitude"
+      ],
+      [
+        "a_{c} = v^{2}/r",
+        "circle of radius r"
+      ]
+    ],
+    "example": {
+      "problem": "A car takes a curve of radius 50 m at 20 m/s while braking at 3 m/s^{2}. Find the normal and total acceleration.",
+      "steps": [
+        "a_{n} = (20 m/s)^{2}/50 m = 8 m/s^{2}",
+        "a = √(3^{2} + 8^{2}) = 8.54 m/s^{2}"
+      ],
+      "answer": "a_{n} = 8 m/s^{2}; total ≈ 8.54 m/s^{2}"
+    },
+    "try": "(20 m/s)^2 / (50 m)"
+  },
+  "W = Δ KE": {
+    "title": "Work–energy principle",
+    "about": "The net work done on a particle by all forces equals its change in kinetic energy. It skips time entirely, so it is the quickest route when forces and distances are known and speeds are wanted.",
+    "assumptions": [
+      "W is the work of the net force (sum of all forces), including friction and weight",
+      "Particle or rigid body in translation; rigid bodies add (1/2) I ω^{2}",
+      "Conservative forces may instead be moved to the energy side as potential energy: T_{1} + V_{1} + U_{nc} = T_{2} + V_{2}"
+    ],
+    "vars": [
+      [
+        "W",
+        "net work done on the body",
+        "J"
+      ],
+      [
+        "Δ KE",
+        "change in kinetic energy, (1/2) m v_{2}^{2} − (1/2) m v_{1}^{2}",
+        "J"
+      ]
+    ],
+    "related": [
+      [
+        "W = ∫ F · ds",
+        "work of a force"
+      ],
+      [
+        "KE = (1/2) m v^{2}",
+        "kinetic energy"
+      ],
+      [
+        "PE = m g h",
+        "gravitational potential energy"
+      ]
+    ],
+    "example": {
+      "problem": "A 1200 kg car at 25 m/s brakes to a stop. Friction from the brakes acts over 40 m. Find the average braking force.",
+      "steps": [
+        "ΔKE = 0 − (1/2)(1200)(25)^{2} = −375 000 J",
+        "W = −F (40 m) = −375 000 J",
+        "F = 375 000/40 = 9375 N"
+      ],
+      "answer": "F ≈ 9.38 kN"
+    },
+    "try": "1200 kg * (25 m/s)^2 / (2 * 40 m) to kN"
+  },
+  "∫ F dt = Δp": {
+    "title": "Impulse–momentum principle",
+    "about": "The impulse of the net force over a time interval equals the change in momentum. It is the tool for collisions, impacts and short, large forces where the force history is unknown but the time or the speeds are known.",
+    "assumptions": [
+      "F is the net external force; internal forces cancel for a system",
+      "A vector equation: apply it in each direction",
+      "Over a very short impact, finite forces such as weight give negligible impulse"
+    ],
+    "vars": [
+      [
+        "F",
+        "net force",
+        "N"
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "p",
+        "linear momentum m v",
+        "kg·m/s"
+      ]
+    ],
+    "related": [
+      [
+        "p = m v",
+        "momentum"
+      ],
+      [
+        "F_{avg} Δt = m(v_{2} − v_{1})",
+        "average-force form"
+      ],
+      [
+        "Σ m v_{1} = Σ m v_{2}",
+        "conservation when the net impulse is zero"
+      ]
+    ],
+    "example": {
+      "problem": "A 0.145 kg baseball arrives at 40 m/s and leaves the bat at 50 m/s in the opposite direction. Contact lasts 1.2 ms. Find the average force.",
+      "steps": [
+        "Δp = 0.145 × (50 − (−40)) = 13.05 kg·m/s",
+        "F_{avg} = Δp/Δt = 13.05/0.0012"
+      ],
+      "answer": "F_{avg} ≈ 10.9 kN"
+    },
+    "try": "0.145 kg * 90 m/s / 1.2 ms to kN"
+  },
+  "e = (v′_{2} − v′_{1})/(v_{1} − v_{2})": {
+    "title": "Coefficient of restitution",
+    "about": "Measures how bouncy a collision is: the speed at which two bodies separate after impact divided by the speed at which they approached. e = 1 is perfectly elastic, e = 0 perfectly plastic (they stick together).",
+    "assumptions": [
+      "Central impact, along the line joining the centres; for oblique impact use the components along that line",
+      "Primes are velocities after impact; signs follow one positive direction",
+      "Pair it with conservation of momentum to solve for both final velocities",
+      "e depends on materials and impact speed, so it is an empirical value"
+    ],
+    "vars": [
+      [
+        "e",
+        "coefficient of restitution, 0 ≤ e ≤ 1",
+        ""
+      ],
+      [
+        "v_{1}, v_{2}",
+        "velocities of bodies 1 and 2 before impact",
+        "m/s"
+      ],
+      [
+        "v′_{1}, v′_{2}",
+        "velocities after impact",
+        "m/s"
+      ]
+    ],
+    "related": [
+      [
+        "m_{1} v_{1} + m_{2} v_{2} = m_{1} v′_{1} + m_{2} v′_{2}",
+        "momentum conservation"
+      ],
+      [
+        "e = √(h_{2}/h_{1})",
+        "ball dropped on a fixed floor"
+      ]
+    ],
+    "example": {
+      "problem": "A ball dropped from 2.0 m rebounds to 1.3 m. Find e.",
+      "steps": [
+        "Impact speed √(2gh_{1}), rebound speed √(2gh_{2})",
+        "e = √(h_{2}/h_{1}) = √(1.3/2.0)"
+      ],
+      "answer": "e ≈ 0.806"
+    },
+    "try": "sqrt(1.3/2.0)"
+  },
+  "v = ω r": {
+    "title": "Rolling without slipping (speed and spin)",
+    "about": "A wheel that rolls without slipping has its centre moving at v = ω r, and the contact point momentarily at rest. On a rotating body it also gives the speed of any point at distance r from a fixed axis.",
+    "assumptions": [
+      "No slip at the contact point (friction is enough; static friction does no work)",
+      "ω in rad/s",
+      "Its derivative gives a = α r for the centre's acceleration"
+    ],
+    "vars": [
+      [
+        "v",
+        "speed of the centre (or of a point at radius r)",
+        "m/s"
+      ],
+      [
+        "ω",
+        "angular velocity",
+        "rad/s"
+      ],
+      [
+        "r",
+        "radius",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "a = α r",
+        "tangential acceleration"
+      ],
+      [
+        "KE = (1/2) m v^{2} + (1/2) I ω^{2}",
+        "rolling kinetic energy"
+      ],
+      [
+        "v_{top} = 2 v",
+        "top of a rolling wheel"
+      ]
+    ],
+    "example": {
+      "problem": "A car tyre of radius 0.32 m turns at 800 rpm without slipping. Find the car's speed.",
+      "steps": [
+        "ω = 800 rpm = 800 × 2π/60 = 83.8 rad/s",
+        "v = ω r = 83.8 × 0.32 = 26.8 m/s (about 96.5 km/h)"
+      ],
+      "answer": "v ≈ 26.8 m/s"
+    },
+    "try": "800 * 2 pi / 60 * 0.32 m/s"
+  },
+  "Σ M = I α": {
+    "title": "Rotational equation of motion",
+    "about": "The rotational form of Newton's second law: the net moment about a fixed axis (or the centre of mass) equals the moment of inertia times the angular acceleration.",
+    "assumptions": [
+      "Moments and I are about the same axis: a fixed pivot or the centre of mass G",
+      "Rigid body in plane motion; about any other point extra m a terms appear",
+      "α in rad/s^{2}"
+    ],
+    "vars": [
+      [
+        "Σ M",
+        "net moment about the axis",
+        "N·m"
+      ],
+      [
+        "I",
+        "mass moment of inertia about that axis",
+        "kg·m^{2}"
+      ],
+      [
+        "α",
+        "angular acceleration",
+        "rad/s^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "Σ F = m a_{G}",
+        "translation of the centre of mass"
+      ],
+      [
+        "I = I_{G} + m d^{2}",
+        "parallel axis"
+      ],
+      [
+        "τ = I α",
+        "same law, physics notation"
+      ]
+    ],
+    "example": {
+      "problem": "A 10 kg solid disk of radius 0.25 m (I = 0.3125 kg·m^{2}) is driven by a 5 N·m motor torque. Find α.",
+      "steps": [
+        "α = ΣM/I = 5/0.3125"
+      ],
+      "answer": "α = 16 rad/s^{2}"
+    },
+    "try": "5 / 0.3125"
+  },
+  "ω_{1}/ω_{2} = N_{2}/N_{1}": {
+    "title": "Gear ratio: speeds",
+    "about": "Two meshing gears share the same pitch-line speed, so their angular speeds are in inverse proportion to their tooth counts. A small gear driving a large one slows the output down.",
+    "assumptions": [
+      "Gears mesh without slipping (same tangential speed at the pitch circle)",
+      "N counts teeth; pitch radii work the same way, ω_{1}/ω_{2} = r_{2}/r_{1}",
+      "External gears reverse direction; an idler between them restores it",
+      "For a gear train, multiply the ratios of each mesh"
+    ],
+    "vars": [
+      [
+        "ω_{1}, ω_{2}",
+        "angular speeds of the driver and driven gear",
+        "rad/s"
+      ],
+      [
+        "N_{1}, N_{2}",
+        "numbers of teeth",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "τ_{2}/τ_{1} = N_{2}/N_{1}",
+        "torque goes the other way"
+      ],
+      [
+        "ω_{1} r_{1} = ω_{2} r_{2}",
+        "equal pitch-line speed"
+      ]
+    ],
+    "example": {
+      "problem": "A 20-tooth pinion on a motor at 1800 rpm drives a 60-tooth gear. Find the output speed.",
+      "steps": [
+        "ω_{2} = ω_{1} N_{1}/N_{2} = 1800 × 20/60"
+      ],
+      "answer": "ω_{2} = 600 rpm"
+    },
+    "try": "1800 rpm * 20/60"
+  },
+  "τ_{2}/τ_{1} = N_{2}/N_{1}": {
+    "title": "Gear ratio: torques",
+    "about": "Power through ideal gears is conserved (τω is the same on both shafts), so torque scales up by exactly the ratio that speed scales down. A reduction gear trades speed for torque.",
+    "assumptions": [
+      "Ideal, lossless gears; real gears lose a few percent per mesh, so multiply by an efficiency",
+      "Steady running (the gears' own inertia not being accelerated)"
+    ],
+    "vars": [
+      [
+        "τ_{1}, τ_{2}",
+        "torques on the driver and driven shafts",
+        "N·m"
+      ],
+      [
+        "N_{1}, N_{2}",
+        "numbers of teeth",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "ω_{1}/ω_{2} = N_{2}/N_{1}",
+        "speed ratio"
+      ],
+      [
+        "P = τ ω",
+        "power is unchanged"
+      ]
+    ],
+    "example": {
+      "problem": "A motor gives 4 N·m to a 15-tooth pinion meshing with a 75-tooth gear. Find the output torque.",
+      "steps": [
+        "τ_{2} = τ_{1} N_{2}/N_{1} = 4 × 75/15"
+      ],
+      "answer": "τ_{2} = 20 N·m"
+    },
+    "try": "4 N m * 75/15"
+  },
+  "m x′′ + c x′ + k x = 0": {
+    "title": "Free vibration of a damped mass–spring system",
+    "about": "The equation of motion for a mass on a spring with a viscous damper and no applied force. Its solution depends on the damping ratio ζ: underdamped (ζ < 1) oscillates and decays, critically damped (ζ = 1) returns fastest without overshoot, overdamped (ζ > 1) creeps back.",
+    "assumptions": [
+      "Linear spring (force kx) and viscous damper (force c x′)",
+      "Single degree of freedom; x measured from the static equilibrium position (so gravity drops out)",
+      "No external force; with a force F(t) it becomes the right-hand side"
+    ],
+    "vars": [
+      [
+        "m",
+        "mass",
+        "kg"
+      ],
+      [
+        "c",
+        "viscous damping coefficient",
+        "N·s/m"
+      ],
+      [
+        "k",
+        "spring stiffness",
+        "N/m"
+      ],
+      [
+        "x",
+        "displacement from equilibrium",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "ω_{n} = √(k/m)",
+        "natural frequency"
+      ],
+      [
+        "ζ = c/c_{c}",
+        "damping ratio"
+      ],
+      [
+        "x = A e^{−ζω_{n}t} cos(ω_{d}t − φ)",
+        "underdamped solution"
+      ]
+    ],
+    "example": {
+      "problem": "m = 2 kg, c = 8 N·s/m, k = 200 N/m. Classify the motion.",
+      "steps": [
+        "ω_{n} = √(200/2) = 10 rad/s",
+        "c_{c} = 2√(km) = 2√400 = 40 N·s/m",
+        "ζ = 8/40 = 0.2 < 1, so underdamped",
+        "ω_{d} = 10√(1 − 0.04) = 9.80 rad/s"
+      ],
+      "answer": "ζ = 0.2, underdamped, ω_{d} ≈ 9.80 rad/s"
+    },
+    "try": "8 / (2 sqrt(200*2))"
+  },
+  "ω_{n} = √(k/m)": {
+    "title": "Undamped natural frequency",
+    "about": "The angular frequency at which a mass on a spring oscillates freely when there is no damping. Stiffer springs raise it; heavier masses lower it.",
+    "assumptions": [
+      "Linear spring, single degree of freedom",
+      "Mass of the spring itself small (else add about a third of it to m)",
+      "In rad/s; divide by 2π for Hz"
+    ],
+    "vars": [
+      [
+        "ω_{n}",
+        "natural (angular) frequency",
+        "rad/s"
+      ],
+      [
+        "k",
+        "spring stiffness",
+        "N/m"
+      ],
+      [
+        "m",
+        "mass",
+        "kg"
+      ]
+    ],
+    "related": [
+      [
+        "f_{n} = ω_{n}/(2π)",
+        "in hertz"
+      ],
+      [
+        "T = 2π√(m/k)",
+        "period"
+      ],
+      [
+        "ω_{n} = √(g/δ_{st})",
+        "from static deflection δ_{st}"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 kg mass hangs on a 400 N/m spring. Find ω_{n}.",
+      "steps": [
+        "ω_{n} = √(400/2) = √200"
+      ],
+      "answer": "ω_{n} ≈ 14.1 rad/s"
+    },
+    "try": "sqrt(400/2)"
+  },
+  "f_{n} = ω_{n}/(2π)": {
+    "title": "Natural frequency in hertz",
+    "about": "Converts natural angular frequency (rad/s) to cycles per second. One full cycle is 2π radians.",
+    "assumptions": [
+      "ω_{n} in rad/s",
+      "Same conversion for any angular frequency: f = ω/(2π)"
+    ],
+    "vars": [
+      [
+        "f_{n}",
+        "natural frequency",
+        "Hz"
+      ],
+      [
+        "ω_{n}",
+        "natural angular frequency",
+        "rad/s"
+      ]
+    ],
+    "related": [
+      [
+        "ω_{n} = √(k/m)",
+        "natural frequency"
+      ],
+      [
+        "T = 1/f",
+        "period"
+      ]
+    ],
+    "example": {
+      "problem": "A system has ω_{n} = 14.14 rad/s. Find f_{n} and the period.",
+      "steps": [
+        "f_{n} = 14.14/(2π) = 2.25 Hz",
+        "T = 1/f_{n} = 0.444 s"
+      ],
+      "answer": "f_{n} ≈ 2.25 Hz"
+    },
+    "try": "14.14 / (2 pi)"
+  },
+  "c_{c} = 2√(k m)": {
+    "title": "Critical damping coefficient",
+    "about": "The amount of viscous damping that just stops a mass–spring system from oscillating. It is the reference value against which actual damping is measured.",
+    "assumptions": [
+      "Linear spring and viscous damper",
+      "Same as c_{c} = 2 m ω_{n}"
+    ],
+    "vars": [
+      [
+        "c_{c}",
+        "critical damping coefficient",
+        "N·s/m"
+      ],
+      [
+        "k",
+        "spring stiffness",
+        "N/m"
+      ],
+      [
+        "m",
+        "mass",
+        "kg"
+      ]
+    ],
+    "related": [
+      [
+        "ζ = c/c_{c}",
+        "damping ratio"
+      ],
+      [
+        "c_{c} = 2 m ω_{n}",
+        "equivalent form"
+      ]
+    ],
+    "example": {
+      "problem": "Find the critical damping for a 250 kg mass on a 100 kN/m spring.",
+      "steps": [
+        "c_{c} = 2√(100 000 × 250) = 2 × 5000"
+      ],
+      "answer": "c_{c} = 10 000 N·s/m"
+    },
+    "try": "2 sqrt(100000 * 250)"
+  },
+  "ζ = c/c_{c}": {
+    "title": "Damping ratio",
+    "about": "Expresses damping as a fraction of critical: ζ < 1 underdamped (oscillates), ζ = 1 critically damped, ζ > 1 overdamped. Structures are often ζ ≈ 0.01–0.05; car suspensions about 0.2–0.4.",
+    "assumptions": [
+      "Linear viscous damping; other damping (friction, hysteresis) is often expressed as an equivalent ζ",
+      "c_{c} = 2√(km)"
+    ],
+    "vars": [
+      [
+        "ζ",
+        "damping ratio",
+        ""
+      ],
+      [
+        "c",
+        "actual damping coefficient",
+        "N·s/m"
+      ],
+      [
+        "c_{c}",
+        "critical damping coefficient",
+        "N·s/m"
+      ]
+    ],
+    "related": [
+      [
+        "c_{c} = 2√(k m)",
+        "critical damping"
+      ],
+      [
+        "ω_{d} = ω_{n} √(1 − ζ^{2})",
+        "damped frequency"
+      ],
+      [
+        "ζ ≈ δ/(2π)",
+        "from logarithmic decrement, light damping"
+      ]
+    ],
+    "example": {
+      "problem": "A 250 kg machine on a 100 kN/m mount has a damper of 1500 N·s/m. Find ζ.",
+      "steps": [
+        "c_{c} = 2√(100 000 × 250) = 10 000 N·s/m",
+        "ζ = 1500/10 000"
+      ],
+      "answer": "ζ = 0.15"
+    },
+    "try": "1500 / (2 sqrt(100000*250))"
+  },
+  "ω_{d} = ω_{n} √(1 − ζ^{2})": {
+    "title": "Damped natural frequency",
+    "about": "An underdamped system oscillates a little slower than it would without damping. For light damping (ζ < 0.2) the difference is under 2%.",
+    "assumptions": [
+      "Underdamped only, ζ < 1; at ζ ≥ 1 there is no oscillation",
+      "Linear viscous damping"
+    ],
+    "vars": [
+      [
+        "ω_{d}",
+        "damped natural frequency",
+        "rad/s"
+      ],
+      [
+        "ω_{n}",
+        "undamped natural frequency",
+        "rad/s"
+      ],
+      [
+        "ζ",
+        "damping ratio",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "ω_{n} = √(k/m)",
+        "undamped frequency"
+      ],
+      [
+        "T_{d} = 2π/ω_{d}",
+        "damped period"
+      ]
+    ],
+    "example": {
+      "problem": "ω_{n} = 20 rad/s and ζ = 0.3. Find ω_{d}.",
+      "steps": [
+        "ω_{d} = 20√(1 − 0.09) = 20 × 0.9539"
+      ],
+      "answer": "ω_{d} ≈ 19.08 rad/s"
+    },
+    "try": "20 sqrt(1 - 0.3^2)"
+  },
+  "δ = ln(x_{1}/x_{2})": {
+    "title": "Logarithmic decrement",
+    "about": "Measures damping from a recorded free vibration: the natural log of the ratio of two successive peaks. It is the standard way to find ζ from a ring-down test.",
+    "assumptions": [
+      "Underdamped free vibration with viscous damping",
+      "x_{1} and x_{2} are successive peaks one period apart; over n periods δ = (1/n) ln(x_{1}/x_{n+1})"
+    ],
+    "vars": [
+      [
+        "δ",
+        "logarithmic decrement",
+        ""
+      ],
+      [
+        "x_{1}, x_{2}",
+        "amplitudes of successive peaks",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "ζ = δ/√(4π^{2} + δ^{2})",
+        "damping ratio from δ"
+      ],
+      [
+        "ζ ≈ δ/(2π)",
+        "light damping"
+      ]
+    ],
+    "example": {
+      "problem": "Successive peaks of a vibration record are 12 mm and 9 mm. Find δ and ζ.",
+      "steps": [
+        "δ = ln(12/9) = 0.2877",
+        "ζ = 0.2877/√(4π^{2} + 0.2877^{2}) = 0.0457"
+      ],
+      "answer": "δ ≈ 0.288; ζ ≈ 0.0457"
+    },
+    "try": "ln(12/9)"
+  },
+  "v = v_{0} + a t": {
+    "title": "Constant acceleration: velocity after a time",
+    "about": "Velocity changes by a t over a time t when acceleration is constant. Use it when displacement is neither known nor wanted.",
+    "assumptions": [
+      "Acceleration is constant in magnitude and direction over the interval (not true with drag, or in circular motion)",
+      "Motion along a straight line; in 2D apply each equation separately to x and y (projectiles: a_{y} = −g, a_{x} = 0)",
+      "Signs follow one chosen positive direction"
+    ],
+    "vars": [
+      [
+        "v",
+        "final velocity",
+        "m/s"
+      ],
+      [
+        "v_{0}",
+        "initial velocity",
+        "m/s"
+      ],
+      [
+        "a",
+        "constant acceleration",
+        "m/s^{2}"
+      ],
+      [
+        "t",
+        "elapsed time",
+        "s"
+      ],
+      [
+        "x, x_{0}",
+        "final and initial position",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "x = x_{0} + v_{0} t + (1/2) a t^{2}",
+        "no final velocity"
+      ],
+      [
+        "v^{2} = v_{0}^{2} + 2a Δx",
+        "no time"
+      ],
+      [
+        "Δx = (1/2)(v_{0} + v) t",
+        "no acceleration"
+      ]
+    ],
+    "example": {
+      "problem": "A car accelerates from 5 m/s at 2.5 m/s^{2} for 6 s. Find its speed.",
+      "steps": [
+        "v = 5 + 2.5 × 6"
+      ],
+      "answer": "v = 20 m/s"
+    },
+    "try": "5 m/s + 2.5 m/s^2 * 6 s"
+  },
+  "x = x_{0} + v_{0} t + (1/2) a t^{2}": {
+    "title": "Constant acceleration: position after a time",
+    "about": "Position after time t when acceleration is constant: the starting position, plus the distance covered at the initial speed, plus the extra from accelerating. Use it when final velocity is not needed.",
+    "assumptions": [
+      "Acceleration is constant in magnitude and direction over the interval (not true with drag, or in circular motion)",
+      "Motion along a straight line; in 2D apply each equation separately to x and y (projectiles: a_{y} = −g, a_{x} = 0)",
+      "Signs follow one chosen positive direction"
+    ],
+    "vars": [
+      [
+        "v",
+        "final velocity",
+        "m/s"
+      ],
+      [
+        "v_{0}",
+        "initial velocity",
+        "m/s"
+      ],
+      [
+        "a",
+        "constant acceleration",
+        "m/s^{2}"
+      ],
+      [
+        "t",
+        "elapsed time",
+        "s"
+      ],
+      [
+        "x, x_{0}",
+        "final and initial position",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "v = v_{0} + a t",
+        "no displacement"
+      ],
+      [
+        "v^{2} = v_{0}^{2} + 2a Δx",
+        "no time"
+      ],
+      [
+        "Δx = (1/2)(v_{0} + v) t",
+        "no acceleration"
+      ]
+    ],
+    "example": {
+      "problem": "A stone is dropped from rest off a bridge and hits the water 2.4 s later. How high is the bridge (ignore air resistance)?",
+      "steps": [
+        "Take down as positive: v_{0} = 0, a = g = 9.81 m/s^{2}",
+        "Δx = (1/2)(9.81)(2.4)^{2} = 28.3 m"
+      ],
+      "answer": "h ≈ 28.3 m"
+    },
+    "try": "1/2 * 9.81 m/s^2 * (2.4 s)^2"
+  },
+  "v^{2} = v_{0}^{2} + 2a Δx": {
+    "title": "Constant acceleration: speed after a distance",
+    "about": "Relates speeds and distance without time. It is the stopping-distance formula: set v = 0 to get Δx = v_{0}^{2}/(2|a|).",
+    "assumptions": [
+      "Acceleration is constant in magnitude and direction over the interval (not true with drag, or in circular motion)",
+      "Motion along a straight line; in 2D apply each equation separately to x and y (projectiles: a_{y} = −g, a_{x} = 0)",
+      "Signs follow one chosen positive direction"
+    ],
+    "vars": [
+      [
+        "v",
+        "final velocity",
+        "m/s"
+      ],
+      [
+        "v_{0}",
+        "initial velocity",
+        "m/s"
+      ],
+      [
+        "a",
+        "constant acceleration",
+        "m/s^{2}"
+      ],
+      [
+        "t",
+        "elapsed time",
+        "s"
+      ],
+      [
+        "x, x_{0}",
+        "final and initial position",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "v = v_{0} + a t",
+        "no displacement"
+      ],
+      [
+        "x = x_{0} + v_{0} t + (1/2) a t^{2}",
+        "no final velocity"
+      ],
+      [
+        "Δx = (1/2)(v_{0} + v) t",
+        "no acceleration"
+      ]
+    ],
+    "example": {
+      "problem": "A car at 27 m/s (about 97 km/h) brakes at 7 m/s^{2}. Find its stopping distance.",
+      "steps": [
+        "0 = 27^{2} − 2(7)Δx",
+        "Δx = 729/14 = 52.1 m"
+      ],
+      "answer": "Δx ≈ 52.1 m"
+    },
+    "try": "(27 m/s)^2 / (2 * 7 m/s^2)"
+  },
+  "Δx = (1/2)(v_{0} + v) t": {
+    "title": "Constant acceleration: distance from average velocity",
+    "about": "Under constant acceleration the average velocity is the mean of the initial and final velocities, so distance is that average times the time. Use it when acceleration is not known.",
+    "assumptions": [
+      "Acceleration is constant in magnitude and direction over the interval (not true with drag, or in circular motion)",
+      "Motion along a straight line; in 2D apply each equation separately to x and y (projectiles: a_{y} = −g, a_{x} = 0)",
+      "Signs follow one chosen positive direction"
+    ],
+    "vars": [
+      [
+        "v",
+        "final velocity",
+        "m/s"
+      ],
+      [
+        "v_{0}",
+        "initial velocity",
+        "m/s"
+      ],
+      [
+        "a",
+        "constant acceleration",
+        "m/s^{2}"
+      ],
+      [
+        "t",
+        "elapsed time",
+        "s"
+      ],
+      [
+        "x, x_{0}",
+        "final and initial position",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "v = v_{0} + a t",
+        "no displacement"
+      ],
+      [
+        "x = x_{0} + v_{0} t + (1/2) a t^{2}",
+        "no final velocity"
+      ],
+      [
+        "v^{2} = v_{0}^{2} + 2a Δx",
+        "no time"
+      ]
+    ],
+    "example": {
+      "problem": "A train slows uniformly from 30 m/s to 10 m/s in 40 s. How far does it travel?",
+      "steps": [
+        "Δx = (1/2)(30 + 10)(40) = 20 × 40"
+      ],
+      "answer": "Δx = 800 m"
+    },
+    "try": "1/2 * (30 m/s + 10 m/s) * 40 s"
+  },
+  "F = m a": {
+    "title": "Newton's second law",
+    "about": "The net force on a body equals its mass times its acceleration, in the same direction. With a free-body diagram it turns a mechanics problem into equations for unknown forces or accelerations.",
+    "assumptions": [
+      "F is the net (vector sum) external force",
+      "Inertial reference frame (not an accelerating or rotating one, unless fictitious forces are added)",
+      "Constant mass; for variable mass (rockets) use F = dp/dt",
+      "Speeds much less than c"
+    ],
+    "vars": [
+      [
+        "F",
+        "net force",
+        "N"
+      ],
+      [
+        "m",
+        "mass",
+        "kg"
+      ],
+      [
+        "a",
+        "acceleration",
+        "m/s^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "F = dp/dt",
+        "general form"
+      ],
+      [
+        "W = m g",
+        "weight"
+      ],
+      [
+        "Σ F = 0",
+        "equilibrium, a = 0"
+      ]
+    ],
+    "example": {
+      "problem": "A 1500 kg car accelerates from 0 to 27 m/s in 9 s. Find the average net force.",
+      "steps": [
+        "a = 27/9 = 3 m/s^{2}",
+        "F = 1500 × 3 = 4500 N"
+      ],
+      "answer": "F = 4.5 kN"
+    },
+    "try": "1500 kg * 27 m/s / 9 s to kN"
+  },
+  "W = F d cos(θ)": {
+    "title": "Work done by a constant force",
+    "about": "A force does work when it moves its point of application. Only the component along the displacement counts, so a force at right angles does no work.",
+    "assumptions": [
+      "Constant force and straight-line displacement; otherwise W = ∫F · ds",
+      "θ is the angle between the force and the displacement",
+      "Work can be negative (θ > 90°), e.g. friction"
+    ],
+    "vars": [
+      [
+        "W",
+        "work",
+        "J"
+      ],
+      [
+        "F",
+        "magnitude of the force",
+        "N"
+      ],
+      [
+        "d",
+        "displacement",
+        "m"
+      ],
+      [
+        "θ",
+        "angle between F and the displacement",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "W = ∫ F · ds",
+        "variable force"
+      ],
+      [
+        "W = Δ KE",
+        "work-energy theorem"
+      ],
+      [
+        "P = F v",
+        "power"
+      ]
+    ],
+    "example": {
+      "problem": "A crate is pulled 12 m across a floor by a rope at 30° above the horizontal with a tension of 150 N. Find the work done by the rope.",
+      "steps": [
+        "W = 150 × 12 × cos(30°) = 1800 × 0.866"
+      ],
+      "answer": "W ≈ 1559 J"
+    },
+    "try": "150 N * 12 m * cos(30 deg) to J"
+  },
+  "KE = (1/2) m v^{2}": {
+    "title": "Translational kinetic energy",
+    "about": "The energy a body has because it is moving. It grows with the square of speed, so doubling speed quadruples it (and the stopping distance).",
+    "assumptions": [
+      "Speeds much less than c (otherwise KE = (γ − 1) m c^{2})",
+      "Translation only; a spinning body adds (1/2) I ω^{2}"
+    ],
+    "vars": [
+      [
+        "KE",
+        "kinetic energy",
+        "J"
+      ],
+      [
+        "m",
+        "mass",
+        "kg"
+      ],
+      [
+        "v",
+        "speed",
+        "m/s"
+      ]
+    ],
+    "related": [
+      [
+        "W = Δ KE",
+        "work-energy theorem"
+      ],
+      [
+        "KE = p^{2}/(2m)",
+        "in terms of momentum"
+      ],
+      [
+        "KE = (1/2) I ω^{2}",
+        "rotation"
+      ]
+    ],
+    "example": {
+      "problem": "Find the kinetic energy of a 1200 kg car at 25 m/s (90 km/h).",
+      "steps": [
+        "KE = (1/2)(1200)(25)^{2} = 600 × 625"
+      ],
+      "answer": "KE = 375 kJ"
+    },
+    "try": "1/2 * 1200 kg * (25 m/s)^2 to kJ"
+  },
+  "PE = m g h": {
+    "title": "Gravitational potential energy near Earth's surface",
+    "about": "The energy stored by lifting a mass a height h in a uniform gravitational field. Only differences in h matter; the zero level is a free choice.",
+    "assumptions": [
+      "Uniform field: h much smaller than Earth's radius (otherwise U = −G M m/r)",
+      "g ≈ 9.81 m/s^{2} at Earth's surface",
+      "h measured upward from the chosen reference"
+    ],
+    "vars": [
+      [
+        "PE",
+        "gravitational potential energy",
+        "J"
+      ],
+      [
+        "m",
+        "mass",
+        "kg"
+      ],
+      [
+        "g",
+        "gravitational acceleration",
+        "m/s^{2}"
+      ],
+      [
+        "h",
+        "height above the reference level",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "KE + PE = constant",
+        "no friction"
+      ],
+      [
+        "U = −G M m/r",
+        "far from the surface"
+      ],
+      [
+        "v = √(2 g h)",
+        "speed after falling h from rest"
+      ]
+    ],
+    "example": {
+      "problem": "How much energy does it take to lift a 70 kg person up 3 floors (10 m)?",
+      "steps": [
+        "PE = 70 × 9.81 × 10"
+      ],
+      "answer": "PE ≈ 6.87 kJ"
+    },
+    "try": "70 kg * 9.81 m/s^2 * 10 m to kJ"
+  },
+  "P = dW/dt = F v": {
+    "title": "Power",
+    "about": "Power is the rate of doing work. For a force pushing a body at speed v along its line, it is force times speed.",
+    "assumptions": [
+      "F v assumes the force is along the velocity; in general P = F · v = F v cos(θ)",
+      "Instantaneous; average power is W/Δt"
+    ],
+    "vars": [
+      [
+        "P",
+        "power",
+        "W"
+      ],
+      [
+        "W",
+        "work",
+        "J"
+      ],
+      [
+        "F",
+        "force",
+        "N"
+      ],
+      [
+        "v",
+        "speed",
+        "m/s"
+      ]
+    ],
+    "related": [
+      [
+        "P = τ ω",
+        "rotating shaft"
+      ],
+      [
+        "W = F d cos(θ)",
+        "work"
+      ],
+      [
+        "η = P_{out}/P_{in}",
+        "efficiency"
+      ]
+    ],
+    "example": {
+      "problem": "A car needs 600 N to overcome drag and rolling resistance at 30 m/s. Find the power at the wheels.",
+      "steps": [
+        "P = 600 × 30"
+      ],
+      "answer": "P = 18 kW"
+    },
+    "try": "600 N * 30 m/s to kW"
+  },
+  "p = m v": {
+    "title": "Linear momentum",
+    "about": "Mass times velocity, a vector. The total momentum of a system is conserved whenever the net external force is zero, which is what solves collision and explosion problems.",
+    "assumptions": [
+      "Speeds much less than c (otherwise p = γ m v)",
+      "Vector: direction matters, add components"
+    ],
+    "vars": [
+      [
+        "p",
+        "momentum",
+        "kg·m/s"
+      ],
+      [
+        "m",
+        "mass",
+        "kg"
+      ],
+      [
+        "v",
+        "velocity",
+        "m/s"
+      ]
+    ],
+    "related": [
+      [
+        "∫ F dt = Δp",
+        "impulse"
+      ],
+      [
+        "m_{1} v_{1} + m_{2} v_{2} = (m_{1} + m_{2}) v_{f}",
+        "perfectly inelastic collision"
+      ],
+      [
+        "KE = p^{2}/(2m)",
+        "kinetic energy"
+      ]
+    ],
+    "example": {
+      "problem": "A 1000 kg car at 20 m/s rear-ends a stopped 1500 kg car and they lock together. Find their speed just after.",
+      "steps": [
+        "Momentum before: 1000 × 20 = 20 000 kg·m/s",
+        "v_{f} = 20 000/(1000 + 1500)"
+      ],
+      "answer": "v_{f} = 8 m/s"
+    },
+    "try": "1000 kg * 20 m/s / 2500 kg"
+  },
+  "a_{c} = v^{2}/r": {
+    "title": "Centripetal acceleration",
+    "about": "A body moving in a circle at constant speed accelerates toward the centre, because its direction is always changing. Some force (tension, friction, gravity, a normal force) must supply m v^{2}/r.",
+    "assumptions": [
+      "Circular path of radius r",
+      "For non-uniform circular motion there is also a tangential component dv/dt",
+      "Equivalent: a_{c} = ω^{2} r"
+    ],
+    "vars": [
+      [
+        "a_{c}",
+        "centripetal acceleration",
+        "m/s^{2}"
+      ],
+      [
+        "v",
+        "speed",
+        "m/s"
+      ],
+      [
+        "r",
+        "radius of the circle",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "F_{c} = m v^{2}/r",
+        "centripetal force"
+      ],
+      [
+        "a_{c} = ω^{2} r",
+        "with angular speed"
+      ],
+      [
+        "v = 2πr/T",
+        "speed from period"
+      ]
+    ],
+    "example": {
+      "problem": "A car rounds a curve of radius 80 m at 20 m/s. Find a_{c} and the friction coefficient it needs on a flat road.",
+      "steps": [
+        "a_{c} = 20^{2}/80 = 5 m/s^{2}",
+        "μ ≥ a_{c}/g = 5/9.81 = 0.51"
+      ],
+      "answer": "a_{c} = 5 m/s^{2} (μ ≥ 0.51)"
+    },
+    "try": "(20 m/s)^2 / (80 m)"
+  },
+  "τ = r F sin(θ)": {
+    "title": "Torque",
+    "about": "The turning effect of a force about an axis: the force times the lever arm. Pushing perpendicular to the lever (θ = 90°) gives the most torque; pushing along it gives none.",
+    "assumptions": [
+      "θ is the angle between the position vector r (axis to point of application) and F",
+      "Vector form τ = r × F gives the direction by the right-hand rule",
+      "r sin(θ) is the perpendicular distance d of M = F d"
+    ],
+    "vars": [
+      [
+        "τ",
+        "torque",
+        "N·m"
+      ],
+      [
+        "r",
+        "distance from the axis to where the force acts",
+        "m"
+      ],
+      [
+        "F",
+        "force",
+        "N"
+      ],
+      [
+        "θ",
+        "angle between r and F",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "τ = r × F",
+        "vector form"
+      ],
+      [
+        "τ = I α",
+        "rotational second law"
+      ],
+      [
+        "M = F d",
+        "statics form"
+      ]
+    ],
+    "example": {
+      "problem": "A 40 N force is applied at the end of a 0.25 m wrench, at 60° to the handle. Find the torque.",
+      "steps": [
+        "τ = 0.25 × 40 × sin(60°) = 10 × 0.866"
+      ],
+      "answer": "τ ≈ 8.66 N·m"
+    },
+    "try": "0.25 m * 40 N * sin(60 deg)"
+  },
+  "τ = I α": {
+    "title": "Newton's second law for rotation",
+    "about": "Net torque about a fixed axis equals moment of inertia times angular acceleration. It plays the role of F = m a for spinning bodies.",
+    "assumptions": [
+      "Rigid body rotating about a fixed axis or its centre of mass",
+      "τ and I about the same axis",
+      "α in rad/s^{2}"
+    ],
+    "vars": [
+      [
+        "τ",
+        "net torque",
+        "N·m"
+      ],
+      [
+        "I",
+        "moment of inertia",
+        "kg·m^{2}"
+      ],
+      [
+        "α",
+        "angular acceleration",
+        "rad/s^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "ω = ω_{0} + α t",
+        "constant angular acceleration"
+      ],
+      [
+        "L = I ω",
+        "angular momentum"
+      ],
+      [
+        "I = (1/2) m r^{2}",
+        "solid disk"
+      ]
+    ],
+    "example": {
+      "problem": "A 0.5 kg·m^{2} wheel starts from rest under a 2 N·m net torque. Find α and its speed after 5 s.",
+      "steps": [
+        "α = 2/0.5 = 4 rad/s^{2}",
+        "ω = α t = 4 × 5 = 20 rad/s"
+      ],
+      "answer": "α = 4 rad/s^{2}; ω = 20 rad/s after 5 s"
+    },
+    "try": "2/0.5"
+  },
+  "L = I ω": {
+    "title": "Angular momentum of a rotating body",
+    "about": "The rotational counterpart of momentum. With no external torque it is conserved, which is why a skater spins faster pulling in their arms: I falls, so ω rises.",
+    "assumptions": [
+      "Rigid body spinning about a symmetry axis (in general L and ω need not be parallel)",
+      "Conserved only when the net external torque is zero"
+    ],
+    "vars": [
+      [
+        "L",
+        "angular momentum",
+        "kg·m^{2}/s"
+      ],
+      [
+        "I",
+        "moment of inertia",
+        "kg·m^{2}"
+      ],
+      [
+        "ω",
+        "angular velocity",
+        "rad/s"
+      ]
+    ],
+    "related": [
+      [
+        "τ = dL/dt",
+        "torque changes L"
+      ],
+      [
+        "I_{1} ω_{1} = I_{2} ω_{2}",
+        "conservation"
+      ],
+      [
+        "L = r × p",
+        "for a particle"
+      ]
+    ],
+    "example": {
+      "problem": "A skater spinning at 2 rev/s with I = 4 kg·m^{2} pulls in to I = 1.6 kg·m^{2}. Find the new spin rate.",
+      "steps": [
+        "L is conserved: 4 × 2 = 1.6 × ω_{2}",
+        "ω_{2} = 8/1.6"
+      ],
+      "answer": "ω_{2} = 5 rev/s"
+    },
+    "try": "4 * 2 / 1.6"
+  },
+  "KE = (1/2) I ω^{2}": {
+    "title": "Rotational kinetic energy",
+    "about": "The energy of a spinning body. A body that rolls has both this and translational KE; for a rolling body the split depends on its shape.",
+    "assumptions": [
+      "Rigid body about a fixed axis, or about its centre of mass (then add (1/2) m v^{2})",
+      "ω in rad/s"
+    ],
+    "vars": [
+      [
+        "KE",
+        "rotational kinetic energy",
+        "J"
+      ],
+      [
+        "I",
+        "moment of inertia about the axis",
+        "kg·m^{2}"
+      ],
+      [
+        "ω",
+        "angular velocity",
+        "rad/s"
+      ]
+    ],
+    "related": [
+      [
+        "KE = (1/2) m v^{2} + (1/2) I ω^{2}",
+        "rolling body"
+      ],
+      [
+        "W = τ θ",
+        "work by a constant torque"
+      ],
+      [
+        "L = I ω",
+        "angular momentum"
+      ]
+    ],
+    "example": {
+      "problem": "A flywheel with I = 0.3125 kg·m^{2} spins at 3000 rpm. Find its stored energy.",
+      "steps": [
+        "ω = 3000 × 2π/60 = 314.2 rad/s",
+        "KE = (1/2)(0.3125)(314.2)^{2} = 15.4 kJ"
+      ],
+      "answer": "KE ≈ 15.4 kJ"
+    },
+    "try": "1/2 * 0.3125 * (3000 * 2 pi / 60)^2 / 1000"
+  },
+  "F = G m_{1} m_{2}/r^{2}": {
+    "title": "Newton's law of gravitation",
+    "about": "Any two masses attract with a force proportional to both masses and inversely proportional to the square of the distance between their centres. G = 6.674 × 10^{−11} N·m^{2}/kg^{2}.",
+    "assumptions": [
+      "Point masses, or spherically symmetric bodies (r between centres, outside the bodies)",
+      "Weak fields and low speeds (general relativity otherwise)"
+    ],
+    "vars": [
+      [
+        "F",
+        "attractive force on each body",
+        "N"
+      ],
+      [
+        "G",
+        "gravitational constant, 6.674 × 10^{−11}",
+        "N·m^{2}/kg^{2}"
+      ],
+      [
+        "m_{1}, m_{2}",
+        "the two masses",
+        "kg"
+      ],
+      [
+        "r",
+        "distance between centres",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "g = G M/R^{2}",
+        "surface gravity"
+      ],
+      [
+        "U = −G m_{1} m_{2}/r",
+        "potential energy"
+      ],
+      [
+        "v = √(G M/r)",
+        "circular orbit speed"
+      ]
+    ],
+    "example": {
+      "problem": "Find the force between Earth (5.97 × 10^{24} kg) and the Moon (7.35 × 10^{22} kg), 3.84 × 10^{8} m apart.",
+      "steps": [
+        "F = 6.674e−11 × 5.97e24 × 7.35e22/(3.84e8)^{2}"
+      ],
+      "answer": "F ≈ 1.98 × 10^{20} N"
+    },
+    "try": "6.674e-11 N m^2/kg^2 * 5.97e24 kg * 7.35e22 kg / (3.84e8 m)^2"
+  },
+  "F = −k x": {
+    "title": "Hooke's law",
+    "about": "A spring pulls back toward its rest length with a force proportional to how far it is stretched or compressed. The minus sign says the force opposes the displacement.",
+    "assumptions": [
+      "Linear-elastic range: small deflections, below the spring's elastic limit",
+      "x measured from the unstretched length",
+      "Massless spring"
+    ],
+    "vars": [
+      [
+        "F",
+        "spring force on the attached body",
+        "N"
+      ],
+      [
+        "k",
+        "spring constant (stiffness)",
+        "N/m"
+      ],
+      [
+        "x",
+        "extension (+) or compression (−)",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "PE = (1/2) k x^{2}",
+        "stored energy"
+      ],
+      [
+        "k_{series} = (1/k_{1} + 1/k_{2})^{−1}",
+        "springs in series"
+      ],
+      [
+        "k_{parallel} = k_{1} + k_{2}",
+        "springs in parallel"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 kg mass hung on a spring stretches it 4.9 cm. Find k.",
+      "steps": [
+        "At rest k x = m g: k = (2 × 9.81)/0.049"
+      ],
+      "answer": "k ≈ 400 N/m"
+    },
+    "try": "2 kg * 9.81 m/s^2 / 4.9 cm"
+  },
+  "PE = (1/2) k x^{2}": {
+    "title": "Elastic potential energy of a spring",
+    "about": "The energy stored in a stretched or compressed spring, equal to the work done deforming it (the area under the F–x line).",
+    "assumptions": [
+      "Linear spring (Hooke's law holds)",
+      "x measured from the unstretched length"
+    ],
+    "vars": [
+      [
+        "PE",
+        "stored energy",
+        "J"
+      ],
+      [
+        "k",
+        "spring constant",
+        "N/m"
+      ],
+      [
+        "x",
+        "extension or compression",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "F = −k x",
+        "Hooke's law"
+      ],
+      [
+        "(1/2) k x^{2} = (1/2) m v^{2}",
+        "spring launcher, no friction"
+      ]
+    ],
+    "example": {
+      "problem": "A 500 N/m spring is compressed 8 cm. How much energy does it store?",
+      "steps": [
+        "PE = (1/2)(500)(0.08)^{2} = 250 × 0.0064"
+      ],
+      "answer": "PE = 1.6 J"
+    },
+    "try": "1/2 * 500 N/m * (8 cm)^2 to J"
+  },
+  "T = 2π√(m/k)": {
+    "title": "Period of a mass on a spring",
+    "about": "A mass on a spring oscillates in simple harmonic motion with this period, whatever the amplitude. The same period holds hanging vertically, since gravity only shifts the equilibrium point.",
+    "assumptions": [
+      "Linear spring, no damping",
+      "Spring mass negligible (else add about a third of it to m)",
+      "Independent of amplitude"
+    ],
+    "vars": [
+      [
+        "T",
+        "period",
+        "s"
+      ],
+      [
+        "m",
+        "mass",
+        "kg"
+      ],
+      [
+        "k",
+        "spring constant",
+        "N/m"
+      ]
+    ],
+    "related": [
+      [
+        "ω = √(k/m)",
+        "angular frequency"
+      ],
+      [
+        "f = 1/T",
+        "frequency"
+      ],
+      [
+        "x = A cos(ωt + φ)",
+        "motion"
+      ]
+    ],
+    "example": {
+      "problem": "A 0.5 kg mass on a 200 N/m spring. Find the period.",
+      "steps": [
+        "T = 2π√(0.5/200) = 2π × 0.05"
+      ],
+      "answer": "T ≈ 0.314 s"
+    },
+    "try": "2 pi sqrt(0.5 kg / (200 N/m)) to s"
+  },
+  "T = 2π√(L/g)": {
+    "title": "Period of a simple pendulum",
+    "about": "A small mass on a light string swings with a period that depends only on the length and g, not on the mass. Used to measure g and in clocks.",
+    "assumptions": [
+      "Small swings: amplitude below about 15° (at 15° the error is about 0.4%)",
+      "Point mass on a massless, inextensible string; a rigid swinging body is a physical pendulum, T = 2π√(I/(m g d))",
+      "No air resistance"
+    ],
+    "vars": [
+      [
+        "T",
+        "period",
+        "s"
+      ],
+      [
+        "L",
+        "length from pivot to the mass's centre",
+        "m"
+      ],
+      [
+        "g",
+        "gravitational acceleration",
+        "m/s^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "T = 2π√(I/(m g d))",
+        "physical pendulum"
+      ],
+      [
+        "T = 2π√(m/k)",
+        "mass on a spring"
+      ]
+    ],
+    "example": {
+      "problem": "Find the period of a 1.0 m pendulum.",
+      "steps": [
+        "T = 2π√(1.0/9.81) = 2π × 0.3193"
+      ],
+      "answer": "T ≈ 2.01 s"
+    },
+    "try": "2 pi sqrt(1 m / 9.81 m/s^2)"
+  },
+  "v = f λ": {
+    "title": "Wave speed",
+    "about": "Any travelling wave moves one wavelength each period, so its speed is frequency times wavelength. The medium sets v; the source sets f; λ follows.",
+    "assumptions": [
+      "Periodic wave in a uniform medium",
+      "When a wave crosses into a new medium f stays the same and λ changes"
+    ],
+    "vars": [
+      [
+        "v",
+        "wave speed",
+        "m/s"
+      ],
+      [
+        "f",
+        "frequency",
+        "Hz"
+      ],
+      [
+        "λ",
+        "wavelength",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "T = 1/f",
+        "period"
+      ],
+      [
+        "c = f λ",
+        "light in vacuum, c = 3.00 × 10^{8} m/s"
+      ],
+      [
+        "v = √(T/μ)",
+        "string"
+      ]
+    ],
+    "example": {
+      "problem": "Middle A (440 Hz) in air at 343 m/s. Find the wavelength.",
+      "steps": [
+        "λ = v/f = 343/440"
+      ],
+      "answer": "λ ≈ 0.780 m"
+    },
+    "try": "343 m/s / 440 Hz to m"
+  },
+  "T = 1/f": {
+    "title": "Period and frequency",
+    "about": "The period is the time for one complete cycle; frequency is the number of cycles per second. Each is the reciprocal of the other.",
+    "assumptions": [
+      "Periodic motion or signal",
+      "f in hertz (cycles per second); angular frequency ω = 2πf is in rad/s"
+    ],
+    "vars": [
+      [
+        "T",
+        "period",
+        "s"
+      ],
+      [
+        "f",
+        "frequency",
+        "Hz"
+      ]
+    ],
+    "related": [
+      [
+        "ω = 2π f",
+        "angular frequency"
+      ],
+      [
+        "v = f λ",
+        "wave speed"
+      ]
+    ],
+    "example": {
+      "problem": "Mains power in Europe is 50 Hz. Find the period.",
+      "steps": [
+        "T = 1/50 s"
+      ],
+      "answer": "T = 20 ms"
+    },
+    "try": "1/(50 Hz) to ms"
+  },
+  "n_{1} sin(θ_{1}) = n_{2} sin(θ_{2})": {
+    "title": "Snell's law of refraction",
+    "about": "Light bends when it crosses between media with different refractive indices. Going into a denser medium (larger n) it bends toward the normal.",
+    "assumptions": [
+      "Angles measured from the normal to the surface",
+      "Smooth interface, isotropic media",
+      "If n_{1} sin(θ_{1})/n_{2} > 1 there is no refracted ray: total internal reflection"
+    ],
+    "vars": [
+      [
+        "n_{1}, n_{2}",
+        "refractive indices of the two media",
+        ""
+      ],
+      [
+        "θ_{1}",
+        "angle of incidence",
+        "rad"
+      ],
+      [
+        "θ_{2}",
+        "angle of refraction",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "n = c/v",
+        "refractive index"
+      ],
+      [
+        "sin(θ_{c}) = n_{2}/n_{1}",
+        "critical angle"
+      ]
+    ],
+    "example": {
+      "problem": "Light passes from air (n = 1.00) into water (n = 1.33) at 45° to the normal. Find the refracted angle.",
+      "steps": [
+        "sin(θ_{2}) = 1.00 × sin(45°)/1.33 = 0.5317",
+        "θ_{2} = asin(0.5317)"
+      ],
+      "answer": "θ_{2} ≈ 32.1°"
+    },
+    "try": "asin(sin(45 deg)/1.33) to deg"
+  },
+  "Q = m c ΔT": {
+    "title": "Sensible heat (temperature change)",
+    "about": "The heat needed to change the temperature of a mass of material without changing its phase. Water's high c (4186 J/(kg·K)) is why it stores so much heat.",
+    "assumptions": [
+      "No phase change in the temperature range (add Q = m L for melting or boiling)",
+      "c roughly constant over the range",
+      "Gases: c depends on whether heated at constant pressure or volume"
+    ],
+    "vars": [
+      [
+        "Q",
+        "heat added",
+        "J"
+      ],
+      [
+        "m",
+        "mass",
+        "kg"
+      ],
+      [
+        "c",
+        "specific heat capacity",
+        "J/(kg·K)"
+      ],
+      [
+        "ΔT",
+        "temperature change",
+        "K"
+      ]
+    ],
+    "related": [
+      [
+        "Q = m L",
+        "phase change"
+      ],
+      [
+        "m_{1} c_{1} ΔT_{1} + m_{2} c_{2} ΔT_{2} = 0",
+        "calorimetry, no losses"
+      ],
+      [
+        "Q = C ΔT",
+        "with heat capacity C"
+      ]
+    ],
+    "example": {
+      "problem": "How much heat warms 2 kg of water from 20 °C to 100 °C?",
+      "steps": [
+        "Q = 2 × 4186 × 80"
+      ],
+      "answer": "Q ≈ 670 kJ"
+    },
+    "try": "2 * 4186 * 80 / 1000"
+  },
+  "ΔU = Q − W": {
+    "title": "First law of thermodynamics",
+    "about": "Energy is conserved: the change in a system's internal energy equals the heat added to it minus the work it does on its surroundings.",
+    "assumptions": [
+      "Sign convention: Q > 0 into the system, W > 0 done by the system (some texts use W on the system and write ΔU = Q + W)",
+      "Closed system; kinetic and potential energy of the system as a whole neglected"
+    ],
+    "vars": [
+      [
+        "ΔU",
+        "change in internal energy",
+        "J"
+      ],
+      [
+        "Q",
+        "heat added to the system",
+        "J"
+      ],
+      [
+        "W",
+        "work done by the system",
+        "J"
+      ]
+    ],
+    "related": [
+      [
+        "W = P ΔV",
+        "constant-pressure work"
+      ],
+      [
+        "ΔU = n C_{v} ΔT",
+        "ideal gas"
+      ],
+      [
+        "W = n R T ln(V_{2}/V_{1})",
+        "isothermal ideal gas"
+      ]
+    ],
+    "example": {
+      "problem": "A gas absorbs 500 J of heat and does 200 J of work pushing a piston. Find ΔU.",
+      "steps": [
+        "ΔU = 500 − 200"
+      ],
+      "answer": "ΔU = 300 J"
+    },
+    "try": "500 J - 200 J"
+  },
+  "F = k q_{1} q_{2}/r^{2}": {
+    "title": "Coulomb's law",
+    "about": "Two point charges push apart (like signs) or pull together (unlike signs) with a force proportional to each charge and inversely proportional to the square of their separation. k = 1/(4πε_{0}) = 8.99 × 10^{9} N·m^{2}/C^{2}.",
+    "assumptions": [
+      "Point charges, or spherically symmetric charge distributions",
+      "Charges at rest (electrostatics)",
+      "In vacuum (or air); in a dielectric divide by the relative permittivity"
+    ],
+    "vars": [
+      [
+        "F",
+        "force on each charge",
+        "N"
+      ],
+      [
+        "k",
+        "Coulomb constant, 8.99 × 10^{9}",
+        "N·m^{2}/C^{2}"
+      ],
+      [
+        "q_{1}, q_{2}",
+        "charges",
+        "C"
+      ],
+      [
+        "r",
+        "separation",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "k = 1/(4π ε_{0})",
+        "with permittivity"
+      ],
+      [
+        "E = kq/r^{2}",
+        "field of a point charge"
+      ],
+      [
+        "F = q E",
+        "force in a field"
+      ]
+    ],
+    "example": {
+      "problem": "Two 2 μC charges are 5 cm apart. Find the force between them.",
+      "steps": [
+        "F = 8.99e9 × (2e−6)^{2}/(0.05)^{2} = 8.99e9 × 4e−12/0.0025"
+      ],
+      "answer": "F ≈ 14.4 N"
+    },
+    "try": "coulomb constant * (2 uC)^2 / (5 cm)^2 to N"
+  },
+  "F = q(E + v × B)": {
+    "title": "Lorentz force",
+    "about": "The total electromagnetic force on a moving charge: an electric part along E and a magnetic part perpendicular to both v and B. The magnetic part does no work; it only bends the path.",
+    "assumptions": [
+      "Point charge",
+      "Fields evaluated at the charge's position",
+      "v × B by the right-hand rule; reverse for a negative charge"
+    ],
+    "vars": [
+      [
+        "F",
+        "force on the charge",
+        "N"
+      ],
+      [
+        "q",
+        "charge",
+        "C"
+      ],
+      [
+        "E",
+        "electric field",
+        "V/m"
+      ],
+      [
+        "v",
+        "velocity",
+        "m/s"
+      ],
+      [
+        "B",
+        "magnetic field",
+        "T"
+      ]
+    ],
+    "related": [
+      [
+        "F = q v B sin(θ)",
+        "magnetic part's magnitude"
+      ],
+      [
+        "r = m v/(|q| B)",
+        "radius of circular motion in B"
+      ],
+      [
+        "v = E/B",
+        "velocity selector, forces balance"
+      ]
+    ],
+    "example": {
+      "problem": "In a velocity selector E = 3 × 10^{4} V/m and B = 0.1 T are crossed. What speed passes straight through?",
+      "steps": [
+        "Forces balance when qE = qvB",
+        "v = E/B = 3e4/0.1"
+      ],
+      "answer": "v = 3 × 10^{5} m/s"
+    },
+    "try": "3e4 / 0.1"
+  },
+  "E = m c^{2}": {
+    "title": "Mass–energy equivalence",
+    "about": "A body at rest has an energy proportional to its mass. Converting even a small amount of mass releases enormous energy, which powers nuclear reactors and the Sun.",
+    "assumptions": [
+      "m is the rest mass; a moving body's total energy is γ m c^{2}",
+      "c = 2.998 × 10^{8} m/s"
+    ],
+    "vars": [
+      [
+        "E",
+        "rest energy",
+        "J"
+      ],
+      [
+        "m",
+        "rest mass",
+        "kg"
+      ],
+      [
+        "c",
+        "speed of light",
+        "m/s"
+      ]
+    ],
+    "related": [
+      [
+        "E^{2} = (pc)^{2} + (mc^{2})^{2}",
+        "moving body"
+      ],
+      [
+        "E = Δm c^{2}",
+        "binding energy"
+      ],
+      [
+        "1 u = 931.5 MeV/c^{2}",
+        "atomic mass unit"
+      ]
+    ],
+    "example": {
+      "problem": "Find the rest energy of 1 g of matter.",
+      "steps": [
+        "E = 0.001 × (2.998e8)^{2}"
+      ],
+      "answer": "E ≈ 8.99 × 10^{13} J"
+    },
+    "try": "1 g * (speed of light)^2 to J"
+  },
+  "E = h f": {
+    "title": "Photon energy",
+    "about": "Light comes in quanta (photons) whose energy is Planck's constant times the frequency. Higher frequency (bluer) light carries more energy per photon. h = 6.626 × 10^{−34} J·s.",
+    "assumptions": [
+      "Applies to a single photon (or any quantum of an oscillator)",
+      "Equivalent: E = h c/λ; with hc = 1240 eV·nm, E(eV) = 1240/λ(nm)"
+    ],
+    "vars": [
+      [
+        "E",
+        "photon energy",
+        "J"
+      ],
+      [
+        "h",
+        "Planck constant, 6.626 × 10^{−34}",
+        "J·s"
+      ],
+      [
+        "f",
+        "frequency",
+        "Hz"
+      ]
+    ],
+    "related": [
+      [
+        "E = h c/λ",
+        "with wavelength"
+      ],
+      [
+        "KE = h f − φ",
+        "photoelectric effect"
+      ],
+      [
+        "p = h/λ",
+        "photon momentum"
+      ]
+    ],
+    "example": {
+      "problem": "Find the energy of a green photon at 540 THz.",
+      "steps": [
+        "E = 6.626e−34 × 540e12 = 3.58e−19 J",
+        "In eV: 3.58e−19/1.602e−19 = 2.23 eV"
+      ],
+      "answer": "E ≈ 3.58 × 10^{−19} J (2.23 eV)"
+    },
+    "try": "planck constant * 540 THz to J"
+  },
+  "λ = h/p": {
+    "title": "de Broglie wavelength",
+    "about": "Every particle has a wavelength inversely proportional to its momentum. It matters when λ is comparable to the size of the things the particle interacts with, as for electrons in atoms and electron microscopes.",
+    "assumptions": [
+      "p is the momentum; non-relativistic p = m v, otherwise p = γ m v",
+      "For a particle accelerated through V from rest, p = √(2 m q V)"
+    ],
+    "vars": [
+      [
+        "λ",
+        "wavelength",
+        "m"
+      ],
+      [
+        "h",
+        "Planck constant",
+        "J·s"
+      ],
+      [
+        "p",
+        "momentum",
+        "kg·m/s"
+      ]
+    ],
+    "related": [
+      [
+        "p = m v",
+        "non-relativistic"
+      ],
+      [
+        "E = h f",
+        "energy-frequency"
+      ],
+      [
+        "Δx Δp ≥ ħ/2",
+        "uncertainty"
+      ]
+    ],
+    "example": {
+      "problem": "Find the wavelength of an electron (9.109 × 10^{−31} kg) moving at 1 × 10^{6} m/s.",
+      "steps": [
+        "p = 9.109e−31 × 1e6 = 9.109e−25 kg·m/s",
+        "λ = 6.626e−34/9.109e−25 = 7.27e−10 m"
+      ],
+      "answer": "λ ≈ 0.727 nm"
+    },
+    "try": "planck constant / (electron mass * 1e6 m/s) to nm"
+  },
+  "E = kq/r^{2}": {
+    "title": "Electric field of a point charge",
+    "about": "The field a point charge sets up around it: radial, outward for a positive charge, falling off as 1/r^{2}. A test charge q_{0} placed there feels F = q_{0} E.",
+    "assumptions": [
+      "Point charge or spherically symmetric charge, r outside it",
+      "Charges at rest",
+      "Fields from several charges add as vectors (superposition)"
+    ],
+    "vars": [
+      [
+        "E",
+        "electric field magnitude",
+        "V/m"
+      ],
+      [
+        "k",
+        "Coulomb constant, 8.99 × 10^{9}",
+        "N·m^{2}/C^{2}"
+      ],
+      [
+        "q",
+        "source charge",
+        "C"
+      ],
+      [
+        "r",
+        "distance from the charge",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "F = q E",
+        "force on a charge"
+      ],
+      [
+        "V = kq/r",
+        "potential"
+      ],
+      [
+        "∮ E · dA = q_{enc}/ε_{0}",
+        "Gauss's law"
+      ]
+    ],
+    "example": {
+      "problem": "Find the field 10 cm from a 5 nC charge.",
+      "steps": [
+        "E = 8.99e9 × 5e−9/(0.1)^{2} = 44.95/0.01"
+      ],
+      "answer": "E ≈ 4.49 kV/m"
+    },
+    "try": "coulomb constant * 5 nC / (10 cm)^2 to V/m"
+  },
+  "V = kq/r": {
+    "title": "Electric potential of a point charge",
+    "about": "The potential energy per unit charge at distance r from a point charge, taking V = 0 at infinity. Unlike the field it is a scalar, so potentials from several charges simply add.",
+    "assumptions": [
+      "Point charge (or outside a spherical charge), at rest",
+      "Reference V = 0 at r → ∞",
+      "Sign follows q"
+    ],
+    "vars": [
+      [
+        "V",
+        "electric potential",
+        "V"
+      ],
+      [
+        "k",
+        "Coulomb constant",
+        "N·m^{2}/C^{2}"
+      ],
+      [
+        "q",
+        "source charge",
+        "C"
+      ],
+      [
+        "r",
+        "distance",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "U = qV",
+        "potential energy"
+      ],
+      [
+        "E = −dV/dx",
+        "field from potential"
+      ],
+      [
+        "E = kq/r^{2}",
+        "field"
+      ]
+    ],
+    "example": {
+      "problem": "Find the potential 10 cm from a 5 nC charge.",
+      "steps": [
+        "V = 8.99e9 × 5e−9/0.1"
+      ],
+      "answer": "V ≈ 449 V"
+    },
+    "try": "coulomb constant * 5 nC / (10 cm) to V"
+  },
+  "U = qV": {
+    "title": "Electric potential energy",
+    "about": "A charge q at a point of potential V has potential energy qV. Moving through a potential difference ΔV changes its energy by qΔV, which is why an electron accelerated through 1 V gains 1 eV.",
+    "assumptions": [
+      "V defined relative to a chosen reference",
+      "Electrostatic (conservative) field"
+    ],
+    "vars": [
+      [
+        "U",
+        "potential energy",
+        "J"
+      ],
+      [
+        "q",
+        "charge",
+        "C"
+      ],
+      [
+        "V",
+        "electric potential",
+        "V"
+      ]
+    ],
+    "related": [
+      [
+        "ΔKE = −q ΔV",
+        "energy conservation"
+      ],
+      [
+        "1 eV = 1.602 × 10^{−19} J",
+        "electron-volt"
+      ],
+      [
+        "U = k q_{1} q_{2}/r",
+        "two point charges"
+      ]
+    ],
+    "example": {
+      "problem": "An electron is accelerated from rest through 5000 V. Find the kinetic energy gained.",
+      "steps": [
+        "|ΔU| = e ΔV = 1.602e−19 × 5000"
+      ],
+      "answer": "KE ≈ 8.01 × 10^{−16} J (5 keV)"
+    },
+    "try": "elementary charge * 5000 V to J"
+  },
+  "E = −dV/dx": {
+    "title": "Electric field from potential",
+    "about": "The field points the way potential falls fastest, with a strength equal to how steeply it falls. Between parallel plates it reduces to E = V/d.",
+    "assumptions": [
+      "One-dimensional form; in general E = −∇V",
+      "Electrostatic fields"
+    ],
+    "vars": [
+      [
+        "E",
+        "electric field (x component)",
+        "V/m"
+      ],
+      [
+        "V",
+        "electric potential",
+        "V"
+      ],
+      [
+        "x",
+        "position",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "E = V/d",
+        "uniform field between plates"
+      ],
+      [
+        "E = −∇V",
+        "3D form"
+      ],
+      [
+        "ΔV = −∫ E · dl",
+        "potential from field"
+      ]
+    ],
+    "example": {
+      "problem": "Two plates 2 mm apart are held 12 V apart. Find the field between them.",
+      "steps": [
+        "E = ΔV/d = 12/0.002"
+      ],
+      "answer": "E = 6 kV/m"
+    },
+    "try": "12 V / 2 mm to V/m"
+  },
+  "C = ε_{0} A/d": {
+    "title": "Capacitance of a parallel-plate capacitor",
+    "about": "Two flat plates of area A separated by d store charge Q = C V. Bigger plates or a smaller gap mean more capacitance. A dielectric between them multiplies C by its relative permittivity κ.",
+    "assumptions": [
+      "Gap much smaller than the plate size (fringing fields neglected)",
+      "Vacuum or air between the plates; with a dielectric C = κ ε_{0} A/d",
+      "ε_{0} = 8.854 × 10^{−12} F/m"
+    ],
+    "vars": [
+      [
+        "C",
+        "capacitance",
+        "F"
+      ],
+      [
+        "ε_{0}",
+        "permittivity of free space",
+        "F/m"
+      ],
+      [
+        "A",
+        "plate area",
+        "m^{2}"
+      ],
+      [
+        "d",
+        "plate separation",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "Q = C V",
+        "charge stored"
+      ],
+      [
+        "U = (1/2) C V^{2}",
+        "stored energy"
+      ],
+      [
+        "C = κ ε_{0} A/d",
+        "with dielectric"
+      ]
+    ],
+    "example": {
+      "problem": "Plates 10 cm × 10 cm, 1 mm apart, in air. Find C.",
+      "steps": [
+        "C = 8.854e−12 × 0.01/0.001"
+      ],
+      "answer": "C ≈ 88.5 pF"
+    },
+    "try": "8.854e-12 * 0.01 / 0.001 * 1e12"
+  },
+  "R = ρL/A": {
+    "title": "Resistance from resistivity",
+    "about": "A uniform conductor's resistance grows with its length and falls with its cross-sectional area. ρ is a material property: copper is about 1.68 × 10^{−8} Ω·m at 20 °C.",
+    "assumptions": [
+      "Uniform cross-section and material, current spread evenly (DC, no skin effect)",
+      "ρ depends on temperature: ρ ≈ ρ_{0}[1 + α(T − T_{0})]"
+    ],
+    "vars": [
+      [
+        "R",
+        "resistance",
+        "Ω"
+      ],
+      [
+        "ρ",
+        "resistivity",
+        "Ω·m"
+      ],
+      [
+        "L",
+        "length",
+        "m"
+      ],
+      [
+        "A",
+        "cross-sectional area",
+        "m^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "V = I R",
+        "Ohm's law"
+      ],
+      [
+        "ρ = ρ_{0}[1 + α ΔT]",
+        "temperature dependence"
+      ],
+      [
+        "σ = 1/ρ",
+        "conductivity"
+      ]
+    ],
+    "example": {
+      "problem": "Find the resistance of 20 m of copper wire 1 mm in diameter.",
+      "steps": [
+        "A = π(0.0005)^{2} = 7.854e−7 m^{2}",
+        "R = 1.68e−8 × 20/7.854e−7"
+      ],
+      "answer": "R ≈ 0.428 Ω"
+    },
+    "try": "1.68e-8 * 20 / (pi * 0.0005^2)"
+  },
+  "I = n q A v_{d}": {
+    "title": "Current and drift velocity",
+    "about": "Current in a conductor is carried by charges drifting slowly along it. The drift is remarkably slow, typically fractions of a millimetre per second, even though signals travel near light speed.",
+    "assumptions": [
+      "Uniform conductor with one type of carrier",
+      "n is the number of carriers per volume; copper has about 8.5 × 10^{28} m^{−3}"
+    ],
+    "vars": [
+      [
+        "I",
+        "current",
+        "A"
+      ],
+      [
+        "n",
+        "carrier density",
+        "m^{−3}"
+      ],
+      [
+        "q",
+        "charge per carrier",
+        "C"
+      ],
+      [
+        "A",
+        "cross-sectional area",
+        "m^{2}"
+      ],
+      [
+        "v_{d}",
+        "drift speed",
+        "m/s"
+      ]
+    ],
+    "related": [
+      [
+        "J = I/A = n q v_{d}",
+        "current density"
+      ],
+      [
+        "R = ρL/A",
+        "resistance"
+      ]
+    ],
+    "example": {
+      "problem": "A 1 mm diameter copper wire carries 2 A. Find the drift speed.",
+      "steps": [
+        "A = 7.854e−7 m^{2}",
+        "v_{d} = 2/(8.5e28 × 1.602e−19 × 7.854e−7)"
+      ],
+      "answer": "v_{d} ≈ 1.87 × 10^{−4} m/s (0.19 mm/s)"
+    },
+    "try": "2 / (8.5e28 * 1.602e-19 * 7.854e-7)"
+  },
+  "F = q v B sin(θ)": {
+    "title": "Magnetic force on a moving charge",
+    "about": "A charge moving through a magnetic field feels a force perpendicular to both its velocity and the field. It changes direction, not speed, so a charge moving across a uniform field circles.",
+    "assumptions": [
+      "θ is the angle between v and B; a charge moving along B feels nothing",
+      "Direction by the right-hand rule on v × B, reversed for negative charge"
+    ],
+    "vars": [
+      [
+        "F",
+        "force",
+        "N"
+      ],
+      [
+        "q",
+        "charge",
+        "C"
+      ],
+      [
+        "v",
+        "speed",
+        "m/s"
+      ],
+      [
+        "B",
+        "magnetic field",
+        "T"
+      ],
+      [
+        "θ",
+        "angle between v and B",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "F = q(E + v × B)",
+        "Lorentz force"
+      ],
+      [
+        "r = m v/(|q| B)",
+        "radius of the circle"
+      ],
+      [
+        "f = |q| B/(2π m)",
+        "cyclotron frequency"
+      ]
+    ],
+    "example": {
+      "problem": "A proton moves at 2 × 10^{6} m/s perpendicular to a 0.5 T field. Find the force.",
+      "steps": [
+        "F = 1.602e−19 × 2e6 × 0.5 × sin(90°)"
+      ],
+      "answer": "F ≈ 1.60 × 10^{−13} N"
+    },
+    "try": "1.602e-19 * 2e6 * 0.5 * sin(90 deg)"
+  },
+  "F = I L B sin(θ)": {
+    "title": "Magnetic force on a current-carrying wire",
+    "about": "A straight wire carrying current in a magnetic field is pushed sideways. It is the principle of electric motors and loudspeakers.",
+    "assumptions": [
+      "Straight wire in a uniform field",
+      "θ is the angle between the wire (current direction) and B",
+      "Vector form F = I L × B"
+    ],
+    "vars": [
+      [
+        "F",
+        "force on the wire",
+        "N"
+      ],
+      [
+        "I",
+        "current",
+        "A"
+      ],
+      [
+        "L",
+        "length of wire in the field",
+        "m"
+      ],
+      [
+        "B",
+        "magnetic field",
+        "T"
+      ],
+      [
+        "θ",
+        "angle between the wire and B",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "F = q v B sin(θ)",
+        "on a single charge"
+      ],
+      [
+        "τ = N I A B sin(θ)",
+        "torque on a coil"
+      ],
+      [
+        "F/L = μ_{0} I_{1} I_{2}/(2π d)",
+        "between parallel wires"
+      ]
+    ],
+    "example": {
+      "problem": "A 0.5 m wire carrying 2 A sits at right angles to a 1.5 T field. Find the force.",
+      "steps": [
+        "F = 2 × 0.5 × 1.5 × sin(90°)"
+      ],
+      "answer": "F = 1.5 N"
+    },
+    "try": "2 * 0.5 * 1.5 * sin(90 deg)"
+  },
+  "B = μ_{0} I/(2πr)": {
+    "title": "Magnetic field of a long straight wire",
+    "about": "Current in a long straight wire makes circular field lines around it, with strength falling as 1/r. Follows from Ampère's law. μ_{0} = 4π × 10^{−7} T·m/A.",
+    "assumptions": [
+      "Wire long compared with r (infinite-wire approximation)",
+      "r measured from the wire's axis, outside the wire",
+      "Direction by the right-hand grip rule"
+    ],
+    "vars": [
+      [
+        "B",
+        "magnetic field",
+        "T"
+      ],
+      [
+        "μ_{0}",
+        "permeability of free space, 4π × 10^{−7}",
+        "T·m/A"
+      ],
+      [
+        "I",
+        "current",
+        "A"
+      ],
+      [
+        "r",
+        "distance from the wire",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "∮ B · dl = μ_{0} I_{enc}",
+        "Ampère's law"
+      ],
+      [
+        "B = μ_{0} n I",
+        "solenoid"
+      ],
+      [
+        "F/L = μ_{0} I_{1} I_{2}/(2π d)",
+        "force between wires"
+      ]
+    ],
+    "example": {
+      "problem": "Find the field 5 cm from a wire carrying 10 A.",
+      "steps": [
+        "B = 4π × 10^{−7} × 10/(2π × 0.05) = 2e−6/0.05"
+      ],
+      "answer": "B = 40 μT"
+    },
+    "try": "4 pi 1e-7 * 10 / (2 pi * 0.05) * 1e6"
+  },
+  "B = μ_{0} n I": {
+    "title": "Magnetic field inside a solenoid",
+    "about": "A long tightly wound coil makes a nearly uniform field inside, set by the turns per unit length and the current, not by the coil's radius.",
+    "assumptions": [
+      "Long solenoid (length much greater than radius), away from the ends; at an end it is about half",
+      "n = N/L is turns per metre",
+      "Air core; an iron core multiplies B by its relative permeability (until saturation)"
+    ],
+    "vars": [
+      [
+        "B",
+        "field inside",
+        "T"
+      ],
+      [
+        "μ_{0}",
+        "permeability of free space",
+        "T·m/A"
+      ],
+      [
+        "n",
+        "turns per unit length",
+        "m^{−1}"
+      ],
+      [
+        "I",
+        "current",
+        "A"
+      ]
+    ],
+    "related": [
+      [
+        "L = μ_{0} N^{2} A/ℓ",
+        "inductance of a solenoid"
+      ],
+      [
+        "Φ = B A cos(θ)",
+        "flux through it"
+      ]
+    ],
+    "example": {
+      "problem": "A 0.3 m solenoid with 600 turns carries 2 A. Find B inside.",
+      "steps": [
+        "n = 600/0.3 = 2000 m^{−1}",
+        "B = 4π × 10^{−7} × 2000 × 2 = 5.03 mT"
+      ],
+      "answer": "B ≈ 5.03 mT"
+    },
+    "try": "4 pi 1e-7 * 2000 * 2 * 1000"
+  },
+  "Φ = B A cos(θ)": {
+    "title": "Magnetic flux",
+    "about": "How much magnetic field passes through a surface: the field times the area times the cosine of the angle between B and the surface's normal. Changing flux induces an emf.",
+    "assumptions": [
+      "Uniform B over a flat surface; otherwise Φ = ∫B · dA",
+      "θ is measured from the surface normal, not from the surface"
+    ],
+    "vars": [
+      [
+        "Φ",
+        "magnetic flux",
+        "Wb"
+      ],
+      [
+        "B",
+        "magnetic field",
+        "T"
+      ],
+      [
+        "A",
+        "area",
+        "m^{2}"
+      ],
+      [
+        "θ",
+        "angle between B and the normal",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "ε = −N dΦ/dt",
+        "Faraday's law"
+      ],
+      [
+        "1 Wb = 1 T·m^{2}",
+        "unit"
+      ]
+    ],
+    "example": {
+      "problem": "A 20 cm × 30 cm loop sits in a 0.4 T field, its normal at 60° to B. Find Φ.",
+      "steps": [
+        "Φ = 0.4 × 0.06 × cos(60°) = 0.024 × 0.5"
+      ],
+      "answer": "Φ = 0.012 Wb"
+    },
+    "try": "0.4 * 0.06 * cos(60 deg)"
+  },
+  "ε = −N dΦ/dt": {
+    "title": "Faraday's law of induction",
+    "about": "A changing magnetic flux through a coil induces an emf proportional to how fast the flux changes and to the number of turns. The minus sign is Lenz's law: the induced current opposes the change. Generators and transformers rely on it.",
+    "assumptions": [
+      "Φ is the flux through one turn; all N turns link the same flux",
+      "Average form: ε = −N ΔΦ/Δt"
+    ],
+    "vars": [
+      [
+        "ε",
+        "induced emf",
+        "V"
+      ],
+      [
+        "N",
+        "number of turns",
+        ""
+      ],
+      [
+        "Φ",
+        "magnetic flux per turn",
+        "Wb"
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "Φ = B A cos(θ)",
+        "flux"
+      ],
+      [
+        "ε = B L v",
+        "rod moving through a field"
+      ],
+      [
+        "ε = N B A ω sin(ωt)",
+        "rotating coil (generator)"
+      ]
+    ],
+    "example": {
+      "problem": "A 200-turn coil of area 0.01 m^{2} sees its field fall from 0.5 T to 0 in 0.1 s. Find the average emf.",
+      "steps": [
+        "ΔΦ = 0.5 × 0.01 = 0.005 Wb per turn",
+        "|ε| = 200 × 0.005/0.1"
+      ],
+      "answer": "|ε| = 10 V"
+    },
+    "try": "200 * 0.5 * 0.01 / 0.1"
+  },
+  "∇ · E = ρ/ε_{0}": {
+    "title": "Gauss's law (Maxwell's first equation)",
+    "about": "Electric field lines start on positive charge and end on negative charge: the divergence of E at a point equals the charge density there over ε_{0}. In integral form, the flux of E out of any closed surface equals the enclosed charge over ε_{0}.",
+    "assumptions": [
+      "Holds always (static or changing fields) in vacuum; in materials use ∇ · D = ρ_{free}",
+      "For hand calculation the integral form needs symmetry (sphere, cylinder, plane)"
+    ],
+    "vars": [
+      [
+        "E",
+        "electric field",
+        "V/m"
+      ],
+      [
+        "ρ",
+        "charge density",
+        "C/m^{3}"
+      ],
+      [
+        "ε_{0}",
+        "permittivity of free space, 8.854 × 10^{−12}",
+        "F/m"
+      ]
+    ],
+    "related": [
+      [
+        "∮ E · dA = Q_{enc}/ε_{0}",
+        "integral form"
+      ],
+      [
+        "E = σ/(2ε_{0})",
+        "infinite sheet of charge"
+      ],
+      [
+        "E = λ/(2π ε_{0} r)",
+        "infinite line of charge"
+      ]
+    ],
+    "example": {
+      "problem": "A long line carries 2 nC/m. Use Gauss's law to find the field 5 cm away.",
+      "steps": [
+        "Cylinder of radius r, length L: E(2πrL) = λL/ε_{0}",
+        "E = λ/(2π ε_{0} r) = 2e−9/(2π × 8.854e−12 × 0.05)"
+      ],
+      "answer": "E ≈ 719 V/m"
+    },
+    "try": "2e-9 / (2 pi * 8.854e-12 * 0.05)"
+  },
+  "∇ · B = 0": {
+    "title": "Gauss's law for magnetism",
+    "about": "There are no magnetic monopoles: magnetic field lines never start or end, they form closed loops. The net magnetic flux out of any closed surface is zero.",
+    "assumptions": [
+      "Holds in all classical electromagnetism (no monopole has ever been observed)"
+    ],
+    "vars": [
+      [
+        "B",
+        "magnetic field",
+        "T"
+      ]
+    ],
+    "related": [
+      [
+        "∮ B · dA = 0",
+        "integral form"
+      ],
+      [
+        "B = ∇ × A",
+        "B written from a vector potential"
+      ]
+    ],
+    "example": {
+      "problem": "A closed cylindrical surface has 3 mWb of magnetic flux entering through one end. What is the total flux leaving through its side and other end?",
+      "steps": [
+        "∮ B · dA = 0, so the flux out must equal the flux in"
+      ],
+      "answer": "3 mWb leaves (net flux zero)"
+    }
+  },
+  "∇ × E = −∂B/∂t": {
+    "title": "Faraday's law (Maxwell's third equation)",
+    "about": "A changing magnetic field creates a circulating electric field. Integrated around a loop it gives the induced emf, ε = −dΦ/dt.",
+    "assumptions": [
+      "Differential form for a fixed point; the integral form for a moving loop also includes motional emf",
+      "In electrostatics ∂B/∂t = 0, so E is curl-free and can be written as −∇V"
+    ],
+    "vars": [
+      [
+        "E",
+        "electric field",
+        "V/m"
+      ],
+      [
+        "B",
+        "magnetic field",
+        "T"
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "∮ E · dl = −dΦ_{B}/dt",
+        "integral form"
+      ],
+      [
+        "ε = −N dΦ/dt",
+        "for a coil"
+      ]
+    ],
+    "example": {
+      "problem": "A uniform field through a circular region of radius 0.1 m rises at 0.5 T/s. Find the induced E on the circle's edge.",
+      "steps": [
+        "E(2πr) = πr^{2} dB/dt",
+        "E = (r/2) dB/dt = 0.05 × 0.5"
+      ],
+      "answer": "E = 0.025 V/m"
+    },
+    "try": "0.1/2 * 0.5"
+  },
+  "∇ × B = μ_{0} J + μ_{0} ε_{0} ∂E/∂t": {
+    "title": "Ampère–Maxwell law (Maxwell's fourth equation)",
+    "about": "Magnetic fields circulate around currents and around changing electric fields. Maxwell's displacement-current term μ_{0} ε_{0} ∂E/∂t completes the set and predicts electromagnetic waves moving at c = 1/√(μ_{0} ε_{0}).",
+    "assumptions": [
+      "Vacuum form; in materials use ∇ × H = J_{free} + ∂D/∂t",
+      "For steady currents the ∂E/∂t term vanishes and it reduces to Ampère's law"
+    ],
+    "vars": [
+      [
+        "B",
+        "magnetic field",
+        "T"
+      ],
+      [
+        "J",
+        "current density",
+        "A/m^{2}"
+      ],
+      [
+        "E",
+        "electric field",
+        "V/m"
+      ],
+      [
+        "μ_{0}",
+        "permeability of free space",
+        "T·m/A"
+      ],
+      [
+        "ε_{0}",
+        "permittivity of free space",
+        "F/m"
+      ]
+    ],
+    "related": [
+      [
+        "∮ B · dl = μ_{0} I_{enc} + μ_{0} ε_{0} dΦ_{E}/dt",
+        "integral form"
+      ],
+      [
+        "c = 1/√(μ_{0} ε_{0})",
+        "speed of light"
+      ],
+      [
+        "B = μ_{0} I/(2πr)",
+        "long wire"
+      ]
+    ],
+    "example": {
+      "problem": "Find the wave speed predicted by Maxwell's equations, from μ_{0} = 4π × 10^{−7} T·m/A and ε_{0} = 8.854 × 10^{−12} F/m.",
+      "steps": [
+        "c = 1/√(μ_{0} ε_{0}) = 1/√(4π × 10^{−7} × 8.854 × 10^{−12})"
+      ],
+      "answer": "c ≈ 2.998 × 10^{8} m/s"
+    },
+    "try": "1/sqrt(4 pi 1e-7 * 8.854e-12)"
+  },
+  "ΔS = Q/T": {
+    "title": "Entropy change for reversible heat transfer",
+    "about": "Heat added reversibly at absolute temperature T raises a system's entropy by Q/T. The second law says the total entropy of an isolated system never decreases.",
+    "assumptions": [
+      "Reversible process; for an irreversible one ΔS > Q/T, so compute ΔS along a reversible path between the same states",
+      "T in kelvin and constant during the transfer; otherwise ΔS = ∫dQ/T (e.g. m c ln(T_{2}/T_{1}))"
+    ],
+    "vars": [
+      [
+        "ΔS",
+        "entropy change",
+        "J/K"
+      ],
+      [
+        "Q",
+        "heat added",
+        "J"
+      ],
+      [
+        "T",
+        "absolute temperature",
+        "K"
+      ]
+    ],
+    "related": [
+      [
+        "ΔS = m c ln(T_{2}/T_{1})",
+        "heating at constant c"
+      ],
+      [
+        "ΔS = n R ln(V_{2}/V_{1})",
+        "isothermal ideal gas"
+      ],
+      [
+        "ΔS_{universe} ≥ 0",
+        "second law"
+      ]
+    ],
+    "example": {
+      "problem": "1 kg of ice melts at 0 °C (L = 334 kJ/kg). Find its entropy change.",
+      "steps": [
+        "Q = 334 000 J at T = 273.15 K",
+        "ΔS = 334 000/273.15"
+      ],
+      "answer": "ΔS ≈ 1223 J/K"
+    },
+    "try": "334000 / 273.15"
+  },
+  "η = 1 − T_{c}/T_{h}": {
+    "title": "Carnot efficiency",
+    "about": "The highest efficiency any heat engine can have when running between a hot reservoir at T_{h} and a cold one at T_{c}. Real engines get well under it.",
+    "assumptions": [
+      "Temperatures in kelvin",
+      "Reversible engine; every real engine is less efficient",
+      "Upper bound only; it says nothing about the engine's power"
+    ],
+    "vars": [
+      [
+        "η",
+        "efficiency (0 to 1)",
+        ""
+      ],
+      [
+        "T_{c}",
+        "cold reservoir temperature",
+        "K"
+      ],
+      [
+        "T_{h}",
+        "hot reservoir temperature",
+        "K"
+      ]
+    ],
+    "related": [
+      [
+        "η = W/Q_{h}",
+        "any engine"
+      ],
+      [
+        "COP_{ref} = T_{c}/(T_{h} − T_{c})",
+        "Carnot refrigerator"
+      ],
+      [
+        "Q_{c}/Q_{h} = T_{c}/T_{h}",
+        "Carnot cycle"
+      ]
+    ],
+    "example": {
+      "problem": "A steam plant runs between 550 °C and 30 °C. Find its Carnot limit.",
+      "steps": [
+        "T_{h} = 823.15 K, T_{c} = 303.15 K",
+        "η = 1 − 303.15/823.15"
+      ],
+      "answer": "η ≈ 0.632 (63.2%)"
+    },
+    "try": "1 - 303.15/823.15"
+  },
+  "η = W/Q_{h}": {
+    "title": "Thermal efficiency of a heat engine",
+    "about": "The fraction of the heat taken from the hot source that comes out as useful work. The rest, Q_{c} = Q_{h} − W, is rejected to the cold side.",
+    "assumptions": [
+      "Per cycle, or as rates (power over heat input rate)",
+      "Energy balance: W = Q_{h} − Q_{c}",
+      "Always below the Carnot limit"
+    ],
+    "vars": [
+      [
+        "η",
+        "efficiency",
+        ""
+      ],
+      [
+        "W",
+        "net work out per cycle",
+        "J"
+      ],
+      [
+        "Q_{h}",
+        "heat taken in from the hot reservoir",
+        "J"
+      ]
+    ],
+    "related": [
+      [
+        "η = 1 − Q_{c}/Q_{h}",
+        "from the energy balance"
+      ],
+      [
+        "η = 1 − T_{c}/T_{h}",
+        "Carnot limit"
+      ]
+    ],
+    "example": {
+      "problem": "An engine takes in 2000 J of heat and rejects 1400 J each cycle. Find its efficiency.",
+      "steps": [
+        "W = 2000 − 1400 = 600 J",
+        "η = 600/2000"
+      ],
+      "answer": "η = 0.30 (30%)"
+    },
+    "try": "(2000 - 1400)/2000"
+  },
+  "W = P ΔV": {
+    "title": "Work at constant pressure (isobaric)",
+    "about": "A gas expanding against a constant pressure does work equal to pressure times its change in volume: the area under a flat line on the P–V diagram.",
+    "assumptions": [
+      "Constant pressure; otherwise W = ∫P dV",
+      "Quasi-static process",
+      "W > 0 when the gas expands (work done by the gas)"
+    ],
+    "vars": [
+      [
+        "W",
+        "work done by the gas",
+        "J"
+      ],
+      [
+        "P",
+        "pressure",
+        "Pa"
+      ],
+      [
+        "ΔV",
+        "change in volume",
+        "m^{3}"
+      ]
+    ],
+    "related": [
+      [
+        "W = ∫ P dV",
+        "general"
+      ],
+      [
+        "ΔU = Q − W",
+        "first law"
+      ],
+      [
+        "Q = n C_{p} ΔT",
+        "heat at constant pressure, ideal gas"
+      ]
+    ],
+    "example": {
+      "problem": "A gas at 200 kPa expands from 2 L to 5 L at constant pressure. Find the work done.",
+      "steps": [
+        "ΔV = 3 L = 0.003 m^{3}",
+        "W = 200 000 × 0.003"
+      ],
+      "answer": "W = 600 J"
+    },
+    "try": "200 kPa * 3 L to J"
+  },
+  "W = n R T ln(V_{2}/V_{1})": {
+    "title": "Work in an isothermal ideal-gas process",
+    "about": "An ideal gas expanding at constant temperature does work given by the area under the hyperbola P = nRT/V. Since ΔU = 0, the gas absorbs exactly this much heat.",
+    "assumptions": [
+      "Ideal gas, constant temperature (in contact with a reservoir)",
+      "Quasi-static (reversible)",
+      "R = 8.314 J/(mol·K), T in kelvin"
+    ],
+    "vars": [
+      [
+        "W",
+        "work done by the gas",
+        "J"
+      ],
+      [
+        "n",
+        "amount of gas",
+        "mol"
+      ],
+      [
+        "R",
+        "gas constant, 8.314",
+        "J/(mol·K)"
+      ],
+      [
+        "T",
+        "absolute temperature",
+        "K"
+      ],
+      [
+        "V_{1}, V_{2}",
+        "initial and final volume",
+        "m^{3}"
+      ]
+    ],
+    "related": [
+      [
+        "P V = n R T",
+        "ideal gas law"
+      ],
+      [
+        "Q = W",
+        "isothermal, ΔU = 0"
+      ],
+      [
+        "W = n R T ln(P_{1}/P_{2})",
+        "in terms of pressures"
+      ]
+    ],
+    "example": {
+      "problem": "2 mol of gas at 300 K doubles its volume isothermally. Find the work.",
+      "steps": [
+        "W = 2 × 8.314 × 300 × ln(2) = 4988 × 0.693"
+      ],
+      "answer": "W ≈ 3.46 kJ"
+    },
+    "try": "2 * 8.314 * 300 * ln(2) / 1000"
+  },
+  "U = (3/2) n R T": {
+    "title": "Internal energy of a monatomic ideal gas",
+    "about": "A monatomic gas (He, Ne, Ar) stores energy only as translational kinetic energy of its atoms, (3/2)kT each. Diatomic gases near room temperature have (5/2) n R T.",
+    "assumptions": [
+      "Ideal, monatomic gas",
+      "Depends only on temperature, so ΔU = (3/2) n R ΔT for any process"
+    ],
+    "vars": [
+      [
+        "U",
+        "internal energy",
+        "J"
+      ],
+      [
+        "n",
+        "amount of gas",
+        "mol"
+      ],
+      [
+        "R",
+        "gas constant",
+        "J/(mol·K)"
+      ],
+      [
+        "T",
+        "absolute temperature",
+        "K"
+      ]
+    ],
+    "related": [
+      [
+        "C_{v} = (3/2) R",
+        "molar heat capacity, monatomic"
+      ],
+      [
+        "U = (5/2) n R T",
+        "diatomic"
+      ],
+      [
+        "KE_{avg} = (3/2) k_{B} T",
+        "per molecule"
+      ]
+    ],
+    "example": {
+      "problem": "Find the internal energy of 1 mol of helium at 300 K.",
+      "steps": [
+        "U = 1.5 × 1 × 8.314 × 300"
+      ],
+      "answer": "U ≈ 3.74 kJ"
+    },
+    "try": "1.5 * 8.314 * 300 / 1000"
+  },
+  "P V^{γ} = constant": {
+    "title": "Reversible adiabatic process of an ideal gas",
+    "about": "When an ideal gas is compressed or expanded with no heat transfer, pressure rises faster than in an isothermal process. It models fast compressions in engines and sound waves.",
+    "assumptions": [
+      "Ideal gas, reversible (isentropic), no heat transfer",
+      "γ = C_{p}/C_{v}: 5/3 monatomic, 1.4 for air and diatomic gases",
+      "Also T V^{γ−1} = constant"
+    ],
+    "vars": [
+      [
+        "P",
+        "pressure",
+        "Pa"
+      ],
+      [
+        "V",
+        "volume",
+        "m^{3}"
+      ],
+      [
+        "γ",
+        "heat-capacity ratio C_{p}/C_{v}",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "T V^{γ−1} = constant",
+        "temperature form"
+      ],
+      [
+        "W = (P_{1} V_{1} − P_{2} V_{2})/(γ − 1)",
+        "work done by the gas"
+      ],
+      [
+        "P V = n R T",
+        "ideal gas law"
+      ]
+    ],
+    "example": {
+      "problem": "Air at 100 kPa is compressed adiabatically to 1/8 of its volume. Find the final pressure.",
+      "steps": [
+        "P_{2} = P_{1}(V_{1}/V_{2})^{γ} = 100 × 8^{1.4}"
+      ],
+      "answer": "P_{2} ≈ 1838 kPa"
+    },
+    "try": "100 kPa * 8^1.4 to kPa"
+  },
+  "Q = m L": {
+    "title": "Latent heat (change of phase)",
+    "about": "The heat needed to melt or boil a mass of material at constant temperature. For water L_{f} = 334 kJ/kg (melting) and L_{v} = 2257 kJ/kg (boiling at 1 atm).",
+    "assumptions": [
+      "Temperature stays at the phase-change point during the transfer",
+      "L depends on the material and the phase change (fusion or vaporisation) and somewhat on pressure"
+    ],
+    "vars": [
+      [
+        "Q",
+        "heat",
+        "J"
+      ],
+      [
+        "m",
+        "mass changing phase",
+        "kg"
+      ],
+      [
+        "L",
+        "specific latent heat",
+        "J/kg"
+      ]
+    ],
+    "related": [
+      [
+        "Q = m c ΔT",
+        "heating within one phase"
+      ],
+      [
+        "ΔS = Q/T",
+        "entropy of the phase change"
+      ]
+    ],
+    "example": {
+      "problem": "How much heat boils off 0.5 kg of water already at 100 °C?",
+      "steps": [
+        "Q = 0.5 × 2 257 000"
+      ],
+      "answer": "Q ≈ 1.13 MJ"
+    },
+    "try": "0.5 * 2257 / 1000"
+  },
+  "Q/t = k A ΔT/d": {
+    "title": "Fourier's law of heat conduction",
+    "about": "Heat flows through a slab at a rate proportional to its area and the temperature difference across it, and inversely to its thickness. k is the material's thermal conductivity.",
+    "assumptions": [
+      "Steady state, one-dimensional flow through a flat slab",
+      "k constant over the temperature range",
+      "Layers in series add as thermal resistances R = d/(kA)"
+    ],
+    "vars": [
+      [
+        "Q/t",
+        "rate of heat flow",
+        "W"
+      ],
+      [
+        "k",
+        "thermal conductivity",
+        "W/(m·K)"
+      ],
+      [
+        "A",
+        "area",
+        "m^{2}"
+      ],
+      [
+        "ΔT",
+        "temperature difference across the slab",
+        "K"
+      ],
+      [
+        "d",
+        "thickness",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "R_{th} = d/(k A)",
+        "thermal resistance"
+      ],
+      [
+        "Q/t = h A ΔT",
+        "convection"
+      ],
+      [
+        "P = e σ A T^{4}",
+        "radiation"
+      ]
+    ],
+    "example": {
+      "problem": "A 1.2 m^{2} window of glass (k = 0.8 W/(m·K)) 4 mm thick has 20 °C on one face and 5 °C on the other. Find the heat loss.",
+      "steps": [
+        "Q/t = 0.8 × 1.2 × 15/0.004"
+      ],
+      "answer": "Q/t = 3600 W"
+    },
+    "try": "0.8 * 1.2 * 15 / 0.004"
+  },
+  "P = e σ A T^{4}": {
+    "title": "Stefan–Boltzmann law (thermal radiation)",
+    "about": "Every surface radiates power that grows with the fourth power of its absolute temperature. σ = 5.67 × 10^{−8} W/(m^{2}·K^{4}); the emissivity e is 1 for a blackbody.",
+    "assumptions": [
+      "T in kelvin",
+      "Grey-body surface (emissivity independent of wavelength)",
+      "Net exchange with surroundings at T_{s}: P_{net} = e σ A (T^{4} − T_{s}^{4})"
+    ],
+    "vars": [
+      [
+        "P",
+        "radiated power",
+        "W"
+      ],
+      [
+        "e",
+        "emissivity (0 to 1)",
+        ""
+      ],
+      [
+        "σ",
+        "Stefan–Boltzmann constant",
+        "W/(m^{2}·K^{4})"
+      ],
+      [
+        "A",
+        "surface area",
+        "m^{2}"
+      ],
+      [
+        "T",
+        "absolute temperature",
+        "K"
+      ]
+    ],
+    "related": [
+      [
+        "P_{net} = e σ A (T^{4} − T_{s}^{4})",
+        "net exchange"
+      ],
+      [
+        "λ_{max} T = 2.898 × 10^{−3} m·K",
+        "Wien's law"
+      ]
+    ],
+    "example": {
+      "problem": "A person's skin (A = 1.8 m^{2}, e = 0.97) is at 307 K. Find the power radiated.",
+      "steps": [
+        "P = 0.97 × 5.67e−8 × 1.8 × 307^{4}"
+      ],
+      "answer": "P ≈ 879 W"
+    },
+    "try": "0.97 * 5.67e-8 * 1.8 * 307^4"
+  },
+  "v = √(T/μ)": {
+    "title": "Wave speed on a stretched string",
+    "about": "Transverse waves travel faster on a tighter, lighter string. It is why tuning a guitar string's tension changes its pitch.",
+    "assumptions": [
+      "Perfectly flexible string, small amplitudes",
+      "Uniform linear density μ = mass/length",
+      "Tension unchanged by the wave"
+    ],
+    "vars": [
+      [
+        "v",
+        "wave speed",
+        "m/s"
+      ],
+      [
+        "T",
+        "tension",
+        "N"
+      ],
+      [
+        "μ",
+        "mass per unit length",
+        "kg/m"
+      ]
+    ],
+    "related": [
+      [
+        "f_{n} = n v/(2L)",
+        "harmonics of a string"
+      ],
+      [
+        "v = f λ",
+        "wave speed"
+      ]
+    ],
+    "example": {
+      "problem": "A guitar string with μ = 0.005 kg/m is under 80 N tension. Find the wave speed.",
+      "steps": [
+        "v = √(80/0.005) = √16 000"
+      ],
+      "answer": "v ≈ 126.5 m/s"
+    },
+    "try": "sqrt(80/0.005)"
+  },
+  "f_{n} = n v/(2L)": {
+    "title": "Harmonics of a string fixed at both ends",
+    "about": "A string fixed at both ends can only vibrate in standing waves that fit a whole number of half-wavelengths: λ_{n} = 2L/n. n = 1 is the fundamental.",
+    "assumptions": [
+      "Both ends fixed (nodes at the ends); an open–open pipe gives the same formula",
+      "A pipe closed at one end has only odd harmonics: f_{n} = n v/(4L), n = 1, 3, 5, …"
+    ],
+    "vars": [
+      [
+        "f_{n}",
+        "frequency of the n-th harmonic",
+        "Hz"
+      ],
+      [
+        "n",
+        "harmonic number 1, 2, 3, …",
+        ""
+      ],
+      [
+        "v",
+        "wave speed on the string",
+        "m/s"
+      ],
+      [
+        "L",
+        "string length",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "v = √(T/μ)",
+        "wave speed on the string"
+      ],
+      [
+        "λ_{n} = 2L/n",
+        "wavelengths"
+      ],
+      [
+        "f_{n} = n v/(4L)",
+        "pipe closed at one end, odd n"
+      ]
+    ],
+    "example": {
+      "problem": "A 0.65 m string has wave speed 286 m/s. Find its fundamental and second harmonic.",
+      "steps": [
+        "f_{1} = 286/(2 × 0.65) = 220 Hz",
+        "f_{2} = 2 f_{1} = 440 Hz"
+      ],
+      "answer": "f_{1} = 220 Hz; f_{2} = 440 Hz"
+    },
+    "try": "286 / (2 * 0.65)"
+  },
+  "f′ = f (v + v_{o})/(v − v_{s})": {
+    "title": "Doppler effect for sound (approaching)",
+    "about": "A sound's observed pitch rises when the source and observer approach each other. Flip the signs (v − v_{o} on top, v + v_{s} below) when they move apart.",
+    "assumptions": [
+      "Speeds measured relative to still air; v is the speed of sound (343 m/s at 20 °C)",
+      "Motion along the line joining source and observer",
+      "Source speed below the speed of sound",
+      "For light use the relativistic Doppler formula"
+    ],
+    "vars": [
+      [
+        "f′",
+        "observed frequency",
+        "Hz"
+      ],
+      [
+        "f",
+        "emitted frequency",
+        "Hz"
+      ],
+      [
+        "v",
+        "speed of sound",
+        "m/s"
+      ],
+      [
+        "v_{o}",
+        "observer's speed toward the source",
+        "m/s"
+      ],
+      [
+        "v_{s}",
+        "source's speed toward the observer",
+        "m/s"
+      ]
+    ],
+    "related": [
+      [
+        "f′ = f (v − v_{o})/(v + v_{s})",
+        "moving apart"
+      ],
+      [
+        "v = f λ",
+        "wave speed"
+      ]
+    ],
+    "example": {
+      "problem": "An ambulance siren at 700 Hz approaches a standing listener at 30 m/s. What does the listener hear?",
+      "steps": [
+        "f′ = 700 × 343/(343 − 30) = 700 × 1.0958"
+      ],
+      "answer": "f′ ≈ 767 Hz"
+    },
+    "try": "700 * 343 / (343 - 30)"
+  },
+  "β = 10 log_{10}(I/I_{0})": {
+    "title": "Sound intensity level in decibels",
+    "about": "Loudness on a log scale relative to the threshold of hearing, I_{0} = 10^{−12} W/m^{2}. Every factor of 10 in intensity adds 10 dB; doubling adds about 3 dB.",
+    "assumptions": [
+      "I_{0} = 10^{−12} W/m^{2} is the reference",
+      "Intensity, not pressure; for pressure the form is 20 log_{10}(p/p_{0})"
+    ],
+    "vars": [
+      [
+        "β",
+        "sound intensity level",
+        "dB"
+      ],
+      [
+        "I",
+        "intensity",
+        "W/m^{2}"
+      ],
+      [
+        "I_{0}",
+        "reference intensity, 10^{−12}",
+        "W/m^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "I = P/(4πr^{2})",
+        "point source"
+      ],
+      [
+        "Δβ = 10 log_{10}(I_{2}/I_{1})",
+        "change in level"
+      ],
+      [
+        "Δβ = −20 log_{10}(r_{2}/r_{1})",
+        "distance change, point source"
+      ]
+    ],
+    "example": {
+      "problem": "A lawn mower produces 1 × 10^{−3} W/m^{2} at the operator. Find the sound level.",
+      "steps": [
+        "β = 10 log_{10}(10^{−3}/10^{−12}) = 10 × 9"
+      ],
+      "answer": "β = 90 dB"
+    },
+    "try": "10 log10(1e-3/1e-12)"
+  },
+  "I = P/(4πr^{2})": {
+    "title": "Intensity from a point source (inverse-square law)",
+    "about": "A source radiating equally in all directions spreads its power over a sphere, so intensity falls as 1/r^{2}: double the distance, a quarter the intensity.",
+    "assumptions": [
+      "Point source, radiating uniformly in all directions",
+      "No absorption or reflections (free field)",
+      "Applies to sound, light and other radiation"
+    ],
+    "vars": [
+      [
+        "I",
+        "intensity",
+        "W/m^{2}"
+      ],
+      [
+        "P",
+        "power of the source",
+        "W"
+      ],
+      [
+        "r",
+        "distance from the source",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "β = 10 log_{10}(I/I_{0})",
+        "in decibels"
+      ],
+      [
+        "I_{1} r_{1}^{2} = I_{2} r_{2}^{2}",
+        "comparing two distances"
+      ]
+    ],
+    "example": {
+      "problem": "A speaker radiates 2 W of sound uniformly. Find the intensity 5 m away.",
+      "steps": [
+        "I = 2/(4π × 25)"
+      ],
+      "answer": "I ≈ 6.37 × 10^{−3} W/m^{2}"
+    },
+    "try": "2 / (4 pi * 5^2)"
+  },
+  "1/f = 1/d_{o} + 1/d_{i}": {
+    "title": "Thin lens (and mirror) equation",
+    "about": "Relates where an object sits to where its image forms, given the focal length. It also works for spherical mirrors with f = R/2.",
+    "assumptions": [
+      "Thin lens, paraxial rays (close to the axis, small angles)",
+      "Sign convention: f > 0 converging; d_{i} > 0 for a real image on the far side, d_{i} < 0 for a virtual image",
+      "Object outside the focal point gives a real, inverted image"
+    ],
+    "vars": [
+      [
+        "f",
+        "focal length",
+        "m"
+      ],
+      [
+        "d_{o}",
+        "object distance",
+        "m"
+      ],
+      [
+        "d_{i}",
+        "image distance",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "m = −d_{i}/d_{o}",
+        "magnification"
+      ],
+      [
+        "1/f = (n − 1)(1/R_{1} − 1/R_{2})",
+        "lensmaker's equation"
+      ],
+      [
+        "P = 1/f",
+        "lens power in dioptres (f in m)"
+      ]
+    ],
+    "example": {
+      "problem": "An object is 30 cm in front of a converging lens with f = 10 cm. Where is the image?",
+      "steps": [
+        "1/d_{i} = 1/10 − 1/30 = 2/30",
+        "d_{i} = 15 cm (real, on the far side)"
+      ],
+      "answer": "d_{i} = 15 cm"
+    },
+    "try": "1/(1/10 - 1/30)"
+  },
+  "m = −d_{i}/d_{o}": {
+    "title": "Lateral magnification",
+    "about": "The ratio of image height to object height. A negative m means the image is inverted; |m| > 1 means enlarged.",
+    "assumptions": [
+      "Thin lens or spherical mirror, paraxial rays",
+      "Same sign convention as the lens equation"
+    ],
+    "vars": [
+      [
+        "m",
+        "magnification",
+        ""
+      ],
+      [
+        "d_{i}",
+        "image distance",
+        "m"
+      ],
+      [
+        "d_{o}",
+        "object distance",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "m = h_{i}/h_{o}",
+        "heights"
+      ],
+      [
+        "1/f = 1/d_{o} + 1/d_{i}",
+        "lens equation"
+      ]
+    ],
+    "example": {
+      "problem": "With d_{o} = 30 cm and d_{i} = 15 cm, find m. How tall is the image of a 4 cm object?",
+      "steps": [
+        "m = −15/30 = −0.5",
+        "h_{i} = −0.5 × 4 = −2 cm (inverted, half size)"
+      ],
+      "answer": "m = −0.5; image 2 cm tall, inverted"
+    },
+    "try": "-15/30"
+  },
+  "n = c/v": {
+    "title": "Refractive index",
+    "about": "How much slower light travels in a material than in vacuum. Air is about 1.0003, water 1.33, glass about 1.5, diamond 2.42.",
+    "assumptions": [
+      "n depends on wavelength (dispersion), which is why prisms split white light",
+      "c = 2.998 × 10^{8} m/s"
+    ],
+    "vars": [
+      [
+        "n",
+        "refractive index",
+        ""
+      ],
+      [
+        "c",
+        "speed of light in vacuum",
+        "m/s"
+      ],
+      [
+        "v",
+        "speed of light in the material",
+        "m/s"
+      ]
+    ],
+    "related": [
+      [
+        "n_{1} sin(θ_{1}) = n_{2} sin(θ_{2})",
+        "Snell's law"
+      ],
+      [
+        "λ_{n} = λ_{0}/n",
+        "wavelength in the medium"
+      ]
+    ],
+    "example": {
+      "problem": "Find the speed of light in glass with n = 1.5.",
+      "steps": [
+        "v = c/n = 2.998e8/1.5"
+      ],
+      "answer": "v ≈ 2.00 × 10^{8} m/s"
+    },
+    "try": "speed of light / 1.5"
+  },
+  "sin(θ_{c}) = n_{2}/n_{1}": {
+    "title": "Critical angle for total internal reflection",
+    "about": "Light going from a denser medium into a less dense one is totally reflected if it hits the surface at more than the critical angle. Optical fibres guide light this way.",
+    "assumptions": [
+      "Only when n_{1} > n_{2} (going from higher to lower index)",
+      "Angle measured from the normal"
+    ],
+    "vars": [
+      [
+        "θ_{c}",
+        "critical angle",
+        "rad"
+      ],
+      [
+        "n_{1}",
+        "index of the medium the light is in",
+        ""
+      ],
+      [
+        "n_{2}",
+        "index of the medium beyond",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "n_{1} sin(θ_{1}) = n_{2} sin(θ_{2})",
+        "Snell's law, θ_{2} = 90° at θ_{c}"
+      ],
+      [
+        "NA = √(n_{1}^{2} − n_{2}^{2})",
+        "numerical aperture of a fibre"
+      ]
+    ],
+    "example": {
+      "problem": "Find the critical angle for glass (n = 1.5) to air.",
+      "steps": [
+        "sin(θ_{c}) = 1/1.5 = 0.6667",
+        "θ_{c} = asin(0.6667)"
+      ],
+      "answer": "θ_{c} ≈ 41.8°"
+    },
+    "try": "asin(1/1.5) to deg"
+  },
+  "d sin(θ) = m λ": {
+    "title": "Double-slit (and grating) bright fringes",
+    "about": "Light through two slits interferes: bright fringes appear where the path difference d sin(θ) is a whole number of wavelengths. A diffraction grating follows the same rule with sharper lines.",
+    "assumptions": [
+      "Coherent, monochromatic light",
+      "Screen far away (Fraunhofer); for small angles the fringe spacing on a screen at L is Δy = λL/d",
+      "m = 0, ±1, ±2, …; dark fringes at d sin(θ) = (m + 1/2) λ"
+    ],
+    "vars": [
+      [
+        "d",
+        "slit spacing",
+        "m"
+      ],
+      [
+        "θ",
+        "angle of the fringe from the centre line",
+        "rad"
+      ],
+      [
+        "m",
+        "order of the fringe",
+        ""
+      ],
+      [
+        "λ",
+        "wavelength",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "Δy = λ L/d",
+        "fringe spacing, small angles"
+      ],
+      [
+        "a sin(θ) = m λ",
+        "single-slit dark fringes"
+      ]
+    ],
+    "example": {
+      "problem": "Slits 0.2 mm apart are lit with 600 nm light. Find the angle of the first-order bright fringe.",
+      "steps": [
+        "sin(θ) = 1 × 600e−9/0.2e−3 = 0.003",
+        "θ = 0.003 rad = 0.172°"
+      ],
+      "answer": "θ ≈ 0.172°"
+    },
+    "try": "asin(600e-9/0.2e-3) to deg"
+  },
+  "γ = 1/√(1 − v^{2}/c^{2})": {
+    "title": "Lorentz factor",
+    "about": "The factor by which moving clocks slow, lengths shorten and energy grows in special relativity. It is barely above 1 at everyday speeds and runs to infinity as v approaches c.",
+    "assumptions": [
+      "Inertial frames, special relativity (no gravity)",
+      "v < c",
+      "For v ≪ c, γ ≈ 1 + v^{2}/(2c^{2})"
+    ],
+    "vars": [
+      [
+        "γ",
+        "Lorentz factor (≥ 1)",
+        ""
+      ],
+      [
+        "v",
+        "relative speed",
+        "m/s"
+      ],
+      [
+        "c",
+        "speed of light",
+        "m/s"
+      ]
+    ],
+    "related": [
+      [
+        "t = γ t_{0}",
+        "time dilation"
+      ],
+      [
+        "L = L_{0}/γ",
+        "length contraction"
+      ],
+      [
+        "E = γ m c^{2}",
+        "total energy"
+      ]
+    ],
+    "example": {
+      "problem": "Find γ at 0.8c.",
+      "steps": [
+        "γ = 1/√(1 − 0.64) = 1/0.6"
+      ],
+      "answer": "γ ≈ 1.667"
+    },
+    "try": "1/sqrt(1 - 0.8^2)"
+  },
+  "t = γ t_{0}": {
+    "title": "Time dilation",
+    "about": "A clock moving relative to you runs slow: the time you measure between two of its ticks is γ times its proper time. Muons from cosmic rays reach the ground because of this.",
+    "assumptions": [
+      "t_{0} is the proper time, measured by a clock at rest relative to both events (same place in its frame)",
+      "Special relativity, constant relative velocity"
+    ],
+    "vars": [
+      [
+        "t",
+        "dilated time measured by the observer",
+        "s"
+      ],
+      [
+        "γ",
+        "Lorentz factor",
+        ""
+      ],
+      [
+        "t_{0}",
+        "proper time",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "γ = 1/√(1 − v^{2}/c^{2})",
+        "Lorentz factor"
+      ],
+      [
+        "L = L_{0}/γ",
+        "length contraction"
+      ]
+    ],
+    "example": {
+      "problem": "A muon lives 2.2 μs at rest. How long does it last in the lab at 0.99c?",
+      "steps": [
+        "γ = 1/√(1 − 0.9801) = 7.09",
+        "t = 7.09 × 2.2 μs = 15.6 μs"
+      ],
+      "answer": "t ≈ 15.6 μs"
+    },
+    "try": "2.2 / sqrt(1 - 0.99^2)"
+  },
+  "L = L_{0}/γ": {
+    "title": "Length contraction",
+    "about": "A moving object is shorter along its direction of motion than its proper (rest) length, by the factor γ. Perpendicular dimensions don't change.",
+    "assumptions": [
+      "L_{0} is the proper length, measured in the object's rest frame",
+      "Only along the direction of motion",
+      "Special relativity, constant velocity"
+    ],
+    "vars": [
+      [
+        "L",
+        "measured length",
+        "m"
+      ],
+      [
+        "L_{0}",
+        "proper length",
+        "m"
+      ],
+      [
+        "γ",
+        "Lorentz factor",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "γ = 1/√(1 − v^{2}/c^{2})",
+        "Lorentz factor"
+      ],
+      [
+        "t = γ t_{0}",
+        "time dilation"
+      ]
+    ],
+    "example": {
+      "problem": "A 100 m spaceship flies past at 0.6c. How long is it in your frame?",
+      "steps": [
+        "γ = 1/√(1 − 0.36) = 1.25",
+        "L = 100/1.25"
+      ],
+      "answer": "L = 80 m"
+    },
+    "try": "100 * sqrt(1 - 0.6^2)"
+  },
+  "E^{2} = (pc)^{2} + (mc^{2})^{2}": {
+    "title": "Relativistic energy–momentum relation",
+    "about": "Ties together a particle's total energy, momentum and rest mass. At rest it gives E = mc^{2}; for a massless photon it gives E = pc.",
+    "assumptions": [
+      "Special relativity; m is the rest mass",
+      "E is the total energy γ m c^{2} (kinetic energy is E − mc^{2})"
+    ],
+    "vars": [
+      [
+        "E",
+        "total energy",
+        "J"
+      ],
+      [
+        "p",
+        "momentum",
+        "kg·m/s"
+      ],
+      [
+        "c",
+        "speed of light",
+        "m/s"
+      ],
+      [
+        "m",
+        "rest mass",
+        "kg"
+      ]
+    ],
+    "related": [
+      [
+        "E = γ m c^{2}",
+        "total energy"
+      ],
+      [
+        "p = γ m v",
+        "momentum"
+      ],
+      [
+        "E = p c",
+        "massless particle"
+      ]
+    ],
+    "example": {
+      "problem": "An electron (mc^{2} = 0.511 MeV) has momentum pc = 1.0 MeV. Find its total and kinetic energy.",
+      "steps": [
+        "E = √(1.0^{2} + 0.511^{2}) = 1.123 MeV",
+        "KE = E − mc^{2} = 0.612 MeV"
+      ],
+      "answer": "E ≈ 1.123 MeV; KE ≈ 0.612 MeV"
+    },
+    "try": "sqrt(1.0^2 + 0.511^2)"
+  },
+  "KE = h f − φ": {
+    "title": "Photoelectric effect",
+    "about": "Light knocks electrons out of a metal only if each photon carries more energy than the work function φ; the excess becomes the electron's kinetic energy. Brightness changes the number of electrons, not their energy.",
+    "assumptions": [
+      "KE is the maximum kinetic energy of the ejected electrons",
+      "No emission below the threshold frequency f_{0} = φ/h",
+      "φ depends on the metal (about 2–5 eV)"
+    ],
+    "vars": [
+      [
+        "KE",
+        "maximum kinetic energy of the electrons",
+        "J"
+      ],
+      [
+        "h",
+        "Planck constant",
+        "J·s"
+      ],
+      [
+        "f",
+        "light frequency",
+        "Hz"
+      ],
+      [
+        "φ",
+        "work function",
+        "J"
+      ]
+    ],
+    "related": [
+      [
+        "E = h f",
+        "photon energy"
+      ],
+      [
+        "e V_{stop} = KE_{max}",
+        "stopping potential"
+      ],
+      [
+        "f_{0} = φ/h",
+        "threshold frequency"
+      ]
+    ],
+    "example": {
+      "problem": "UV light of 250 nm hits sodium (φ = 2.28 eV). Find the maximum kinetic energy of the electrons.",
+      "steps": [
+        "E = hc/λ = 1240 eV·nm/250 nm = 4.96 eV",
+        "KE = 4.96 − 2.28 = 2.68 eV"
+      ],
+      "answer": "KE ≈ 2.68 eV"
+    },
+    "try": "1240/250 - 2.28"
+  },
+  "Δx Δp ≥ ħ/2": {
+    "title": "Heisenberg uncertainty principle",
+    "about": "A particle's position and momentum cannot both be known exactly: the product of their uncertainties has a floor. Confining an electron tightly forces it to have a large spread in momentum.",
+    "assumptions": [
+      "Δx and Δp are standard deviations of the measured values",
+      "ħ = h/(2π) = 1.055 × 10^{−34} J·s",
+      "An analogous relation ΔE Δt ≳ ħ/2 holds for energy and time"
+    ],
+    "vars": [
+      [
+        "Δx",
+        "uncertainty in position",
+        "m"
+      ],
+      [
+        "Δp",
+        "uncertainty in momentum",
+        "kg·m/s"
+      ],
+      [
+        "ħ",
+        "reduced Planck constant",
+        "J·s"
+      ]
+    ],
+    "related": [
+      [
+        "ΔE Δt ≥ ħ/2",
+        "energy–time"
+      ],
+      [
+        "λ = h/p",
+        "de Broglie wavelength"
+      ]
+    ],
+    "example": {
+      "problem": "An electron is confined to 0.1 nm (an atom). Find the least uncertainty in its speed.",
+      "steps": [
+        "Δp ≥ ħ/(2Δx) = 1.055e−34/(2 × 1e−10) = 5.27e−25 kg·m/s",
+        "Δv = Δp/m = 5.27e−25/9.109e−31"
+      ],
+      "answer": "Δv ≥ 5.79 × 10^{5} m/s"
+    },
+    "try": "1.0546e-34 / (2 * 1e-10 * 9.109e-31)"
+  },
+  "E_{n} = −13.6 eV/n^{2}": {
+    "title": "Energy levels of the hydrogen atom",
+    "about": "The Bohr model's energies for hydrogen's electron. A photon emitted when the electron drops from n_{i} to n_{f} carries the difference. n = 1 is the ground state; 13.6 eV ionises it.",
+    "assumptions": [
+      "Hydrogen (or a one-electron ion: multiply by Z^{2})",
+      "Non-relativistic; fine structure ignored",
+      "n = 1, 2, 3, …"
+    ],
+    "vars": [
+      [
+        "E_{n}",
+        "energy of level n",
+        "eV"
+      ],
+      [
+        "n",
+        "principal quantum number",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "ΔE = 13.6 eV (1/n_{f}^{2} − 1/n_{i}^{2})",
+        "transition energy"
+      ],
+      [
+        "λ = h c/ΔE",
+        "emitted wavelength"
+      ],
+      [
+        "1/λ = R_{H}(1/n_{f}^{2} − 1/n_{i}^{2})",
+        "Rydberg formula"
+      ]
+    ],
+    "example": {
+      "problem": "Find the photon energy and wavelength for the n = 3 to n = 2 transition (Balmer H-α).",
+      "steps": [
+        "ΔE = 13.6(1/4 − 1/9) = 1.889 eV",
+        "λ = 1240 eV·nm/1.889 eV = 656 nm"
+      ],
+      "answer": "ΔE ≈ 1.89 eV; λ ≈ 656 nm"
+    },
+    "try": "13.6 * (1/4 - 1/9)"
+  },
+  "iħ ∂ψ/∂t = H ψ": {
+    "title": "Time-dependent Schrödinger equation",
+    "about": "The equation of motion of quantum mechanics: it gives how a wavefunction ψ evolves in time under the Hamiltonian H (kinetic plus potential energy). |ψ|^{2} is the probability density.",
+    "assumptions": [
+      "Non-relativistic quantum mechanics",
+      "For one particle in 1D, H = −(ħ^{2}/2m) ∂^{2}/∂x^{2} + V(x)",
+      "When V doesn't depend on time, separating variables gives the time-independent form H ψ = E ψ"
+    ],
+    "vars": [
+      [
+        "ψ",
+        "wavefunction",
+        "m^{−1/2} (1D)"
+      ],
+      [
+        "ħ",
+        "reduced Planck constant",
+        "J·s"
+      ],
+      [
+        "H",
+        "Hamiltonian operator (energy)",
+        "J"
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "H ψ = E ψ",
+        "time-independent form"
+      ],
+      [
+        "E_{n} = n^{2} h^{2}/(8 m L^{2})",
+        "particle in a 1D box"
+      ],
+      [
+        "∫|ψ|^{2} dx = 1",
+        "normalisation"
+      ]
+    ],
+    "example": {
+      "problem": "Solve H ψ = E ψ for an electron in a 1D box 1 nm wide and find the ground-state energy.",
+      "steps": [
+        "ψ = √(2/L) sin(nπx/L), E_{n} = n^{2} h^{2}/(8 m L^{2})",
+        "E_{1} = (6.626e−34)^{2}/(8 × 9.109e−31 × (1e−9)^{2}) = 6.02e−20 J",
+        "In eV: 6.02e−20/1.602e−19 = 0.376 eV"
+      ],
+      "answer": "E_{1} ≈ 0.376 eV"
+    },
+    "try": "(planck constant)^2 / (8 * electron mass * (1 nm)^2) to eV"
+  },
+  "N = N_{0} e^{−λt}": {
+    "title": "Radioactive decay law",
+    "about": "The number of undecayed nuclei falls exponentially: each nucleus has the same chance λ per unit time of decaying. The activity A = λN falls the same way.",
+    "assumptions": [
+      "Large numbers of nuclei (it describes averages)",
+      "λ is constant for a given isotope, unaffected by temperature or pressure",
+      "No new nuclei being produced"
+    ],
+    "vars": [
+      [
+        "N",
+        "nuclei remaining at time t",
+        ""
+      ],
+      [
+        "N_{0}",
+        "initial number",
+        ""
+      ],
+      [
+        "λ",
+        "decay constant",
+        "s^{−1}"
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "t_{1/2} = ln(2)/λ",
+        "half-life"
+      ],
+      [
+        "N = N_{0} (1/2)^{t/t_{1/2}}",
+        "half-life form"
+      ],
+      [
+        "A = λ N",
+        "activity, in Bq"
+      ]
+    ],
+    "example": {
+      "problem": "Carbon-14 has a half-life of 5730 years. What fraction of it is left after 10 000 years?",
+      "steps": [
+        "λ = ln(2)/5730 = 1.21e−4 per year",
+        "N/N_{0} = e^{−1.21e−4 × 10 000} = 0.298"
+      ],
+      "answer": "N/N_{0} ≈ 0.298"
+    },
+    "try": "exp(-ln(2)/5730 * 10000)"
+  },
+  "t_{1/2} = ln(2)/λ": {
+    "title": "Half-life",
+    "about": "The time for half of a radioactive sample (or any exponentially decaying quantity) to go. After n half-lives a fraction (1/2)^{n} remains.",
+    "assumptions": [
+      "Exponential (first-order) decay with a constant rate λ",
+      "Also applies to drug elimination, RC discharge (with λ = 1/RC) and first-order reactions"
+    ],
+    "vars": [
+      [
+        "t_{1/2}",
+        "half-life",
+        "s"
+      ],
+      [
+        "λ",
+        "decay constant",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "N = N_{0} e^{−λt}",
+        "decay law"
+      ],
+      [
+        "τ = 1/λ",
+        "mean lifetime"
+      ]
+    ],
+    "example": {
+      "problem": "Iodine-131 has a decay constant of 0.0862 per day. Find its half-life.",
+      "steps": [
+        "t_{1/2} = 0.6931/0.0862"
+      ],
+      "answer": "t_{1/2} ≈ 8.04 days"
+    },
+    "try": "ln(2)/0.0862"
+  },
+  "E = Δm c^{2}": {
+    "title": "Nuclear binding energy (mass defect)",
+    "about": "A nucleus weighs less than its separate protons and neutrons. The missing mass Δm, times c^{2}, is the energy binding it together, and it is released in fission and fusion. 1 u of mass is 931.5 MeV.",
+    "assumptions": [
+      "Δm = (Z m_{p} + N m_{n}) − m_{nucleus}; with atomic masses use m_{H} in place of m_{p} so electrons cancel",
+      "Rest-mass energies only"
+    ],
+    "vars": [
+      [
+        "E",
+        "binding energy",
+        "J"
+      ],
+      [
+        "Δm",
+        "mass defect",
+        "kg"
+      ],
+      [
+        "c",
+        "speed of light",
+        "m/s"
+      ]
+    ],
+    "related": [
+      [
+        "1 u = 931.5 MeV/c^{2}",
+        "conversion"
+      ],
+      [
+        "E = m c^{2}",
+        "rest energy"
+      ],
+      [
+        "Q = (m_{before} − m_{after}) c^{2}",
+        "energy released in a reaction"
+      ]
+    ],
+    "example": {
+      "problem": "Helium-4 has a mass defect of 0.0304 u. Find its binding energy.",
+      "steps": [
+        "E = 0.0304 × 931.5 MeV"
+      ],
+      "answer": "E ≈ 28.3 MeV"
+    },
+    "try": "0.0304 * 931.5"
+  }
+}

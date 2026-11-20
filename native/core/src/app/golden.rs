@@ -402,6 +402,7 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
         // native only: the part or sheet a line opens, and a sheet by its id
         ("lib/identities", "nativeTargetFor") => opt(idt::native_target_for(&s(0))),
         ("lib/identities", "identitySheetById") => opt(idt::native_identity_sheet_by_id(&s(0))),
+        ("lib/identities", "nativeSheetIds") => json!(idt::native_sheet_ids()),
         ("lib/identities", "identityRuns") => to(&idt::identity_runs(&s(0))),
         ("lib/identities", "identitySheetFor") => opt(idt::identity_sheet_for(&s(0))),
         ("lib/identities", "identityTargetFor") => opt(idt::identity_target_for(&s(0))),

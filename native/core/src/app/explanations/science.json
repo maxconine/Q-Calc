@@ -1,0 +1,4608 @@
+{
+ "Q̇ = −k A dT/dx": {
+  "title": "Fourier's law: heat conducted through a solid",
+  "about": "Heat flows by conduction from hot to cold at a rate set by the material's conductivity, the area it flows through and how steeply the temperature falls along the path. The minus sign says heat runs down the temperature gradient. For a flat wall at steady state it becomes Q̇ = k A (T_{1} − T_{2})/L.",
+  "assumptions": [
+   "One-dimensional flow: temperature varies only along x, so edges and corners are ignored",
+   "Steady state for the plane-wall form; a changing temperature field needs the heat equation",
+   "k is constant; for large temperature spans use k at the mean temperature",
+   "No heat generated inside the material"
+  ],
+  "vars": [
+   [
+    "Q̇",
+    "heat transfer rate in the +x direction",
+    "W"
+   ],
+   [
+    "k",
+    "thermal conductivity of the material",
+    "W/(m·K)"
+   ],
+   [
+    "A",
+    "area normal to the flow",
+    "m^{2}"
+   ],
+   [
+    "dT/dx",
+    "temperature gradient along the flow",
+    "K/m"
+   ]
+  ],
+  "related": [
+   [
+    "Q̇ = k A (T_{1} − T_{2})/L",
+    "plane wall of thickness L at steady state"
+   ],
+   [
+    "Q̇ = 2πkL(T_{1} − T_{2})/ln(r_{2}/r_{1})",
+    "cylindrical shell (pipe wall)"
+   ],
+   [
+    "q″ = Q̇/A",
+    "heat flux"
+   ]
+  ],
+  "example": {
+   "problem": "A brick wall (k = 0.72 W/(m·K)) is 0.20 m thick and 12 m^{2} in area. Inside it is 20 °C and outside 0 °C on the surfaces. How much heat is lost?",
+   "steps": [
+    "dT/dx = (0 − 20) K/0.20 m = −100 K/m",
+    "Q̇ = −(0.72)(12)(−100) = 864 W"
+   ],
+   "answer": "Q̇ = 864 W"
+  },
+  "try": "0.72 W/(m K) * 12 m^2 * 20 K / 0.2 m"
+ },
+ "Q̇ = h A (T − T_{∞})": {
+  "title": "Newton's law of cooling: convection from a surface",
+  "about": "A surface at T loses heat to a moving fluid at T_{∞} at a rate proportional to the temperature difference. All the physics of the flow is packed into the convection coefficient h, found from tables or a Nusselt correlation.",
+  "assumptions": [
+   "h is an average over the surface and is roughly constant over the temperature range",
+   "T_{∞} is the fluid temperature far from the surface (or the bulk temperature in a pipe)",
+   "Typical h: free convection in air 2–25, forced air 25–250, water 50–20 000 W/(m^{2}·K)"
+  ],
+  "vars": [
+   [
+    "Q̇",
+    "heat transfer rate from the surface to the fluid",
+    "W"
+   ],
+   [
+    "h",
+    "convection heat transfer coefficient",
+    "W/(m^{2}·K)"
+   ],
+   [
+    "A",
+    "surface area in contact with the fluid",
+    "m^{2}"
+   ],
+   [
+    "T",
+    "surface temperature",
+    "K"
+   ],
+   [
+    "T_{∞}",
+    "free-stream fluid temperature",
+    "K"
+   ]
+  ],
+  "related": [
+   [
+    "R = 1/(h A)",
+    "the same law as a thermal resistance"
+   ],
+   [
+    "Nu = h L/k",
+    "to get h from a correlation"
+   ]
+  ],
+  "example": {
+   "problem": "A 0.5 m^{2} plate at 80 °C is cooled by a fan blowing 20 °C air with h = 25 W/(m^{2}·K). Find the heat loss.",
+   "steps": [
+    "T − T_{∞} = 80 − 20 = 60 K",
+    "Q̇ = (25)(0.5)(60) = 750 W"
+   ],
+   "answer": "Q̇ = 750 W"
+  },
+  "try": "25 W/(m^2 K) * 0.5 m^2 * 60 K"
+ },
+ "Q̇ = ε σ A (T_{1}^{4} − T_{2}^{4})": {
+  "title": "Net radiation between a surface and large surroundings",
+  "about": "Every surface emits thermal radiation in proportion to T^{4}. A small gray surface at T_{1} enclosed by much larger surroundings at T_{2} exchanges this net amount. Temperatures must be absolute (kelvin).",
+  "assumptions": [
+   "The surface is small compared to the surroundings, which act as a blackbody",
+   "The surface is gray and diffuse: ε is the same at all wavelengths and directions",
+   "Temperatures in kelvin, never °C",
+   "No absorbing gas in between"
+  ],
+  "vars": [
+   [
+    "Q̇",
+    "net radiation rate from the surface",
+    "W"
+   ],
+   [
+    "ε",
+    "emissivity of the surface, 0 to 1",
+    ""
+   ],
+   [
+    "σ",
+    "Stefan–Boltzmann constant, 5.67 × 10^{−8}",
+    "W/(m^{2}·K^{4})"
+   ],
+   [
+    "A",
+    "surface area",
+    "m^{2}"
+   ],
+   [
+    "T_{1}",
+    "surface temperature",
+    "K"
+   ],
+   [
+    "T_{2}",
+    "temperature of the surroundings",
+    "K"
+   ]
+  ],
+  "related": [
+   [
+    "E_{b} = σ T^{4}",
+    "blackbody emissive power"
+   ],
+   [
+    "h_{r} = εσ(T_{1} + T_{2})(T_{1}^{2} + T_{2}^{2})",
+    "radiation coefficient, to add to h"
+   ]
+  ],
+  "example": {
+   "problem": "A 1 m^{2} painted surface (ε = 0.9) at 100 °C sits in a room at 20 °C. Find the net radiation loss.",
+   "steps": [
+    "T_{1} = 373 K, T_{2} = 293 K",
+    "T_{1}^{4} − T_{2}^{4} = 1.936 × 10^{10} − 7.370 × 10^{9} = 1.199 × 10^{10} K^{4}",
+    "Q̇ = 0.9 × 5.67 × 10^{−8} × 1 × 1.199 × 10^{10} ≈ 612 W"
+   ],
+   "answer": "Q̇ ≈ 612 W"
+  },
+  "try": "5.67e-8 W/(m^2 K^4) * 0.9 * 1 m^2 * ((373 K)^4 - (293 K)^4)"
+ },
+ "R = L/(k A)": {
+  "title": "Conduction resistance of a plane wall",
+  "about": "Writing heat flow like current (Q̇ = ΔT/R), a wall resists heat in proportion to its thickness and inversely to its conductivity and area. Layers and surface films then add like resistors.",
+  "assumptions": [
+   "Plane wall, one-dimensional steady conduction",
+   "Constant k",
+   "For a pipe wall use R = ln(r_{2}/r_{1})/(2πkL) instead"
+  ],
+  "vars": [
+   [
+    "R",
+    "thermal resistance",
+    "K/W"
+   ],
+   [
+    "L",
+    "wall thickness",
+    "m"
+   ],
+   [
+    "k",
+    "thermal conductivity",
+    "W/(m·K)"
+   ],
+   [
+    "A",
+    "area normal to the heat flow",
+    "m^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "R = ln(r_{2}/r_{1})/(2πkL)",
+    "cylindrical shell"
+   ],
+   [
+    "R = 1/(h A)",
+    "convection film"
+   ],
+   [
+    "Q̇ = ΔT/R",
+    "heat flow through it"
+   ]
+  ],
+  "example": {
+   "problem": "Find the conduction resistance of a 0.20 m brick wall (k = 0.72 W/(m·K)) of area 12 m^{2}.",
+   "steps": [
+    "R = 0.20/(0.72 × 12) = 0.0231 K/W"
+   ],
+   "answer": "R ≈ 0.0231 K/W"
+  },
+  "try": "0.2 / (0.72 * 12)"
+ },
+ "R = 1/(h A)": {
+  "title": "Convection resistance of a surface film",
+  "about": "The convection law Q̇ = h A ΔT written as a resistance. It lets the fluid films on each side of a wall sit in series with the wall's conduction resistance.",
+  "assumptions": [
+   "h is a constant average over the surface",
+   "Radiation in parallel can be included by using h + h_{r}"
+  ],
+  "vars": [
+   [
+    "R",
+    "convection thermal resistance",
+    "K/W"
+   ],
+   [
+    "h",
+    "convection coefficient",
+    "W/(m^{2}·K)"
+   ],
+   [
+    "A",
+    "surface area",
+    "m^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "R = L/(k A)",
+    "conduction through a wall"
+   ],
+   [
+    "1/(U A) = Σ R",
+    "resistances in series"
+   ]
+  ],
+  "example": {
+   "problem": "Still indoor air on a 12 m^{2} wall has h = 8 W/(m^{2}·K). Find its film resistance.",
+   "steps": [
+    "R = 1/(8 × 12) = 1/96 = 0.0104 K/W"
+   ],
+   "answer": "R ≈ 0.0104 K/W"
+  },
+  "try": "1/(8 * 12)"
+ },
+ "1/(U A) = Σ R": {
+  "title": "Overall heat transfer coefficient from resistances in series",
+  "about": "When heat passes through several layers one after another (inside film, wall layers, outside film), their resistances add. The total defines the overall coefficient U, so the whole path is Q̇ = U A ΔT.",
+  "assumptions": [
+   "Steady one-dimensional flow; the same Q̇ crosses every layer",
+   "Perfect contact between layers, or a contact resistance added as its own term",
+   "Parallel paths (studs beside insulation) combine like parallel resistors instead"
+  ],
+  "vars": [
+   [
+    "U",
+    "overall heat transfer coefficient",
+    "W/(m^{2}·K)"
+   ],
+   [
+    "A",
+    "area the coefficient is based on",
+    "m^{2}"
+   ],
+   [
+    "R",
+    "each resistance in the path",
+    "K/W"
+   ]
+  ],
+  "related": [
+   [
+    "R = L/(k A)",
+    "each solid layer"
+   ],
+   [
+    "R = 1/(h A)",
+    "each fluid film"
+   ],
+   [
+    "Q̇ = U A ΔT",
+    "the total heat flow"
+   ]
+  ],
+  "example": {
+   "problem": "A 12 m^{2} brick wall (0.20 m, k = 0.72) has h = 8 W/(m^{2}·K) inside and 25 outside. Find UA and U.",
+   "steps": [
+    "R_{in} = 1/(8 × 12) = 0.01042 K/W",
+    "R_{wall} = 0.20/(0.72 × 12) = 0.02315 K/W",
+    "R_{out} = 1/(25 × 12) = 0.00333 K/W",
+    "Σ R = 0.0369 K/W, so UA = 1/0.0369 = 27.1 W/K",
+    "U = 27.1/12 = 2.26 W/(m^{2}·K)"
+   ],
+   "answer": "UA ≈ 27.1 W/K, U ≈ 2.26 W/(m^{2}·K)"
+  },
+  "try": "1/(1/(8*12) + 0.2/(0.72*12) + 1/(25*12))"
+ },
+ "Q̇ = ΔT/R": {
+  "title": "Heat flow through a thermal resistance",
+  "about": "The thermal Ohm's law: temperature difference drives heat flow the way voltage drives current. With the total resistance of a path you get the heat flow, and with the heat flow you get the temperature at every interface.",
+  "assumptions": [
+   "Steady state",
+   "R is the total resistance between the two temperatures, series and parallel combined like resistors"
+  ],
+  "vars": [
+   [
+    "Q̇",
+    "heat transfer rate",
+    "W"
+   ],
+   [
+    "ΔT",
+    "temperature difference across the path",
+    "K"
+   ],
+   [
+    "R",
+    "thermal resistance of the path",
+    "K/W"
+   ]
+  ],
+  "related": [
+   [
+    "R = L/(k A)",
+    "conduction"
+   ],
+   [
+    "R = 1/(h A)",
+    "convection"
+   ],
+   [
+    "1/(U A) = Σ R",
+    "series path"
+   ]
+  ],
+  "example": {
+   "problem": "The wall above (Σ R = 0.0369 K/W) separates a 20 °C room from 0 °C outdoor air. Find the heat loss.",
+   "steps": [
+    "Q̇ = 20 K/0.0369 K/W = 542 W"
+   ],
+   "answer": "Q̇ ≈ 542 W"
+  },
+  "try": "20/(1/(8*12) + 0.2/(0.72*12) + 1/(25*12))"
+ },
+ "T − T_{∞} = (T_{0} − T_{∞}) e^{−t/τ}": {
+  "title": "Lumped-capacity cooling (or heating) over time",
+  "about": "A small or highly conductive body has nearly uniform temperature, so it cools toward the fluid temperature exponentially with time constant τ. After one τ it has covered 63 % of the gap; after 5τ it is essentially there.",
+  "assumptions": [
+   "Bi = hL_{c}/k < 0.1, so the inside stays uniform (L_{c} = V/A)",
+   "h, ρ, c constant; T_{∞} constant",
+   "Radiation small, or folded into h"
+  ],
+  "vars": [
+   [
+    "T",
+    "body temperature at time t",
+    "K"
+   ],
+   [
+    "T_{∞}",
+    "fluid temperature",
+    "K"
+   ],
+   [
+    "T_{0}",
+    "initial body temperature",
+    "K"
+   ],
+   [
+    "t",
+    "time",
+    "s"
+   ],
+   [
+    "τ",
+    "time constant ρVc/(hA)",
+    "s"
+   ]
+  ],
+  "related": [
+   [
+    "τ = ρ V c/(h A)",
+    "the time constant"
+   ],
+   [
+    "Bi = h L/k",
+    "check the lumped assumption"
+   ],
+   [
+    "Q = ρVc(T_{0} − T)",
+    "heat lost up to time t"
+   ]
+  ],
+  "example": {
+   "problem": "A 10 mm steel ball (ρ = 7800 kg/m^{3}, c = 470 J/(kg·K), k = 45 W/(m·K)) at 300 °C is dropped in 25 °C air with h = 50 W/(m^{2}·K). What is its temperature after 60 s?",
+   "steps": [
+    "V/A = D/6 = 1.667 mm; Bi = 50 × 0.001667/45 = 0.0019, lumped is fine",
+    "τ = ρ c (D/6)/h = 7800 × 470 × 0.001667/50 = 122 s",
+    "T = 25 + (300 − 25) e^{−60/122} = 25 + 275 × 0.612 = 193 °C"
+   ],
+   "answer": "T ≈ 193 °C"
+  },
+  "try": "25 + 275 exp(-60/(7800*470*0.01/(6*50)))"
+ },
+ "τ = ρ V c/(h A)": {
+  "title": "Thermal time constant of a lumped body",
+  "about": "The ratio of the heat a body stores per degree (ρVc) to the rate it sheds heat per degree (hA). Small, thin or well-cooled objects have short time constants; this is why a thermocouple bead responds fast.",
+  "assumptions": [
+   "Lumped body: Bi < 0.1",
+   "Constant properties and h"
+  ],
+  "vars": [
+   [
+    "τ",
+    "time constant",
+    "s"
+   ],
+   [
+    "ρ",
+    "density",
+    "kg/m^{3}"
+   ],
+   [
+    "V",
+    "volume",
+    "m^{3}"
+   ],
+   [
+    "c",
+    "specific heat",
+    "J/(kg·K)"
+   ],
+   [
+    "h",
+    "convection coefficient",
+    "W/(m^{2}·K)"
+   ],
+   [
+    "A",
+    "surface area",
+    "m^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "V/A = D/6",
+    "sphere of diameter D"
+   ],
+   [
+    "V/A = D/4",
+    "long cylinder"
+   ],
+   [
+    "T − T_{∞} = (T_{0} − T_{∞}) e^{−t/τ}",
+    "the response"
+   ]
+  ],
+  "example": {
+   "problem": "Find the time constant of a 10 mm steel ball (ρ = 7800 kg/m^{3}, c = 470 J/(kg·K)) in air with h = 50 W/(m^{2}·K).",
+   "steps": [
+    "V/A = D/6 = 0.01/6 m",
+    "τ = 7800 × 470 × (0.01/6)/50 = 122 s"
+   ],
+   "answer": "τ ≈ 122 s"
+  },
+  "try": "7800 * 470 * 0.01 / (6 * 50)"
+ },
+ "Bi = h L/k": {
+  "title": "Biot number: is a body's temperature uniform?",
+  "about": "The Biot number compares the resistance to conduction inside a body with the resistance to convection at its surface. When it is under 0.1 the inside temperature is nearly uniform and the simple lumped model works.",
+  "assumptions": [
+   "L is the characteristic length V/A for the lumped check (some charts use the half-thickness or radius instead)",
+   "k is the solid's conductivity, not the fluid's (contrast Nu)"
+  ],
+  "vars": [
+   [
+    "Bi",
+    "Biot number",
+    ""
+   ],
+   [
+    "h",
+    "convection coefficient",
+    "W/(m^{2}·K)"
+   ],
+   [
+    "L",
+    "characteristic length V/A",
+    "m"
+   ],
+   [
+    "k",
+    "thermal conductivity of the solid",
+    "W/(m·K)"
+   ]
+  ],
+  "related": [
+   [
+    "τ = ρ V c/(h A)",
+    "time constant when Bi < 0.1"
+   ],
+   [
+    "Nu = h L/k",
+    "looks the same, but k is the fluid's"
+   ]
+  ],
+  "example": {
+   "problem": "Is a 10 mm steel ball (k = 45 W/(m·K)) cooled with h = 50 W/(m^{2}·K) lumped?",
+   "steps": [
+    "L = V/A = D/6 = 1.667 mm",
+    "Bi = 50 × 0.001667/45 = 0.00185 < 0.1, yes"
+   ],
+   "answer": "Bi ≈ 0.0019, lumped"
+  },
+  "try": "50 * (0.01/6) / 45"
+ },
+ "Q̇ = U A ΔT_{m}": {
+  "title": "Heat exchanger rate",
+  "about": "The heat passed from the hot stream to the cold stream equals the overall coefficient times the area times a mean temperature difference. For simple parallel or counterflow exchangers the mean is the log mean.",
+  "assumptions": [
+   "Steady flow, no heat lost to the surroundings",
+   "U constant along the exchanger",
+   "For shell-and-tube and crossflow, multiply the counterflow ΔT_{lm} by a correction factor F"
+  ],
+  "vars": [
+   [
+    "Q̇",
+    "heat transfer rate",
+    "W"
+   ],
+   [
+    "U",
+    "overall heat transfer coefficient",
+    "W/(m^{2}·K)"
+   ],
+   [
+    "A",
+    "heat transfer area",
+    "m^{2}"
+   ],
+   [
+    "ΔT_{m}",
+    "mean temperature difference (log mean)",
+    "K"
+   ]
+  ],
+  "related": [
+   [
+    "ΔT_{m} = (ΔT_{1} − ΔT_{2})/ln(ΔT_{1}/ΔT_{2})",
+    "log mean temperature difference"
+   ],
+   [
+    "Q̇ = ṁ c_{p} ΔT",
+    "energy balance on either stream"
+   ]
+  ],
+  "example": {
+   "problem": "A water heater exchanger has U = 300 W/(m^{2}·K), A = 5 m^{2} and a log mean temperature difference of 40 K. Find its duty.",
+   "steps": [
+    "Q̇ = 300 × 5 × 40 = 60 000 W"
+   ],
+   "answer": "Q̇ = 60 kW"
+  },
+  "try": "300 W/(m^2 K) * 5 m^2 * 40 K to kW"
+ },
+ "ΔT_{m} = (ΔT_{1} − ΔT_{2})/ln(ΔT_{1}/ΔT_{2})": {
+  "title": "Log mean temperature difference",
+  "about": "The temperature gap between the streams changes along an exchanger, roughly exponentially. The log mean is the exact average to use in Q̇ = UAΔT_{m}. ΔT_{1} and ΔT_{2} are the gaps at the two ends.",
+  "assumptions": [
+   "Counterflow: ΔT_{1} = T_{h,in} − T_{c,out}, ΔT_{2} = T_{h,out} − T_{c,in}; parallel flow: both inlets at one end",
+   "Constant U and specific heats",
+   "If ΔT_{1} = ΔT_{2} the formula is 0/0; then ΔT_{m} = ΔT_{1}"
+  ],
+  "vars": [
+   [
+    "ΔT_{m}",
+    "log mean temperature difference",
+    "K"
+   ],
+   [
+    "ΔT_{1}",
+    "stream-to-stream difference at one end",
+    "K"
+   ],
+   [
+    "ΔT_{2}",
+    "stream-to-stream difference at the other end",
+    "K"
+   ]
+  ],
+  "related": [
+   [
+    "Q̇ = U A ΔT_{m}",
+    "exchanger rate"
+   ]
+  ],
+  "example": {
+   "problem": "Hot oil cools from 150 °C to 90 °C in counterflow with water heated from 30 °C to 70 °C. Find ΔT_{m}.",
+   "steps": [
+    "ΔT_{1} = 150 − 70 = 80 K, ΔT_{2} = 90 − 30 = 60 K",
+    "ΔT_{m} = (80 − 60)/ln(80/60) = 20/0.2877 = 69.5 K"
+   ],
+   "answer": "ΔT_{m} ≈ 69.5 K"
+  },
+  "try": "(80 - 60)/ln(80/60)"
+ },
+ "Nu = h L/k": {
+  "title": "Nusselt number: dimensionless convection coefficient",
+  "about": "The Nusselt number is the convection coefficient made dimensionless with a length and the fluid's conductivity. Correlations give Nu from Re and Pr; you then solve this for h.",
+  "assumptions": [
+   "k is the fluid's conductivity (contrast Biot)",
+   "L is the correlation's own length: diameter D for pipes, plate length for plates"
+  ],
+  "vars": [
+   [
+    "Nu",
+    "Nusselt number",
+    ""
+   ],
+   [
+    "h",
+    "convection coefficient",
+    "W/(m^{2}·K)"
+   ],
+   [
+    "L",
+    "characteristic length",
+    "m"
+   ],
+   [
+    "k",
+    "fluid thermal conductivity",
+    "W/(m·K)"
+   ]
+  ],
+  "related": [
+   [
+    "Nu = 0.023 Re^{0.8} Pr^{n}",
+    "turbulent pipe flow"
+   ],
+   [
+    "Nu = 3.66",
+    "laminar pipe, constant wall temperature"
+   ],
+   [
+    "Nu = 4.36",
+    "laminar pipe, constant heat flux"
+   ]
+  ],
+  "example": {
+   "problem": "Water (k = 0.6 W/(m·K)) flows in a 25 mm pipe with Nu = 150. Find h.",
+   "steps": [
+    "h = Nu k/D = 150 × 0.6/0.025 = 3600 W/(m^{2}·K)"
+   ],
+   "answer": "h = 3600 W/(m^{2}·K)"
+  },
+  "try": "150 * 0.6 / 0.025"
+ },
+ "Re = ρ v L/μ": {
+  "title": "Reynolds number: laminar or turbulent?",
+  "about": "The ratio of inertial to viscous forces in a flow. It decides whether flow is laminar or turbulent and is the first input to every convection and friction correlation.",
+  "assumptions": [
+   "In a pipe, L = D and v is the mean velocity; laminar below about 2300, turbulent above about 4000",
+   "On a flat plate, L = x from the leading edge; transition near 5 × 10^{5}",
+   "Properties at the film or bulk temperature, as the correlation specifies"
+  ],
+  "vars": [
+   [
+    "Re",
+    "Reynolds number",
+    ""
+   ],
+   [
+    "ρ",
+    "fluid density",
+    "kg/m^{3}"
+   ],
+   [
+    "v",
+    "flow velocity",
+    "m/s"
+   ],
+   [
+    "L",
+    "characteristic length",
+    "m"
+   ],
+   [
+    "μ",
+    "dynamic viscosity",
+    "Pa·s"
+   ]
+  ],
+  "related": [
+   [
+    "Re = v L/ν",
+    "with kinematic viscosity ν = μ/ρ"
+   ],
+   [
+    "Nu = 0.023 Re^{0.8} Pr^{n}",
+    "turbulent pipe heat transfer"
+   ]
+  ],
+  "example": {
+   "problem": "Water (ρ = 998 kg/m^{3}, μ = 1.0 × 10^{−3} Pa·s) flows at 1.5 m/s in a 25 mm pipe. Is it turbulent?",
+   "steps": [
+    "Re = 998 × 1.5 × 0.025/0.001 = 37 400",
+    "37 400 > 4000, so turbulent"
+   ],
+   "answer": "Re ≈ 37 400, turbulent"
+  },
+  "try": "998 * 1.5 * 0.025 / 0.001"
+ },
+ "Pr = μ c_{p}/k": {
+  "title": "Prandtl number: momentum vs heat diffusion",
+  "about": "The ratio of how fast momentum diffuses (viscosity) to how fast heat diffuses in a fluid. It is a property of the fluid alone: about 0.7 for gases, 7 for water at room temperature, hundreds for oils.",
+  "assumptions": [
+   "Evaluate at the temperature the correlation specifies (bulk or film)"
+  ],
+  "vars": [
+   [
+    "Pr",
+    "Prandtl number",
+    ""
+   ],
+   [
+    "μ",
+    "dynamic viscosity",
+    "Pa·s"
+   ],
+   [
+    "c_{p}",
+    "specific heat at constant pressure",
+    "J/(kg·K)"
+   ],
+   [
+    "k",
+    "thermal conductivity",
+    "W/(m·K)"
+   ]
+  ],
+  "related": [
+   [
+    "Pr = ν/α",
+    "kinematic viscosity over thermal diffusivity"
+   ],
+   [
+    "Re = ρ v L/μ",
+    "the other input to convection correlations"
+   ]
+  ],
+  "example": {
+   "problem": "Find Pr for water at 20 °C: μ = 1.002 × 10^{−3} Pa·s, c_{p} = 4182 J/(kg·K), k = 0.598 W/(m·K).",
+   "steps": [
+    "Pr = 1.002 × 10^{−3} × 4182/0.598 = 7.01"
+   ],
+   "answer": "Pr ≈ 7.01"
+  },
+  "try": "1.002e-3 * 4182 / 0.598"
+ },
+ "Nu = 0.023 Re^{0.8} Pr^{n}": {
+  "title": "Dittus–Boelter: turbulent heat transfer in a pipe",
+  "about": "The standard quick correlation for fully developed turbulent flow in a smooth pipe. n = 0.4 when the fluid is being heated and 0.3 when it is being cooled.",
+  "assumptions": [
+   "Fully developed turbulent flow: Re > 10 000, 0.6 ≤ Pr ≤ 160, L/D > 10",
+   "Smooth tube, moderate wall-to-fluid temperature difference",
+   "Properties at the bulk mean temperature",
+   "Accuracy about ±25 %; Gnielinski is better near transition"
+  ],
+  "vars": [
+   [
+    "Nu",
+    "Nusselt number hD/k",
+    ""
+   ],
+   [
+    "Re",
+    "Reynolds number ρvD/μ",
+    ""
+   ],
+   [
+    "Pr",
+    "Prandtl number",
+    ""
+   ],
+   [
+    "n",
+    "0.4 heating, 0.3 cooling",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "h = Nu k/D",
+    "the convection coefficient"
+   ],
+   [
+    "Re = ρ v L/μ",
+    "Reynolds number"
+   ],
+   [
+    "Pr = μ c_{p}/k",
+    "Prandtl number"
+   ]
+  ],
+  "example": {
+   "problem": "Water (k = 0.598 W/(m·K), Pr = 7.01) at Re = 37 400 is heated in a 25 mm pipe. Find Nu and h.",
+   "steps": [
+    "Nu = 0.023 × 37 400^{0.8} × 7.01^{0.4} = 0.023 × 4555 × 2.179 = 228",
+    "h = 228 × 0.598/0.025 = 5460 W/(m^{2}·K)"
+   ],
+   "answer": "Nu ≈ 228, h ≈ 5460 W/(m^{2}·K)"
+  },
+  "try": "0.023 * 37425^0.8 * 7.01^0.4"
+ },
+ "n = m/M": {
+  "title": "Moles from mass",
+  "about": "The number of moles in a sample is its mass divided by the molar mass, which is the sum of atomic masses in the formula, in g/mol. This is the bridge from what a balance reads to what a balanced equation counts.",
+  "assumptions": [
+   "M is for the exact formula weighed (hydrates include their water)",
+   "The sample is pure"
+  ],
+  "vars": [
+   [
+    "n",
+    "amount of substance",
+    "mol"
+   ],
+   [
+    "m",
+    "mass",
+    "g"
+   ],
+   [
+    "M",
+    "molar mass",
+    "g/mol"
+   ]
+  ],
+  "related": [
+   [
+    "N = n N_{A}",
+    "number of particles"
+   ],
+   [
+    "c = n/V",
+    "molarity"
+   ]
+  ],
+  "example": {
+   "problem": "How many moles are in 10.0 g of NaCl (M = 58.44 g/mol)?",
+   "steps": [
+    "n = 10.0/58.44 = 0.171 mol"
+   ],
+   "answer": "n ≈ 0.171 mol"
+  },
+  "try": "10/58.44"
+ },
+ "N = n N_{A}": {
+  "title": "Number of particles from moles",
+  "about": "A mole is 6.022 × 10^{23} particles (Avogadro's number), so multiplying moles by N_{A} counts atoms, molecules or ions.",
+  "assumptions": [
+   "Count the particle you mean: 1 mol of H_{2}O has 2 mol of H atoms"
+  ],
+  "vars": [
+   [
+    "N",
+    "number of particles",
+    ""
+   ],
+   [
+    "n",
+    "amount of substance",
+    "mol"
+   ],
+   [
+    "N_{A}",
+    "Avogadro constant, 6.022 × 10^{23}",
+    "mol^{−1}"
+   ]
+  ],
+  "related": [
+   [
+    "n = m/M",
+    "moles from mass"
+   ]
+  ],
+  "example": {
+   "problem": "How many water molecules are in 4.50 g of water (M = 18.02 g/mol)?",
+   "steps": [
+    "n = 4.50/18.02 = 0.2497 mol",
+    "N = 0.2497 × 6.022 × 10^{23} = 1.50 × 10^{23}"
+   ],
+   "answer": "N ≈ 1.50 × 10^{23} molecules"
+  },
+  "try": "4.50/18.02 * 6.022e23"
+ },
+ "percent yield = 100 × actual/theoretical": {
+  "title": "Percent yield of a reaction",
+  "about": "How much product you actually got compared with the most the limiting reagent could have made. The theoretical yield comes from stoichiometry with the limiting reagent.",
+  "assumptions": [
+   "Both yields in the same units (grams or moles)",
+   "Theoretical yield from the limiting reagent, not the excess one",
+   "Over 100 % usually means a wet or impure product"
+  ],
+  "vars": [
+   [
+    "actual",
+    "mass (or moles) of product obtained",
+    "g"
+   ],
+   [
+    "theoretical",
+    "maximum product from the limiting reagent",
+    "g"
+   ]
+  ],
+  "related": [
+   [
+    "n = m/M",
+    "moles for the stoichiometry"
+   ]
+  ],
+  "example": {
+   "problem": "A synthesis should give 12.5 g of aspirin, but 10.2 g is collected. Find the percent yield.",
+   "steps": [
+    "percent yield = 100 × 10.2/12.5 = 81.6 %"
+   ],
+   "answer": "81.6 %"
+  },
+  "try": "100 * 10.2/12.5"
+ },
+ "c = n/V": {
+  "title": "Molarity: moles per litre of solution",
+  "about": "Molar concentration is moles of solute per litre of solution (not of solvent). 1 M = 1 mol/L = 1000 mol/m^{3}.",
+  "assumptions": [
+   "V is the final solution volume",
+   "Volume changes with temperature, so molarity does too (molality doesn't)"
+  ],
+  "vars": [
+   [
+    "c",
+    "molar concentration",
+    "mol/L"
+   ],
+   [
+    "n",
+    "moles of solute",
+    "mol"
+   ],
+   [
+    "V",
+    "volume of solution",
+    "L"
+   ]
+  ],
+  "related": [
+   [
+    "c_{1} V_{1} = c_{2} V_{2}",
+    "dilution"
+   ],
+   [
+    "b = n/m_{solvent}",
+    "molality"
+   ]
+  ],
+  "example": {
+   "problem": "10.0 g of NaCl (58.44 g/mol) is dissolved to make 250 mL of solution. Find its molarity.",
+   "steps": [
+    "n = 10.0/58.44 = 0.171 mol",
+    "c = 0.171/0.250 = 0.684 M"
+   ],
+   "answer": "c ≈ 0.684 M"
+  },
+  "try": "10/58.44/0.250"
+ },
+ "b = n/m_{solvent}": {
+  "title": "Molality: moles per kilogram of solvent",
+  "about": "Molality divides moles of solute by the mass of solvent, not the volume of solution, so it doesn't change with temperature. Freezing point depression and boiling point elevation use it.",
+  "assumptions": [
+   "m_{solvent} in kilograms, solvent only"
+  ],
+  "vars": [
+   [
+    "b",
+    "molality",
+    "mol/kg"
+   ],
+   [
+    "n",
+    "moles of solute",
+    "mol"
+   ],
+   [
+    "m_{solvent}",
+    "mass of solvent",
+    "kg"
+   ]
+  ],
+  "related": [
+   [
+    "ΔT_{f} = i K_{f} b",
+    "freezing point depression"
+   ],
+   [
+    "c = n/V",
+    "molarity"
+   ]
+  ],
+  "example": {
+   "problem": "10.0 g of NaCl (58.44 g/mol) is dissolved in 500 g of water. Find the molality.",
+   "steps": [
+    "n = 0.171 mol",
+    "b = 0.171/0.500 = 0.342 mol/kg"
+   ],
+   "answer": "b ≈ 0.342 mol/kg"
+  },
+  "try": "10/58.44/0.500"
+ },
+ "c_{1} V_{1} = c_{2} V_{2}": {
+  "title": "Dilution",
+  "about": "Adding solvent doesn't change the moles of solute, so concentration times volume is the same before and after. Use any matching units for c and V.",
+  "assumptions": [
+   "Only solvent is added; no reaction",
+   "Volumes are additive enough (fine for dilute aqueous solutions)"
+  ],
+  "vars": [
+   [
+    "c_{1}",
+    "stock concentration",
+    "mol/L"
+   ],
+   [
+    "V_{1}",
+    "volume of stock used",
+    "L"
+   ],
+   [
+    "c_{2}",
+    "diluted concentration",
+    "mol/L"
+   ],
+   [
+    "V_{2}",
+    "final volume",
+    "L"
+   ]
+  ],
+  "related": [
+   [
+    "c = n/V",
+    "molarity"
+   ]
+  ],
+  "example": {
+   "problem": "How much 2.0 M HCl is needed to make 250 mL of 0.10 M HCl?",
+   "steps": [
+    "V_{1} = c_{2}V_{2}/c_{1} = 0.10 × 250 mL/2.0 = 12.5 mL",
+    "Dilute 12.5 mL of stock to 250 mL"
+   ],
+   "answer": "V_{1} = 12.5 mL"
+  },
+  "try": "0.10 * 250 mL / 2.0"
+ },
+ "A = ε l c": {
+  "title": "Beer–Lambert law: absorbance and concentration",
+  "about": "Absorbance of light by a solution is proportional to the concentration of the absorbing species and the path length. It is how a spectrophotometer measures concentration.",
+  "assumptions": [
+   "Monochromatic light at a wavelength the species absorbs",
+   "Dilute solutions (roughly A < 1); at high concentration the line bends",
+   "No scattering, fluorescence or chemical change with concentration",
+   "A = −log_{10}(I/I_{0}) = −log_{10} T"
+  ],
+  "vars": [
+   [
+    "A",
+    "absorbance",
+    ""
+   ],
+   [
+    "ε",
+    "molar absorptivity",
+    "L/(mol·cm)"
+   ],
+   [
+    "l",
+    "path length",
+    "cm"
+   ],
+   [
+    "c",
+    "concentration",
+    "mol/L"
+   ]
+  ],
+  "related": [
+   [
+    "A = −log_{10}(I/I_{0})",
+    "absorbance from transmitted light"
+   ]
+  ],
+  "example": {
+   "problem": "A dye with ε = 1.5 × 10^{4} L/(mol·cm) reads A = 0.45 in a 1.00 cm cuvette. Find its concentration.",
+   "steps": [
+    "c = A/(ε l) = 0.45/(1.5 × 10^{4} × 1.00) = 3.0 × 10^{−5} M"
+   ],
+   "answer": "c = 3.0 × 10^{−5} M"
+  },
+  "try": "0.45/(1.5e4 * 1.00)"
+ },
+ "P V = n R T": {
+  "title": "Ideal gas law",
+  "about": "Relates pressure, volume, amount and absolute temperature of a gas. It is the starting point for nearly every gas problem; R = 8.314 J/(mol·K) = 0.08206 L·atm/(mol·K).",
+  "assumptions": [
+   "Molecules have no volume and don't attract each other: good at low pressure and high temperature",
+   "Breaks down near condensation or at high pressure (use van der Waals)",
+   "T in kelvin, and R in units that match P and V"
+  ],
+  "vars": [
+   [
+    "P",
+    "absolute pressure",
+    "Pa"
+   ],
+   [
+    "V",
+    "volume",
+    "m^{3}"
+   ],
+   [
+    "n",
+    "amount of gas",
+    "mol"
+   ],
+   [
+    "R",
+    "gas constant, 8.314",
+    "J/(mol·K)"
+   ],
+   [
+    "T",
+    "absolute temperature",
+    "K"
+   ]
+  ],
+  "related": [
+   [
+    "P_{1} V_{1}/T_{1} = P_{2} V_{2}/T_{2}",
+    "same gas, two states"
+   ],
+   [
+    "PM = ρRT",
+    "density form, M molar mass"
+   ],
+   [
+    "V_{m} = 22.4 L/mol",
+    "molar volume at 0 °C and 1 atm"
+   ]
+  ],
+  "example": {
+   "problem": "2.00 mol of N_{2} is held in a 10.0 L tank at 25 °C. Find the pressure.",
+   "steps": [
+    "T = 298 K, V = 0.0100 m^{3}",
+    "P = nRT/V = 2.00 × 8.314 × 298/0.0100 = 4.955 × 10^{5} Pa",
+    "P ≈ 496 kPa ≈ 4.89 atm"
+   ],
+   "answer": "P ≈ 496 kPa"
+  },
+  "try": "8.314 J/K * 2 * 298 K / 10 L to kPa"
+ },
+ "P_{1} V_{1}/T_{1} = P_{2} V_{2}/T_{2}": {
+  "title": "Combined gas law",
+  "about": "For a fixed amount of gas, PV/T stays constant, so any one of the six values follows from the other five. Boyle's, Charles's and Gay-Lussac's laws are its special cases.",
+  "assumptions": [
+   "Fixed amount of gas (no leaks or reaction)",
+   "Ideal gas behaviour",
+   "Absolute T and P; P and V units must match on both sides"
+  ],
+  "vars": [
+   [
+    "P_{1}, P_{2}",
+    "pressure before and after",
+    "Pa"
+   ],
+   [
+    "V_{1}, V_{2}",
+    "volume before and after",
+    "m^{3}"
+   ],
+   [
+    "T_{1}, T_{2}",
+    "absolute temperature before and after",
+    "K"
+   ]
+  ],
+  "related": [
+   [
+    "P V = n R T",
+    "ideal gas law"
+   ],
+   [
+    "P_{1}V_{1} = P_{2}V_{2}",
+    "Boyle, constant T"
+   ],
+   [
+    "V_{1}/T_{1} = V_{2}/T_{2}",
+    "Charles, constant P"
+   ]
+  ],
+  "example": {
+   "problem": "1.00 L of gas at 100 kPa and 300 K is compressed to 200 kPa and heated to 400 K. Find the new volume.",
+   "steps": [
+    "V_{2} = V_{1} (P_{1}/P_{2})(T_{2}/T_{1}) = 1.00 × (100/200) × (400/300)",
+    "V_{2} = 0.667 L"
+   ],
+   "answer": "V_{2} ≈ 0.667 L"
+  },
+  "try": "1 L * 100/200 * 400/300"
+ },
+ "P_{tot} = Σ P_{i}": {
+  "title": "Dalton's law of partial pressures",
+  "about": "In a mixture of gases each one pushes as if it were alone, and the total pressure is the sum. It is used to subtract water vapour from a gas collected over water.",
+  "assumptions": [
+   "Ideal gases that don't react"
+  ],
+  "vars": [
+   [
+    "P_{tot}",
+    "total pressure",
+    "Pa"
+   ],
+   [
+    "P_{i}",
+    "partial pressure of gas i",
+    "Pa"
+   ]
+  ],
+  "related": [
+   [
+    "P_{i} = x_{i} P_{tot}",
+    "partial pressure from mole fraction"
+   ]
+  ],
+  "example": {
+   "problem": "Hydrogen collected over water at 25 °C has a total pressure of 101.3 kPa. Water's vapour pressure at 25 °C is 3.17 kPa. Find the pressure of the hydrogen.",
+   "steps": [
+    "P_{H2} = P_{tot} − P_{H2O} = 101.3 − 3.17 = 98.1 kPa"
+   ],
+   "answer": "P_{H2} ≈ 98.1 kPa"
+  },
+  "try": "101.3 kPa - 3.17 kPa"
+ },
+ "P_{i} = x_{i} P_{tot}": {
+  "title": "Partial pressure from mole fraction",
+  "about": "Each gas's share of the total pressure equals its share of the moles. This is why there is less oxygen to breathe at altitude: x_{O2} stays 0.209, but P_{tot} drops.",
+  "assumptions": [
+   "Ideal gas mixture"
+  ],
+  "vars": [
+   [
+    "P_{i}",
+    "partial pressure of gas i",
+    "Pa"
+   ],
+   [
+    "x_{i}",
+    "mole fraction n_{i}/n_{tot}",
+    ""
+   ],
+   [
+    "P_{tot}",
+    "total pressure",
+    "Pa"
+   ]
+  ],
+  "related": [
+   [
+    "P_{tot} = Σ P_{i}",
+    "Dalton's law"
+   ],
+   [
+    "x_{i} = n_{i}/n_{tot}",
+    "mole fraction"
+   ]
+  ],
+  "example": {
+   "problem": "Air is 20.9 % O_{2} by moles. Find the oxygen partial pressure at sea level (101.3 kPa).",
+   "steps": [
+    "P_{O2} = 0.209 × 101.3 kPa = 21.2 kPa"
+   ],
+   "answer": "P_{O2} ≈ 21.2 kPa"
+  },
+  "try": "0.209 * 101.3 kPa"
+ },
+ "(P + a n^{2}/V^{2})(V − n b) = n R T": {
+  "title": "van der Waals equation for a real gas",
+  "about": "Corrects the ideal gas law for real molecules: a adds back the pressure lost to attractions between molecules, and b subtracts the volume the molecules themselves occupy. It matters at high pressure or near condensation.",
+  "assumptions": [
+   "a and b are fitted per gas; still approximate near the critical point",
+   "Use units of R that match a and b (often L·bar or L·atm)"
+  ],
+  "vars": [
+   [
+    "P",
+    "pressure",
+    "Pa"
+   ],
+   [
+    "a",
+    "attraction constant",
+    "Pa·m^{6}/mol^{2}"
+   ],
+   [
+    "n",
+    "amount",
+    "mol"
+   ],
+   [
+    "V",
+    "volume",
+    "m^{3}"
+   ],
+   [
+    "b",
+    "excluded volume per mole",
+    "m^{3}/mol"
+   ],
+   [
+    "R",
+    "gas constant",
+    "J/(mol·K)"
+   ],
+   [
+    "T",
+    "absolute temperature",
+    "K"
+   ]
+  ],
+  "related": [
+   [
+    "P = nRT/(V − nb) − a n^{2}/V^{2}",
+    "solved for pressure"
+   ],
+   [
+    "P V = n R T",
+    "the ideal limit (a, b → 0)"
+   ]
+  ],
+  "example": {
+   "problem": "1.00 mol of CO_{2} is held in 0.500 L at 300 K. With a = 3.640 L^{2}·bar/mol^{2}, b = 0.04267 L/mol and R = 0.08314 L·bar/(mol·K), find P and compare with an ideal gas.",
+   "steps": [
+    "nRT/(V − nb) = 0.08314 × 300/(0.500 − 0.04267) = 54.54 bar",
+    "a n^{2}/V^{2} = 3.640/0.250 = 14.56 bar",
+    "P = 54.54 − 14.56 = 40.0 bar; ideal gives 49.9 bar"
+   ],
+   "answer": "P ≈ 40.0 bar (ideal: 49.9 bar)"
+  },
+  "try": "0.08314*300/(0.500 - 0.04267) - 3.640/0.500^2"
+ },
+ "r_{1}/r_{2} = √(M_{2}/M_{1})": {
+  "title": "Graham's law of effusion",
+  "about": "Lighter gases effuse (and diffuse) faster: the rate goes as one over the square root of molar mass, because at the same temperature molecules have the same average kinetic energy.",
+  "assumptions": [
+   "Effusion through a hole small compared to the mean free path; diffusion only roughly",
+   "Both gases at the same temperature and pressure"
+  ],
+  "vars": [
+   [
+    "r_{1}, r_{2}",
+    "effusion rates of gases 1 and 2",
+    "mol/s"
+   ],
+   [
+    "M_{1}, M_{2}",
+    "molar masses",
+    "g/mol"
+   ]
+  ],
+  "related": [
+   [
+    "v_{rms} = √(3RT/M)",
+    "molecular speed"
+   ],
+   [
+    "t_{2}/t_{1} = √(M_{2}/M_{1})",
+    "times to effuse the same amount"
+   ]
+  ],
+  "example": {
+   "problem": "How much faster does H_{2} (2.016 g/mol) effuse than O_{2} (32.00 g/mol)?",
+   "steps": [
+    "r_{H2}/r_{O2} = √(32.00/2.016) = √15.87 = 3.98"
+   ],
+   "answer": "≈ 3.98 times faster"
+  },
+  "try": "sqrt(32.00/2.016)"
+ },
+ "v_{rms} = √(3RT/M)": {
+  "title": "Root-mean-square speed of gas molecules",
+  "about": "From kinetic theory, the typical speed of gas molecules depends only on temperature and molar mass. M must be in kg/mol for an answer in m/s.",
+  "assumptions": [
+   "Ideal gas with a Maxwell–Boltzmann distribution",
+   "M in kg/mol (28 g/mol = 0.028 kg/mol)"
+  ],
+  "vars": [
+   [
+    "v_{rms}",
+    "root-mean-square molecular speed",
+    "m/s"
+   ],
+   [
+    "R",
+    "gas constant, 8.314",
+    "J/(mol·K)"
+   ],
+   [
+    "T",
+    "absolute temperature",
+    "K"
+   ],
+   [
+    "M",
+    "molar mass",
+    "kg/mol"
+   ]
+  ],
+  "related": [
+   [
+    "v_{avg} = √(8RT/(πM))",
+    "mean speed"
+   ],
+   [
+    "v_{mp} = √(2RT/M)",
+    "most probable speed"
+   ],
+   [
+    "KE_{avg} = (3/2) k_{B} T",
+    "per molecule"
+   ]
+  ],
+  "example": {
+   "problem": "Find the rms speed of N_{2} (M = 0.028 kg/mol) at 300 K.",
+   "steps": [
+    "v_{rms} = √(3 × 8.314 × 300/0.028) = √267 200 = 517 m/s"
+   ],
+   "answer": "v_{rms} ≈ 517 m/s"
+  },
+  "try": "sqrt(3 * 8.314 J/K * 300 K / 0.028 kg)"
+ },
+ "q = m c ΔT": {
+  "title": "Heat to change a temperature",
+  "about": "The heat absorbed or released by a substance as its temperature changes, with no change of phase. In calorimetry the heat lost by one thing equals the heat gained by another.",
+  "assumptions": [
+   "No phase change in the range (add m L for melting or boiling)",
+   "c constant over the range",
+   "ΔT = T_{final} − T_{initial}; a kelvin and a °C step are the same size"
+  ],
+  "vars": [
+   [
+    "q",
+    "heat absorbed (positive) or released",
+    "J"
+   ],
+   [
+    "m",
+    "mass",
+    "kg"
+   ],
+   [
+    "c",
+    "specific heat capacity (water 4.184 J/(g·K))",
+    "J/(kg·K)"
+   ],
+   [
+    "ΔT",
+    "temperature change",
+    "K"
+   ]
+  ],
+  "related": [
+   [
+    "q = n C_{m} ΔT",
+    "with molar heat capacity"
+   ],
+   [
+    "q = m L",
+    "phase change"
+   ],
+   [
+    "q_{rxn} = −q_{solution}",
+    "coffee-cup calorimetry"
+   ]
+  ],
+  "example": {
+   "problem": "How much heat warms 250 g of water from 20 °C to 80 °C?",
+   "steps": [
+    "q = 250 g × 4.184 J/(g·K) × 60 K = 62 760 J"
+   ],
+   "answer": "q ≈ 62.8 kJ"
+  },
+  "try": "250 g * 4.184 J/(g K) * 60 K to kJ"
+ },
+ "ΔH° = Σ ΔH°_{f}(products) − Σ ΔH°_{f}(reactants)": {
+  "title": "Reaction enthalpy from enthalpies of formation (Hess's law)",
+  "about": "Because enthalpy is a state function, a reaction's enthalpy change is the formation enthalpies of the products minus those of the reactants, each times its coefficient. Negative ΔH° means exothermic.",
+  "assumptions": [
+   "Standard state: 1 bar, usually 298 K, with each substance in the phase written",
+   "Elements in their standard state have ΔH°_{f} = 0",
+   "Multiply each ΔH°_{f} by its stoichiometric coefficient; watch liquid vs gas water"
+  ],
+  "vars": [
+   [
+    "ΔH°",
+    "standard reaction enthalpy",
+    "kJ/mol"
+   ],
+   [
+    "ΔH°_{f}",
+    "standard enthalpy of formation of each species",
+    "kJ/mol"
+   ]
+  ],
+  "related": [
+   [
+    "ΔG = ΔH − T ΔS",
+    "with entropy, spontaneity"
+   ],
+   [
+    "ΔH = Σ bonds broken − Σ bonds formed",
+    "estimate from bond enthalpies"
+   ]
+  ],
+  "example": {
+   "problem": "Find ΔH° for CH_{4} + 2O_{2} → CO_{2} + 2H_{2}O(l), given ΔH°_{f}: CH_{4} −74.8, CO_{2} −393.5, H_{2}O(l) −285.8 kJ/mol.",
+   "steps": [
+    "Products: −393.5 + 2(−285.8) = −965.1 kJ",
+    "Reactants: −74.8 + 2(0) = −74.8 kJ",
+    "ΔH° = −965.1 − (−74.8) = −890.3 kJ/mol"
+   ],
+   "answer": "ΔH° = −890.3 kJ/mol"
+  },
+  "try": "(-393.5 + 2*(-285.8)) - (-74.8)"
+ },
+ "ΔG = ΔH − T ΔS": {
+  "title": "Gibbs free energy: will it happen?",
+  "about": "Combines the enthalpy change and the entropy change at a temperature. ΔG < 0 means the process is spontaneous at constant T and P; ΔG = 0 means equilibrium, which gives the temperature where a process switches.",
+  "assumptions": [
+   "Constant temperature and pressure",
+   "ΔH and ΔS are taken as constant with temperature (fair over moderate ranges)",
+   "Spontaneous says nothing about how fast"
+  ],
+  "vars": [
+   [
+    "ΔG",
+    "Gibbs free energy change",
+    "J/mol"
+   ],
+   [
+    "ΔH",
+    "enthalpy change",
+    "J/mol"
+   ],
+   [
+    "T",
+    "absolute temperature",
+    "K"
+   ],
+   [
+    "ΔS",
+    "entropy change",
+    "J/(mol·K)"
+   ]
+  ],
+  "related": [
+   [
+    "T = ΔH/ΔS",
+    "temperature where ΔG = 0"
+   ],
+   [
+    "ΔG° = −R T ln(K)",
+    "link to equilibrium"
+   ],
+   [
+    "ΔG = −n F E",
+    "link to a cell's voltage"
+   ]
+  ],
+  "example": {
+   "problem": "Ice melting has ΔH = 6.01 kJ/mol and ΔS = 22.0 J/(mol·K). Is it spontaneous at 25 °C?",
+   "steps": [
+    "TΔS = 298 × 22.0 = 6556 J/mol",
+    "ΔG = 6010 − 6556 = −546 J/mol < 0, so it melts",
+    "It switches at T = 6010/22.0 = 273 K"
+   ],
+   "answer": "ΔG ≈ −0.546 kJ/mol, spontaneous"
+  },
+  "try": "6.01 kJ - 298 K * 22.0 J/K to kJ"
+ },
+ "ΔG° = −R T ln(K)": {
+  "title": "Standard free energy and the equilibrium constant",
+  "about": "A reaction's standard free energy change fixes its equilibrium constant. A large negative ΔG° means K ≫ 1 (products favoured); positive means K ≪ 1.",
+  "assumptions": [
+   "K is the thermodynamic constant (activities: concentrations over 1 M, pressures over 1 bar)",
+   "ΔG° in J/mol with R = 8.314 J/(mol·K); T in kelvin"
+  ],
+  "vars": [
+   [
+    "ΔG°",
+    "standard Gibbs free energy change",
+    "J/mol"
+   ],
+   [
+    "R",
+    "gas constant, 8.314",
+    "J/(mol·K)"
+   ],
+   [
+    "T",
+    "absolute temperature",
+    "K"
+   ],
+   [
+    "K",
+    "equilibrium constant",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "K = e^{−ΔG°/(RT)}",
+    "solved for K"
+   ],
+   [
+    "ΔG = ΔG° + R T ln(Q)",
+    "away from equilibrium"
+   ],
+   [
+    "ΔG° = −n F E°",
+    "electrochemistry"
+   ]
+  ],
+  "example": {
+   "problem": "A reaction has K = 1.0 × 10^{−5} at 298 K. Find ΔG°.",
+   "steps": [
+    "ΔG° = −8.314 × 298 × ln(1.0 × 10^{−5}) = −2478 × (−11.51) = 28 500 J/mol"
+   ],
+   "answer": "ΔG° ≈ +28.5 kJ/mol"
+  },
+  "try": "-8.314 J/K * 298 K * ln(1e-5) to kJ"
+ },
+ "ΔG = ΔG° + R T ln(Q)": {
+  "title": "Free energy away from standard conditions",
+  "about": "The actual driving force of a reaction depends on the current mixture through the reaction quotient Q. When Q < K, ΔG < 0 and the reaction moves forward; at equilibrium Q = K and ΔG = 0.",
+  "assumptions": [
+   "Q uses activities (M or bar) in the same form as K",
+   "T in kelvin; ΔG° and RT in the same energy units"
+  ],
+  "vars": [
+   [
+    "ΔG",
+    "free energy change under the actual conditions",
+    "J/mol"
+   ],
+   [
+    "ΔG°",
+    "standard free energy change",
+    "J/mol"
+   ],
+   [
+    "R",
+    "gas constant, 8.314",
+    "J/(mol·K)"
+   ],
+   [
+    "T",
+    "absolute temperature",
+    "K"
+   ],
+   [
+    "Q",
+    "reaction quotient",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "ΔG° = −R T ln(K)",
+    "at equilibrium"
+   ],
+   [
+    "ΔG = R T ln(Q/K)",
+    "combined form"
+   ]
+  ],
+  "example": {
+   "problem": "A reaction has ΔG° = −33.0 kJ/mol at 298 K. Find ΔG when Q = 100.",
+   "steps": [
+    "RT ln Q = 8.314 × 298 × ln(100) = 11 410 J/mol = 11.4 kJ/mol",
+    "ΔG = −33.0 + 11.4 = −21.6 kJ/mol, still forward"
+   ],
+   "answer": "ΔG ≈ −21.6 kJ/mol"
+  },
+  "try": "-33.0 kJ + 8.314 J/K * 298 K * ln(100) to kJ"
+ },
+ "ln(P_{2}/P_{1}) = −(ΔH_{vap}/R)(1/T_{2} − 1/T_{1})": {
+  "title": "Clausius–Clapeyron: vapour pressure and temperature",
+  "about": "Vapour pressure rises steeply with temperature. Knowing it at one temperature and the enthalpy of vaporization gives it at another, or gives the boiling point at a different pressure.",
+  "assumptions": [
+   "ΔH_{vap} constant over the range",
+   "Vapour is ideal and the liquid volume is negligible",
+   "Far from the critical point"
+  ],
+  "vars": [
+   [
+    "P_{1}, P_{2}",
+    "vapour pressures",
+    "Pa"
+   ],
+   [
+    "ΔH_{vap}",
+    "enthalpy of vaporization",
+    "J/mol"
+   ],
+   [
+    "R",
+    "gas constant, 8.314",
+    "J/(mol·K)"
+   ],
+   [
+    "T_{1}, T_{2}",
+    "absolute temperatures",
+    "K"
+   ]
+  ],
+  "related": [
+   [
+    "ln P = −ΔH_{vap}/(RT) + C",
+    "the line form: slope −ΔH_{vap}/R vs 1/T"
+   ]
+  ],
+  "example": {
+   "problem": "Water boils at 373.15 K under 101.3 kPa, with ΔH_{vap} = 40.7 kJ/mol. Estimate its vapour pressure at 80 °C (353.15 K).",
+   "steps": [
+    "1/T_{2} − 1/T_{1} = 1/353.15 − 1/373.15 = 1.518 × 10^{−4} K^{−1}",
+    "ln(P_{2}/P_{1}) = −(40 700/8.314) × 1.518 × 10^{−4} = −0.743",
+    "P_{2} = 101.3 × e^{−0.743} = 48.2 kPa (tables: 47.4 kPa)"
+   ],
+   "answer": "P_{2} ≈ 48.2 kPa"
+  },
+  "try": "101.3 kPa * exp(-(40700/8.314)*(1/353.15 - 1/373.15))"
+ },
+ "K = ([C]^{c} [D]^{d})/([A]^{a} [B]^{b})": {
+  "title": "Equilibrium constant (law of mass action)",
+  "about": "At equilibrium, products over reactants, each raised to its coefficient, is a constant at a given temperature. K ≫ 1 means products dominate; K ≪ 1 means reactants do.",
+  "assumptions": [
+   "Concentrations at equilibrium, not initial ones",
+   "Pure solids and liquids (and the solvent) are left out",
+   "K changes with temperature only",
+   "Ideal (dilute) behaviour; real solutions need activities"
+  ],
+  "vars": [
+   [
+    "K",
+    "equilibrium constant",
+    ""
+   ],
+   [
+    "[A], [B], [C], [D]",
+    "equilibrium molar concentrations",
+    "mol/L"
+   ],
+   [
+    "a, b, c, d",
+    "stoichiometric coefficients",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "Q < K",
+    "which way it shifts"
+   ],
+   [
+    "K_{p} = K_{c} (RT)^{Δn}",
+    "pressures vs concentrations"
+   ],
+   [
+    "ΔG° = −R T ln(K)",
+    "from thermodynamics"
+   ]
+  ],
+  "example": {
+   "problem": "For N_{2} + 3H_{2} ⇌ 2NH_{3}, equilibrium has [N_{2}] = 0.50 M, [H_{2}] = 1.5 M and [NH_{3}] = 0.20 M. Find K_{c}.",
+   "steps": [
+    "K_{c} = [NH_{3}]^{2}/([N_{2}][H_{2}]^{3}) = 0.20^{2}/(0.50 × 1.5^{3})",
+    "= 0.040/1.6875 = 0.0237"
+   ],
+   "answer": "K_{c} ≈ 0.0237"
+  },
+  "try": "0.20^2/(0.50 * 1.5^3)"
+ },
+ "K_{p} = K_{c} (RT)^{Δn}": {
+  "title": "Converting between K_{p} and K_{c}",
+  "about": "For gas reactions, K written with partial pressures differs from K written with concentrations by (RT) raised to the change in moles of gas. When Δn = 0 they're equal.",
+  "assumptions": [
+   "Δn = moles of gaseous products − moles of gaseous reactants",
+   "R = 0.08206 L·atm/(mol·K) for pressures in atm (0.08314 L·bar for bar)",
+   "Ideal gases"
+  ],
+  "vars": [
+   [
+    "K_{p}",
+    "equilibrium constant in partial pressures",
+    ""
+   ],
+   [
+    "K_{c}",
+    "equilibrium constant in concentrations",
+    ""
+   ],
+   [
+    "R",
+    "gas constant, 0.08206",
+    "L·atm/(mol·K)"
+   ],
+   [
+    "T",
+    "absolute temperature",
+    "K"
+   ],
+   [
+    "Δn",
+    "change in moles of gas",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "K = ([C]^{c} [D]^{d})/([A]^{a} [B]^{b})",
+    "the constant itself"
+   ]
+  ],
+  "example": {
+   "problem": "For N_{2}O_{4} ⇌ 2NO_{2}, K_{c} = 4.6 × 10^{−3} at 298 K. Find K_{p}.",
+   "steps": [
+    "Δn = 2 − 1 = 1",
+    "K_{p} = 4.6 × 10^{−3} × (0.08206 × 298)^{1} = 4.6 × 10^{−3} × 24.45 = 0.112"
+   ],
+   "answer": "K_{p} ≈ 0.112"
+  },
+  "try": "4.6e-3 * (0.08206*298)^1"
+ },
+ "Q < K": {
+  "title": "Reaction quotient: which way a reaction moves",
+  "about": "Q has the same form as K but uses the concentrations right now. If Q < K there are too few products, so the reaction runs forward; if Q > K it runs in reverse; if Q = K it is at equilibrium.",
+  "assumptions": [
+   "Q and K written for the same balanced equation and the same temperature",
+   "This says the direction, not how fast"
+  ],
+  "vars": [
+   [
+    "Q",
+    "reaction quotient from current concentrations",
+    ""
+   ],
+   [
+    "K",
+    "equilibrium constant",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "K = ([C]^{c} [D]^{d})/([A]^{a} [B]^{b})",
+    "equilibrium constant"
+   ],
+   [
+    "ΔG = R T ln(Q/K)",
+    "the same test with free energy"
+   ]
+  ],
+  "example": {
+   "problem": "For N_{2}O_{4} ⇌ 2NO_{2} (K_{c} = 4.6 × 10^{−3}), a flask holds [NO_{2}] = 0.010 M and [N_{2}O_{4}] = 0.10 M. Which way does it go?",
+   "steps": [
+    "Q = 0.010^{2}/0.10 = 1.0 × 10^{−3}",
+    "Q < K, so more NO_{2} forms: it runs forward"
+   ],
+   "answer": "Q = 1.0 × 10^{−3} < K, so it runs forward"
+  },
+  "try": "0.010^2/0.10"
+ },
+ "K_{sp} = [A]^{a} [B]^{b}": {
+  "title": "Solubility product",
+  "about": "For a sparingly soluble salt A_{a}B_{b}, the product of its dissolved ion concentrations at saturation is a constant. From it you get the molar solubility, or whether a precipitate forms (Q > K_{sp}).",
+  "assumptions": [
+   "Saturated solution in equilibrium with the solid",
+   "Dilute, ideal ions; no complexing or hydrolysis",
+   "A common ion already in solution lowers the solubility"
+  ],
+  "vars": [
+   [
+    "K_{sp}",
+    "solubility product",
+    ""
+   ],
+   [
+    "[A], [B]",
+    "ion concentrations at saturation",
+    "mol/L"
+   ],
+   [
+    "a, b",
+    "ions per formula unit",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "K_{sp} = s^{2}",
+    "1:1 salt, s = molar solubility"
+   ],
+   [
+    "K_{sp} = 4s^{3}",
+    "1:2 salt such as CaF_{2}"
+   ]
+  ],
+  "example": {
+   "problem": "AgCl has K_{sp} = 1.77 × 10^{−10} at 25 °C. Find its molar solubility.",
+   "steps": [
+    "AgCl ⇌ Ag^{+} + Cl^{−}, so [Ag^{+}] = [Cl^{−}] = s",
+    "s^{2} = 1.77 × 10^{−10}, s = 1.33 × 10^{−5} M"
+   ],
+   "answer": "s ≈ 1.33 × 10^{−5} M"
+  },
+  "try": "sqrt(1.77e-10)"
+ },
+ "pH = −log_{10}[H^{+}]": {
+  "title": "pH from hydrogen ion concentration",
+  "about": "pH is the negative log of the hydrogen (hydronium) ion concentration. Each unit is a factor of 10; 7 is neutral at 25 °C, below is acidic.",
+  "assumptions": [
+   "[H^{+}] in mol/L",
+   "Dilute solutions; activity ≈ concentration"
+  ],
+  "vars": [
+   [
+    "pH",
+    "acidity",
+    ""
+   ],
+   [
+    "[H^{+}]",
+    "hydrogen ion concentration",
+    "mol/L"
+   ]
+  ],
+  "related": [
+   [
+    "[H^{+}] = 10^{−pH}",
+    "the inverse"
+   ],
+   [
+    "pH + pOH = 14",
+    "at 25 °C"
+   ]
+  ],
+  "example": {
+   "problem": "A solution has [H^{+}] = 2.5 × 10^{−4} M. Find its pH.",
+   "steps": [
+    "pH = −log_{10}(2.5 × 10^{−4}) = 3.60"
+   ],
+   "answer": "pH ≈ 3.60"
+  },
+  "try": "-log10(2.5e-4)"
+ },
+ "pOH = −log_{10}[OH^{−}]": {
+  "title": "pOH from hydroxide concentration",
+  "about": "pOH is the negative log of the hydroxide ion concentration, the base-side twin of pH. For a strong base, [OH^{−}] comes straight from the base's concentration.",
+  "assumptions": [
+   "[OH^{−}] in mol/L; dilute solutions"
+  ],
+  "vars": [
+   [
+    "pOH",
+    "basicity",
+    ""
+   ],
+   [
+    "[OH^{−}]",
+    "hydroxide ion concentration",
+    "mol/L"
+   ]
+  ],
+  "related": [
+   [
+    "pH + pOH = 14",
+    "at 25 °C"
+   ],
+   [
+    "[OH^{−}] = 10^{−pOH}",
+    "the inverse"
+   ]
+  ],
+  "example": {
+   "problem": "A 3.2 × 10^{−3} M NaOH solution is fully dissociated. Find its pOH and pH at 25 °C.",
+   "steps": [
+    "[OH^{−}] = 3.2 × 10^{−3} M",
+    "pOH = −log_{10}(3.2 × 10^{−3}) = 2.49",
+    "pH = 14 − 2.49 = 11.51"
+   ],
+   "answer": "pOH ≈ 2.49 (pH ≈ 11.51)"
+  },
+  "try": "-log10(3.2e-3)"
+ },
+ "pH + pOH = 14": {
+  "title": "pH and pOH add to 14 at 25 °C",
+  "about": "Water self-ionizes with K_{w} = [H^{+}][OH^{−}] = 10^{−14} at 25 °C. Taking −log of both sides gives pH + pOH = pK_{w} = 14.",
+  "assumptions": [
+   "Only at 25 °C; K_{w} grows with temperature (pK_{w} ≈ 13.6 at 37 °C, so neutral pH is lower)",
+   "Dilute aqueous solutions"
+  ],
+  "vars": [
+   [
+    "pH",
+    "−log_{10}[H^{+}]",
+    ""
+   ],
+   [
+    "pOH",
+    "−log_{10}[OH^{−}]",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "K_{a} K_{b} = K_{w} = 10^{−14}",
+    "the same constant for conjugate pairs"
+   ]
+  ],
+  "example": {
+   "problem": "A solution has pOH = 4.20. Find its pH and [H^{+}].",
+   "steps": [
+    "pH = 14 − 4.20 = 9.80",
+    "[H^{+}] = 10^{−9.80} = 1.6 × 10^{−10} M"
+   ],
+   "answer": "pH = 9.80"
+  },
+  "try": "14 - 4.20"
+ },
+ "K_{a} K_{b} = K_{w} = 10^{−14}": {
+  "title": "Conjugate acid–base pair constants",
+  "about": "For an acid and its conjugate base, K_{a} times K_{b} equals the water constant. A strong acid has a very weak conjugate base, and the reverse.",
+  "assumptions": [
+   "At 25 °C; K_{w} changes with temperature",
+   "The two constants belong to a conjugate pair (HA and A^{−})"
+  ],
+  "vars": [
+   [
+    "K_{a}",
+    "acid dissociation constant of HA",
+    ""
+   ],
+   [
+    "K_{b}",
+    "base constant of A^{−}",
+    ""
+   ],
+   [
+    "K_{w}",
+    "ion product of water",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "pK_{a} + pK_{b} = 14",
+    "in log form"
+   ],
+   [
+    "pH = pK_{a} + log_{10}([A^{−}]/[HA])",
+    "buffers"
+   ]
+  ],
+  "example": {
+   "problem": "Acetic acid has K_{a} = 1.8 × 10^{−5}. Find K_{b} for acetate.",
+   "steps": [
+    "K_{b} = 10^{−14}/1.8 × 10^{−5} = 5.6 × 10^{−10}"
+   ],
+   "answer": "K_{b} ≈ 5.6 × 10^{−10}"
+  },
+  "try": "1e-14/1.8e-5"
+ },
+ "pH = pK_{a} + log_{10}([A^{−}]/[HA])": {
+  "title": "Henderson–Hasselbalch: buffer pH",
+  "about": "The pH of a buffer made from a weak acid and its conjugate base. When they are equal, pH = pK_{a}; a buffer works best within about one pH unit of pK_{a}.",
+  "assumptions": [
+   "Both [A^{−}] and [HA] much larger than [H^{+}] and [OH^{−}] (not very dilute, ratio between 0.1 and 10)",
+   "Equilibrium concentrations are taken as the amounts mixed",
+   "Ideal behaviour"
+  ],
+  "vars": [
+   [
+    "pH",
+    "buffer pH",
+    ""
+   ],
+   [
+    "pK_{a}",
+    "−log_{10} K_{a} of the weak acid",
+    ""
+   ],
+   [
+    "[A^{−}]",
+    "conjugate base concentration",
+    "mol/L"
+   ],
+   [
+    "[HA]",
+    "weak acid concentration",
+    "mol/L"
+   ]
+  ],
+  "related": [
+   [
+    "K_{a} K_{b} = K_{w} = 10^{−14}",
+    "for a base buffer"
+   ],
+   [
+    "pOH = pK_{b} + log_{10}([HB^{+}]/[B])",
+    "base form"
+   ]
+  ],
+  "example": {
+   "problem": "A buffer holds 0.15 M sodium acetate and 0.10 M acetic acid (pK_{a} = 4.76). Find its pH.",
+   "steps": [
+    "pH = 4.76 + log_{10}(0.15/0.10) = 4.76 + 0.176 = 4.94"
+   ],
+   "answer": "pH ≈ 4.94"
+  },
+  "try": "4.76 + log10(0.15/0.10)"
+ },
+ "0 ‖ [A] = [A]_{0} − k t ‖ [A]_{0}/(2k)": {
+  "title": "Zero-order integrated rate law and half-life",
+  "about": "In a zero-order reaction the rate doesn't depend on concentration, so [A] falls in a straight line with time. The half-life gets shorter as the reactant runs down. Typical of saturated catalysts and enzymes.",
+  "assumptions": [
+   "Rate = k only while the catalyst surface or enzyme is saturated; at low [A] the order changes",
+   "Constant temperature",
+   "Stops at [A] = 0, at t = [A]_{0}/k"
+  ],
+  "vars": [
+   [
+    "[A]",
+    "concentration at time t",
+    "mol/L"
+   ],
+   [
+    "[A]_{0}",
+    "initial concentration",
+    "mol/L"
+   ],
+   [
+    "k",
+    "rate constant",
+    "mol/(L·s)"
+   ],
+   [
+    "t",
+    "time",
+    "s"
+   ]
+  ],
+  "related": [
+   [
+    "rate = k",
+    "the rate law"
+   ],
+   [
+    "[A] vs t",
+    "a straight line of slope −k"
+   ]
+  ],
+  "example": {
+   "problem": "A zero-order reaction has k = 0.010 M/s and [A]_{0} = 0.80 M. Find [A] after 30 s and the half-life.",
+   "steps": [
+    "[A] = 0.80 − 0.010 × 30 = 0.50 M",
+    "t_{1/2} = 0.80/(2 × 0.010) = 40 s"
+   ],
+   "answer": "[A] = 0.50 M; t_{1/2} = 40 s"
+  },
+  "try": "0.80 - 0.010*30"
+ },
+ "1 ‖ ln[A] = ln[A]_{0} − k t ‖ ln(2)/k": {
+  "title": "First-order integrated rate law and half-life",
+  "about": "In a first-order reaction the rate is proportional to [A], so [A] decays exponentially: [A] = [A]_{0}e^{−kt}. The half-life is the same at every concentration. Radioactive decay and many decompositions are first order.",
+  "assumptions": [
+   "Rate = k[A] throughout",
+   "Constant temperature",
+   "A plot of ln[A] against t is a straight line of slope −k"
+  ],
+  "vars": [
+   [
+    "[A]",
+    "concentration at time t",
+    "mol/L"
+   ],
+   [
+    "[A]_{0}",
+    "initial concentration",
+    "mol/L"
+   ],
+   [
+    "k",
+    "rate constant",
+    "s^{−1}"
+   ],
+   [
+    "t",
+    "time",
+    "s"
+   ]
+  ],
+  "related": [
+   [
+    "[A] = [A]_{0} e^{−kt}",
+    "exponential form"
+   ],
+   [
+    "t_{1/2} = ln(2)/k",
+    "half-life"
+   ]
+  ],
+  "example": {
+   "problem": "A first-order decomposition has k = 5.0 × 10^{−4} s^{−1} and [A]_{0} = 0.20 M. Find [A] after 1000 s and the half-life.",
+   "steps": [
+    "kt = 0.50",
+    "[A] = 0.20 e^{−0.50} = 0.121 M",
+    "t_{1/2} = 0.693/5.0 × 10^{−4} = 1386 s"
+   ],
+   "answer": "[A] ≈ 0.121 M; t_{1/2} ≈ 1390 s"
+  },
+  "try": "0.20 exp(-5.0e-4 * 1000)"
+ },
+ "2 ‖ 1/[A] = 1/[A]_{0} + k t ‖ 1/(k[A]_{0})": {
+  "title": "Second-order integrated rate law and half-life",
+  "about": "In a second-order reaction (rate = k[A]^{2}), 1/[A] grows linearly with time. Each half-life is twice as long as the one before, since it depends on the starting concentration.",
+  "assumptions": [
+   "Rate = k[A]^{2} (or k[A][B] with [A] = [B])",
+   "Constant temperature",
+   "A plot of 1/[A] against t is a straight line of slope k"
+  ],
+  "vars": [
+   [
+    "[A]",
+    "concentration at time t",
+    "mol/L"
+   ],
+   [
+    "[A]_{0}",
+    "initial concentration",
+    "mol/L"
+   ],
+   [
+    "k",
+    "rate constant",
+    "L/(mol·s)"
+   ],
+   [
+    "t",
+    "time",
+    "s"
+   ]
+  ],
+  "related": [
+   [
+    "rate = k[A]^{2}",
+    "the rate law"
+   ]
+  ],
+  "example": {
+   "problem": "2NO_{2} → 2NO + O_{2} is second order with k = 0.54 M^{−1}s^{−1}. Starting at 0.010 M, find [NO_{2}] after 100 s and the first half-life.",
+   "steps": [
+    "1/[A] = 1/0.010 + 0.54 × 100 = 100 + 54 = 154 M^{−1}",
+    "[A] = 1/154 = 6.49 × 10^{−3} M",
+    "t_{1/2} = 1/(0.54 × 0.010) = 185 s"
+   ],
+   "answer": "[A] ≈ 6.49 × 10^{−3} M; t_{1/2} ≈ 185 s"
+  },
+  "try": "1/(1/0.010 + 0.54*100)"
+ },
+ "rate = k [A]^{m} [B]^{n}": {
+  "title": "Rate law",
+  "about": "The rate of a reaction is a rate constant times each reactant's concentration raised to its order. The orders m and n come from experiment (method of initial rates), not from the balanced equation, unless the step is elementary.",
+  "assumptions": [
+   "Constant temperature (k depends on T)",
+   "Orders are found by experiment; the overall order is m + n",
+   "The units of k depend on the overall order"
+  ],
+  "vars": [
+   [
+    "rate",
+    "reaction rate",
+    "mol/(L·s)"
+   ],
+   [
+    "k",
+    "rate constant",
+    "varies"
+   ],
+   [
+    "[A], [B]",
+    "reactant concentrations",
+    "mol/L"
+   ],
+   [
+    "m, n",
+    "reaction orders",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "m = log(rate_{2}/rate_{1})/log([A]_{2}/[A]_{1})",
+    "order from two runs with [B] held"
+   ],
+   [
+    "k = A e^{−E_{a}/(RT)}",
+    "k and temperature"
+   ]
+  ],
+  "example": {
+   "problem": "For 2NO + O_{2} → 2NO_{2}, rate = k[NO]^{2}[O_{2}] with k = 7.1 × 10^{3} M^{−2}s^{−1}. Find the rate when [NO] = 0.010 M and [O_{2}] = 0.020 M.",
+   "steps": [
+    "rate = 7.1 × 10^{3} × 0.010^{2} × 0.020 = 0.0142 M/s"
+   ],
+   "answer": "rate ≈ 0.0142 M/s"
+  },
+  "try": "7.1e3 * 0.010^2 * 0.020"
+ },
+ "k = A e^{−E_{a}/(RT)}": {
+  "title": "Arrhenius equation",
+  "about": "The rate constant grows exponentially with temperature. E_{a} is the energy barrier and A the frequency factor; only the fraction e^{−E_{a}/(RT)} of collisions has enough energy to react.",
+  "assumptions": [
+   "E_{a} and A constant over the temperature range",
+   "T in kelvin; E_{a} in J/mol with R = 8.314 J/(mol·K)",
+   "Elementary or effective rate constants; enzymes break it above their optimum"
+  ],
+  "vars": [
+   [
+    "k",
+    "rate constant",
+    "varies"
+   ],
+   [
+    "A",
+    "pre-exponential (frequency) factor",
+    "same as k"
+   ],
+   [
+    "E_{a}",
+    "activation energy",
+    "J/mol"
+   ],
+   [
+    "R",
+    "gas constant, 8.314",
+    "J/(mol·K)"
+   ],
+   [
+    "T",
+    "absolute temperature",
+    "K"
+   ]
+  ],
+  "related": [
+   [
+    "ln k = ln A − (E_{a}/R)(1/T)",
+    "plot ln k vs 1/T: slope −E_{a}/R"
+   ],
+   [
+    "ln(k_{2}/k_{1}) = −(E_{a}/R)(1/T_{2} − 1/T_{1})",
+    "two temperatures"
+   ]
+  ],
+  "example": {
+   "problem": "A reaction has A = 1.0 × 10^{13} s^{−1} and E_{a} = 100 kJ/mol. Find k at 298 K.",
+   "steps": [
+    "E_{a}/(RT) = 100 000/(8.314 × 298) = 40.36",
+    "k = 1.0 × 10^{13} × e^{−40.36} = 2.96 × 10^{−5} s^{−1}"
+   ],
+   "answer": "k ≈ 2.96 × 10^{−5} s^{−1}"
+  },
+  "try": "1e13 * exp(-100000/(8.314*298))"
+ },
+ "ln(k_{2}/k_{1}) = −(E_{a}/R)(1/T_{2} − 1/T_{1})": {
+  "title": "Arrhenius at two temperatures",
+  "about": "Compares rate constants at two temperatures without knowing A. Use it to get E_{a} from two measured rates, or to predict a rate at a new temperature.",
+  "assumptions": [
+   "E_{a} constant between T_{1} and T_{2}",
+   "Temperatures in kelvin"
+  ],
+  "vars": [
+   [
+    "k_{1}, k_{2}",
+    "rate constants at T_{1} and T_{2}",
+    "varies"
+   ],
+   [
+    "E_{a}",
+    "activation energy",
+    "J/mol"
+   ],
+   [
+    "R",
+    "gas constant, 8.314",
+    "J/(mol·K)"
+   ],
+   [
+    "T_{1}, T_{2}",
+    "absolute temperatures",
+    "K"
+   ]
+  ],
+  "related": [
+   [
+    "k = A e^{−E_{a}/(RT)}",
+    "Arrhenius equation"
+   ],
+   [
+    "Q_{10} = (R_{2}/R_{1})^{10/(T_{2} − T_{1})}",
+    "biology's version"
+   ]
+  ],
+  "example": {
+   "problem": "A reaction has E_{a} = 50 kJ/mol. By what factor does k rise from 25 °C to 35 °C?",
+   "steps": [
+    "1/T_{2} − 1/T_{1} = 1/308 − 1/298 = −1.090 × 10^{−4} K^{−1}",
+    "ln(k_{2}/k_{1}) = (50 000/8.314) × 1.090 × 10^{−4} = 0.655",
+    "k_{2}/k_{1} = e^{0.655} = 1.93"
+   ],
+   "answer": "k_{2}/k_{1} ≈ 1.93"
+  },
+  "try": "exp(-(50000/8.314)*(1/308 - 1/298))"
+ },
+ "E°_{cell} = E°_{cathode} − E°_{anode}": {
+  "title": "Standard cell potential",
+  "about": "A galvanic cell's standard voltage is the reduction potential of the cathode minus that of the anode, both read from a table of standard reduction potentials. Positive means the cell runs spontaneously.",
+  "assumptions": [
+   "Standard conditions: 1 M, 1 bar, usually 25 °C",
+   "Both values are reduction potentials; don't flip the anode's sign as well as subtract",
+   "Don't multiply E° by coefficients: it is intensive"
+  ],
+  "vars": [
+   [
+    "E°_{cell}",
+    "standard cell potential",
+    "V"
+   ],
+   [
+    "E°_{cathode}",
+    "standard reduction potential at the cathode (reduction)",
+    "V"
+   ],
+   [
+    "E°_{anode}",
+    "standard reduction potential at the anode (oxidation)",
+    "V"
+   ]
+  ],
+  "related": [
+   [
+    "ΔG = −n F E",
+    "free energy"
+   ],
+   [
+    "E = E° − (RT/(nF)) ln(Q)",
+    "non-standard conditions"
+   ]
+  ],
+  "example": {
+   "problem": "Find E° for the Daniell cell Zn | Zn^{2+} || Cu^{2+} | Cu, given E°(Cu^{2+}/Cu) = +0.34 V and E°(Zn^{2+}/Zn) = −0.76 V.",
+   "steps": [
+    "Cu^{2+} is reduced (cathode), Zn is oxidized (anode)",
+    "E°_{cell} = 0.34 − (−0.76) = 1.10 V"
+   ],
+   "answer": "E°_{cell} = 1.10 V"
+  },
+  "try": "0.34 - (-0.76)"
+ },
+ "ΔG = −n F E": {
+  "title": "Free energy from cell voltage",
+  "about": "The electrical work a cell can do equals the drop in Gibbs free energy. A positive cell voltage means a negative ΔG: spontaneous.",
+  "assumptions": [
+   "n is the moles of electrons transferred in the balanced reaction",
+   "E in volts, F = 96 485 C/mol, gives ΔG in J/mol"
+  ],
+  "vars": [
+   [
+    "ΔG",
+    "Gibbs free energy change",
+    "J/mol"
+   ],
+   [
+    "n",
+    "moles of electrons transferred",
+    ""
+   ],
+   [
+    "F",
+    "Faraday constant, 96 485",
+    "C/mol"
+   ],
+   [
+    "E",
+    "cell potential",
+    "V"
+   ]
+  ],
+  "related": [
+   [
+    "ΔG° = −n F E°",
+    "standard form"
+   ],
+   [
+    "ΔG° = −R T ln(K)",
+    "link to K"
+   ],
+   [
+    "E° = (RT/(nF)) ln(K)",
+    "the two combined"
+   ]
+  ],
+  "example": {
+   "problem": "The Daniell cell (n = 2) has E° = 1.10 V. Find ΔG°.",
+   "steps": [
+    "ΔG° = −2 × 96 485 × 1.10 = −212 300 J/mol"
+   ],
+   "answer": "ΔG° ≈ −212 kJ/mol"
+  },
+  "try": "-2 * 96485 * 1.10 / 1000"
+ },
+ "E = E° − (RT/(nF)) ln(Q)": {
+  "title": "Nernst equation",
+  "about": "Gives a cell's voltage away from standard conditions. As products build up Q grows and the voltage falls, reaching zero at equilibrium (Q = K).",
+  "assumptions": [
+   "Q uses activities (M for solutes, bar for gases) in the form of K",
+   "T in kelvin; n the moles of electrons in the balanced reaction",
+   "Dilute solutions"
+  ],
+  "vars": [
+   [
+    "E",
+    "cell potential",
+    "V"
+   ],
+   [
+    "E°",
+    "standard cell potential",
+    "V"
+   ],
+   [
+    "R",
+    "gas constant, 8.314",
+    "J/(mol·K)"
+   ],
+   [
+    "T",
+    "absolute temperature",
+    "K"
+   ],
+   [
+    "n",
+    "moles of electrons transferred",
+    ""
+   ],
+   [
+    "F",
+    "Faraday constant, 96 485",
+    "C/mol"
+   ],
+   [
+    "Q",
+    "reaction quotient",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "E = E° − (0.0592/n) log_{10}(Q)",
+    "at 25 °C"
+   ],
+   [
+    "ΔG = −n F E",
+    "free energy"
+   ]
+  ],
+  "example": {
+   "problem": "A Daniell cell (E° = 1.10 V, n = 2) has [Zn^{2+}] = 1.0 M and [Cu^{2+}] = 0.010 M at 298 K. Find E.",
+   "steps": [
+    "Q = [Zn^{2+}]/[Cu^{2+}] = 100",
+    "RT/(nF) = 8.314 × 298/(2 × 96 485) = 0.01284 V",
+    "E = 1.10 − 0.01284 × ln(100) = 1.10 − 0.059 = 1.041 V"
+   ],
+   "answer": "E ≈ 1.041 V"
+  },
+  "try": "1.10 - 8.314*298/(2*96485) * ln(100)"
+ },
+ "E = E° − (0.0592/n) log_{10}(Q)": {
+  "title": "Nernst equation at 25 °C",
+  "about": "The Nernst equation with RT/F ln 10 = 0.0592 V worked out for 298 K. Each tenfold change in Q shifts the voltage by 0.0592/n volts.",
+  "assumptions": [
+   "Only at 25 °C (298 K); otherwise use the full form",
+   "Same Q and n as the full form"
+  ],
+  "vars": [
+   [
+    "E",
+    "cell potential",
+    "V"
+   ],
+   [
+    "E°",
+    "standard cell potential",
+    "V"
+   ],
+   [
+    "n",
+    "moles of electrons transferred",
+    ""
+   ],
+   [
+    "Q",
+    "reaction quotient",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "E = E° − (RT/(nF)) ln(Q)",
+    "any temperature"
+   ],
+   [
+    "E° = (0.0592/n) log_{10}(K)",
+    "at equilibrium E = 0"
+   ]
+  ],
+  "example": {
+   "problem": "A Daniell cell (E° = 1.10 V, n = 2) has [Zn^{2+}] = 1.0 M and [Cu^{2+}] = 0.010 M. Find E at 25 °C.",
+   "steps": [
+    "Q = 1.0/0.010 = 100, log_{10}(100) = 2",
+    "E = 1.10 − (0.0592/2) × 2 = 1.041 V"
+   ],
+   "answer": "E ≈ 1.041 V"
+  },
+  "try": "1.10 - 0.0592/2 * log10(100)"
+ },
+ "m = I t M/(n F)": {
+  "title": "Faraday's law of electrolysis: mass plated",
+  "about": "The charge passed (It) divided by F gives moles of electrons; dividing by the electrons per ion and multiplying by molar mass gives the mass deposited or dissolved.",
+  "assumptions": [
+   "100 % current efficiency (no side reactions such as hydrogen evolution)",
+   "Constant current; otherwise use the total charge Q = ∫I dt"
+  ],
+  "vars": [
+   [
+    "m",
+    "mass deposited",
+    "g"
+   ],
+   [
+    "I",
+    "current",
+    "A"
+   ],
+   [
+    "t",
+    "time",
+    "s"
+   ],
+   [
+    "M",
+    "molar mass of the metal",
+    "g/mol"
+   ],
+   [
+    "n",
+    "electrons per ion (charge of the ion)",
+    ""
+   ],
+   [
+    "F",
+    "Faraday constant, 96 485",
+    "C/mol"
+   ]
+  ],
+  "related": [
+   [
+    "Q = I t",
+    "charge passed"
+   ],
+   [
+    "n_{e} = Q/F",
+    "moles of electrons"
+   ]
+  ],
+  "example": {
+   "problem": "Copper is plated from Cu^{2+} (n = 2, M = 63.55 g/mol) with 1.50 A for 1.00 h. Find the mass of copper.",
+   "steps": [
+    "Q = 1.50 × 3600 = 5400 C",
+    "n_{e} = 5400/96 485 = 0.0560 mol",
+    "m = 0.0560/2 × 63.55 = 1.78 g"
+   ],
+   "answer": "m ≈ 1.78 g"
+  },
+  "try": "1.5 A * 3600 s * 63.55 g / (2 * 96485 C) to g"
+ },
+ "ΔT_{b} = i K_{b} b": {
+  "title": "Boiling point elevation",
+  "about": "A non-volatile solute lowers a solvent's vapour pressure, so the solution must get hotter to boil. The rise depends only on the number of dissolved particles, not their kind.",
+  "assumptions": [
+   "Dilute solution, non-volatile solute",
+   "i is the van 't Hoff factor: particles per formula unit (NaCl ≈ 2, glucose 1); real i is a little lower from ion pairing",
+   "b in mol/kg of solvent"
+  ],
+  "vars": [
+   [
+    "ΔT_{b}",
+    "boiling point rise",
+    "K"
+   ],
+   [
+    "i",
+    "van 't Hoff factor",
+    ""
+   ],
+   [
+    "K_{b}",
+    "ebullioscopic constant (water 0.512)",
+    "K·kg/mol"
+   ],
+   [
+    "b",
+    "molality",
+    "mol/kg"
+   ]
+  ],
+  "related": [
+   [
+    "ΔT_{f} = i K_{f} b",
+    "freezing point depression"
+   ],
+   [
+    "b = n/m_{solvent}",
+    "molality"
+   ]
+  ],
+  "example": {
+   "problem": "Find the boiling point of 1.0 mol/kg NaCl in water (K_{b} = 0.512 K·kg/mol, i = 2).",
+   "steps": [
+    "ΔT_{b} = 2 × 0.512 × 1.0 = 1.02 K",
+    "T_{b} = 100.00 + 1.02 = 101.02 °C"
+   ],
+   "answer": "ΔT_{b} ≈ 1.02 K (boils at 101.02 °C)"
+  },
+  "try": "2 * 0.512 * 1.0"
+ },
+ "ΔT_{f} = i K_{f} b": {
+  "title": "Freezing point depression",
+  "about": "Dissolved particles lower the freezing point of a solvent in proportion to their molality. It is why salt melts ice and antifreeze protects engines, and it can measure molar mass.",
+  "assumptions": [
+   "Dilute solution; the solid that freezes out is pure solvent",
+   "i is the van 't Hoff factor",
+   "b in mol/kg of solvent"
+  ],
+  "vars": [
+   [
+    "ΔT_{f}",
+    "freezing point drop",
+    "K"
+   ],
+   [
+    "i",
+    "van 't Hoff factor",
+    ""
+   ],
+   [
+    "K_{f}",
+    "cryoscopic constant (water 1.86)",
+    "K·kg/mol"
+   ],
+   [
+    "b",
+    "molality",
+    "mol/kg"
+   ]
+  ],
+  "related": [
+   [
+    "ΔT_{b} = i K_{b} b",
+    "boiling point elevation"
+   ],
+   [
+    "M = m_{solute}/(b m_{solvent})",
+    "molar mass from a measured ΔT_{f}"
+   ]
+  ],
+  "example": {
+   "problem": "Ethylene glycol (i = 1) at 5.0 mol/kg in water. Find the freezing point (K_{f} = 1.86 K·kg/mol).",
+   "steps": [
+    "ΔT_{f} = 1 × 1.86 × 5.0 = 9.3 K",
+    "T_{f} = 0 − 9.3 = −9.3 °C"
+   ],
+   "answer": "ΔT_{f} = 9.3 K (freezes at −9.3 °C)"
+  },
+  "try": "1 * 1.86 * 5.0"
+ },
+ "π = i c R T": {
+  "title": "Osmotic pressure",
+  "about": "The pressure needed to stop pure solvent flowing through a semipermeable membrane into a solution. It looks like the ideal gas law and is large even for dilute solutions, which makes it useful for measuring big molar masses.",
+  "assumptions": [
+   "Dilute solution, ideal membrane passing only solvent",
+   "c in mol/L with R = 0.08206 L·atm/(mol·K) gives atm (or mol/m^{3} with 8.314 gives Pa)",
+   "T in kelvin"
+  ],
+  "vars": [
+   [
+    "π",
+    "osmotic pressure",
+    "Pa"
+   ],
+   [
+    "i",
+    "van 't Hoff factor",
+    ""
+   ],
+   [
+    "c",
+    "molar concentration",
+    "mol/m^{3}"
+   ],
+   [
+    "R",
+    "gas constant, 8.314",
+    "J/(mol·K)"
+   ],
+   [
+    "T",
+    "absolute temperature",
+    "K"
+   ]
+  ],
+  "related": [
+   [
+    "Ψ_{s} = −i C R T",
+    "biology's solute potential, the same with a minus sign"
+   ]
+  ],
+  "example": {
+   "problem": "Find the osmotic pressure of 0.15 M NaCl (i = 2) at body temperature, 310 K.",
+   "steps": [
+    "π = 2 × 0.15 × 0.08206 × 310 = 7.63 atm (773 kPa)"
+   ],
+   "answer": "π ≈ 7.63 atm"
+  },
+  "try": "2 * 0.15 * 0.08206 * 310"
+ },
+ "P = x P°": {
+  "title": "Raoult's law: vapour pressure of a solution",
+  "about": "The vapour pressure of a solvent over a solution is its pure vapour pressure times its mole fraction. Adding solute lowers the solvent's mole fraction and so its vapour pressure.",
+  "assumptions": [
+   "Ideal solution: solute and solvent attract alike (good for similar liquids and dilute solutions)",
+   "For two volatile liquids, apply it to each and add (Dalton)"
+  ],
+  "vars": [
+   [
+    "P",
+    "vapour pressure of the solvent over the solution",
+    "Pa"
+   ],
+   [
+    "x",
+    "mole fraction of the solvent",
+    ""
+   ],
+   [
+    "P°",
+    "vapour pressure of the pure solvent",
+    "Pa"
+   ]
+  ],
+  "related": [
+   [
+    "P_{tot} = x_{A}P°_{A} + x_{B}P°_{B}",
+    "two volatile liquids"
+   ],
+   [
+    "ΔP = x_{solute} P°",
+    "vapour pressure lowering"
+   ]
+  ],
+  "example": {
+   "problem": "A glucose solution has a water mole fraction of 0.90 at 25 °C, where pure water's vapour pressure is 3.17 kPa. Find the vapour pressure.",
+   "steps": [
+    "P = 0.90 × 3.17 kPa = 2.85 kPa"
+   ],
+   "answer": "P ≈ 2.85 kPa"
+  },
+  "try": "0.90 * 3.17 kPa"
+ },
+ "E = h c/λ": {
+  "title": "Energy of a photon",
+  "about": "A photon's energy is Planck's constant times its frequency, c/λ. Shorter wavelengths carry more energy: ultraviolet breaks bonds, infrared only warms.",
+  "assumptions": [
+   "Applies to one photon; multiply by N_{A} for a mole"
+  ],
+  "vars": [
+   [
+    "E",
+    "photon energy",
+    "J"
+   ],
+   [
+    "h",
+    "Planck constant, 6.626 × 10^{−34}",
+    "J·s"
+   ],
+   [
+    "c",
+    "speed of light, 2.998 × 10^{8}",
+    "m/s"
+   ],
+   [
+    "λ",
+    "wavelength",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "E = h ν",
+    "with frequency"
+   ],
+   [
+    "c = λ ν",
+    "wavelength and frequency"
+   ],
+   [
+    "1 eV = 1.602 × 10^{−19} J",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Find the energy of a 500 nm (green) photon.",
+   "steps": [
+    "E = (6.626 × 10^{−34})(2.998 × 10^{8})/(500 × 10^{−9}) = 3.97 × 10^{−19} J",
+    "= 3.97 × 10^{−19}/1.602 × 10^{−19} = 2.48 eV"
+   ],
+   "answer": "E ≈ 3.97 × 10^{−19} J ≈ 2.48 eV"
+  },
+  "try": "planck constant * speed of light / 500 nm to eV"
+ },
+ "1/λ = R_{H} (1/n_{1}^{2} − 1/n_{2}^{2})": {
+  "title": "Rydberg formula: hydrogen's spectral lines",
+  "about": "The wavelength of light emitted when hydrogen's electron drops from level n_{2} to a lower level n_{1}. n_{1} = 1 is the Lyman (UV) series, 2 the Balmer (visible) series, 3 Paschen (IR).",
+  "assumptions": [
+   "Hydrogen and one-electron ions only (multiply by Z^{2} for He^{+}, Li^{2+})",
+   "n_{2} > n_{1}, both whole numbers",
+   "R_{H} = 1.0968 × 10^{7} m^{−1} for hydrogen (R_{∞} = 1.0974 × 10^{7} ignores the nucleus's motion)"
+  ],
+  "vars": [
+   [
+    "λ",
+    "wavelength of the emitted (or absorbed) light",
+    "m"
+   ],
+   [
+    "R_{H}",
+    "Rydberg constant for hydrogen, 1.0968 × 10^{7}",
+    "m^{−1}"
+   ],
+   [
+    "n_{1}",
+    "lower energy level",
+    ""
+   ],
+   [
+    "n_{2}",
+    "upper energy level",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "E_{n} = −13.6 eV/n^{2}",
+    "Bohr energy levels"
+   ],
+   [
+    "E = h c/λ",
+    "photon energy"
+   ]
+  ],
+  "example": {
+   "problem": "Find the wavelength of the Balmer line from n = 3 to n = 2.",
+   "steps": [
+    "1/λ = 1.0968 × 10^{7} × (1/4 − 1/9) = 1.0968 × 10^{7} × 0.1389 = 1.523 × 10^{6} m^{−1}",
+    "λ = 656.5 nm (red H-α)"
+   ],
+   "answer": "λ ≈ 656 nm"
+  },
+  "try": "1/(1.0968e7 m^-1 * (1/2^2 - 1/3^2)) to nm"
+ },
+ "dN/dt = r N": {
+  "title": "Exponential population growth (rate form)",
+  "about": "With unlimited resources a population grows at a rate proportional to its size. r is births minus deaths per individual per unit time.",
+  "assumptions": [
+   "Unlimited resources, no crowding",
+   "Constant per-capita birth and death rates; no migration",
+   "Continuous breeding (for discrete generations use N_{t+1} = λN_{t})"
+  ],
+  "vars": [
+   [
+    "dN/dt",
+    "population growth rate",
+    "individuals/s"
+   ],
+   [
+    "r",
+    "intrinsic (per-capita) growth rate",
+    "s^{−1}"
+   ],
+   [
+    "N",
+    "population size",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "N = N_{0} e^{rt}",
+    "its solution"
+   ],
+   [
+    "t_{d} = ln(2)/r",
+    "doubling time"
+   ],
+   [
+    "dN/dt = r N (1 − N/K)",
+    "with a carrying capacity"
+   ]
+  ],
+  "example": {
+   "problem": "A deer population of 2000 has r = 0.15 per year. How fast is it growing?",
+   "steps": [
+    "dN/dt = 0.15 × 2000 = 300 deer per year"
+   ],
+   "answer": "dN/dt = 300 per year"
+  },
+  "try": "0.15 * 2000"
+ },
+ "N = N_{0} e^{rt}": {
+  "title": "Exponential growth over time",
+  "about": "The solution of dN/dt = rN: the population multiplies by e^{r} each unit of time. Bacteria in fresh medium, invasive species and early epidemics follow it until resources run short.",
+  "assumptions": [
+   "Same as dN/dt = rN: unlimited resources and constant r",
+   "r and t in matching time units"
+  ],
+  "vars": [
+   [
+    "N",
+    "population at time t",
+    ""
+   ],
+   [
+    "N_{0}",
+    "initial population",
+    ""
+   ],
+   [
+    "r",
+    "intrinsic growth rate",
+    "s^{−1}"
+   ],
+   [
+    "t",
+    "time",
+    "s"
+   ]
+  ],
+  "related": [
+   [
+    "t_{d} = ln(2)/r",
+    "doubling time"
+   ],
+   [
+    "r = ln(N/N_{0})/t",
+    "r from two counts"
+   ],
+   [
+    "N = N_{0} 2^{t/g}",
+    "the same with generation time g = ln(2)/r"
+   ]
+  ],
+  "example": {
+   "problem": "E. coli doubles every 20 min, so r = ln(2)/20 = 0.0347 min^{−1}. Starting from 1000 cells, how many are there after 3 h?",
+   "steps": [
+    "rt = 0.0347 × 180 = 6.24",
+    "N = 1000 × e^{6.24} = 1000 × 2^{9} = 512 000 cells"
+   ],
+   "answer": "N ≈ 512 000 cells"
+  },
+  "try": "1000 * exp(ln(2)/20 * 180)"
+ },
+ "dN/dt = r N (1 − N/K)": {
+  "title": "Logistic population growth",
+  "about": "Growth slows as the population nears the carrying capacity K the environment can support. It is fastest at N = K/2, where dN/dt = rK/4, and stops at N = K.",
+  "assumptions": [
+   "K and r constant",
+   "Density dependence acts instantly (no time lags), so no overshoot",
+   "Closed population"
+  ],
+  "vars": [
+   [
+    "dN/dt",
+    "population growth rate",
+    "individuals/s"
+   ],
+   [
+    "r",
+    "intrinsic growth rate",
+    "s^{−1}"
+   ],
+   [
+    "N",
+    "population size",
+    ""
+   ],
+   [
+    "K",
+    "carrying capacity",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "N(t) = K/(1 + ((K − N_{0})/N_{0}) e^{−rt})",
+    "its solution"
+   ],
+   [
+    "(dN/dt)_{max} = rK/4",
+    "at N = K/2"
+   ]
+  ],
+  "example": {
+   "problem": "A deer herd of 2000 has r = 0.15 per year and K = 5000. How fast is it growing now?",
+   "steps": [
+    "1 − N/K = 1 − 2000/5000 = 0.6",
+    "dN/dt = 0.15 × 2000 × 0.6 = 180 deer per year"
+   ],
+   "answer": "dN/dt = 180 per year"
+  },
+  "try": "0.15 * 2000 * (1 - 2000/5000)"
+ },
+ "t_{d} = ln(2)/r": {
+  "title": "Doubling time",
+  "about": "How long an exponentially growing quantity takes to double. The rule of 70 (t_{d} ≈ 70/percent growth rate) is the same formula, since ln 2 ≈ 0.693.",
+  "assumptions": [
+   "Exponential growth at constant r",
+   "t_{d} comes out in the reciprocal of r's time unit"
+  ],
+  "vars": [
+   [
+    "t_{d}",
+    "doubling time",
+    "s"
+   ],
+   [
+    "r",
+    "intrinsic growth rate",
+    "s^{−1}"
+   ]
+  ],
+  "related": [
+   [
+    "N = N_{0} e^{rt}",
+    "exponential growth"
+   ],
+   [
+    "t_{1/2} = ln(2)/k",
+    "the same for decay"
+   ]
+  ],
+  "example": {
+   "problem": "A population grows at r = 0.02 per year (2 %). Find its doubling time.",
+   "steps": [
+    "t_{d} = 0.693/0.02 = 34.7 years"
+   ],
+   "answer": "t_{d} ≈ 34.7 years"
+  },
+  "try": "ln(2)/0.02"
+ },
+ "H = −Σ p_{i} ln(p_{i})": {
+  "title": "Shannon diversity index",
+  "about": "Measures diversity from both how many species there are and how evenly individuals are spread among them. It is 0 for a single species and ln S for S equally common species.",
+  "assumptions": [
+   "p_{i} = n_{i}/N, the share of individuals in species i",
+   "The sample represents the community; rare species may be missed",
+   "Natural log is usual; some texts use log_{2} or log_{10}"
+  ],
+  "vars": [
+   [
+    "H",
+    "Shannon diversity index",
+    ""
+   ],
+   [
+    "p_{i}",
+    "proportion of individuals in species i",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "E = H/ln(S)",
+    "evenness, S species"
+   ],
+   [
+    "D = 1 − Σ p_{i}^{2}",
+    "Simpson's index"
+   ]
+  ],
+  "example": {
+   "problem": "A plot holds 50, 30 and 20 individuals of three species. Find H.",
+   "steps": [
+    "p = 0.5, 0.3, 0.2",
+    "H = −(0.5 ln 0.5 + 0.3 ln 0.3 + 0.2 ln 0.2) = 0.347 + 0.361 + 0.322 = 1.03",
+    "The maximum for 3 species is ln 3 = 1.10"
+   ],
+   "answer": "H ≈ 1.03"
+  },
+  "try": "-(0.5*ln(0.5) + 0.3*ln(0.3) + 0.2*ln(0.2))"
+ },
+ "D = 1 − Σ p_{i}^{2}": {
+  "title": "Simpson's diversity index",
+  "about": "The chance that two individuals picked at random belong to different species. 0 means one species; values near 1 mean high diversity. Dominant species weigh heavily in it.",
+  "assumptions": [
+   "Sampling with replacement; for small samples use 1 − Σ n(n − 1)/(N(N − 1))",
+   "p_{i} = n_{i}/N"
+  ],
+  "vars": [
+   [
+    "D",
+    "Simpson's diversity index",
+    ""
+   ],
+   [
+    "p_{i}",
+    "proportion of individuals in species i",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "H = −Σ p_{i} ln(p_{i})",
+    "Shannon index"
+   ],
+   [
+    "1/Σ p_{i}^{2}",
+    "Simpson's reciprocal index, effective number of species"
+   ]
+  ],
+  "example": {
+   "problem": "A plot holds 50, 30 and 20 individuals of three species. Find D.",
+   "steps": [
+    "Σ p^{2} = 0.25 + 0.09 + 0.04 = 0.38",
+    "D = 1 − 0.38 = 0.62"
+   ],
+   "answer": "D = 0.62"
+  },
+  "try": "1 - (0.5^2 + 0.3^2 + 0.2^2)"
+ },
+ "p + q = 1": {
+  "title": "Allele frequencies of a two-allele gene",
+  "about": "With two alleles at a locus, the frequency of the dominant allele (p) and the recessive allele (q) add to one. Count alleles from genotypes: each homozygote has two copies, each heterozygote one.",
+  "assumptions": [
+   "Exactly two alleles at the locus",
+   "Diploid organisms: 2N alleles among N individuals"
+  ],
+  "vars": [
+   [
+    "p",
+    "frequency of allele A",
+    ""
+   ],
+   [
+    "q",
+    "frequency of allele a",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "p = (2N_{AA} + N_{Aa})/(2N)",
+    "from genotype counts"
+   ],
+   [
+    "p^{2} + 2pq + q^{2} = 1",
+    "Hardy–Weinberg genotype frequencies"
+   ]
+  ],
+  "example": {
+   "problem": "Of 200 individuals, 90 are AA, 80 Aa and 30 aa. Find p and q.",
+   "steps": [
+    "p = (2 × 90 + 80)/(2 × 200) = 260/400 = 0.65",
+    "q = 1 − 0.65 = 0.35"
+   ],
+   "answer": "p = 0.65, q = 0.35"
+  },
+  "try": "(2*90 + 80)/(2*200)"
+ },
+ "p^{2} + 2pq + q^{2} = 1": {
+  "title": "Hardy–Weinberg equilibrium",
+  "about": "In a non-evolving population, genotype frequencies follow from allele frequencies: p^{2} AA, 2pq Aa and q^{2} aa. It is the null model for testing whether a population is evolving, and it estimates carrier frequency from the rate of a recessive trait.",
+  "assumptions": [
+   "Large population (no drift), random mating",
+   "No mutation, migration or selection",
+   "Departures (found with χ^{2}) suggest one of these is happening"
+  ],
+  "vars": [
+   [
+    "p^{2}",
+    "frequency of AA",
+    ""
+   ],
+   [
+    "2pq",
+    "frequency of heterozygotes Aa",
+    ""
+   ],
+   [
+    "q^{2}",
+    "frequency of aa",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "p + q = 1",
+    "allele frequencies"
+   ],
+   [
+    "χ^{2} = Σ (O − E)^{2}/E",
+    "test against observed counts"
+   ]
+  ],
+  "example": {
+   "problem": "A recessive disease affects 1 in 2500 births. What fraction of people are carriers?",
+   "steps": [
+    "q^{2} = 1/2500, so q = 0.02 and p = 0.98",
+    "2pq = 2 × 0.98 × 0.02 = 0.0392, about 1 in 25"
+   ],
+   "answer": "2pq ≈ 0.0392 (about 1 in 25)"
+  },
+  "try": "2 * (1 - sqrt(1/2500)) * sqrt(1/2500)"
+ },
+ "χ^{2} = Σ (O − E)^{2}/E": {
+  "title": "Chi-square goodness-of-fit test",
+  "about": "Measures how far observed counts are from the counts a hypothesis predicts. Compare it with the critical value for the degrees of freedom (categories − 1) at p = 0.05; if it is larger, reject the hypothesis.",
+  "assumptions": [
+   "Raw counts, not percentages",
+   "Each expected count at least about 5",
+   "Independent observations",
+   "df = number of categories − 1 (minus any parameters estimated from the data)"
+  ],
+  "vars": [
+   [
+    "χ^{2}",
+    "chi-square statistic",
+    ""
+   ],
+   [
+    "O",
+    "observed count in a category",
+    ""
+   ],
+   [
+    "E",
+    "expected count in a category",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "critical χ^{2} at p = 0.05",
+    "3.84 (df 1), 5.99 (df 2), 7.81 (df 3)"
+   ]
+  ],
+  "example": {
+   "problem": "A dihybrid cross gives 95, 28, 27 and 10 offspring (160 total). Does it fit 9:3:3:1?",
+   "steps": [
+    "Expected: 90, 30, 30, 10",
+    "χ^{2} = 25/90 + 4/30 + 9/30 + 0/10 = 0.711",
+    "df = 3, critical value 7.81; 0.711 < 7.81, so the 9:3:3:1 hypothesis fits"
+   ],
+   "answer": "χ^{2} ≈ 0.711, fits 9:3:3:1"
+  },
+  "try": "(95-90)^2/90 + (28-30)^2/30 + (27-30)^2/30 + (10-10)^2/10"
+ },
+ "h^{2} = V_{A}/V_{P}": {
+  "title": "Narrow-sense heritability",
+  "about": "The fraction of a trait's variation in a population due to additive genetic effects, the part that responds to selection. It belongs to one population in one environment, not to individuals.",
+  "assumptions": [
+   "V_{P} = V_{G} + V_{E}: total phenotypic variance",
+   "Says nothing about differences between populations or environments"
+  ],
+  "vars": [
+   [
+    "h^{2}",
+    "narrow-sense heritability, 0 to 1",
+    ""
+   ],
+   [
+    "V_{A}",
+    "additive genetic variance",
+    "trait units^{2}"
+   ],
+   [
+    "V_{P}",
+    "total phenotypic variance",
+    "trait units^{2}"
+   ]
+  ],
+  "related": [
+   [
+    "H^{2} = V_{G}/V_{P}",
+    "broad-sense heritability"
+   ],
+   [
+    "R = h^{2} S",
+    "breeder's equation"
+   ]
+  ],
+  "example": {
+   "problem": "Seed weight has additive genetic variance 12 g^{2} and phenotypic variance 40 g^{2}. Find h^{2}.",
+   "steps": [
+    "h^{2} = 12/40 = 0.30"
+   ],
+   "answer": "h^{2} = 0.30"
+  },
+  "try": "12/40"
+ },
+ "R = h^{2} S": {
+  "title": "Breeder's equation: response to selection",
+  "about": "The change in the mean of the next generation equals heritability times the selection differential (how far the chosen parents' mean is from the population mean).",
+  "assumptions": [
+   "One generation of selection",
+   "h^{2} constant; environment unchanged",
+   "Additive genetics"
+  ],
+  "vars": [
+   [
+    "R",
+    "response: change in offspring mean",
+    "trait units"
+   ],
+   [
+    "h^{2}",
+    "narrow-sense heritability",
+    ""
+   ],
+   [
+    "S",
+    "selection differential: parents' mean − population mean",
+    "trait units"
+   ]
+  ],
+  "related": [
+   [
+    "h^{2} = V_{A}/V_{P}",
+    "heritability"
+   ]
+  ],
+  "example": {
+   "problem": "With h^{2} = 0.30, breeders pick parents whose seeds average 10 g above the population mean. How much will the offspring mean rise?",
+   "steps": [
+    "R = 0.30 × 10 g = 3 g"
+   ],
+   "answer": "R = 3 g"
+  },
+  "try": "0.30 * 10 g"
+ },
+ "RF = recombinants/total": {
+  "title": "Recombination frequency and map distance",
+  "about": "The share of offspring with a new combination of parental alleles, usually from a testcross. 1 % recombination is 1 map unit (centimorgan); genes on different chromosomes or far apart give 50 %.",
+  "assumptions": [
+   "Accurate for nearby genes; double crossovers hide recombination beyond about 20 cM",
+   "RF never exceeds 0.5"
+  ],
+  "vars": [
+   [
+    "RF",
+    "recombination frequency",
+    ""
+   ],
+   [
+    "recombinants",
+    "offspring with non-parental combinations",
+    ""
+   ],
+   [
+    "total",
+    "all offspring counted",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "distance (cM) = 100 × RF",
+    "map units"
+   ]
+  ],
+  "example": {
+   "problem": "A testcross gives 1000 offspring, 85 + 95 of them recombinant. Find RF and the map distance.",
+   "steps": [
+    "RF = (85 + 95)/1000 = 0.18",
+    "Distance = 18 cM"
+   ],
+   "answer": "RF = 0.18 (18 cM)"
+  },
+  "try": "(85 + 95)/1000"
+ },
+ "v = V_{max} [S]/(K_{m} + [S])": {
+  "title": "Michaelis–Menten enzyme kinetics",
+  "about": "The rate of an enzyme reaction rises with substrate concentration and levels off at V_{max} when the enzyme is saturated. K_{m} is the substrate concentration that gives half of V_{max}; low K_{m} means high affinity.",
+  "assumptions": [
+   "Initial rates, before product builds up",
+   "[S] ≫ [E] and steady state for the enzyme–substrate complex",
+   "One substrate, no cooperativity (else use Hill)"
+  ],
+  "vars": [
+   [
+    "v",
+    "initial reaction rate",
+    "mol/(L·s)"
+   ],
+   [
+    "V_{max}",
+    "maximum rate",
+    "mol/(L·s)"
+   ],
+   [
+    "[S]",
+    "substrate concentration",
+    "mol/L"
+   ],
+   [
+    "K_{m}",
+    "Michaelis constant",
+    "mol/L"
+   ]
+  ],
+  "related": [
+   [
+    "1/v = (K_{m}/V_{max})(1/[S]) + 1/V_{max}",
+    "Lineweaver–Burk"
+   ],
+   [
+    "k_{cat} = V_{max}/[E]",
+    "turnover number"
+   ]
+  ],
+  "example": {
+   "problem": "An enzyme has V_{max} = 100 µmol/min and K_{m} = 2.0 mM. Find v at [S] = 0.50 mM.",
+   "steps": [
+    "v = 100 × 0.50/(2.0 + 0.50) = 20 µmol/min"
+   ],
+   "answer": "v = 20 µmol/min"
+  },
+  "try": "100 * 0.50/(2.0 + 0.50)"
+ },
+ "1/v = (K_{m}/V_{max})(1/[S]) + 1/V_{max}": {
+  "title": "Lineweaver–Burk (double reciprocal) plot",
+  "about": "Michaelis–Menten turned into a straight line: plotting 1/v against 1/[S] gives slope K_{m}/V_{max}, y-intercept 1/V_{max} and x-intercept −1/K_{m}. It also shows inhibitor types at a glance.",
+  "assumptions": [
+   "Same assumptions as Michaelis–Menten",
+   "Errors at low [S] are magnified; nonlinear fitting is more accurate",
+   "Competitive inhibitors change the slope only; non-competitive change the intercept"
+  ],
+  "vars": [
+   [
+    "v",
+    "initial rate",
+    "mol/(L·s)"
+   ],
+   [
+    "K_{m}",
+    "Michaelis constant",
+    "mol/L"
+   ],
+   [
+    "V_{max}",
+    "maximum rate",
+    "mol/(L·s)"
+   ],
+   [
+    "[S]",
+    "substrate concentration",
+    "mol/L"
+   ]
+  ],
+  "related": [
+   [
+    "v = V_{max} [S]/(K_{m} + [S])",
+    "Michaelis–Menten"
+   ]
+  ],
+  "example": {
+   "problem": "A Lineweaver–Burk plot has y-intercept 0.010 min/µmol and slope 0.020 min·mM/µmol. Find V_{max} and K_{m}.",
+   "steps": [
+    "V_{max} = 1/0.010 = 100 µmol/min",
+    "K_{m} = slope × V_{max} = 0.020 × 100 = 2.0 mM"
+   ],
+   "answer": "V_{max} = 100 µmol/min, K_{m} = 2.0 mM"
+  },
+  "try": "0.020/0.010"
+ },
+ "k_{cat} = V_{max}/[E]": {
+  "title": "Turnover number",
+  "about": "The number of substrate molecules one enzyme molecule converts per second when saturated. k_{cat}/K_{m} measures catalytic efficiency; the diffusion limit is about 10^{8}–10^{9} M^{−1}s^{−1}.",
+  "assumptions": [
+   "[E] is the total concentration of active enzyme",
+   "V_{max} and [E] in matching units"
+  ],
+  "vars": [
+   [
+    "k_{cat}",
+    "turnover number",
+    "s^{−1}"
+   ],
+   [
+    "V_{max}",
+    "maximum rate",
+    "mol/(L·s)"
+   ],
+   [
+    "[E]",
+    "total enzyme concentration",
+    "mol/L"
+   ]
+  ],
+  "related": [
+   [
+    "k_{cat}/K_{m}",
+    "catalytic efficiency"
+   ],
+   [
+    "v = V_{max} [S]/(K_{m} + [S])",
+    "Michaelis–Menten"
+   ]
+  ],
+  "example": {
+   "problem": "An enzyme at 2.0 × 10^{−8} M has V_{max} = 4.0 × 10^{−5} M/s. Find k_{cat}.",
+   "steps": [
+    "k_{cat} = 4.0 × 10^{−5}/2.0 × 10^{−8} = 2000 s^{−1}"
+   ],
+   "answer": "k_{cat} = 2000 s^{−1}"
+  },
+  "try": "4.0e-5/2.0e-8"
+ },
+ "K_{app} = K_{m} (1 + [I]/K_{i})": {
+  "title": "Apparent K_{m} with a competitive inhibitor",
+  "about": "A competitive inhibitor competes for the active site, so more substrate is needed for half-maximal rate: K_{m} appears larger by the factor (1 + [I]/K_{i}). V_{max} is unchanged, since enough substrate outcompetes it.",
+  "assumptions": [
+   "Purely competitive inhibition, reversible",
+   "K_{i} is the inhibitor's dissociation constant"
+  ],
+  "vars": [
+   [
+    "K_{app}",
+    "apparent Michaelis constant",
+    "mol/L"
+   ],
+   [
+    "K_{m}",
+    "Michaelis constant without inhibitor",
+    "mol/L"
+   ],
+   [
+    "[I]",
+    "inhibitor concentration",
+    "mol/L"
+   ],
+   [
+    "K_{i}",
+    "inhibitor dissociation constant",
+    "mol/L"
+   ]
+  ],
+  "related": [
+   [
+    "v = V_{max} [S]/(K_{app} + [S])",
+    "rate with the inhibitor"
+   ]
+  ],
+  "example": {
+   "problem": "An enzyme with K_{m} = 2.0 mM is exposed to 10 µM of a competitive inhibitor with K_{i} = 5 µM. Find the apparent K_{m}.",
+   "steps": [
+    "1 + [I]/K_{i} = 1 + 10/5 = 3",
+    "K_{app} = 2.0 × 3 = 6.0 mM"
+   ],
+   "answer": "K_{app} = 6.0 mM"
+  },
+  "try": "2.0 * (1 + 10/5)"
+ },
+ "θ = [L]^{n}/(K_{d} + [L]^{n})": {
+  "title": "Hill equation: cooperative binding",
+  "about": "The fraction of binding sites occupied by a ligand. The Hill coefficient n measures cooperativity: n > 1 gives the S-shaped curve of hemoglobin, n = 1 reduces to simple binding. Here K_{d} = (L_{50})^{n}, the ligand level at half saturation raised to n.",
+  "assumptions": [
+   "n is an empirical measure of cooperativity, not the number of sites",
+   "Equilibrium binding"
+  ],
+  "vars": [
+   [
+    "θ",
+    "fraction of sites occupied",
+    ""
+   ],
+   [
+    "[L]",
+    "ligand concentration (or partial pressure)",
+    "mol/L"
+   ],
+   [
+    "K_{d}",
+    "apparent dissociation constant, (L_{50})^{n}",
+    "(mol/L)^{n}"
+   ],
+   [
+    "n",
+    "Hill coefficient",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "θ = [L]^{n}/(L_{50}^{n} + [L]^{n})",
+    "with the half-saturation level"
+   ],
+   [
+    "log(θ/(1 − θ)) = n log[L] − log K_{d}",
+    "Hill plot"
+   ]
+  ],
+  "example": {
+   "problem": "Hemoglobin has n = 2.8 and P_{50} = 26 mmHg. Find its saturation in the lungs (100 mmHg) and in tissue (40 mmHg).",
+   "steps": [
+    "K_{d} = 26^{2.8} = 9161",
+    "Lungs: θ = 100^{2.8}/(26^{2.8} + 100^{2.8}) = 0.978",
+    "Tissue: θ = 40^{2.8}/(26^{2.8} + 40^{2.8}) = 0.770, so about 21 % of the O_{2} is unloaded"
+   ],
+   "answer": "θ ≈ 0.978 in the lungs, 0.770 in tissue"
+  },
+  "try": "100^2.8/(26^2.8 + 100^2.8)"
+ },
+ "E = (RT/(zF)) ln([X]_{out}/[X]_{in})": {
+  "title": "Nernst equilibrium potential of an ion",
+  "about": "The membrane voltage (inside relative to outside) at which an ion's electrical pull exactly balances its concentration gradient, so it has no net flow. The resting potential sits near K^{+}'s equilibrium potential.",
+  "assumptions": [
+   "One ion at a time, membrane permeable to it",
+   "T in kelvin; z is the ion's charge with sign (Ca^{2+} is +2, Cl^{−} is −1)",
+   "For several ions use the Goldman equation"
+  ],
+  "vars": [
+   [
+    "E",
+    "equilibrium potential, inside minus outside",
+    "V"
+   ],
+   [
+    "R",
+    "gas constant, 8.314",
+    "J/(mol·K)"
+   ],
+   [
+    "T",
+    "absolute temperature",
+    "K"
+   ],
+   [
+    "z",
+    "ion charge",
+    ""
+   ],
+   [
+    "F",
+    "Faraday constant, 96 485",
+    "C/mol"
+   ],
+   [
+    "[X]_{out}, [X]_{in}",
+    "ion concentrations outside and inside",
+    "mol/L"
+   ]
+  ],
+  "related": [
+   [
+    "E = (61.5 mV/z) log_{10}([X]_{out}/[X]_{in})",
+    "at 37 °C"
+   ]
+  ],
+  "example": {
+   "problem": "A neuron has [K^{+}] = 5 mM outside and 140 mM inside at 37 °C (310 K). Find E_{K}.",
+   "steps": [
+    "RT/F = 8.314 × 310/96 485 = 26.7 mV",
+    "E_{K} = 26.7 mV × ln(5/140) = 26.7 × (−3.33) = −89.0 mV"
+   ],
+   "answer": "E_{K} ≈ −89.0 mV"
+  },
+  "try": "8.314*310/(1*96485) * ln(5/140) * 1000"
+ },
+ "E = (61.5 mV/z) log_{10}([X]_{out}/[X]_{in})": {
+  "title": "Nernst potential at body temperature",
+  "about": "The Nernst equation with RT ln 10/F worked out at 37 °C: each tenfold concentration ratio is worth 61.5 mV for a singly charged ion.",
+  "assumptions": [
+   "37 °C only (at 20 °C it is 58 mV)",
+   "Same assumptions as the full Nernst equation"
+  ],
+  "vars": [
+   [
+    "E",
+    "equilibrium potential, inside minus outside",
+    "V"
+   ],
+   [
+    "z",
+    "ion charge",
+    ""
+   ],
+   [
+    "[X]_{out}, [X]_{in}",
+    "ion concentrations outside and inside",
+    "mol/L"
+   ]
+  ],
+  "related": [
+   [
+    "E = (RT/(zF)) ln([X]_{out}/[X]_{in})",
+    "any temperature"
+   ]
+  ],
+  "example": {
+   "problem": "Na^{+} is 145 mM outside a cell and 12 mM inside. Find E_{Na} at 37 °C.",
+   "steps": [
+    "E_{Na} = 61.5 mV × log_{10}(145/12) = 61.5 × 1.082 = 66.6 mV"
+   ],
+   "answer": "E_{Na} ≈ +66.6 mV"
+  },
+  "try": "61.5 mV * log10(145/12)"
+ },
+ "J = −D dC/dx": {
+  "title": "Fick's first law of diffusion",
+  "about": "Diffusion carries a substance from high to low concentration at a rate proportional to the gradient. It explains gas exchange in the lungs: thin membranes and big area give fast transfer.",
+  "assumptions": [
+   "Steady state; for a thin membrane dC/dx ≈ ΔC/thickness",
+   "D constant (depends on the molecule, medium and temperature)",
+   "Passive diffusion only, no carriers"
+  ],
+  "vars": [
+   [
+    "J",
+    "diffusion flux",
+    "mol/(m^{2}·s)"
+   ],
+   [
+    "D",
+    "diffusion coefficient",
+    "m^{2}/s"
+   ],
+   [
+    "dC/dx",
+    "concentration gradient",
+    "mol/m^{4}"
+   ]
+  ],
+  "related": [
+   [
+    "rate = D A ΔC/Δx",
+    "total rate through area A"
+   ],
+   [
+    "x ≈ √(2Dt)",
+    "how far diffusion reaches in time t"
+   ]
+  ],
+  "example": {
+   "problem": "Oxygen (D = 1.0 × 10^{−9} m^{2}/s) crosses a 10 µm layer with a concentration drop of 0.20 mol/m^{3}. Find the flux.",
+   "steps": [
+    "dC/dx = −0.20/10 × 10^{−6} = −2.0 × 10^{4} mol/m^{4}",
+    "J = −1.0 × 10^{−9} × (−2.0 × 10^{4}) = 2.0 × 10^{−5} mol/(m^{2}·s)"
+   ],
+   "answer": "J = 2.0 × 10^{−5} mol/(m^{2}·s)"
+  },
+  "try": "1.0e-9 * 0.20/10e-6"
+ },
+ "Ψ = Ψ_{s} + Ψ_{p}": {
+  "title": "Water potential",
+  "about": "Water moves from higher to lower water potential. Solutes make Ψ_{s} negative; pressure (like turgor in a plant cell) adds Ψ_{p}. Pure water at atmospheric pressure is 0.",
+  "assumptions": [
+   "Ψ_{p} is 0 in an open beaker and positive in a turgid cell",
+   "Gravity and matric terms ignored (matter in tall trees and soils)"
+  ],
+  "vars": [
+   [
+    "Ψ",
+    "water potential",
+    "Pa"
+   ],
+   [
+    "Ψ_{s}",
+    "solute potential (≤ 0)",
+    "Pa"
+   ],
+   [
+    "Ψ_{p}",
+    "pressure potential",
+    "Pa"
+   ]
+  ],
+  "related": [
+   [
+    "Ψ_{s} = −i C R T",
+    "solute potential"
+   ]
+  ],
+  "example": {
+   "problem": "A plant cell has Ψ_{s} = −0.7 MPa and Ψ_{p} = 0.3 MPa. It sits in pure water. Which way does water move?",
+   "steps": [
+    "Ψ_{cell} = −0.7 + 0.3 = −0.4 MPa",
+    "Pure water is 0 MPa, higher, so water moves into the cell"
+   ],
+   "answer": "Ψ = −0.4 MPa; water flows in"
+  },
+  "try": "-0.7 MPa + 0.3 MPa to MPa"
+ },
+ "Ψ_{s} = −i C R T": {
+  "title": "Solute potential",
+  "about": "Dissolved solutes lower water potential in proportion to their particle concentration. It is the osmotic pressure with a minus sign.",
+  "assumptions": [
+   "Dilute solution",
+   "With C in mol/L, R = 0.0831 L·bar/(mol·K) gives bar (10 bar = 1 MPa)",
+   "T in kelvin; i the particles per formula unit (sucrose 1, NaCl 2)"
+  ],
+  "vars": [
+   [
+    "Ψ_{s}",
+    "solute potential",
+    "Pa"
+   ],
+   [
+    "i",
+    "ionization constant",
+    ""
+   ],
+   [
+    "C",
+    "molar concentration",
+    "mol/m^{3}"
+   ],
+   [
+    "R",
+    "gas constant, 8.314",
+    "J/(mol·K)"
+   ],
+   [
+    "T",
+    "absolute temperature",
+    "K"
+   ]
+  ],
+  "related": [
+   [
+    "Ψ = Ψ_{s} + Ψ_{p}",
+    "water potential"
+   ],
+   [
+    "π = i c R T",
+    "osmotic pressure"
+   ]
+  ],
+  "example": {
+   "problem": "Find the solute potential of 0.10 M sucrose at 22 °C (295 K).",
+   "steps": [
+    "Ψ_{s} = −1 × 0.10 × 0.0831 × 295 = −2.45 bar = −0.245 MPa"
+   ],
+   "answer": "Ψ_{s} ≈ −2.45 bar"
+  },
+  "try": "-1 * 0.10 * 0.0831 * 295"
+ },
+ "6CO_{2} + 6H_{2}O → C_{6}H_{12}O_{6} + 6O_{2}": {
+  "title": "Photosynthesis, overall",
+  "about": "Plants, algae and cyanobacteria use light energy to build glucose from carbon dioxide and water, releasing oxygen. The O_{2} comes from the water. It stores about 2870 kJ per mole of glucose.",
+  "assumptions": [
+   "A net summary: the real path is the light reactions and the Calvin cycle",
+   "Light energy drives it (ΔG° ≈ +2870 kJ/mol)"
+  ],
+  "vars": [
+   [
+    "CO_{2}",
+    "carbon dioxide, 44.01",
+    "g/mol"
+   ],
+   [
+    "H_{2}O",
+    "water, 18.02",
+    "g/mol"
+   ],
+   [
+    "C_{6}H_{12}O_{6}",
+    "glucose, 180.16",
+    "g/mol"
+   ],
+   [
+    "O_{2}",
+    "oxygen, 32.00",
+    "g/mol"
+   ]
+  ],
+  "related": [
+   [
+    "C_{6}H_{12}O_{6} + 6O_{2} → 6CO_{2} + 6H_{2}O",
+    "respiration, the reverse"
+   ]
+  ],
+  "example": {
+   "problem": "How much glucose can a plant make from 264 g of CO_{2}?",
+   "steps": [
+    "n(CO_{2}) = 264/44.01 = 6.00 mol",
+    "6 mol CO_{2} make 1 mol glucose = 180 g"
+   ],
+   "answer": "≈ 180 g glucose"
+  },
+  "try": "264/44.01/6 * 180.16"
+ },
+ "C_{6}H_{12}O_{6} + 6O_{2} → 6CO_{2} + 6H_{2}O": {
+  "title": "Cellular respiration, overall",
+  "about": "Cells oxidize glucose to carbon dioxide and water, releasing about 2870 kJ per mole of glucose, part of which is stored in roughly 30–32 ATP.",
+  "assumptions": [
+   "A net summary of glycolysis, the Krebs cycle and oxidative phosphorylation",
+   "Aerobic; without O_{2} cells ferment instead"
+  ],
+  "vars": [
+   [
+    "C_{6}H_{12}O_{6}",
+    "glucose, 180.16",
+    "g/mol"
+   ],
+   [
+    "O_{2}",
+    "oxygen, 32.00",
+    "g/mol"
+   ],
+   [
+    "CO_{2}",
+    "carbon dioxide, 44.01",
+    "g/mol"
+   ],
+   [
+    "H_{2}O",
+    "water, 18.02",
+    "g/mol"
+   ]
+  ],
+  "related": [
+   [
+    "ΔG°′ ≈ −2870 kJ/mol",
+    "per mole of glucose"
+   ],
+   [
+    "ΔG°′ = −30.5 kJ/mol",
+    "per ATP hydrolysed"
+   ],
+   [
+    "RQ = CO_{2}/O_{2} = 1",
+    "respiratory quotient for carbohydrate"
+   ]
+  ],
+  "example": {
+   "problem": "How much O_{2} does burning 90 g of glucose use, and how much energy is released?",
+   "steps": [
+    "n = 90/180.16 = 0.500 mol glucose",
+    "O_{2}: 6 × 0.500 = 3.00 mol = 96 g",
+    "Energy: 0.500 × 2870 = 1430 kJ"
+   ],
+   "answer": "≈ 96 g O_{2}, ≈ 1430 kJ"
+  },
+  "try": "90/180.16 * 6 * 32.00"
+ },
+ "ΔG°′ = −30.5 kJ/mol": {
+  "title": "Free energy of ATP hydrolysis",
+  "about": "ATP + H_{2}O → ADP + P_{i} releases 30.5 kJ/mol under biochemical standard conditions (pH 7, 1 M). In a real cell, where ATP is far above equilibrium, it is about −50 kJ/mol, which drives uphill reactions coupled to it.",
+  "assumptions": [
+   "Standard biochemical state: 1 M each, pH 7, 25 °C, Mg^{2+} present",
+   "Actual ΔG depends on cellular concentrations: ΔG = ΔG°′ + RT ln([ADP][P_{i}]/[ATP])"
+  ],
+  "vars": [
+   [
+    "ΔG°′",
+    "standard free energy change at pH 7",
+    "J/mol"
+   ]
+  ],
+  "related": [
+   [
+    "ΔG = ΔG° + R T ln(Q)",
+    "in the cell"
+   ],
+   [
+    "ΔG_{coupled} = ΔG_{1} + ΔG_{2}",
+    "coupled reactions add"
+   ]
+  ],
+  "example": {
+   "problem": "In a muscle cell at 37 °C, [ATP] = 3.5 mM, [ADP] = 1.5 mM and [P_{i}] = 5.0 mM. Find the actual ΔG of ATP hydrolysis.",
+   "steps": [
+    "Q = (1.5 × 10^{−3})(5.0 × 10^{−3})/(3.5 × 10^{−3}) = 2.14 × 10^{−3}",
+    "RT = 8.314 × 310 = 2.577 kJ/mol; RT ln Q = 2.577 × (−6.15) = −15.8 kJ/mol",
+    "ΔG = −30.5 − 15.8 = −46.3 kJ/mol"
+   ],
+   "answer": "ΔG ≈ −46.3 kJ/mol"
+  },
+  "try": "-30.5 + 8.314*310/1000 * ln(1.5e-3 * 5e-3/3.5e-3)"
+ },
+ "Q_{10} = (R_{2}/R_{1})^{10/(T_{2} − T_{1})}": {
+  "title": "Q_{10} temperature coefficient",
+  "about": "How much a biological rate multiplies for each 10 °C rise. Most enzyme and metabolic processes have Q_{10} of 2 to 3; a value near 1 means the process barely depends on temperature (like diffusion).",
+  "assumptions": [
+   "Within the organism's working range; above the optimum, enzymes denature and rates fall",
+   "Q_{10} itself drifts with temperature"
+  ],
+  "vars": [
+   [
+    "Q_{10}",
+    "rate ratio per 10 °C",
+    ""
+   ],
+   [
+    "R_{1}, R_{2}",
+    "rates at T_{1} and T_{2}",
+    "varies"
+   ],
+   [
+    "T_{1}, T_{2}",
+    "temperatures",
+    "K"
+   ]
+  ],
+  "related": [
+   [
+    "R_{2} = R_{1} Q_{10}^{(T_{2} − T_{1})/10}",
+    "predict a rate"
+   ],
+   [
+    "k = A e^{−E_{a}/(RT)}",
+    "Arrhenius, the chemistry version"
+   ]
+  ],
+  "example": {
+   "problem": "A lizard's oxygen use is 4.0 mL/h at 20 °C and 9.0 mL/h at 32 °C. Find Q_{10}.",
+   "steps": [
+    "Q_{10} = (9.0/4.0)^{10/12} = 2.25^{0.833} = 1.97"
+   ],
+   "answer": "Q_{10} ≈ 1.97"
+  },
+  "try": "(9.0/4.0)^(10/(32 - 20))"
+ },
+ "CO = HR × SV": {
+  "title": "Cardiac output",
+  "about": "The volume of blood the heart pumps per minute is beats per minute times the volume ejected per beat. About 5 L/min at rest, up to 20–35 L/min in hard exercise.",
+  "assumptions": [
+   "SV = end-diastolic volume − end-systolic volume",
+   "One ventricle; left and right are equal on average"
+  ],
+  "vars": [
+   [
+    "CO",
+    "cardiac output",
+    "m^{3}/s"
+   ],
+   [
+    "HR",
+    "heart rate",
+    "s^{−1}"
+   ],
+   [
+    "SV",
+    "stroke volume",
+    "m^{3}"
+   ]
+  ],
+  "related": [
+   [
+    "MAP = CO × TPR",
+    "pressure from flow and resistance"
+   ],
+   [
+    "EF = SV/EDV",
+    "ejection fraction"
+   ]
+  ],
+  "example": {
+   "problem": "A resting heart beats 70 times per minute with a stroke volume of 70 mL. Find the cardiac output.",
+   "steps": [
+    "CO = 70/min × 70 mL = 4900 mL/min = 4.9 L/min"
+   ],
+   "answer": "CO = 4.9 L/min"
+  },
+  "try": "70/min * 70 mL to L/min"
+ },
+ "MAP = CO × TPR": {
+  "title": "Mean arterial pressure",
+  "about": "The circulation's Ohm's law: pressure drop equals flow times resistance. Since venous pressure is near zero, the mean arterial pressure is cardiac output times total peripheral resistance.",
+  "assumptions": [
+   "Right atrial pressure ≈ 0 (else use MAP − CVP)",
+   "Steady, averaged flow"
+  ],
+  "vars": [
+   [
+    "MAP",
+    "mean arterial pressure",
+    "Pa"
+   ],
+   [
+    "CO",
+    "cardiac output",
+    "m^{3}/s"
+   ],
+   [
+    "TPR",
+    "total peripheral resistance",
+    "Pa·s/m^{3}"
+   ]
+  ],
+  "related": [
+   [
+    "MAP ≈ DBP + (SBP − DBP)/3",
+    "from a blood-pressure reading"
+   ],
+   [
+    "CO = HR × SV",
+    "cardiac output"
+   ],
+   [
+    "Q = πR^{4}ΔP/(8ηL)",
+    "why vessel radius controls resistance"
+   ]
+  ],
+  "example": {
+   "problem": "Cardiac output is 5.0 L/min and TPR is 18 mmHg·min/L. Find MAP.",
+   "steps": [
+    "MAP = 5.0 × 18 = 90 mmHg"
+   ],
+   "answer": "MAP = 90 mmHg"
+  },
+  "try": "5.0 * 18"
+ },
+ "Q = πR^{4}ΔP/(8ηL)": {
+  "title": "Poiseuille's law: flow through a tube",
+  "about": "Laminar flow through a tube grows with the fourth power of its radius, so a small change in a vessel's radius makes a big change in flow. Halving the radius cuts flow sixteenfold.",
+  "assumptions": [
+   "Steady laminar flow (low Reynolds number), fully developed",
+   "Newtonian fluid (blood only approximately)",
+   "Rigid straight tube of constant radius"
+  ],
+  "vars": [
+   [
+    "Q",
+    "volume flow rate",
+    "m^{3}/s"
+   ],
+   [
+    "R",
+    "tube radius",
+    "m"
+   ],
+   [
+    "ΔP",
+    "pressure drop along the tube",
+    "Pa"
+   ],
+   [
+    "η",
+    "dynamic viscosity",
+    "Pa·s"
+   ],
+   [
+    "L",
+    "tube length",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "R_{flow} = 8ηL/(πR^{4})",
+    "resistance to flow"
+   ],
+   [
+    "ΔP = Q R_{flow}",
+    "pressure drop"
+   ]
+  ],
+  "example": {
+   "problem": "Blood (η = 3.5 × 10^{−3} Pa·s) flows through a vessel 2.0 mm in radius and 10 cm long with a pressure drop of 500 Pa. Find the flow.",
+   "steps": [
+    "Q = π(0.002)^{4}(500)/(8 × 3.5 × 10^{−3} × 0.10)",
+    "= 2.51 × 10^{−8}/2.8 × 10^{−3} = 8.98 × 10^{−6} m^{3}/s = 8.98 mL/s"
+   ],
+   "answer": "Q ≈ 8.98 mL/s"
+  },
+  "try": "pi (2 mm)^4 * 500 Pa / (8 * 3.5e-3 Pa s * 10 cm) to mL/s"
+ },
+ "BMI = m/h^{2}": {
+  "title": "Body mass index",
+  "about": "Body mass divided by height squared, a quick screening number for weight. Adults: under 18.5 underweight, 18.5–25 normal, 25–30 overweight, 30 and over obese.",
+  "assumptions": [
+   "A screening tool only: it ignores muscle, bone and fat distribution",
+   "Adult ranges; children use age percentiles",
+   "Mass in kg, height in metres"
+  ],
+  "vars": [
+   [
+    "BMI",
+    "body mass index",
+    "kg/m^{2}"
+   ],
+   [
+    "m",
+    "body mass",
+    "kg"
+   ],
+   [
+    "h",
+    "height",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "BMI = 703 × lb/in^{2}",
+    "in pounds and inches"
+   ]
+  ],
+  "example": {
+   "problem": "Find the BMI of a person of 70 kg and 1.75 m.",
+   "steps": [
+    "BMI = 70/1.75^{2} = 70/3.0625 = 22.9 kg/m^{2}, normal"
+   ],
+   "answer": "BMI ≈ 22.9 kg/m^{2}"
+  },
+  "try": "70 kg / (1.75 m)^2"
+ },
+ "C = C_{0} e^{−kt}": {
+  "title": "First-order drug elimination",
+  "about": "Most drugs leave the blood at a rate proportional to their concentration, so the concentration falls exponentially after a dose. ln C falls in a straight line with time.",
+  "assumptions": [
+   "One-compartment model, after distribution is complete",
+   "First-order (linear) kinetics; saturated elimination, like alcohol, is zero-order",
+   "k and t in matching time units"
+  ],
+  "vars": [
+   [
+    "C",
+    "plasma concentration at time t",
+    "kg/m^{3}"
+   ],
+   [
+    "C_{0}",
+    "initial concentration",
+    "kg/m^{3}"
+   ],
+   [
+    "k",
+    "elimination rate constant",
+    "s^{−1}"
+   ],
+   [
+    "t",
+    "time since the dose",
+    "s"
+   ]
+  ],
+  "related": [
+   [
+    "t_{1/2} = ln(2)/k",
+    "half-life"
+   ],
+   [
+    "V_{d} = dose/C_{0}",
+    "volume of distribution"
+   ],
+   [
+    "CL = k V_{d}",
+    "clearance"
+   ]
+  ],
+  "example": {
+   "problem": "A drug starts at 10 mg/L and has k = 0.173 h^{−1} (half-life 4 h). Find the concentration after 8 h.",
+   "steps": [
+    "kt = 0.173 × 8 = 1.386",
+    "C = 10 e^{−1.386} = 2.5 mg/L (two half-lives)"
+   ],
+   "answer": "C ≈ 2.5 mg/L"
+  },
+  "try": "10 * exp(-ln(2)/4 * 8)"
+ },
+ "t_{1/2} = ln(2)/k": {
+  "title": "Elimination half-life",
+  "about": "The time for the drug concentration to halve, the same at any concentration in first-order elimination. After about 4–5 half-lives a drug is essentially gone, and repeated dosing reaches steady state.",
+  "assumptions": [
+   "First-order elimination"
+  ],
+  "vars": [
+   [
+    "t_{1/2}",
+    "half-life",
+    "s"
+   ],
+   [
+    "k",
+    "elimination rate constant",
+    "s^{−1}"
+   ]
+  ],
+  "related": [
+   [
+    "C = C_{0} e^{−kt}",
+    "concentration over time"
+   ],
+   [
+    "t_{1/2} = 0.693 V_{d}/CL",
+    "from volume and clearance"
+   ]
+  ],
+  "example": {
+   "problem": "A drug's elimination rate constant is 0.173 h^{−1}. Find its half-life.",
+   "steps": [
+    "t_{1/2} = 0.693/0.173 = 4.0 h"
+   ],
+   "answer": "t_{1/2} ≈ 4.0 h"
+  },
+  "try": "ln(2)/0.173"
+ },
+ "V_{d} = dose/C_{0}": {
+  "title": "Volume of distribution",
+  "about": "The volume the drug would need to fill at its plasma concentration to account for the whole dose. A V_{d} much larger than body water (about 42 L) means the drug is stored in tissues.",
+  "assumptions": [
+   "IV dose, C_{0} extrapolated back to time 0",
+   "One-compartment model; for oral dosing multiply the dose by bioavailability F"
+  ],
+  "vars": [
+   [
+    "V_{d}",
+    "apparent volume of distribution",
+    "m^{3}"
+   ],
+   [
+    "dose",
+    "amount of drug given",
+    "kg"
+   ],
+   [
+    "C_{0}",
+    "initial plasma concentration",
+    "kg/m^{3}"
+   ]
+  ],
+  "related": [
+   [
+    "loading dose = C_{target} V_{d}",
+    "dose to reach a target concentration"
+   ],
+   [
+    "CL = k V_{d}",
+    "clearance"
+   ]
+  ],
+  "example": {
+   "problem": "A 500 mg IV dose gives an initial plasma concentration of 10 mg/L. Find V_{d}.",
+   "steps": [
+    "V_{d} = 500 mg/(10 mg/L) = 50 L"
+   ],
+   "answer": "V_{d} = 50 L"
+  },
+  "try": "500 mg / (10 mg/L)"
+ },
+ "N = N_{0} 2^{n}": {
+  "title": "PCR amplification",
+  "about": "Each PCR cycle ideally doubles the target DNA, so n cycles multiply it by 2^{n}. 30 cycles make about a billion copies of each starting molecule.",
+  "assumptions": [
+   "100 % efficiency; real efficiency E (0.9–1.0) gives N = N_{0}(1 + E)^{n}",
+   "Exponential phase only: primers and nucleotides run out and it plateaus after about 30–40 cycles"
+  ],
+  "vars": [
+   [
+    "N",
+    "copies after n cycles",
+    ""
+   ],
+   [
+    "N_{0}",
+    "starting copies",
+    ""
+   ],
+   [
+    "n",
+    "number of cycles",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "N = N_{0}(1 + E)^{n}",
+    "with efficiency E"
+   ],
+   [
+    "ΔC_{t} = log_{2}(fold change)",
+    "qPCR"
+   ]
+  ],
+  "example": {
+   "problem": "PCR starts with 100 copies of a gene. How many after 30 cycles?",
+   "steps": [
+    "N = 100 × 2^{30} = 100 × 1.07 × 10^{9} = 1.07 × 10^{11}"
+   ],
+   "answer": "N ≈ 1.07 × 10^{11} copies"
+  },
+  "try": "100 * 2^30"
+ },
+ "N = N_{0} 2^{t/g}": {
+  "title": "Bacterial growth by generation time",
+  "about": "During exponential growth a culture doubles every generation time g, so after time t it has gone through t/g doublings.",
+  "assumptions": [
+   "Exponential (log) phase only: not lag, stationary or death phase",
+   "Constant g; t and g in the same units"
+  ],
+  "vars": [
+   [
+    "N",
+    "cell count at time t",
+    ""
+   ],
+   [
+    "N_{0}",
+    "initial cell count",
+    ""
+   ],
+   [
+    "t",
+    "elapsed time",
+    "s"
+   ],
+   [
+    "g",
+    "generation (doubling) time",
+    "s"
+   ]
+  ],
+  "related": [
+   [
+    "g = t/log_{2}(N/N_{0})",
+    "generation time from two counts"
+   ],
+   [
+    "N = N_{0} e^{rt}",
+    "with r = ln(2)/g"
+   ]
+  ],
+  "example": {
+   "problem": "A culture of 1000 E. coli cells with g = 20 min grows for 4 h. How many cells are there?",
+   "steps": [
+    "t/g = 240/20 = 12 generations",
+    "N = 1000 × 2^{12} = 4.10 × 10^{6} cells"
+   ],
+   "answer": "N ≈ 4.10 × 10^{6} cells"
+  },
+  "try": "1000 * 2^(240/20)"
+ }
+}

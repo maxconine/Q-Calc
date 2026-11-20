@@ -670,3 +670,21 @@ fn a_date_answer_chains_by_spans() {
     assert_eq!(next("-2").0, "-2");
     assert_eq!(next("+ 3").0, "3");
 }
+
+#[test]
+fn every_sheet_can_be_searched() {
+    use qcalc_core::app::identities::{native_identity_sheet_by_id, native_sheet_ids};
+    let ids = native_sheet_ids();
+    assert!(ids.len() > 10, "{ids:?}");
+    // each id opens, and none repeats
+    let unique: std::collections::HashSet<&String> = ids.iter().collect();
+    assert_eq!(unique.len(), ids.len());
+    for id in &ids {
+        assert!(native_identity_sheet_by_id(id).is_some(), "{id}");
+    }
+    // the app asks through the logic table
+    match qcalc_core::golden::dispatch("lib/identities", "nativeSheetIds", &[]) {
+        qcalc_core::golden::Outcome::Answer(a) => assert_eq!(a.as_array().map(Vec::len), Some(ids.len())),
+        _ => panic!("nativeSheetIds didn't answer"),
+    }
+}

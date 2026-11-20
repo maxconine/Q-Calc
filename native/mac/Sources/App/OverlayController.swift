@@ -198,7 +198,8 @@ final class OverlayController: NSObject {
         panel.isReleasedWhenClosed = false
         panel.title = "Q Calc"
         panel.onEscape = { [weak self] in self?.escape() }
-        panel.onResignKey = { [weak self] in self?.lostFocus() }
+        // a turn later, once the window taking the keys is key (a sheet's search field keeps the bar up)
+        panel.onResignKey = { [weak self] in DispatchQueue.main.async { self?.lostFocus() } }
         // the matrix grid's cells and a system's equations take the keys with the caret at the end, never selected
         panel.caretToEndOnFocus = { [weak self] in self.map { $0.model.grid != nil || $0.model.sysLines != nil } ?? false }
         panel.isFloatingPanel = true
@@ -424,8 +425,19 @@ final class OverlayController: NSObject {
         return NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main ?? NSScreen.screens.first
     }
 
+    /// A reference sheet or periodic table, or a window of one (a row's explanation popover): clicking it keeps the bar
+    static func isSheetWindow(_ window: NSWindow?) -> Bool {
+        guard let window else { return false }
+        if window is PeriodicPanel { return true }
+        if let parent = window.parent, isSheetWindow(parent) { return true }
+        // an NSPopover's window, shown from a sheet's row
+        return NSStringFromClass(type(of: window)).contains("Popover")
+    }
+
     private func lostFocus() {
         guard wantVisible, panel?.isVisible == true, !gameOpen, !model.holdsOpen else { return }
+        // the keys went to a sheet's search field: the bar stays up beside it
+        if Self.isSheetWindow(NSApp.keyWindow) { return }
         let since = uptime() - shownAt
         if OverlayHealth.focusLossHides(sinceShow: since) {
             hide(because: "lost focus")
@@ -636,7 +648,7 @@ final class OverlayController: NSObject {
         }
         clickAwayLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             guard let self, let panel = self.panel, panel.isVisible, event.window !== panel,
-                  !(event.window is PeriodicPanel), !self.gameOpen, !self.model.holdsOpen else { return event }
+                  !Self.isSheetWindow(event.window), !self.gameOpen, !self.model.holdsOpen else { return event }
             self.hide(because: "click in another window")
             return event
         }
@@ -729,6 +741,12 @@ final class OverlayController: NSObject {
             }
         }
         controller.onOpenNew = { [weak self] line in self?.openSheetInNewWindow(line) }
+        // an explanation's Try: its line in the bar, in place of what was there
+        controller.onTry = { [weak self] line in
+            guard let self else { return }
+            self.show(from: "sheet")
+            self.model.text = line
+        }
         return controller
     }
 

@@ -45,6 +45,92 @@ pub struct Identity {
     /// Native only: the labels on a figure, each its own Typst document, clicked to copy.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spots: Option<Vec<FigureSpot>>,
+    /// Native only: what a click on the row explains (`explanations/*.json`, found by `explain_key`); filled in by
+    /// `native_identity_sheet_by_id`, so the web's `identitySheetFor` stays as it was.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub explain: Option<Explanation>,
+}
+
+/// A row's explanation: what it says, when it holds, what each letter is, and a worked example. Text may raise
+/// and lower runs as `show` does (`c^{4}`, `τ_{max}`).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Explanation {
+    pub title: String,
+    pub about: String,
+    #[serde(default)]
+    pub assumptions: Vec<String>,
+    /// Each letter: its symbol, what it is, and its unit (empty when it has none).
+    #[serde(default)]
+    pub vars: Vec<[String; 3]>,
+    /// Formulas that go with it: the formula, and when it's used (`J = πc^{4}/2`, `solid shaft`).
+    #[serde(default)]
+    pub related: Vec<[String; 2]>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub example: Option<Example>,
+    /// A bar line that works the example out, for its Try button.
+    #[serde(rename = "try", default, skip_serializing_if = "Option::is_none")]
+    pub try_line: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Example {
+    pub problem: String,
+    #[serde(default)]
+    pub steps: Vec<String>,
+    pub answer: String,
+}
+
+/// The files of explanations, each a map from `explain_key` to its `Explanation`.
+pub const EXPLANATION_FILES: [(&str, &str); 13] = [
+    ("identities", include_str!("explanations/identities.json")),
+    ("calculus", include_str!("explanations/calculus.json")),
+    ("analysis", include_str!("explanations/analysis.json")),
+    ("signals", include_str!("explanations/signals.json")),
+    ("transforms", include_str!("explanations/transforms.json")),
+    ("mechanics", include_str!("explanations/mechanics.json")),
+    ("physics", include_str!("explanations/physics.json")),
+    ("circuits-1", include_str!("explanations/circuits-1.json")),
+    ("circuits-2", include_str!("explanations/circuits-2.json")),
+    ("science", include_str!("explanations/science.json")),
+];
+
+/// Every explanation, by key; a key in two files takes the later one.
+pub fn explanations() -> &'static std::collections::HashMap<String, Explanation> {
+    static ALL: LazyLock<std::collections::HashMap<String, Explanation>> = LazyLock::new(|| {
+        let mut all = std::collections::HashMap::new();
+        for (_, text) in EXPLANATION_FILES {
+            let file: std::collections::BTreeMap<String, Explanation> =
+                serde_json::from_str(text).unwrap_or_default();
+            all.extend(file);
+        }
+        all
+    });
+    &ALL
+}
+
+/// What finds a row's explanation: its lead cells and then `show`, joined by ` ‖ ` (`τ = Tρ/J`,
+/// `e^{−at} u(t), a > 0 ‖ 1/(a + jω)`).
+pub fn explain_key(item: &Identity) -> String {
+    let mut parts: Vec<&str> = item.lead.iter().flatten().map(String::as_str).collect();
+    parts.push(&item.show);
+    parts.join(" ‖ ")
+}
+
+fn add_explanations(sheet: &mut IdentitySheet) {
+    for item in sheet
+        .sections
+        .iter_mut()
+        .flat_map(|s| s.groups.iter_mut())
+        .flat_map(|g| g.items.iter_mut())
+    {
+        if item.explain.is_none()
+            && !item.copy.is_empty()
+            && item.open.is_none()
+            && item.figure.is_none()
+        {
+            item.explain = explanations().get(&explain_key(item)).cloned();
+        }
+    }
 }
 
 /// A piece of a row: its Typst maths, and what a click on it copies.
@@ -117,6 +203,18 @@ pub fn sheets() -> &'static [IdentitySheet] {
 
 fn sheet(id: &str) -> &'static IdentitySheet {
     sheets().iter().find(|s| s.id == id).unwrap_or(&sheets()[0])
+}
+
+/// Native only: every sheet's id in order, the web's then the native apps' (not the part sheets `identities trig`
+/// opens, which repeat their rows), so a sheet's search can look through all of them.
+pub fn native_sheet_ids() -> Vec<String> {
+    let parts: std::collections::HashSet<String> =
+        sheets().iter().flat_map(part_sheets).map(|s| s.id).collect();
+    sheets()
+        .iter()
+        .filter(|s| !parts.contains(&s.id))
+        .map(|s| s.id.clone())
+        .collect()
 }
 
 /// The sheet with this id (the Windows sheet window's page is told only the id).
@@ -649,6 +747,7 @@ pub fn native_identity_sheet_by_id(id: &str) -> Option<IdentitySheet> {
             .unwrap_or_default()
     });
     let mut sheet = identity_sheet_by_id(id)?.clone();
+    add_explanations(&mut sheet);
     let base = id.split(": ").next().unwrap_or(id);
     if let Some(table) = CELLS.get(base) {
         for item in sheet

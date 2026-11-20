@@ -46,6 +46,39 @@ struct IdentitySheet {
         // pieces of the row that copy alone, drawn in a line in place of the runs
         var parts: [Part] = []
         var spots: [Spot] = []
+        // the native app's explanation, opened by a click beside the copy
+        var explain: Explanation?
+    }
+
+    // what a row says, when it holds, what each letter is and a worked example (core `Explanation`); its text
+    // raises `^{…}` and lowers `_{…}` as a row's `show` does
+    struct Explanation {
+        let title: String
+        let about: String
+        let assumptions: [String]
+        // symbol, meaning, unit
+        let vars: [[String]]
+        // formula, when it's used
+        let related: [[String]]
+        let problem: String
+        let steps: [String]
+        let answer: String
+        // a bar line that works the example out
+        let tryLine: String
+
+        init?(_ any: Any?) {
+            guard let d = any as? [String: Any], let title = d["title"] as? String else { return nil }
+            self.title = title
+            about = d["about"] as? String ?? ""
+            assumptions = d["assumptions"] as? [String] ?? []
+            vars = d["vars"] as? [[String]] ?? []
+            related = d["related"] as? [[String]] ?? []
+            let example = d["example"] as? [String: Any] ?? [:]
+            problem = example["problem"] as? String ?? ""
+            steps = example["steps"] as? [String] ?? []
+            answer = example["answer"] as? String ?? ""
+            tryLine = d["try"] as? String ?? ""
+        }
     }
 
     struct Group {
@@ -92,7 +125,8 @@ struct IdentitySheet {
                                                          guard let picture = cell(spot["doc"]), let copy = spot["copy"] as? String,
                                                                let x = (spot["x"] as? NSNumber)?.doubleValue, let y = (spot["y"] as? NSNumber)?.doubleValue else { return nil }
                                                          return Spot(center: CGPoint(x: x, y: y), drawn: picture, copy: copy)
-                                                     })
+                                                     },
+                                                     explain: Explanation(i["explain"]))
                 }
                 return items.isEmpty ? nil : Group(title: title, items: items)
             }
@@ -492,6 +526,292 @@ private final class IdentityRow: NSView {
     }
 }
 
+// A row's explanation: the equation, what it's for, when it holds, each letter, a worked example and, last, related
+// formulas, scrolling past 520 pt; a Try button puts the example's line in the bar. Each related formula is a link
+// (`onRelated`, its index): to its own explanation where it has one, else a search for it. Back returns to the
+// explanation that linked here.
+private final class ExplanationView: NSView, NSTextViewDelegate {
+    private static let width: CGFloat = 420
+    private static let pad: CGFloat = 16
+    private static let tallest: CGFloat = 520
+    private static let linkScheme = "qcalc-related"
+    private let onTry: ((String) -> Void)?
+    private let onRelated: ((Int) -> Void)?
+    private let onBack: (() -> Void)?
+    private let tryLine: String
+
+    init(_ e: IdentitySheet.Explanation, equation item: IdentitySheet.Item, onTry: ((String) -> Void)?,
+         onRelated: ((Int) -> Void)? = nil, onBack: (() -> Void)? = nil) {
+        self.onTry = onTry
+        self.onRelated = onRelated
+        self.onBack = onBack
+        tryLine = e.tryLine
+        super.init(frame: .zero)
+        let text = Self.text(e, item, links: onRelated != nil)
+        let inner = Self.width - Self.pad * 2
+        let view = NSTextView(frame: NSRect(x: 0, y: 0, width: inner, height: 10))
+        view.isEditable = false
+        view.isSelectable = true
+        view.drawsBackground = false
+        view.textContainerInset = .zero
+        view.textContainer?.lineFragmentPadding = 0
+        view.textContainer?.widthTracksTextView = true
+        view.textStorage?.setAttributedString(text)
+        view.linkTextAttributes = [.foregroundColor: NSColor.controlAccentColor, .cursor: NSCursor.pointingHand]
+        view.delegate = self
+        view.setAccessibilityLabel(e.title)
+        view.layoutManager?.ensureLayout(for: view.textContainer!)
+        let used = ceil(view.layoutManager?.usedRect(for: view.textContainer!).height ?? 100)
+        view.frame.size.height = used
+        let footer: CGFloat = onTry == nil && onBack == nil ? 0 : 40
+        let shown = min(used, Self.tallest - footer - Self.pad * 2)
+        let scroll = NSScrollView(frame: NSRect(x: Self.pad, y: footer + Self.pad, width: inner, height: shown))
+        scroll.drawsBackground = false
+        scroll.hasVerticalScroller = used > shown
+        scroll.autohidesScrollers = true
+        scroll.documentView = view
+        addSubview(scroll)
+        frame.size = NSSize(width: Self.width, height: shown + footer + Self.pad * 2)
+        var lineStart = Self.pad
+        if onBack != nil {
+            let back = NSButton(title: "‹ Back", target: self, action: #selector(goBack))
+            back.bezelStyle = .rounded
+            back.sizeToFit()
+            back.frame.origin = NSPoint(x: Self.pad, y: Self.pad - 2)
+            back.toolTip = "Back to the explanation before"
+            addSubview(back)
+            lineStart = back.frame.maxX + 10
+        }
+        if onTry != nil {
+            let button = NSButton(title: "Try it in the bar", target: self, action: #selector(tryIt))
+            button.bezelStyle = .rounded
+            button.sizeToFit()
+            button.frame.origin = NSPoint(x: Self.width - Self.pad - button.frame.width, y: Self.pad - 2)
+            button.toolTip = e.tryLine
+            addSubview(button)
+            let line = NSTextField(labelWithString: e.tryLine)
+            line.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
+            line.textColor = .secondaryLabelColor
+            line.lineBreakMode = .byTruncatingTail
+            line.frame = NSRect(x: lineStart, y: Self.pad + 4, width: max(0, button.frame.minX - lineStart - 8), height: 16)
+            addSubview(line)
+        }
+        DispatchQueue.main.async { view.scroll(.zero) }
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    @objc private func tryIt() {
+        onTry?(tryLine)
+    }
+
+    @objc private func goBack() {
+        onBack?()
+    }
+
+    func textView(_ textView: NSTextView, clickedOnLink link: Any, at charIndex: Int) -> Bool {
+        guard let url = link as? URL, url.scheme == Self.linkScheme, let i = Int(url.host ?? "") else { return false }
+        onRelated?(i)
+        return true
+    }
+
+    private static let body = NSFont.systemFont(ofSize: 12.5)
+
+    // the whole explanation as one text
+    private static func text(_ e: IdentitySheet.Explanation, _ item: IdentitySheet.Item, links: Bool) -> NSAttributedString {
+        let out = NSMutableAttributedString()
+        out.append(rich(e.title, size: 15, weight: .semibold))
+        out.append(NSAttributedString(string: "\n"))
+        out.append(equation(item))
+        if !e.about.isEmpty {
+            out.append(paragraph(rich(e.about, size: 12.5), space: 8))
+        }
+        if !e.assumptions.isEmpty {
+            out.append(heading("Assumptions"))
+            for a in e.assumptions { out.append(bullet(rich(a, size: 12.5))) }
+        }
+        if !e.vars.isEmpty {
+            out.append(heading("Variables"))
+            let width = e.vars.map { rich($0.first ?? "", size: 13).size().width }.max() ?? 20
+            let column = min(max(width + 12, 36), 110)
+            for v in e.vars where v.count >= 2 {
+                let line = NSMutableAttributedString()
+                line.append(rich(v[0], size: 13))
+                line.append(NSAttributedString(string: "\t"))
+                line.append(rich(v[1], size: 12.5))
+                if v.count > 2, !v[2].isEmpty {
+                    line.append(rich(", in " + v[2], size: 12, color: .secondaryLabelColor))
+                }
+                out.append(table(line, column: column))
+            }
+        }
+        if !e.problem.isEmpty {
+            out.append(heading("Example"))
+            out.append(paragraph(rich(e.problem, size: 12.5), space: 2))
+            for (i, step) in e.steps.enumerated() {
+                let line = NSMutableAttributedString(string: "\(i + 1).\t", attributes: [.font: body, .foregroundColor: NSColor.secondaryLabelColor])
+                line.append(rich(step, size: 12.5))
+                out.append(table(line, column: 20))
+            }
+            if !e.answer.isEmpty {
+                let line = NSMutableAttributedString(string: "Answer  ", attributes: [.font: NSFont.systemFont(ofSize: 12.5, weight: .semibold), .foregroundColor: NSColor.labelColor])
+                line.append(rich(e.answer, size: 12.5, weight: .semibold))
+                out.append(paragraph(line, space: 6))
+            }
+        }
+        if !e.related.isEmpty {
+            out.append(heading("Related"))
+            for (i, r) in e.related.enumerated() where !r.isEmpty {
+                let line = NSMutableAttributedString(attributedString: rich(r[0], size: 13))
+                // the formula is the link; its note stays plain
+                if links, let url = URL(string: "\(linkScheme)://\(i)") {
+                    line.addAttribute(.link, value: url, range: NSRange(location: 0, length: line.length))
+                }
+                if r.count > 1, !r[1].isEmpty {
+                    line.append(NSAttributedString(string: "   "))
+                    line.append(rich(r[1], size: 12, color: .secondaryLabelColor))
+                }
+                out.append(bullet(line))
+            }
+        }
+        return out
+    }
+
+    // the row's equation, typeset as the sheet draws it where it can be, centred
+    private static func equation(_ item: IdentitySheet.Item) -> NSAttributedString {
+        let gap: CGFloat = 24
+        let line: NSAttributedString
+        if !item.cells.isEmpty {
+            let cells = item.cells
+            let size = NSSize(width: cells.map(\.size.width).reduce(0, +) + gap * CGFloat(cells.count - 1),
+                              height: cells.map(\.size.height).max() ?? 0)
+            let image = NSImage(size: size, flipped: true) { _ in
+                guard let cg = NSGraphicsContext.current?.cgContext else { return false }
+                var x: CGFloat = 0
+                for cell in cells {
+                    cg.saveGState()
+                    cg.translateBy(x: x, y: (size.height - cell.size.height) / 2)
+                    cell.draw(cg)
+                    cg.restoreGState()
+                    x += cell.size.width + gap
+                }
+                return true
+            }
+            let attachment = NSTextAttachment()
+            attachment.image = image
+            attachment.bounds = NSRect(origin: .zero, size: size)
+            line = NSAttributedString(attachment: attachment)
+        } else {
+            let runs = item.lead + [item.runs]
+            let text = NSMutableAttributedString()
+            for (i, cell) in runs.enumerated() {
+                if i > 0 { text.append(NSAttributedString(string: "    ")) }
+                text.append(math(cell, size: 16, color: .labelColor, weight: .regular))
+            }
+            line = text
+        }
+        let style = NSMutableParagraphStyle()
+        style.alignment = .center
+        style.paragraphSpacingBefore = 10
+        style.paragraphSpacing = 4
+        let out = NSMutableAttributedString(attributedString: line)
+        out.append(NSAttributedString(string: "\n"))
+        out.addAttribute(.paragraphStyle, value: style, range: NSRange(location: 0, length: out.length))
+        return out
+    }
+
+    private static func heading(_ title: String) -> NSAttributedString {
+        let style = NSMutableParagraphStyle()
+        style.paragraphSpacingBefore = 12
+        style.paragraphSpacing = 3
+        return NSAttributedString(string: title + "\n", attributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold),
+                                                                     .foregroundColor: NSColor.secondaryLabelColor, .paragraphStyle: style])
+    }
+
+    private static func paragraph(_ text: NSAttributedString, space: CGFloat) -> NSAttributedString {
+        let style = NSMutableParagraphStyle()
+        style.paragraphSpacingBefore = space
+        style.lineSpacing = 1.5
+        let out = NSMutableAttributedString(attributedString: text)
+        out.append(NSAttributedString(string: "\n", attributes: [.font: body]))
+        out.addAttribute(.paragraphStyle, value: style, range: NSRange(location: 0, length: out.length))
+        return out
+    }
+
+    private static func bullet(_ text: NSAttributedString) -> NSAttributedString {
+        let line = NSMutableAttributedString(string: "•\t", attributes: [.font: body, .foregroundColor: NSColor.secondaryLabelColor])
+        line.append(text)
+        return table(line, column: 14)
+    }
+
+    // a first cell, a tab, and the rest wrapping under the rest
+    private static func table(_ line: NSAttributedString, column: CGFloat) -> NSAttributedString {
+        let style = NSMutableParagraphStyle()
+        style.tabStops = [NSTextTab(textAlignment: .left, location: column)]
+        style.defaultTabInterval = column
+        style.headIndent = column
+        style.paragraphSpacing = 3
+        style.lineSpacing = 1.5
+        let out = NSMutableAttributedString(attributedString: line)
+        out.append(NSAttributedString(string: "\n", attributes: [.font: body]))
+        out.addAttribute(.paragraphStyle, value: style, range: NSRange(location: 0, length: out.length))
+        return out
+    }
+
+    // `^{…}` raised and `_{…}` lowered, as a row's `show` reads; a raised run's own `_{…}` is lowered within it
+    static func runs(_ text: String) -> [IdentitySheet.Run] {
+        var out: [IdentitySheet.Run] = []
+        var current = ""
+        var stack: [String] = []
+        let chars = Array(text)
+        var i = 0
+        func flush() {
+            if !current.isEmpty { out.append(IdentitySheet.Run(text: current, shift: stack.last ?? "")) }
+            current = ""
+        }
+        while i < chars.count {
+            let c = chars[i]
+            if (c == "^" || c == "_"), i + 1 < chars.count, chars[i + 1] == "{" {
+                flush()
+                let outer = stack.last ?? ""
+                stack.append(outer == "sup" && c == "_" ? "supsub" : outer.isEmpty ? (c == "^" ? "sup" : "sub") : outer)
+                i += 2
+                continue
+            }
+            if c == "}", !stack.isEmpty {
+                flush()
+                stack.removeLast()
+                i += 1
+                continue
+            }
+            current.append(c)
+            i += 1
+        }
+        flush()
+        return out
+    }
+
+    private static func rich(_ text: String, size: CGFloat, weight: NSFont.Weight = .regular, color: NSColor = .labelColor) -> NSAttributedString {
+        math(runs(text), size: size, color: color, weight: weight)
+    }
+
+    private static func math(_ runs: [IdentitySheet.Run], size: CGFloat, color: NSColor, weight: NSFont.Weight) -> NSAttributedString {
+        let text = NSMutableAttributedString()
+        for run in runs {
+            let font: NSFont
+            let offset: CGFloat
+            switch run.shift {
+            case "sup": (font, offset) = (.systemFont(ofSize: size * 0.73, weight: weight), size * 0.38)
+            case "sub": (font, offset) = (.systemFont(ofSize: size * 0.73, weight: weight), -size * 0.23)
+            case "supsub": (font, offset) = (.systemFont(ofSize: size * 0.62, weight: weight), size * 0.15)
+            default: (font, offset) = (.systemFont(ofSize: size, weight: weight), 0)
+            }
+            text.append(NSAttributedString(string: run.text, attributes: [.font: font, .foregroundColor: color, .baselineOffset: offset]))
+        }
+        return text
+    }
+}
+
 // One window of sheets, a page at a time: a row that opens a sheet (`formulas`) replaces the page, and back and forward
 // (⌘[ ⌘], the header's arrows, a sideways swipe) step through what was shown. Each window keeps its own pages.
 final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowDelegate {
@@ -505,6 +825,16 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
     var onOpen: ((String) -> Void)?
     // the same line, from a row's Open in New Window; with none, rows have no menu
     var onOpenNew: ((String) -> Void)?
+    // an explanation's Try button: its line, into the bar
+    var onTry: ((String) -> Void)?
+    // every sheet (the native app's): a search lists matches from the others too, and a Related formula opens its
+    // own explanation wherever it is. Nil in the web-view app, which searches the open sheet alone
+    static var allSheets: (() -> [IdentitySheet])?
+    // the explanations a Related link went through, for Back: what's shown, last
+    private var explained: [(IdentitySheet.Explanation, IdentitySheet.Item)] = []
+    private weak var explainedRow: IdentityRow?
+    // the explanation a click opened beside its row
+    private var explainer: NSPopover?
     // the pages shown in this window, and which one is up; each remembers where it was scrolled to
     private struct Page {
         let sheet: IdentitySheet
@@ -540,6 +870,7 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
     private let sectionTitle: CGFloat = 26
     private let maxHeight: CGFloat = 620
     private static let hint = "click to copy"
+    private static let explainHint = "click to copy and explain"
 
     init(id: String, cascade: Int) {
         self.id = id
@@ -590,7 +921,12 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         scroll.reflectScrolledClipView(scroll.contentView)
     }
 
-    // the rows a filter leaves, laid out afresh; the figure is never filtered
+    // a search's rows from other sheets, at most this many
+    private static let elsewhereMost = 60
+
+    // the rows a filter leaves, laid out afresh; the figure is never filtered. A filter lists this sheet's matches,
+    // then (the native app) every other sheet's under "<sheet> · <section>"; a row matches when it has every word,
+    // or, when no row anywhere does, all but one of them ("closest matches")
     private func layout(_ content: NSView, _ sheet: IdentitySheet, filter: String) {
         content.subviews.forEach { $0.removeFromSuperview() }
         sectionTops = [:]
@@ -599,24 +935,72 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         let words = Self.searchWords(filter)
         var y: CGFloat = 0
         var matched = false
-        for (index, section) in sheet.sections.enumerated() {
-            // a picture needs no headings over it
-            let bare = section.groups.contains { $0.items.contains(where: \.figure) }
-            // each group's rows the filter keeps: a heading row stays when its table has a match below it
-            let groups: [(IdentitySheet.Group, [IdentitySheet.Item])] = section.groups.compactMap { group in
-                if words.isEmpty || bare { return (group, group.items) }
-                let kept = group.items.filter { item in
-                    item.copy.isEmpty || Self.matches(words, [section.title, group.title] + Self.searchText(item))
-                }
-                if !kept.contains(where: { !$0.copy.isEmpty }) { return nil }
-                matched = true
-                return (group, kept)
+        // this sheet's sections (with their index, for `idt summation`), then the other sheets' while searching
+        var shown: [(index: Int?, title: String, section: IdentitySheet.Section)] =
+            sheet.sections.enumerated().map { ($0.offset, $0.element.title, $0.element) }
+        let others = words.isEmpty ? [] : (Self.allSheets?() ?? []).filter { $0.id != sheet.id }
+        for other in others {
+            for section in other.sections where !section.groups.contains(where: { $0.items.contains(where: \.figure) }) {
+                shown.append((nil, "\(other.title) · \(section.title)", section))
             }
+        }
+        func kept(_ need: Int) -> [[(IdentitySheet.Group, [IdentitySheet.Item])]] {
+            var elsewhere = 0
+            // a row listed once: a one-formula sheet (`ohm's law`) repeats its row from the big sheet
+            var seen = Set<String>()
+            return shown.map { entry in
+                let section = entry.section
+                let bare = section.groups.contains { $0.items.contains(where: \.figure) }
+                return section.groups.compactMap { group in
+                    if words.isEmpty || bare { return entry.index == nil ? nil : (group, group.items) }
+                    if entry.index == nil, elsewhere >= Self.elsewhereMost { return nil }
+                    let rows = group.items.filter { item in
+                        guard !item.copy.isEmpty else { return true }
+                        guard Self.matchCount(words, [entry.title, group.title] + Self.searchText(item)) >= need,
+                              entry.index != nil || !seen.contains(item.copy) else { return false }
+                        seen.insert(item.copy)
+                        return true
+                    }
+                    let count = rows.filter { !$0.copy.isEmpty }.count
+                    if count == 0 { return nil }
+                    if entry.index == nil { elsewhere += count }
+                    return (group, rows)
+                }
+            }
+        }
+        // a figure's section is kept whatever the filter, so it isn't a match
+        func anyMatch(_ found: [[(IdentitySheet.Group, [IdentitySheet.Item])]]) -> Bool {
+            shown.indices.contains { !found[$0].isEmpty && !shown[$0].section.groups.contains { $0.items.contains(where: \.figure) } }
+        }
+        var found = kept(words.count)
+        var closest = false
+        if words.count > 1, !anyMatch(found) {
+            let near = kept(words.count - 1)
+            if anyMatch(near) { found = near; closest = true }
+        }
+        matched = anyMatch(found)
+        // a quiet line over a closest-match search, and where the other sheets' matches start
+        func say(_ text: String) {
+            let note = label(text, size: 11, weight: .regular, color: .tertiaryLabelColor)
+            note.frame = NSRect(x: inset, y: y + 2, width: width - inset * 2, height: 14)
+            content.addSubview(note)
+            y += 20
+        }
+        if closest { say("no row has every word · closest matches") }
+        var saidElsewhere = false
+        for (n, entry) in shown.enumerated() {
+            let section = entry.section
+            let bare = section.groups.contains { $0.items.contains(where: \.figure) }
+            let groups = found[n]
             if groups.isEmpty { continue }
-            sectionTops[index] = y
+            if entry.index == nil, !saidElsewhere {
+                saidElsewhere = true
+                say("in other sheets")
+            }
+            if let index = entry.index { sectionTops[index] = y }
             let titleFrame = NSRect(x: inset, y: y + 4, width: width - inset * 2, height: 16)
             if !bare {
-                let title = label(section.title, size: 12, weight: .semibold, color: .labelColor)
+                let title = label(entry.title, size: 12, weight: .semibold, color: .labelColor)
                 title.frame = titleFrame
                 content.addSubview(title)
                 let rule = NSBox(frame: NSRect(x: inset, y: y + sectionTitle - 3, width: width - inset * 2, height: 1))
@@ -647,6 +1031,7 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
                         idleHint = "click to open"
                     } else if !item.copy.isEmpty || item.figure {
                         row.onPick = { [weak self] in self?.copy($0) }
+                        if item.explain != nil { idleHint = Self.explainHint }
                     }
                     content.addSubview(row)
                     gy += height
@@ -668,11 +1053,38 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         content.setFrameSize(NSSize(width: width, height: max(0, y + inset - 14)))
     }
 
-    // what a filter is matched on: the row's words, its note and what it copies (symbols such as τ included)
+    // what a filter is matched on: the row's words, its note and what it copies (symbols such as τ included), and its
+    // explanation's title, related formulas and letters, each letter's unit with that unit's name (`ohm` finds rows in Ω, `newton` and
+    // `force` rows in N)
     private static func searchText(_ item: IdentitySheet.Item) -> [String] {
         let runs = (item.lead + [item.runs]).map { $0.map(\.text).joined() }
-        return runs + [item.note, item.copy, item.open] + item.leadCopy + item.parts.map(\.copy)
+        var texts = runs + [item.note, item.copy, item.open] + item.leadCopy + item.parts.map(\.copy)
+        if let e = item.explain {
+            texts.append(e.title)
+            // its related formulas and what each is (`effective annual yield` finds compound interest)
+            texts += e.related.map { $0.joined(separator: " ") }
+            for v in e.vars {
+                texts.append(v.dropFirst().joined(separator: " "))
+                if v.count > 2, let name = unitNames[v[2].trimmingCharacters(in: .whitespaces)] { texts.append(name) }
+            }
+        }
+        return texts
     }
+
+    // the SI units the explanations give, by name and by what they measure, so a word finds the symbol
+    private static let unitNames: [String: String] = [
+        "Ω": "ohm ohms resistance resistor", "S": "siemens conductance", "V": "volt volts voltage potential emf",
+        "A": "amp amps ampere current", "W": "watt watts power", "J": "joule joules energy work heat",
+        "N": "newton newtons force", "N·m": "newton meter torque moment", "Pa": "pascal pressure stress",
+        "C": "coulomb charge", "F": "farad capacitance capacitor", "H": "henry inductance inductor",
+        "T": "tesla magnetic field flux density", "Wb": "weber magnetic flux", "Hz": "hertz frequency",
+        "rad/s": "angular frequency velocity", "kg": "kilogram mass", "m": "meter metre length distance",
+        "s": "second seconds time", "K": "kelvin temperature", "°C": "celsius temperature", "mol": "mole moles amount",
+        "m/s": "velocity speed", "m/s^{2}": "acceleration", "kg·m/s": "momentum impulse", "m^{2}": "area",
+        "m^{3}": "volume", "kg/m^{3}": "density", "W/(m·K)": "thermal conductivity", "N/m": "spring constant stiffness",
+        "kg·m^{2}": "moment of inertia", "m^{4}": "second moment of area", "rad": "radian angle", "lm": "lumen", "cd": "candela",
+        "V/m": "electric field", "A/m": "magnetic field strength", "Pa·s": "viscosity", "m^{3}/s": "flow rate",
+    ]
 
     private static func fold(_ text: String) -> String {
         text.folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: nil)
@@ -688,16 +1100,14 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         fold(filter).split(whereSeparator: \.isWhitespace).map(String.init)
     }
 
-    // every word of the filter is somewhere in the row, its group's or its section's title
-    private static func matches(_ words: [String], _ texts: [String]) -> Bool {
+    // how many of the filter's words are somewhere in the row, its group's or its section's title
+    private static func matchCount(_ words: [String], _ texts: [String]) -> Int {
         let hay = fold(texts.joined(separator: " "))
-        // squeezed a word at a time, so `sin` doesn't run across `s in`; and again with greek spelled in latin
-        // (τ is t, σ is s, θ is th), so `tmax` finds τ_max while a typed `τ` still finds only τ
         let squeezed = hay.split(whereSeparator: \.isWhitespace).map { compact(String($0)) }
         let tight = squeezed + squeezed.map(latin).filter { !squeezed.contains($0) }
-        return words.allSatisfy { word in
+        return words.filter { word in
             hay.contains(word) || { let w = compact(word); return !w.isEmpty && tight.contains { $0.contains(w) } }()
-        }
+        }.count
     }
 
     // greek in latin letters (ICU's Greek-Latin), folded again: τ_max is t_max, ω is o, Δ is d
@@ -873,6 +1283,7 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
     // the page that's up, laid out afresh with the filter cleared; the window keeps its top edge and takes the page's height
     private func render() {
         guard pages.indices.contains(at), let panel, let scroll, let content = scroll.documentView else { return }
+        explainer?.close()
         let sheet = pages[at].sheet
         self.sheet = sheet
         clearCopied?.cancel()
@@ -988,6 +1399,7 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         guard !text.isEmpty else { return }
         Self.board.clearContents()
         Self.board.setString(text, forType: .string)
+        if let explain = row.item.explain { showExplanation(explain, for: row) }
         copiedRow?.copied = false
         row.copied = true
         copiedRow = row
@@ -1002,10 +1414,86 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: clear)
     }
 
-    // Esc clears the filter first, then closes the sheet
+    // a row's explanation, in a popover beside it; another click replaces it
+    private func showExplanation(_ explain: IdentitySheet.Explanation, for row: IdentityRow) {
+        explainer?.close()
+        explained = [(explain, row.item)]
+        explainedRow = row
+        let popover = NSPopover()
+        popover.behavior = .transient
+        popover.animates = false
+        popover.appearance = panel?.appearance
+        popover.contentViewController = NSViewController()
+        explainer = popover
+        fillExplainer()
+        // beside the row, on whichever side has more room on the screen
+        let onScreen = row.window?.convertToScreen(row.convert(row.bounds, to: nil)) ?? .zero
+        let screen = (row.window?.screen ?? NSScreen.main)?.visibleFrame ?? .zero
+        let edge: NSRectEdge = screen.maxX - onScreen.maxX >= onScreen.minX - screen.minX ? .maxX : .minX
+        popover.show(relativeTo: row.bounds, of: row, preferredEdge: edge)
+    }
+
+    // the popover shows the last explanation gone to, with Back when a Related link brought it there
+    private func fillExplainer() {
+        guard let popover = explainer, let (explain, item) = explained.last else { return }
+        let view = ExplanationView(explain, equation: item, onTry: explain.tryLine.isEmpty ? nil : { [weak self, weak popover] line in
+            popover?.close()
+            self?.onTry?(line)
+        }, onRelated: { [weak self] i in
+            self?.openRelated(explain.related[i])
+        }, onBack: explained.count > 1 ? { [weak self] in
+            self?.explained.removeLast()
+            self?.fillExplainer()
+        } : nil)
+        popover.contentViewController?.view = view
+        popover.contentSize = view.frame.size
+    }
+
+    // a Related formula: its own explanation, in the same popover, when some row has one; otherwise the sheets
+    // searched for it, its note's words first (`effective annual yield`), closest matches if nothing has them all
+    private func openRelated(_ related: [String]) {
+        let formula = related.first ?? ""
+        if let item = Self.explainedRow(for: formula, in: [sheet].compactMap { $0 } + (Self.allSheets?() ?? [])),
+           let explain = item.explain {
+            explained.append((explain, item))
+            fillExplainer()
+            return
+        }
+        explainer?.close()
+        let note = related.count > 1 ? related[1] : ""
+        setFilter(note.isEmpty ? formula : note)
+    }
+
+    // the row a formula is: the same characters, leaving out spaces, brackets, ^ _ and the way minus and times are
+    // written, compared with each of a row's cells and its equation, either way round
+    private static func explainedRow(for formula: String, in sheets: [IdentitySheet]) -> IdentitySheet.Item? {
+        func key(_ text: String) -> String {
+            let plain = text.replacingOccurrences(of: "\u{2212}", with: "-")
+            return String(plain.lowercased().filter { !" \t{}()^_*·×⋅".contains($0) })
+        }
+        let want = key(formula)
+        let sides = formula.components(separatedBy: "=")
+        let flipped = sides.count == 2 ? key(sides[1] + "=" + sides[0]) : nil
+        guard !want.isEmpty else { return nil }
+        for sheet in sheets {
+            for section in sheet.sections {
+                for group in section.groups {
+                    for item in group.items where item.explain != nil {
+                        let cells = (item.lead + [item.runs]).map { key($0.map(\.text).joined()) }
+                        if cells.contains(want) || flipped.map(cells.contains) == true { return item }
+                    }
+                }
+            }
+        }
+        return nil
+    }
+
+    // Esc closes an explanation, then clears the filter, then closes the sheet
     func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
         guard control === filterField, selector == #selector(NSResponder.cancelOperation(_:)) else { return false }
-        if filterField?.stringValue.isEmpty == false {
+        if let explainer, explainer.isShown {
+            explainer.close()
+        } else if filterField?.stringValue.isEmpty == false {
             filterField?.stringValue = ""
             refilter()
         } else {

@@ -1,0 +1,3433 @@
+{
+  "sin^{2}x + cos^{2}x = 1": {
+    "title": "Pythagorean identity",
+    "about": "On the unit circle the point at angle x is (cos x, sin x), and its distance from the origin is 1, so the squares add to 1. Use it to get cos x from sin x (or back), and to swap sin^{2} for 1 − cos^{2} when simplifying.",
+    "assumptions": [
+      "Holds for every real (or complex) x",
+      "Solving for one function gives a ± sign; pick it from the quadrant of x"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "1 + tan^{2}x = sec^{2}x",
+        "divide through by cos^{2}x"
+      ],
+      [
+        "1 + cot^{2}x = csc^{2}x",
+        "divide through by sin^{2}x"
+      ]
+    ],
+    "example": {
+      "problem": "x is in the second quadrant with sin x = 3/5. Find cos x.",
+      "steps": [
+        "cos^{2}x = 1 − sin^{2}x = 1 − 9/25 = 16/25",
+        "cos x = ±4/5; cosine is negative in quadrant II"
+      ],
+      "answer": "cos x = −4/5 = −0.8"
+    },
+    "try": "-sqrt(1 - (3/5)^2)"
+  },
+  "1 + tan^{2}x = sec^{2}x": {
+    "title": "Pythagorean identity for tan and sec",
+    "about": "Divide sin^{2}x + cos^{2}x = 1 by cos^{2}x. It links tangent and secant, and is the substitution behind ∫sec^{2}x dx and the x = a tan θ trick in integrals with a^{2} + x^{2}.",
+    "assumptions": [
+      "cos x ≠ 0 (x ≠ π/2 + kπ), where tan and sec are undefined"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}x + cos^{2}x = 1",
+        "the parent identity"
+      ],
+      [
+        "1 + cot^{2}x = csc^{2}x",
+        "divide by sin^{2}x instead"
+      ]
+    ],
+    "example": {
+      "problem": "tan x = 2 with x in quadrant I. Find sec x and cos x.",
+      "steps": [
+        "sec^{2}x = 1 + 2^{2} = 5",
+        "sec x = √5 (positive in quadrant I)",
+        "cos x = 1/√5 ≈ 0.4472"
+      ],
+      "answer": "sec x = √5 ≈ 2.236"
+    },
+    "try": "sqrt(1 + 2^2)"
+  },
+  "1 + cot^{2}x = csc^{2}x": {
+    "title": "Pythagorean identity for cot and csc",
+    "about": "Divide sin^{2}x + cos^{2}x = 1 by sin^{2}x. It links cotangent and cosecant, and turns 1 + cot^{2} into a single square.",
+    "assumptions": [
+      "sin x ≠ 0 (x ≠ kπ), where cot and csc are undefined"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}x + cos^{2}x = 1",
+        "the parent identity"
+      ],
+      [
+        "1 + tan^{2}x = sec^{2}x",
+        "divide by cos^{2}x instead"
+      ]
+    ],
+    "example": {
+      "problem": "Check the identity at x = 30°.",
+      "steps": [
+        "cot 30° = √3, so 1 + cot^{2} = 1 + 3 = 4",
+        "csc 30° = 1/sin 30° = 2, so csc^{2} = 4"
+      ],
+      "answer": "both sides = 4"
+    },
+    "try": "1 + cot(30)^2"
+  },
+  "csc x = 1/sin x": {
+    "title": "Cosecant, the reciprocal of sine",
+    "about": "Cosecant is defined as one over sine. Calculators rarely have a csc key, so you evaluate it as 1/sin.",
+    "assumptions": [
+      "sin x ≠ 0, so x ≠ kπ"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sec x = 1/cos x",
+        "reciprocal of cosine"
+      ],
+      [
+        "cot x = 1/tan x",
+        "reciprocal of tangent"
+      ]
+    ],
+    "example": {
+      "problem": "Find csc 30°.",
+      "steps": [
+        "sin 30° = 1/2",
+        "csc 30° = 1/(1/2) = 2"
+      ],
+      "answer": "csc 30° = 2"
+    },
+    "try": "1/sin(30)"
+  },
+  "sec x = 1/cos x": {
+    "title": "Secant, the reciprocal of cosine",
+    "about": "Secant is defined as one over cosine. It shows up in derivatives (d/dx tan x = sec^{2}x) and in the length of a slanted line.",
+    "assumptions": [
+      "cos x ≠ 0, so x ≠ π/2 + kπ"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "csc x = 1/sin x",
+        "reciprocal of sine"
+      ],
+      [
+        "1 + tan^{2}x = sec^{2}x",
+        "its Pythagorean identity"
+      ]
+    ],
+    "example": {
+      "problem": "Find sec 60°.",
+      "steps": [
+        "cos 60° = 1/2",
+        "sec 60° = 1/(1/2) = 2"
+      ],
+      "answer": "sec 60° = 2"
+    },
+    "try": "1/cos(60)"
+  },
+  "cot x = 1/tan x": {
+    "title": "Cotangent, the reciprocal of tangent",
+    "about": "Cotangent is one over tangent, or equivalently cos x/sin x. Use the quotient form where tan x is undefined (cot 90° = 0).",
+    "assumptions": [
+      "tan x ≠ 0 and defined; at x = π/2 + kπ use cot x = cos x/sin x = 0 instead"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "cot x = cos x / sin x",
+        "quotient form, defined wherever sin x ≠ 0"
+      ],
+      [
+        "tan x = sin x / cos x",
+        "tangent"
+      ]
+    ],
+    "example": {
+      "problem": "Find cot 60°.",
+      "steps": [
+        "tan 60° = √3",
+        "cot 60° = 1/√3 = √3/3"
+      ],
+      "answer": "cot 60° = √3/3 ≈ 0.5774"
+    },
+    "try": "1/tan(60)"
+  },
+  "tan x = sin x / cos x": {
+    "title": "Tangent as a quotient",
+    "about": "Tangent is the ratio of the unit-circle point's y to its x, which is the slope of the ray at angle x. Rewriting tan in sines and cosines is the usual first step in proving an identity.",
+    "assumptions": [
+      "cos x ≠ 0 (x ≠ π/2 + kπ)"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "cot x = cos x / sin x",
+        "the reciprocal ratio"
+      ],
+      [
+        "1 + tan^{2}x = sec^{2}x",
+        "Pythagorean form"
+      ]
+    ],
+    "example": {
+      "problem": "sin x = 0.6 and cos x = 0.8. Find tan x.",
+      "steps": [
+        "tan x = 0.6/0.8"
+      ],
+      "answer": "tan x = 0.75"
+    },
+    "try": "0.6/0.8"
+  },
+  "cot x = cos x / sin x": {
+    "title": "Cotangent as a quotient",
+    "about": "Cotangent is x over y for the unit-circle point, the reciprocal of tangent. This form stays defined at π/2, where tan is not.",
+    "assumptions": [
+      "sin x ≠ 0 (x ≠ kπ)"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "tan x = sin x / cos x",
+        "tangent"
+      ],
+      [
+        "cot x = 1/tan x",
+        "reciprocal form"
+      ]
+    ],
+    "example": {
+      "problem": "Find cot 45°.",
+      "steps": [
+        "cos 45° = sin 45° = √2/2",
+        "cot 45° = (√2/2)/(√2/2) = 1"
+      ],
+      "answer": "cot 45° = 1"
+    },
+    "try": "cos(45)/sin(45)"
+  },
+  "sin(π/2 − x) = cos x": {
+    "title": "Cofunction: sine of the complement",
+    "about": "In a right triangle the two acute angles add to 90°, and the side opposite one is adjacent to the other. So the sine of an angle is the cosine of its complement — the \"co\" in cosine.",
+    "assumptions": [
+      "Holds for all x; π/2 is 90° when working in degrees"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "cos(π/2 − x) = sin x",
+        "the companion"
+      ],
+      [
+        "sin(x − y) = sin x cos y − cos x sin y",
+        "proves it with x = π/2"
+      ]
+    ],
+    "example": {
+      "problem": "Write sin 70° as a cosine and check it.",
+      "steps": [
+        "sin 70° = cos(90° − 70°) = cos 20°",
+        "both are ≈ 0.9397"
+      ],
+      "answer": "sin 70° = cos 20° ≈ 0.9397"
+    },
+    "try": "sin(70)"
+  },
+  "cos(π/2 − x) = sin x": {
+    "title": "Cofunction: cosine of the complement",
+    "about": "The cosine of an angle equals the sine of its complement, from the right triangle with acute angles x and 90° − x.",
+    "assumptions": [
+      "Holds for all x"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin(π/2 − x) = cos x",
+        "the companion"
+      ],
+      [
+        "cos(x − y) = cos x cos y + sin x sin y",
+        "proves it with x = π/2"
+      ]
+    ],
+    "example": {
+      "problem": "Write cos 25° as a sine.",
+      "steps": [
+        "cos 25° = sin(90° − 25°) = sin 65°"
+      ],
+      "answer": "cos 25° = sin 65° ≈ 0.9063"
+    },
+    "try": "cos(25)"
+  },
+  "tan(π/2 − x) = cot x": {
+    "title": "Cofunction: tangent of the complement",
+    "about": "Swapping to the complementary angle swaps opposite and adjacent sides, so tangent becomes cotangent.",
+    "assumptions": [
+      "x ≠ kπ, where cot x is undefined"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "cot(π/2 − x) = tan x",
+        "the companion"
+      ],
+      [
+        "cot x = 1/tan x",
+        "reciprocal"
+      ]
+    ],
+    "example": {
+      "problem": "Find tan 60° from cot 30°.",
+      "steps": [
+        "tan 60° = tan(90° − 30°) = cot 30°",
+        "cot 30° = √3"
+      ],
+      "answer": "tan 60° = √3 ≈ 1.732"
+    },
+    "try": "1/tan(30)"
+  },
+  "cot(π/2 − x) = tan x": {
+    "title": "Cofunction: cotangent of the complement",
+    "about": "Cotangent of the complementary angle is tangent, because the opposite and adjacent sides swap roles.",
+    "assumptions": [
+      "x ≠ π/2 + kπ, where tan x is undefined"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "tan(π/2 − x) = cot x",
+        "the companion"
+      ]
+    ],
+    "example": {
+      "problem": "Write cot 80° using tangent.",
+      "steps": [
+        "cot 80° = tan(90° − 80°) = tan 10°"
+      ],
+      "answer": "cot 80° = tan 10° ≈ 0.1763"
+    },
+    "try": "cot(80)"
+  },
+  "sec(π/2 − x) = csc x": {
+    "title": "Cofunction: secant of the complement",
+    "about": "Secant is 1/cos and cosecant is 1/sin, so the cos ↔ sin cofunction identity carries over to their reciprocals.",
+    "assumptions": [
+      "sin x ≠ 0 (x ≠ kπ)"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "csc(π/2 − x) = sec x",
+        "the companion"
+      ],
+      [
+        "cos(π/2 − x) = sin x",
+        "the identity it comes from"
+      ]
+    ],
+    "example": {
+      "problem": "Find sec 60° using csc 30°.",
+      "steps": [
+        "sec 60° = sec(90° − 30°) = csc 30°",
+        "csc 30° = 1/sin 30° = 2"
+      ],
+      "answer": "sec 60° = 2"
+    },
+    "try": "1/sin(30)"
+  },
+  "csc(π/2 − x) = sec x": {
+    "title": "Cofunction: cosecant of the complement",
+    "about": "Cosecant of the complement is secant: the reciprocal of sin(π/2 − x) = cos x.",
+    "assumptions": [
+      "cos x ≠ 0 (x ≠ π/2 + kπ)"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sec(π/2 − x) = csc x",
+        "the companion"
+      ]
+    ],
+    "example": {
+      "problem": "Find csc 30° using sec 60°.",
+      "steps": [
+        "csc 30° = csc(90° − 60°) = sec 60°",
+        "sec 60° = 1/cos 60° = 2"
+      ],
+      "answer": "csc 30° = 2"
+    },
+    "try": "1/cos(60)"
+  },
+  "sin(−x) = −sin x": {
+    "title": "Sine is odd",
+    "about": "Reflecting the angle across the x-axis flips the unit-circle point's y-coordinate, so sine changes sign. Sine's graph is symmetric about the origin.",
+    "assumptions": [
+      "Holds for all x"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "cos(−x) = cos x",
+        "cosine is even"
+      ],
+      [
+        "tan(−x) = −tan x",
+        "tangent is odd"
+      ]
+    ],
+    "example": {
+      "problem": "Find sin(−30°).",
+      "steps": [
+        "sin(−30°) = −sin 30° = −1/2"
+      ],
+      "answer": "sin(−30°) = −0.5"
+    },
+    "try": "sin(-30)"
+  },
+  "cos(−x) = cos x": {
+    "title": "Cosine is even",
+    "about": "Reflecting the angle across the x-axis leaves the unit-circle point's x-coordinate unchanged, so cosine does not change. Its graph is symmetric about the y-axis.",
+    "assumptions": [
+      "Holds for all x"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin(−x) = −sin x",
+        "sine is odd"
+      ],
+      [
+        "tan(−x) = −tan x",
+        "tangent is odd"
+      ]
+    ],
+    "example": {
+      "problem": "Find cos(−60°).",
+      "steps": [
+        "cos(−60°) = cos 60° = 1/2"
+      ],
+      "answer": "cos(−60°) = 0.5"
+    },
+    "try": "cos(-60)"
+  },
+  "tan(−x) = −tan x": {
+    "title": "Tangent is odd",
+    "about": "Tangent is sin/cos: an odd function over an even one, so it is odd.",
+    "assumptions": [
+      "cos x ≠ 0 (x ≠ π/2 + kπ)"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin(−x) = −sin x",
+        "sine is odd"
+      ],
+      [
+        "cos(−x) = cos x",
+        "cosine is even"
+      ]
+    ],
+    "example": {
+      "problem": "Find tan(−45°).",
+      "steps": [
+        "tan(−45°) = −tan 45° = −1"
+      ],
+      "answer": "tan(−45°) = −1"
+    },
+    "try": "tan(-45)"
+  },
+  "sin(x + y) = sin x cos y + cos x sin y": {
+    "title": "Sine of a sum",
+    "about": "Breaks the sine of a sum into the sines and cosines of the parts. It gives exact values at angles like 75° = 45° + 30°, and the double-angle formula follows with y = x.",
+    "assumptions": [
+      "Holds for all x and y"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ],
+      [
+        "y",
+        "second angle",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin(x − y) = sin x cos y − cos x sin y",
+        "difference"
+      ],
+      [
+        "sin 2x = 2 sin x cos x",
+        "set y = x"
+      ],
+      [
+        "cos(x + y) = cos x cos y − sin x sin y",
+        "cosine of a sum"
+      ]
+    ],
+    "example": {
+      "problem": "Find sin 75° exactly.",
+      "steps": [
+        "sin 75° = sin 45° cos 30° + cos 45° sin 30°",
+        "= (√2/2)(√3/2) + (√2/2)(1/2)",
+        "= (√6 + √2)/4"
+      ],
+      "answer": "sin 75° = (√6 + √2)/4 ≈ 0.9659"
+    },
+    "try": "(sqrt(6) + sqrt(2))/4"
+  },
+  "sin(x − y) = sin x cos y − cos x sin y": {
+    "title": "Sine of a difference",
+    "about": "The sum formula with −y in place of y, using cos(−y) = cos y and sin(−y) = −sin y.",
+    "assumptions": [
+      "Holds for all x and y"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ],
+      [
+        "y",
+        "second angle",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin(x + y) = sin x cos y + cos x sin y",
+        "sum"
+      ],
+      [
+        "cos(x − y) = cos x cos y + sin x sin y",
+        "cosine of a difference"
+      ]
+    ],
+    "example": {
+      "problem": "Find sin 15° exactly.",
+      "steps": [
+        "sin 15° = sin 45° cos 30° − cos 45° sin 30°",
+        "= (√2/2)(√3/2) − (√2/2)(1/2)",
+        "= (√6 − √2)/4"
+      ],
+      "answer": "sin 15° = (√6 − √2)/4 ≈ 0.2588"
+    },
+    "try": "(sqrt(6) - sqrt(2))/4"
+  },
+  "cos(x + y) = cos x cos y − sin x sin y": {
+    "title": "Cosine of a sum",
+    "about": "Breaks the cosine of a sum into products of the parts' sines and cosines; note the minus sign. With y = x it gives the double-angle forms of cos 2x.",
+    "assumptions": [
+      "Holds for all x and y"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ],
+      [
+        "y",
+        "second angle",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "cos(x − y) = cos x cos y + sin x sin y",
+        "difference"
+      ],
+      [
+        "cos 2x = cos^{2}x − sin^{2}x",
+        "set y = x"
+      ]
+    ],
+    "example": {
+      "problem": "Find cos 75° exactly.",
+      "steps": [
+        "cos 75° = cos 45° cos 30° − sin 45° sin 30°",
+        "= (√2/2)(√3/2) − (√2/2)(1/2)",
+        "= (√6 − √2)/4"
+      ],
+      "answer": "cos 75° = (√6 − √2)/4 ≈ 0.2588"
+    },
+    "try": "(sqrt(6) - sqrt(2))/4"
+  },
+  "cos(x − y) = cos x cos y + sin x sin y": {
+    "title": "Cosine of a difference",
+    "about": "The sum formula with −y for y. It is often the one proved first (from the distance between two unit-circle points), and the others follow from it.",
+    "assumptions": [
+      "Holds for all x and y"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ],
+      [
+        "y",
+        "second angle",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "cos(x + y) = cos x cos y − sin x sin y",
+        "sum"
+      ],
+      [
+        "sin(x − y) = sin x cos y − cos x sin y",
+        "sine of a difference"
+      ]
+    ],
+    "example": {
+      "problem": "Find cos 15° exactly.",
+      "steps": [
+        "cos 15° = cos 45° cos 30° + sin 45° sin 30°",
+        "= (√2/2)(√3/2) + (√2/2)(1/2)",
+        "= (√6 + √2)/4"
+      ],
+      "answer": "cos 15° = (√6 + √2)/4 ≈ 0.9659"
+    },
+    "try": "(sqrt(6) + sqrt(2))/4"
+  },
+  "tan(x + y) = (tan x + tan y)/(1 − tan x tan y)": {
+    "title": "Tangent of a sum",
+    "about": "Divide sin(x + y) by cos(x + y) and then divide top and bottom by cos x cos y. Handy when you know the tangents (slopes) of two angles and want the angle they add to.",
+    "assumptions": [
+      "tan x, tan y and tan(x + y) defined: cos x, cos y ≠ 0 and tan x tan y ≠ 1"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ],
+      [
+        "y",
+        "second angle",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "tan(x − y) = (tan x − tan y)/(1 + tan x tan y)",
+        "difference"
+      ],
+      [
+        "tan 2x = 2 tan x/(1 − tan^{2}x)",
+        "set y = x"
+      ]
+    ],
+    "example": {
+      "problem": "Find tan 75° exactly.",
+      "steps": [
+        "tan 75° = (tan 45° + tan 30°)/(1 − tan 45° tan 30°)",
+        "= (1 + 1/√3)/(1 − 1/√3) = (√3 + 1)/(√3 − 1)",
+        "= 2 + √3"
+      ],
+      "answer": "tan 75° = 2 + √3 ≈ 3.732"
+    },
+    "try": "(1 + 1/sqrt(3))/(1 - 1/sqrt(3))"
+  },
+  "tan(x − y) = (tan x − tan y)/(1 + tan x tan y)": {
+    "title": "Tangent of a difference",
+    "about": "The sum formula with −y for y. With slopes m_{1} = tan x and m_{2} = tan y it gives the angle between two lines.",
+    "assumptions": [
+      "tan x, tan y defined and tan x tan y ≠ −1 (perpendicular lines)"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ],
+      [
+        "y",
+        "second angle",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "tan(x + y) = (tan x + tan y)/(1 − tan x tan y)",
+        "sum"
+      ]
+    ],
+    "example": {
+      "problem": "Find the acute angle between lines of slope 3 and 1.",
+      "steps": [
+        "tan θ = (3 − 1)/(1 + 3·1) = 2/4 = 0.5",
+        "θ = arctan 0.5"
+      ],
+      "answer": "θ ≈ 26.57°"
+    },
+    "try": "atan((3 - 1)/(1 + 3*1))"
+  },
+  "sin 2x = 2 sin x cos x": {
+    "title": "Double angle for sine",
+    "about": "The sine-of-a-sum formula with y = x. Use it to collapse sin x cos x into one sine, or to expand sin 2x when solving equations.",
+    "assumptions": [
+      "Holds for all x"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin(x + y) = sin x cos y + cos x sin y",
+        "where it comes from"
+      ],
+      [
+        "sin x cos y = ½[sin(x + y) + sin(x − y)]",
+        "product to sum"
+      ]
+    ],
+    "example": {
+      "problem": "sin x = 3/5 with x in quadrant I. Find sin 2x.",
+      "steps": [
+        "cos x = √(1 − 9/25) = 4/5",
+        "sin 2x = 2(3/5)(4/5) = 24/25"
+      ],
+      "answer": "sin 2x = 24/25 = 0.96"
+    },
+    "try": "2*(3/5)*(4/5)"
+  },
+  "cos 2x = cos^{2}x − sin^{2}x": {
+    "title": "Double angle for cosine",
+    "about": "The cosine-of-a-sum formula with y = x. Replacing sin^{2} or cos^{2} with the Pythagorean identity gives the two other forms.",
+    "assumptions": [
+      "Holds for all x"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "cos 2x = 2cos^{2}x − 1",
+        "in cosine only"
+      ],
+      [
+        "cos 2x = 1 − 2sin^{2}x",
+        "in sine only"
+      ]
+    ],
+    "example": {
+      "problem": "sin x = 3/5, cos x = 4/5. Find cos 2x.",
+      "steps": [
+        "cos 2x = (4/5)^{2} − (3/5)^{2} = 16/25 − 9/25"
+      ],
+      "answer": "cos 2x = 7/25 = 0.28"
+    },
+    "try": "(4/5)^2 - (3/5)^2"
+  },
+  "cos 2x = 2cos^{2}x − 1": {
+    "title": "Double angle for cosine, in cosine only",
+    "about": "Substitute sin^{2}x = 1 − cos^{2}x into cos^{2}x − sin^{2}x. Solved for cos^{2}x it becomes the power-reduction formula.",
+    "assumptions": [
+      "Holds for all x"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "cos 2x = cos^{2}x − sin^{2}x",
+        "the parent form"
+      ],
+      [
+        "cos^{2}x = (1 + cos 2x)/2",
+        "solved for cos^{2}x"
+      ]
+    ],
+    "example": {
+      "problem": "cos x = 0.8. Find cos 2x.",
+      "steps": [
+        "cos 2x = 2(0.8)^{2} − 1 = 1.28 − 1"
+      ],
+      "answer": "cos 2x = 0.28"
+    },
+    "try": "2*0.8^2 - 1"
+  },
+  "cos 2x = 1 − 2sin^{2}x": {
+    "title": "Double angle for cosine, in sine only",
+    "about": "Substitute cos^{2}x = 1 − sin^{2}x into cos^{2}x − sin^{2}x. Solved for sin^{2}x it becomes the power-reduction formula.",
+    "assumptions": [
+      "Holds for all x"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "cos 2x = cos^{2}x − sin^{2}x",
+        "the parent form"
+      ],
+      [
+        "sin^{2}x = (1 − cos 2x)/2",
+        "solved for sin^{2}x"
+      ]
+    ],
+    "example": {
+      "problem": "sin x = 0.6. Find cos 2x.",
+      "steps": [
+        "cos 2x = 1 − 2(0.6)^{2} = 1 − 0.72"
+      ],
+      "answer": "cos 2x = 0.28"
+    },
+    "try": "1 - 2*0.6^2"
+  },
+  "tan 2x = 2 tan x/(1 − tan^{2}x)": {
+    "title": "Double angle for tangent",
+    "about": "The tangent-of-a-sum formula with y = x. Gives tan 2x straight from tan x.",
+    "assumptions": [
+      "tan x defined and tan^{2}x ≠ 1 (x ≠ π/4 + kπ/2, where tan 2x is undefined)"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "tan(x + y) = (tan x + tan y)/(1 − tan x tan y)",
+        "where it comes from"
+      ],
+      [
+        "sin 2x = 2 sin x cos x",
+        "sine version"
+      ]
+    ],
+    "example": {
+      "problem": "tan x = 3/4. Find tan 2x.",
+      "steps": [
+        "tan 2x = 2(3/4)/(1 − 9/16) = (3/2)/(7/16)",
+        "= 24/7"
+      ],
+      "answer": "tan 2x = 24/7 ≈ 3.429"
+    },
+    "try": "2*(3/4)/(1 - (3/4)^2)"
+  },
+  "sin(x/2) = ±√((1 − cos x)/2)": {
+    "title": "Half angle for sine",
+    "about": "Power reduction sin^{2}θ = (1 − cos 2θ)/2 with θ = x/2. Gives exact sines of angles like 15° and 22.5°.",
+    "assumptions": [
+      "The sign is the sign of sin(x/2), set by the quadrant of x/2, not of x"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "cos(x/2) = ±√((1 + cos x)/2)",
+        "cosine version"
+      ],
+      [
+        "sin^{2}x = (1 − cos 2x)/2",
+        "where it comes from"
+      ]
+    ],
+    "example": {
+      "problem": "Find sin 15° exactly.",
+      "steps": [
+        "15° = 30°/2, in quadrant I so take +",
+        "sin 15° = √((1 − √3/2)/2) = √(2 − √3)/2"
+      ],
+      "answer": "sin 15° = √(2 − √3)/2 ≈ 0.2588"
+    },
+    "try": "sqrt((1 - cos(30))/2)"
+  },
+  "cos(x/2) = ±√((1 + cos x)/2)": {
+    "title": "Half angle for cosine",
+    "about": "Power reduction cos^{2}θ = (1 + cos 2θ)/2 with θ = x/2.",
+    "assumptions": [
+      "The sign is the sign of cos(x/2), set by the quadrant of x/2"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin(x/2) = ±√((1 − cos x)/2)",
+        "sine version"
+      ],
+      [
+        "cos^{2}x = (1 + cos 2x)/2",
+        "where it comes from"
+      ]
+    ],
+    "example": {
+      "problem": "Find cos 22.5° exactly.",
+      "steps": [
+        "22.5° = 45°/2, in quadrant I so take +",
+        "cos 22.5° = √((1 + √2/2)/2) = √(2 + √2)/2"
+      ],
+      "answer": "cos 22.5° = √(2 + √2)/2 ≈ 0.9239"
+    },
+    "try": "sqrt((1 + cos(45))/2)"
+  },
+  "tan(x/2) = (1 − cos x)/sin x": {
+    "title": "Half angle for tangent (no ± sign)",
+    "about": "Divide the sine and cosine half-angle forms and rationalize. Unlike those, this form carries its own sign, so no quadrant check is needed.",
+    "assumptions": [
+      "sin x ≠ 0 (x ≠ kπ)"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "tan(x/2) = sin x/(1 + cos x)",
+        "equivalent form, defined at x = 0"
+      ],
+      [
+        "tan^{2}x = (1 − cos 2x)/(1 + cos 2x)",
+        "power reduction"
+      ]
+    ],
+    "example": {
+      "problem": "Find tan 15° exactly.",
+      "steps": [
+        "tan 15° = (1 − cos 30°)/sin 30° = (1 − √3/2)/(1/2)",
+        "= 2 − √3"
+      ],
+      "answer": "tan 15° = 2 − √3 ≈ 0.2679"
+    },
+    "try": "(1 - cos(30))/sin(30)"
+  },
+  "tan(x/2) = sin x/(1 + cos x)": {
+    "title": "Half angle for tangent, second form",
+    "about": "Multiply (1 − cos x)/sin x by (1 + cos x)/(1 + cos x) and use 1 − cos^{2}x = sin^{2}x. Also the basis of the Weierstrass substitution t = tan(x/2) in integrals.",
+    "assumptions": [
+      "cos x ≠ −1 (x ≠ π + 2kπ)"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "tan(x/2) = (1 − cos x)/sin x",
+        "equivalent form"
+      ]
+    ],
+    "example": {
+      "problem": "Find tan 22.5° exactly.",
+      "steps": [
+        "tan 22.5° = sin 45°/(1 + cos 45°) = (√2/2)/(1 + √2/2)",
+        "= √2 − 1"
+      ],
+      "answer": "tan 22.5° = √2 − 1 ≈ 0.4142"
+    },
+    "try": "sin(45)/(1 + cos(45))"
+  },
+  "sin^{2}x = (1 − cos 2x)/2": {
+    "title": "Power reduction for sin²",
+    "about": "Trades a square for a first power of cosine at double the angle. The standard way to integrate sin^{2}x and to find the average of a squared sinusoid (it is ½).",
+    "assumptions": [
+      "Holds for all x"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "cos^{2}x = (1 + cos 2x)/2",
+        "cosine version"
+      ],
+      [
+        "cos 2x = 1 − 2sin^{2}x",
+        "where it comes from"
+      ]
+    ],
+    "example": {
+      "problem": "Evaluate ∫_{0}^{π} sin^{2}x dx.",
+      "steps": [
+        "∫(1 − cos 2x)/2 dx = x/2 − sin 2x/4",
+        "From 0 to π: π/2 − 0"
+      ],
+      "answer": "π/2 ≈ 1.5708"
+    },
+    "try": "integral(sin(x rad)^2, x, 0, pi)"
+  },
+  "cos^{2}x = (1 + cos 2x)/2": {
+    "title": "Power reduction for cos²",
+    "about": "Trades a square of cosine for a first power at double the angle. Used to integrate cos^{2}x and to find RMS values.",
+    "assumptions": [
+      "Holds for all x"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}x = (1 − cos 2x)/2",
+        "sine version"
+      ],
+      [
+        "cos 2x = 2cos^{2}x − 1",
+        "where it comes from"
+      ]
+    ],
+    "example": {
+      "problem": "Find cos^{2}(15°) without a calculator's cos 15°.",
+      "steps": [
+        "cos^{2}15° = (1 + cos 30°)/2 = (1 + √3/2)/2",
+        "= (2 + √3)/4"
+      ],
+      "answer": "(2 + √3)/4 ≈ 0.9330"
+    },
+    "try": "(1 + cos(30))/2"
+  },
+  "tan^{2}x = (1 − cos 2x)/(1 + cos 2x)": {
+    "title": "Power reduction for tan²",
+    "about": "The sin^{2} power-reduction formula divided by the cos^{2} one.",
+    "assumptions": [
+      "cos 2x ≠ −1 (cos x ≠ 0)"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}x = (1 − cos 2x)/2",
+        "numerator"
+      ],
+      [
+        "cos^{2}x = (1 + cos 2x)/2",
+        "denominator"
+      ]
+    ],
+    "example": {
+      "problem": "Find tan^{2}(30°) from cos 60°.",
+      "steps": [
+        "tan^{2}30° = (1 − 1/2)/(1 + 1/2) = (1/2)/(3/2)"
+      ],
+      "answer": "tan^{2}30° = 1/3 ≈ 0.3333"
+    },
+    "try": "(1 - cos(60))/(1 + cos(60))"
+  },
+  "sin x sin y = ½[cos(x − y) − cos(x + y)]": {
+    "title": "Product to sum: sin·sin",
+    "about": "Subtract cos(x + y) from cos(x − y) and halve. Turns a product into a sum, which is easier to integrate and shows the beat frequencies when two waves multiply.",
+    "assumptions": [
+      "Holds for all x and y"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ],
+      [
+        "y",
+        "second angle",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "cos x cos y = ½[cos(x − y) + cos(x + y)]",
+        "cos·cos"
+      ],
+      [
+        "cos x − cos y = −2 sin((x + y)/2) sin((x − y)/2)",
+        "the reverse direction"
+      ]
+    ],
+    "example": {
+      "problem": "Write sin 75° sin 15° as a sum and evaluate.",
+      "steps": [
+        "= ½[cos 60° − cos 90°]",
+        "= ½[1/2 − 0]"
+      ],
+      "answer": "= 1/4 = 0.25"
+    },
+    "try": "sin(75) sin(15)"
+  },
+  "cos x cos y = ½[cos(x − y) + cos(x + y)]": {
+    "title": "Product to sum: cos·cos",
+    "about": "Add the cosine sum and difference formulas and halve. Used in integrating products of cosines and in mixing signals (two frequencies multiply into their sum and difference).",
+    "assumptions": [
+      "Holds for all x and y"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ],
+      [
+        "y",
+        "second angle",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin x sin y = ½[cos(x − y) − cos(x + y)]",
+        "sin·sin"
+      ],
+      [
+        "cos x + cos y = 2 cos((x + y)/2) cos((x − y)/2)",
+        "the reverse direction"
+      ]
+    ],
+    "example": {
+      "problem": "Write cos 75° cos 15° as a sum and evaluate.",
+      "steps": [
+        "= ½[cos 60° + cos 90°]",
+        "= ½[1/2 + 0]"
+      ],
+      "answer": "= 1/4 = 0.25"
+    },
+    "try": "cos(75) cos(15)"
+  },
+  "sin x cos y = ½[sin(x + y) + sin(x − y)]": {
+    "title": "Product to sum: sin·cos",
+    "about": "Add the sine sum and difference formulas and halve.",
+    "assumptions": [
+      "Holds for all x and y"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ],
+      [
+        "y",
+        "second angle",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "cos x sin y = ½[sin(x + y) − sin(x − y)]",
+        "cos·sin"
+      ],
+      [
+        "sin x + sin y = 2 sin((x + y)/2) cos((x − y)/2)",
+        "the reverse direction"
+      ]
+    ],
+    "example": {
+      "problem": "Write sin 75° cos 15° as a sum and evaluate.",
+      "steps": [
+        "= ½[sin 90° + sin 60°]",
+        "= ½[1 + √3/2] = (2 + √3)/4"
+      ],
+      "answer": "(2 + √3)/4 ≈ 0.9330"
+    },
+    "try": "sin(75) cos(15)"
+  },
+  "cos x sin y = ½[sin(x + y) − sin(x − y)]": {
+    "title": "Product to sum: cos·sin",
+    "about": "Subtract the sine difference formula from the sum formula and halve.",
+    "assumptions": [
+      "Holds for all x and y"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ],
+      [
+        "y",
+        "second angle",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin x cos y = ½[sin(x + y) + sin(x − y)]",
+        "sin·cos"
+      ],
+      [
+        "sin x − sin y = 2 cos((x + y)/2) sin((x − y)/2)",
+        "the reverse direction"
+      ]
+    ],
+    "example": {
+      "problem": "Write cos 75° sin 15° as a sum and evaluate.",
+      "steps": [
+        "= ½[sin 90° − sin 60°]",
+        "= ½[1 − √3/2] = (2 − √3)/4"
+      ],
+      "answer": "(2 − √3)/4 ≈ 0.0670"
+    },
+    "try": "cos(75) sin(15)"
+  },
+  "sin x + sin y = 2 sin((x + y)/2) cos((x − y)/2)": {
+    "title": "Sum to product: sin + sin",
+    "about": "Turns a sum of sines into a product, which is what you need to solve sin x + sin y = 0 or to see beats when two close frequencies add.",
+    "assumptions": [
+      "Holds for all x and y"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ],
+      [
+        "y",
+        "second angle",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin x − sin y = 2 cos((x + y)/2) sin((x − y)/2)",
+        "difference"
+      ],
+      [
+        "sin x cos y = ½[sin(x + y) + sin(x − y)]",
+        "the reverse direction"
+      ]
+    ],
+    "example": {
+      "problem": "Evaluate sin 75° + sin 15°.",
+      "steps": [
+        "= 2 sin 45° cos 30°",
+        "= 2(√2/2)(√3/2) = √6/2"
+      ],
+      "answer": "√6/2 ≈ 1.2247"
+    },
+    "try": "sin(75) + sin(15)"
+  },
+  "sin x − sin y = 2 cos((x + y)/2) sin((x − y)/2)": {
+    "title": "Sum to product: sin − sin",
+    "about": "Turns a difference of sines into a product.",
+    "assumptions": [
+      "Holds for all x and y"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ],
+      [
+        "y",
+        "second angle",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin x + sin y = 2 sin((x + y)/2) cos((x − y)/2)",
+        "sum"
+      ]
+    ],
+    "example": {
+      "problem": "Evaluate sin 75° − sin 15°.",
+      "steps": [
+        "= 2 cos 45° sin 30°",
+        "= 2(√2/2)(1/2) = √2/2"
+      ],
+      "answer": "√2/2 ≈ 0.7071"
+    },
+    "try": "sin(75) - sin(15)"
+  },
+  "cos x + cos y = 2 cos((x + y)/2) cos((x − y)/2)": {
+    "title": "Sum to product: cos + cos",
+    "about": "Turns a sum of cosines into a product of cosines.",
+    "assumptions": [
+      "Holds for all x and y"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ],
+      [
+        "y",
+        "second angle",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "cos x − cos y = −2 sin((x + y)/2) sin((x − y)/2)",
+        "difference"
+      ],
+      [
+        "cos x cos y = ½[cos(x − y) + cos(x + y)]",
+        "the reverse direction"
+      ]
+    ],
+    "example": {
+      "problem": "Evaluate cos 75° + cos 15°.",
+      "steps": [
+        "= 2 cos 45° cos 30°",
+        "= 2(√2/2)(√3/2) = √6/2"
+      ],
+      "answer": "√6/2 ≈ 1.2247"
+    },
+    "try": "cos(75) + cos(15)"
+  },
+  "cos x − cos y = −2 sin((x + y)/2) sin((x − y)/2)": {
+    "title": "Sum to product: cos − cos",
+    "about": "Turns a difference of cosines into a product of sines; mind the leading minus sign.",
+    "assumptions": [
+      "Holds for all x and y"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle (any real number, in radians or degrees)",
+        ""
+      ],
+      [
+        "y",
+        "second angle",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "cos x + cos y = 2 cos((x + y)/2) cos((x − y)/2)",
+        "sum"
+      ],
+      [
+        "sin x sin y = ½[cos(x − y) − cos(x + y)]",
+        "the reverse direction"
+      ]
+    ],
+    "example": {
+      "problem": "Evaluate cos 75° − cos 15°.",
+      "steps": [
+        "= −2 sin 45° sin 30°",
+        "= −2(√2/2)(1/2) = −√2/2"
+      ],
+      "answer": "−√2/2 ≈ −0.7071"
+    },
+    "try": "cos(75) - cos(15)"
+  },
+  "log_{b}(xy) = log_{b}x + log_{b}y": {
+    "title": "Log of a product",
+    "about": "A logarithm turns multiplication into addition, because b^{m}b^{n} = b^{m+n}. This is why decibels and pH add when the underlying ratios multiply.",
+    "assumptions": [
+      "x > 0 and y > 0 (logs of zero or negatives are not real)",
+      "b > 0 and b ≠ 1"
+    ],
+    "vars": [
+      [
+        "b",
+        "base of the logarithm, b > 0 and b ≠ 1",
+        ""
+      ],
+      [
+        "x",
+        "positive number whose log is taken",
+        ""
+      ],
+      [
+        "y",
+        "second positive number",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "log_{b}(x/y) = log_{b}x − log_{b}y",
+        "quotient"
+      ],
+      [
+        "log_{b}(x^{r}) = r log_{b}x",
+        "power"
+      ],
+      [
+        "a^{m}a^{n} = a^{m+n}",
+        "the exponent rule behind it"
+      ]
+    ],
+    "example": {
+      "problem": "Given log_{10}2 ≈ 0.3010 and log_{10}3 ≈ 0.4771, find log_{10}6.",
+      "steps": [
+        "log_{10}6 = log_{10}2 + log_{10}3",
+        "≈ 0.3010 + 0.4771"
+      ],
+      "answer": "log_{10}6 ≈ 0.7782"
+    },
+    "try": "log(2) + log(3)"
+  },
+  "log_{b}(x/y) = log_{b}x − log_{b}y": {
+    "title": "Log of a quotient",
+    "about": "A logarithm turns division into subtraction. A ratio's log is the difference of the logs, as in a gain in dB.",
+    "assumptions": [
+      "x > 0 and y > 0 (logs of zero or negatives are not real)",
+      "b > 0 and b ≠ 1"
+    ],
+    "vars": [
+      [
+        "b",
+        "base of the logarithm, b > 0 and b ≠ 1",
+        ""
+      ],
+      [
+        "x",
+        "positive number whose log is taken",
+        ""
+      ],
+      [
+        "y",
+        "second positive number",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "log_{b}(xy) = log_{b}x + log_{b}y",
+        "product"
+      ],
+      [
+        "a^{m}/a^{n} = a^{m−n}",
+        "the exponent rule behind it"
+      ]
+    ],
+    "example": {
+      "problem": "Given ln 10 ≈ 2.3026 and ln 2 ≈ 0.6931, find ln 5.",
+      "steps": [
+        "ln 5 = ln(10/2) = ln 10 − ln 2",
+        "≈ 2.3026 − 0.6931"
+      ],
+      "answer": "ln 5 ≈ 1.6094"
+    },
+    "try": "ln(10) - ln(2)"
+  },
+  "log_{b}(x^{r}) = r log_{b}x": {
+    "title": "Log of a power",
+    "about": "A logarithm brings an exponent down as a multiplier. This is how you solve for an unknown exponent: take logs of both sides.",
+    "assumptions": [
+      "x > 0",
+      "b > 0 and b ≠ 1",
+      "r any real number"
+    ],
+    "vars": [
+      [
+        "b",
+        "base of the logarithm, b > 0 and b ≠ 1",
+        ""
+      ],
+      [
+        "x",
+        "positive number whose log is taken",
+        ""
+      ],
+      [
+        "r",
+        "exponent",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "log_{b}x = ln x / ln b",
+        "change of base"
+      ],
+      [
+        "(a^{m})^{n} = a^{mn}",
+        "the exponent rule behind it"
+      ]
+    ],
+    "example": {
+      "problem": "Solve 2^{x} = 50.",
+      "steps": [
+        "ln(2^{x}) = ln 50, so x ln 2 = ln 50",
+        "x = ln 50/ln 2 = 3.912/0.6931"
+      ],
+      "answer": "x ≈ 5.644"
+    },
+    "try": "ln(50)/ln(2)"
+  },
+  "log_{b}x = ln x / ln b": {
+    "title": "Change of base",
+    "about": "Any logarithm can be written with natural logs (or common logs) as a ratio. This is how a calculator with only ln and log finds log_{2} or log_{7}.",
+    "assumptions": [
+      "x > 0",
+      "b > 0 and b ≠ 1",
+      "Any other base works in place of e: log_{b}x = log_{c}x / log_{c}b"
+    ],
+    "vars": [
+      [
+        "b",
+        "base of the logarithm, b > 0 and b ≠ 1",
+        ""
+      ],
+      [
+        "x",
+        "positive number whose log is taken",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "log_{b}(x^{r}) = r log_{b}x",
+        "power rule, used to prove it"
+      ],
+      [
+        "b^{log_{b}x} = x",
+        "inverse"
+      ]
+    ],
+    "example": {
+      "problem": "Find log_{2}100.",
+      "steps": [
+        "log_{2}100 = ln 100/ln 2 = 4.6052/0.6931"
+      ],
+      "answer": "log_{2}100 ≈ 6.644"
+    },
+    "try": "log(100, 2)"
+  },
+  "log_{b}1 = 0": {
+    "title": "Log of 1 is zero",
+    "about": "Any allowed base raised to the power 0 is 1, so the log of 1 is 0 in every base.",
+    "assumptions": [
+      "b > 0 and b ≠ 1"
+    ],
+    "vars": [
+      [
+        "b",
+        "base of the logarithm, b > 0 and b ≠ 1",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "a^{0} = 1",
+        "the exponent rule behind it"
+      ],
+      [
+        "log_{b}b = 1",
+        "log of the base"
+      ]
+    ],
+    "example": {
+      "problem": "Simplify log_{5}(3) + log_{5}(1/3).",
+      "steps": [
+        "= log_{5}(3 · 1/3) = log_{5}1"
+      ],
+      "answer": "0"
+    },
+    "try": "log(3, 5) + log(1/3, 5)"
+  },
+  "log_{b}b = 1": {
+    "title": "Log of the base is one",
+    "about": "b^{1} = b, so the log of the base in its own base is 1. With the power rule it gives log_{b}(b^{x}) = x.",
+    "assumptions": [
+      "b > 0 and b ≠ 1"
+    ],
+    "vars": [
+      [
+        "b",
+        "base of the logarithm, b > 0 and b ≠ 1",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "log_{b}1 = 0",
+        "log of 1"
+      ],
+      [
+        "log_{b}(b^{x}) = x",
+        "the general inverse"
+      ]
+    ],
+    "example": {
+      "problem": "Simplify log_{4}64.",
+      "steps": [
+        "64 = 4^{3}",
+        "log_{4}64 = 3 log_{4}4 = 3 · 1"
+      ],
+      "answer": "3"
+    },
+    "try": "log(64, 4)"
+  },
+  "log_{b}(b^{x}) = x": {
+    "title": "Log undoes the exponential",
+    "about": "log_{b} and b^{x} are inverse functions: raising b to a power and then taking log_{b} returns the power.",
+    "assumptions": [
+      "b > 0 and b ≠ 1",
+      "Holds for every real x"
+    ],
+    "vars": [
+      [
+        "b",
+        "base of the logarithm, b > 0 and b ≠ 1",
+        ""
+      ],
+      [
+        "x",
+        "any real exponent",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "b^{log_{b}x} = x",
+        "the other order"
+      ],
+      [
+        "ln(e^{x}) = x",
+        "base e"
+      ]
+    ],
+    "example": {
+      "problem": "Evaluate log_{2}(1/32).",
+      "steps": [
+        "1/32 = 2^{−5}",
+        "log_{2}(2^{−5}) = −5"
+      ],
+      "answer": "−5"
+    },
+    "try": "log(1/32, 2)"
+  },
+  "b^{log_{b}x} = x": {
+    "title": "Exponential undoes the log",
+    "about": "Raising b to the log_{b} of x returns x. Use it to rewrite any power with a convenient base: a^{x} = e^{x ln a}.",
+    "assumptions": [
+      "x > 0 (the log must exist)",
+      "b > 0 and b ≠ 1"
+    ],
+    "vars": [
+      [
+        "b",
+        "base of the logarithm, b > 0 and b ≠ 1",
+        ""
+      ],
+      [
+        "x",
+        "positive number whose log is taken",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "log_{b}(b^{x}) = x",
+        "the other order"
+      ],
+      [
+        "e^{ln x} = x",
+        "base e"
+      ]
+    ],
+    "example": {
+      "problem": "Simplify 10^{log_{10}7 + log_{10}2}.",
+      "steps": [
+        "= 10^{log_{10}14}",
+        "= 14"
+      ],
+      "answer": "14"
+    },
+    "try": "10^(log(7) + log(2))"
+  },
+  "ln(e^{x}) = x": {
+    "title": "Natural log undoes e^{x}",
+    "about": "ln is the logarithm with base e ≈ 2.71828, so it undoes the natural exponential. Used to pull a variable out of an exponent, as in solving for time in exponential decay.",
+    "assumptions": [
+      "Holds for every real x"
+    ],
+    "vars": [
+      [
+        "x",
+        "any real exponent",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "e^{ln x} = x",
+        "the other order"
+      ],
+      [
+        "log_{b}(b^{x}) = x",
+        "any base"
+      ]
+    ],
+    "example": {
+      "problem": "A quantity decays as N = N_{0}e^{−0.2t}. When is N = N_{0}/2?",
+      "steps": [
+        "e^{−0.2t} = 1/2",
+        "−0.2t = ln(1/2), t = ln 2/0.2"
+      ],
+      "answer": "t ≈ 3.466"
+    },
+    "try": "ln(2)/0.2"
+  },
+  "e^{ln x} = x": {
+    "title": "e^{x} undoes the natural log",
+    "about": "Exponentiating a natural log returns the number. Used to undo ln after solving, and to write powers as a^{x} = e^{x ln a}.",
+    "assumptions": [
+      "x > 0"
+    ],
+    "vars": [
+      [
+        "x",
+        "positive number",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "ln(e^{x}) = x",
+        "the other order"
+      ],
+      [
+        "b^{log_{b}x} = x",
+        "any base"
+      ]
+    ],
+    "example": {
+      "problem": "Solve ln y = 2.5.",
+      "steps": [
+        "y = e^{ln y} = e^{2.5}"
+      ],
+      "answer": "y ≈ 12.18"
+    },
+    "try": "e^2.5"
+  },
+  "a^{m}a^{n} = a^{m+n}": {
+    "title": "Product of powers",
+    "about": "Multiplying powers of the same base adds their exponents: m factors of a times n factors of a is m + n factors.",
+    "assumptions": [
+      "Integer exponents: any a (a ≠ 0 if an exponent is negative)",
+      "Real exponents: a > 0"
+    ],
+    "vars": [
+      [
+        "a",
+        "base",
+        ""
+      ],
+      [
+        "m",
+        "exponent",
+        ""
+      ],
+      [
+        "n",
+        "exponent",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "a^{m}/a^{n} = a^{m−n}",
+        "quotient"
+      ],
+      [
+        "log_{b}(xy) = log_{b}x + log_{b}y",
+        "its log form"
+      ]
+    ],
+    "example": {
+      "problem": "Simplify 2^{3} · 2^{4}.",
+      "steps": [
+        "= 2^{3+4} = 2^{7}"
+      ],
+      "answer": "128"
+    },
+    "try": "2^3 * 2^4"
+  },
+  "a^{m}/a^{n} = a^{m−n}": {
+    "title": "Quotient of powers",
+    "about": "Dividing powers of the same base subtracts exponents: the n factors in the bottom cancel n of the m on top.",
+    "assumptions": [
+      "a ≠ 0",
+      "Real exponents: a > 0"
+    ],
+    "vars": [
+      [
+        "a",
+        "base",
+        ""
+      ],
+      [
+        "m",
+        "exponent",
+        ""
+      ],
+      [
+        "n",
+        "exponent",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "a^{m}a^{n} = a^{m+n}",
+        "product"
+      ],
+      [
+        "a^{0} = 1",
+        "the case m = n"
+      ],
+      [
+        "a^{−n} = 1/a^{n}",
+        "the case m = 0"
+      ]
+    ],
+    "example": {
+      "problem": "Simplify 10^{8}/10^{5}.",
+      "steps": [
+        "= 10^{8−5} = 10^{3}"
+      ],
+      "answer": "1000"
+    },
+    "try": "10^8/10^5"
+  },
+  "(a^{m})^{n} = a^{mn}": {
+    "title": "Power of a power",
+    "about": "Raising a power to a power multiplies the exponents: n copies of m factors.",
+    "assumptions": [
+      "Integer exponents: any a",
+      "Real exponents: a > 0 (e.g. ((−1)^{2})^{1/2} = 1 but (−1)^{1} = −1)"
+    ],
+    "vars": [
+      [
+        "a",
+        "base",
+        ""
+      ],
+      [
+        "m",
+        "exponent",
+        ""
+      ],
+      [
+        "n",
+        "exponent",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "log_{b}(x^{r}) = r log_{b}x",
+        "its log form"
+      ],
+      [
+        "a^{1/n} = ^{n}√a",
+        "fractional exponents"
+      ]
+    ],
+    "example": {
+      "problem": "Simplify (3^{2})^{3}.",
+      "steps": [
+        "= 3^{2·3} = 3^{6}"
+      ],
+      "answer": "729"
+    },
+    "try": "(3^2)^3"
+  },
+  "(ab)^{n} = a^{n}b^{n}": {
+    "title": "Power of a product",
+    "about": "An exponent distributes over multiplication (but not over addition: (a + b)^{2} ≠ a^{2} + b^{2}).",
+    "assumptions": [
+      "Integer n: any a, b",
+      "Fractional n: a, b ≥ 0"
+    ],
+    "vars": [
+      [
+        "a",
+        "base",
+        ""
+      ],
+      [
+        "b",
+        "second factor",
+        ""
+      ],
+      [
+        "n",
+        "exponent",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "(a/b)^{n} = a^{n}/b^{n}",
+        "quotient"
+      ],
+      [
+        "(a + b)^{2} = a^{2} + 2ab + b^{2}",
+        "what a sum does instead"
+      ]
+    ],
+    "example": {
+      "problem": "Evaluate (2 · 5)^{3} both ways.",
+      "steps": [
+        "(10)^{3} = 1000",
+        "2^{3} · 5^{3} = 8 · 125 = 1000"
+      ],
+      "answer": "1000"
+    },
+    "try": "2^3 * 5^3"
+  },
+  "(a/b)^{n} = a^{n}/b^{n}": {
+    "title": "Power of a quotient",
+    "about": "An exponent distributes over division.",
+    "assumptions": [
+      "b ≠ 0",
+      "Fractional n: a ≥ 0, b > 0"
+    ],
+    "vars": [
+      [
+        "a",
+        "base",
+        ""
+      ],
+      [
+        "b",
+        "denominator",
+        ""
+      ],
+      [
+        "n",
+        "exponent",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "(ab)^{n} = a^{n}b^{n}",
+        "product"
+      ]
+    ],
+    "example": {
+      "problem": "Evaluate (2/3)^{4}.",
+      "steps": [
+        "= 2^{4}/3^{4} = 16/81"
+      ],
+      "answer": "16/81 ≈ 0.1975"
+    },
+    "try": "2^4/3^4"
+  },
+  "a^{0} = 1": {
+    "title": "Zero exponent",
+    "about": "Any nonzero number to the power 0 is 1, which keeps a^{m}/a^{m} = a^{m−m} consistent.",
+    "assumptions": [
+      "a ≠ 0 (0^{0} is undefined, though often taken as 1 in series and combinatorics)"
+    ],
+    "vars": [
+      [
+        "a",
+        "base",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "a^{m}/a^{n} = a^{m−n}",
+        "where it comes from"
+      ],
+      [
+        "log_{b}1 = 0",
+        "its log form"
+      ]
+    ],
+    "example": {
+      "problem": "Simplify 7x^{0} for x ≠ 0.",
+      "steps": [
+        "x^{0} = 1",
+        "7 · 1 = 7"
+      ],
+      "answer": "7"
+    },
+    "try": "7*5^0"
+  },
+  "a^{−n} = 1/a^{n}": {
+    "title": "Negative exponent",
+    "about": "A negative exponent means the reciprocal. Moving a factor across the fraction bar flips the sign of its exponent.",
+    "assumptions": [
+      "a ≠ 0"
+    ],
+    "vars": [
+      [
+        "a",
+        "base",
+        ""
+      ],
+      [
+        "n",
+        "exponent",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "a^{m}/a^{n} = a^{m−n}",
+        "where it comes from"
+      ],
+      [
+        "a^{0} = 1",
+        "zero exponent"
+      ]
+    ],
+    "example": {
+      "problem": "Evaluate 2^{−3}.",
+      "steps": [
+        "2^{−3} = 1/2^{3} = 1/8"
+      ],
+      "answer": "0.125"
+    },
+    "try": "2^-3"
+  },
+  "a^{1/n} = ^{n}√a": {
+    "title": "Fractional exponent as a root",
+    "about": "The power 1/n is the nth root, because (a^{1/n})^{n} = a^{1} = a. Then a^{m/n} = (^{n}√a)^{m}.",
+    "assumptions": [
+      "a ≥ 0 for even n; any real a for odd n",
+      "n a positive integer"
+    ],
+    "vars": [
+      [
+        "a",
+        "base",
+        ""
+      ],
+      [
+        "n",
+        "root index, a positive integer",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "(a^{m})^{n} = a^{mn}",
+        "gives a^{m/n} = (a^{1/n})^{m}"
+      ]
+    ],
+    "example": {
+      "problem": "Evaluate 8^{2/3}.",
+      "steps": [
+        "8^{1/3} = ^{3}√8 = 2",
+        "8^{2/3} = 2^{2}"
+      ],
+      "answer": "4"
+    },
+    "try": "8^(2/3)"
+  },
+  "(a + b)^{2} = a^{2} + 2ab + b^{2}": {
+    "title": "Square of a sum",
+    "about": "Expanding (a + b)(a + b) gives the cross term 2ab, which is what's missed when people write a^{2} + b^{2}. Read backward it is the pattern for completing the square.",
+    "assumptions": [
+      "Holds for all real (or complex) a and b"
+    ],
+    "vars": [
+      [
+        "a",
+        "first term",
+        ""
+      ],
+      [
+        "b",
+        "second term",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "(a − b)^{2} = a^{2} − 2ab + b^{2}",
+        "square of a difference"
+      ],
+      [
+        "(a + b)^{n} = Σ_{k=0}^{n} C(n, k) a^{n−k}b^{k}",
+        "any power"
+      ]
+    ],
+    "example": {
+      "problem": "Compute 103^{2} in your head.",
+      "steps": [
+        "103^{2} = (100 + 3)^{2} = 10000 + 600 + 9"
+      ],
+      "answer": "10609"
+    },
+    "try": "103^2"
+  },
+  "(a − b)^{2} = a^{2} − 2ab + b^{2}": {
+    "title": "Square of a difference",
+    "about": "The square of a sum with −b for b: the cross term turns negative.",
+    "assumptions": [
+      "Holds for all real (or complex) a and b"
+    ],
+    "vars": [
+      [
+        "a",
+        "first term",
+        ""
+      ],
+      [
+        "b",
+        "second term",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "(a + b)^{2} = a^{2} + 2ab + b^{2}",
+        "square of a sum"
+      ],
+      [
+        "a^{2} − b^{2} = (a + b)(a − b)",
+        "difference of squares"
+      ]
+    ],
+    "example": {
+      "problem": "Compute 98^{2} in your head.",
+      "steps": [
+        "98^{2} = (100 − 2)^{2} = 10000 − 400 + 4"
+      ],
+      "answer": "9604"
+    },
+    "try": "98^2"
+  },
+  "a^{2} − b^{2} = (a + b)(a − b)": {
+    "title": "Difference of squares",
+    "about": "Factors a difference of two squares; the cross terms cancel. Used to factor, to rationalize (multiply by the conjugate) and for quick products like 31 · 29.",
+    "assumptions": [
+      "Holds for all real (or complex) a and b",
+      "A sum of squares a^{2} + b^{2} does not factor over the reals"
+    ],
+    "vars": [
+      [
+        "a",
+        "first term",
+        ""
+      ],
+      [
+        "b",
+        "second term",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "(a + b)^{2} = a^{2} + 2ab + b^{2}",
+        "square of a sum"
+      ],
+      [
+        "a^{3} − b^{3} = (a − b)(a^{2} + ab + b^{2})",
+        "difference of cubes"
+      ]
+    ],
+    "example": {
+      "problem": "Compute 31 × 29.",
+      "steps": [
+        "31 × 29 = (30 + 1)(30 − 1) = 30^{2} − 1^{2}",
+        "= 900 − 1"
+      ],
+      "answer": "899"
+    },
+    "try": "31*29"
+  },
+  "a^{3} + b^{3} = (a + b)(a^{2} − ab + b^{2})": {
+    "title": "Sum of cubes",
+    "about": "Factors a sum of two cubes. The quadratic factor has no real roots, so a + b is the only real linear factor.",
+    "assumptions": [
+      "Holds for all real (or complex) a and b"
+    ],
+    "vars": [
+      [
+        "a",
+        "first term",
+        ""
+      ],
+      [
+        "b",
+        "second term",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "a^{3} − b^{3} = (a − b)(a^{2} + ab + b^{2})",
+        "difference of cubes"
+      ]
+    ],
+    "example": {
+      "problem": "Factor x^{3} + 8 and check at x = 2.",
+      "steps": [
+        "x^{3} + 2^{3} = (x + 2)(x^{2} − 2x + 4)",
+        "At x = 2: (4)(4 − 4 + 4) = 16, and 2^{3} + 8 = 16"
+      ],
+      "answer": "(x + 2)(x^{2} − 2x + 4); 16 at x = 2"
+    },
+    "try": "(2 + 2)*(2^2 - 2*2 + 4)"
+  },
+  "a^{3} − b^{3} = (a − b)(a^{2} + ab + b^{2})": {
+    "title": "Difference of cubes",
+    "about": "Factors a difference of two cubes. a − b is the only real linear factor.",
+    "assumptions": [
+      "Holds for all real (or complex) a and b"
+    ],
+    "vars": [
+      [
+        "a",
+        "first term",
+        ""
+      ],
+      [
+        "b",
+        "second term",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "a^{3} + b^{3} = (a + b)(a^{2} − ab + b^{2})",
+        "sum of cubes"
+      ],
+      [
+        "a^{2} − b^{2} = (a + b)(a − b)",
+        "difference of squares"
+      ]
+    ],
+    "example": {
+      "problem": "Factor x^{3} − 27 and check at x = 5.",
+      "steps": [
+        "x^{3} − 3^{3} = (x − 3)(x^{2} + 3x + 9)",
+        "At x = 5: (2)(25 + 15 + 9) = 98, and 125 − 27 = 98"
+      ],
+      "answer": "(x − 3)(x^{2} + 3x + 9); 98 at x = 5"
+    },
+    "try": "(5 - 3)*(5^2 + 3*5 + 9)"
+  },
+  "(a + b)^{3} = a^{3} + 3a^{2}b + 3ab^{2} + b^{3}": {
+    "title": "Cube of a sum",
+    "about": "The binomial theorem for n = 3; the coefficients 1, 3, 3, 1 are row 3 of Pascal's triangle.",
+    "assumptions": [
+      "Holds for all real (or complex) a and b"
+    ],
+    "vars": [
+      [
+        "a",
+        "first term",
+        ""
+      ],
+      [
+        "b",
+        "second term",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "(a − b)^{3} = a^{3} − 3a^{2}b + 3ab^{2} − b^{3}",
+        "cube of a difference"
+      ],
+      [
+        "(a + b)^{n} = Σ_{k=0}^{n} C(n, k) a^{n−k}b^{k}",
+        "any power"
+      ]
+    ],
+    "example": {
+      "problem": "Expand (x + 2)^{3} and check at x = 1.",
+      "steps": [
+        "= x^{3} + 6x^{2} + 12x + 8",
+        "At x = 1: 1 + 6 + 12 + 8 = 27 = 3^{3}"
+      ],
+      "answer": "x^{3} + 6x^{2} + 12x + 8; 27 at x = 1"
+    },
+    "try": "1 + 6 + 12 + 8"
+  },
+  "(a − b)^{3} = a^{3} − 3a^{2}b + 3ab^{2} − b^{3}": {
+    "title": "Cube of a difference",
+    "about": "The cube of a sum with −b for b: the signs alternate.",
+    "assumptions": [
+      "Holds for all real (or complex) a and b"
+    ],
+    "vars": [
+      [
+        "a",
+        "first term",
+        ""
+      ],
+      [
+        "b",
+        "second term",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "(a + b)^{3} = a^{3} + 3a^{2}b + 3ab^{2} + b^{3}",
+        "cube of a sum"
+      ]
+    ],
+    "example": {
+      "problem": "Compute 99^{3}.",
+      "steps": [
+        "(100 − 1)^{3} = 1000000 − 30000 + 300 − 1"
+      ],
+      "answer": "970299"
+    },
+    "try": "99^3"
+  },
+  "(a + b)^{n} = Σ_{k=0}^{n} C(n, k) a^{n−k}b^{k}": {
+    "title": "Binomial theorem",
+    "about": "Expands any whole-number power of a sum. The coefficient of a^{n−k}b^{k} is C(n, k) = n!/(k!(n − k)!), the number of ways to choose which k of the n factors give a b.",
+    "assumptions": [
+      "n a non-negative integer (for other n it becomes an infinite series, valid for |b/a| < 1)"
+    ],
+    "vars": [
+      [
+        "a",
+        "first term",
+        ""
+      ],
+      [
+        "b",
+        "second term",
+        ""
+      ],
+      [
+        "n",
+        "power, a non-negative integer",
+        ""
+      ],
+      [
+        "k",
+        "index of the term",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Σ_{k=0}^{n} C(n, k) = 2^{n}",
+        "set a = b = 1"
+      ],
+      [
+        "(a + b)^{2} = a^{2} + 2ab + b^{2}",
+        "n = 2"
+      ]
+    ],
+    "example": {
+      "problem": "Find the coefficient of x^{3} in (2 + x)^{5}.",
+      "steps": [
+        "k = 3: C(5, 3) · 2^{5−3} · x^{3}",
+        "= 10 · 4"
+      ],
+      "answer": "40"
+    },
+    "try": "nCr(5, 3) * 2^2"
+  },
+  "(px + q)/((x − a)(x − b)) = A/(x − a) + B/(x − b)": {
+    "title": "Partial fractions: two distinct linear factors",
+    "about": "A proper fraction over two different linear factors splits into one simple fraction per factor. Each piece integrates to a log and inverts to an exponential in a Laplace transform.",
+    "assumptions": [
+      "a ≠ b (distinct factors)",
+      "The numerator's degree is less than the denominator's; divide first if not"
+    ],
+    "vars": [
+      [
+        "x",
+        "variable",
+        ""
+      ],
+      [
+        "p",
+        "coefficient of x in the numerator",
+        ""
+      ],
+      [
+        "q",
+        "constant in the numerator",
+        ""
+      ],
+      [
+        "a",
+        "root of the first linear factor",
+        ""
+      ],
+      [
+        "b",
+        "root of the second linear factor",
+        ""
+      ],
+      [
+        "A, B",
+        "constants to find",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "A = (pa + q)/(a − b)",
+        "coefficient over x − a"
+      ],
+      [
+        "B = (pb + q)/(b − a)",
+        "coefficient over x − b"
+      ],
+      [
+        "1/(x^{2} − a^{2}) = (1/(x − a) − 1/(x + a))/2a",
+        "a common special case"
+      ]
+    ],
+    "example": {
+      "problem": "Split (3x + 5)/((x − 1)(x + 2)) into partial fractions. Check the result at x = 3.",
+      "steps": [
+        "a = 1, b = −2, p = 3, q = 5",
+        "A = (3·1 + 5)/(1 + 2) = 8/3, B = (3(−2) + 5)/(−2 − 1) = 1/3",
+        "At x = 3: left side 14/10 = 1.4; right side (8/3)/2 + (1/3)/5 = 1.4"
+      ],
+      "answer": "(8/3)/(x − 1) + (1/3)/(x + 2); both sides 1.4 at x = 3"
+    },
+    "try": "(8/3)/(3 - 1) + (1/3)/(3 + 2)"
+  },
+  "A = (pa + q)/(a − b)": {
+    "title": "Partial fractions: the coefficient over x − a",
+    "about": "Cover-up rule: multiply both sides by x − a and set x = a. The B term vanishes and what is left of the fraction, evaluated at a, is A.",
+    "assumptions": [
+      "a ≠ b (distinct factors)",
+      "The numerator's degree is less than the denominator's; divide first if not"
+    ],
+    "vars": [
+      [
+        "p",
+        "coefficient of x in the numerator",
+        ""
+      ],
+      [
+        "q",
+        "constant in the numerator",
+        ""
+      ],
+      [
+        "a",
+        "root of the first linear factor",
+        ""
+      ],
+      [
+        "b",
+        "root of the second linear factor",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "(px + q)/((x − a)(x − b)) = A/(x − a) + B/(x − b)",
+        "the expansion"
+      ],
+      [
+        "B = (pb + q)/(b − a)",
+        "the other coefficient"
+      ]
+    ],
+    "example": {
+      "problem": "Split (3x + 5)/((x − 1)(x + 2)) into partial fractions. Find A.",
+      "steps": [
+        "a = 1, b = −2",
+        "A = (3·1 + 5)/(1 − (−2)) = 8/3"
+      ],
+      "answer": "A = 8/3 ≈ 2.667"
+    },
+    "try": "(3*1 + 5)/(1 - (-2))"
+  },
+  "B = (pb + q)/(b − a)": {
+    "title": "Partial fractions: the coefficient over x − b",
+    "about": "Cover-up rule at x = b: multiply by x − b and set x = b.",
+    "assumptions": [
+      "a ≠ b (distinct factors)",
+      "The numerator's degree is less than the denominator's; divide first if not"
+    ],
+    "vars": [
+      [
+        "p",
+        "coefficient of x in the numerator",
+        ""
+      ],
+      [
+        "q",
+        "constant in the numerator",
+        ""
+      ],
+      [
+        "a",
+        "root of the first linear factor",
+        ""
+      ],
+      [
+        "b",
+        "root of the second linear factor",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "(px + q)/((x − a)(x − b)) = A/(x − a) + B/(x − b)",
+        "the expansion"
+      ],
+      [
+        "A = (pa + q)/(a − b)",
+        "the other coefficient"
+      ]
+    ],
+    "example": {
+      "problem": "Split (3x + 5)/((x − 1)(x + 2)) into partial fractions. Find B.",
+      "steps": [
+        "a = 1, b = −2",
+        "B = (3(−2) + 5)/(−2 − 1) = (−1)/(−3)"
+      ],
+      "answer": "B = 1/3 ≈ 0.3333"
+    },
+    "try": "(3*(-2) + 5)/(-2 - 1)"
+  },
+  "1/(x^{2} − a^{2}) = (1/(x − a) − 1/(x + a))/2a": {
+    "title": "Partial fractions of 1/(x² − a²)",
+    "about": "The two-factor rule with p = 0, q = 1 and roots ±a. It gives ∫dx/(x^{2} − a^{2}) = (1/2a) ln|(x − a)/(x + a)|.",
+    "assumptions": [
+      "a ≠ 0",
+      "x ≠ ±a"
+    ],
+    "vars": [
+      [
+        "x",
+        "variable",
+        ""
+      ],
+      [
+        "a",
+        "positive constant",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "(px + q)/((x − a)(x − b)) = A/(x − a) + B/(x − b)",
+        "the general case"
+      ],
+      [
+        "a^{2} − b^{2} = (a + b)(a − b)",
+        "the factoring"
+      ]
+    ],
+    "example": {
+      "problem": "Check the split for a = 3 at x = 5.",
+      "steps": [
+        "Left: 1/(25 − 9) = 1/16 = 0.0625",
+        "Right: (1/2 − 1/8)/6 = 0.375/6 = 0.0625"
+      ],
+      "answer": "0.0625 both sides"
+    },
+    "try": "(1/(5 - 3) - 1/(5 + 3))/(2*3)"
+  },
+  "(px + q)/(x − a)^{2} = A/(x − a) + B/(x − a)^{2}": {
+    "title": "Partial fractions: a repeated linear factor",
+    "about": "A squared factor needs a term for each power of it. Writing px + q = p(x − a) + (pa + q) gives both constants at once.",
+    "assumptions": [
+      "The numerator's degree is less than 2; divide first if not"
+    ],
+    "vars": [
+      [
+        "x",
+        "variable",
+        ""
+      ],
+      [
+        "p",
+        "coefficient of x in the numerator",
+        ""
+      ],
+      [
+        "q",
+        "constant in the numerator",
+        ""
+      ],
+      [
+        "a",
+        "root of the repeated factor",
+        ""
+      ],
+      [
+        "A, B",
+        "constants to find",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "A = p",
+        "coefficient over x − a"
+      ],
+      [
+        "B = pa + q",
+        "coefficient over (x − a)^{2}"
+      ]
+    ],
+    "example": {
+      "problem": "Split (2x + 7)/(x − 1)^{2} into partial fractions. Check at x = 3.",
+      "steps": [
+        "A = p = 2, B = pa + q = 2 + 7 = 9",
+        "At x = 3: left 13/4 = 3.25; right 2/2 + 9/4 = 3.25"
+      ],
+      "answer": "2/(x − 1) + 9/(x − 1)^{2}; both 3.25 at x = 3"
+    },
+    "try": "2/(3 - 1) + 9/(3 - 1)^2"
+  },
+  "A = p": {
+    "title": "Repeated factor: the coefficient over x − a",
+    "about": "Write px + q = A(x − a) + B and match the x terms: A = p.",
+    "assumptions": [
+      "The numerator's degree is less than 2; divide first if not"
+    ],
+    "vars": [
+      [
+        "p",
+        "coefficient of x in the numerator",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "B = pa + q",
+        "the other coefficient"
+      ],
+      [
+        "(px + q)/(x − a)^{2} = A/(x − a) + B/(x − a)^{2}",
+        "the expansion"
+      ]
+    ],
+    "example": {
+      "problem": "Split (2x + 7)/(x − 1)^{2} into partial fractions. Find A.",
+      "steps": [
+        "p = 2"
+      ],
+      "answer": "A = 2"
+    }
+  },
+  "B = pa + q": {
+    "title": "Repeated factor: the coefficient over (x − a)^{2}",
+    "about": "Cover-up at x = a: multiply by (x − a)^{2} and set x = a, leaving B = pa + q.",
+    "assumptions": [
+      "The numerator's degree is less than 2; divide first if not"
+    ],
+    "vars": [
+      [
+        "p",
+        "coefficient of x in the numerator",
+        ""
+      ],
+      [
+        "q",
+        "constant in the numerator",
+        ""
+      ],
+      [
+        "a",
+        "root of the repeated factor",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "A = p",
+        "the other coefficient"
+      ],
+      [
+        "(px + q)/(x − a)^{2} = A/(x − a) + B/(x − a)^{2}",
+        "the expansion"
+      ]
+    ],
+    "example": {
+      "problem": "Split (2x + 7)/(x − 1)^{2} into partial fractions. Find B.",
+      "steps": [
+        "a = 1, p = 2, q = 7",
+        "B = 2·1 + 7"
+      ],
+      "answer": "B = 9"
+    },
+    "try": "2*1 + 7"
+  },
+  "(px + q)/((x − a)(x^{2} + b^{2})) = A/(x − a) + (Bx + C)/(x^{2} + b^{2})": {
+    "title": "Partial fractions: an irreducible quadratic factor",
+    "about": "A quadratic that won't factor over the reals gets a linear numerator Bx + C. That piece integrates to a log plus an arctangent, and in Laplace transforms gives sines and cosines.",
+    "assumptions": [
+      "b ≠ 0, so x^{2} + b^{2} has no real roots",
+      "The numerator's degree is less than 3"
+    ],
+    "vars": [
+      [
+        "x",
+        "variable",
+        ""
+      ],
+      [
+        "p",
+        "coefficient of x in the numerator",
+        ""
+      ],
+      [
+        "q",
+        "constant in the numerator",
+        ""
+      ],
+      [
+        "a",
+        "root of the linear factor",
+        ""
+      ],
+      [
+        "b",
+        "√ of the quadratic's constant term",
+        ""
+      ],
+      [
+        "A, B, C",
+        "constants to find",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "A = (pa + q)/(a^{2} + b^{2})",
+        "over the linear factor"
+      ],
+      [
+        "B = −A",
+        "x coefficient over the quadratic"
+      ],
+      [
+        "C = p − aA",
+        "constant over the quadratic"
+      ]
+    ],
+    "example": {
+      "problem": "Split (x + 3)/((x − 1)(x^{2} + 4)) into partial fractions. Check at x = 2.",
+      "steps": [
+        "p = 1, q = 3, a = 1, b = 2",
+        "A = 4/5 = 0.8, B = −0.8, C = 1 − 0.8 = 0.2",
+        "At x = 2: left 5/8 = 0.625; right 0.8/1 + (−1.6 + 0.2)/8 = 0.625"
+      ],
+      "answer": "0.8/(x − 1) + (−0.8x + 0.2)/(x^{2} + 4); both 0.625 at x = 2"
+    },
+    "try": "0.8/(2 - 1) + (-0.8*2 + 0.2)/(2^2 + 4)"
+  },
+  "A = (pa + q)/(a^{2} + b^{2})": {
+    "title": "Quadratic factor: the coefficient over x − a",
+    "about": "Cover-up at x = a: multiply by x − a and set x = a. The quadratic piece vanishes, leaving (pa + q)/(a^{2} + b^{2}).",
+    "assumptions": [
+      "b ≠ 0, so x^{2} + b^{2} has no real roots",
+      "The numerator's degree is less than 3"
+    ],
+    "vars": [
+      [
+        "p",
+        "coefficient of x in the numerator",
+        ""
+      ],
+      [
+        "q",
+        "constant in the numerator",
+        ""
+      ],
+      [
+        "a",
+        "root of the linear factor",
+        ""
+      ],
+      [
+        "b",
+        "√ of the quadratic's constant term",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "B = −A",
+        "x coefficient over the quadratic"
+      ],
+      [
+        "C = p − aA",
+        "constant over the quadratic"
+      ],
+      [
+        "(px + q)/((x − a)(x^{2} + b^{2})) = A/(x − a) + (Bx + C)/(x^{2} + b^{2})",
+        "the expansion"
+      ]
+    ],
+    "example": {
+      "problem": "Split (x + 3)/((x − 1)(x^{2} + 4)) into partial fractions. Find A.",
+      "steps": [
+        "A = (1·1 + 3)/(1 + 4) = 4/5"
+      ],
+      "answer": "A = 0.8"
+    },
+    "try": "(1*1 + 3)/(1^2 + 2^2)"
+  },
+  "B = −A": {
+    "title": "Quadratic factor: the x coefficient",
+    "about": "Clearing denominators, px + q = A(x^{2} + b^{2}) + (Bx + C)(x − a). There is no x^{2} on the left, so A + B = 0.",
+    "assumptions": [
+      "b ≠ 0, so x^{2} + b^{2} has no real roots",
+      "The numerator's degree is less than 3"
+    ],
+    "vars": [
+      [
+        "A",
+        "coefficient over x − a",
+        ""
+      ],
+      [
+        "B",
+        "x coefficient over the quadratic",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "A = (pa + q)/(a^{2} + b^{2})",
+        "over the linear factor"
+      ],
+      [
+        "C = p − aA",
+        "constant over the quadratic"
+      ]
+    ],
+    "example": {
+      "problem": "Split (x + 3)/((x − 1)(x^{2} + 4)) into partial fractions. Find B.",
+      "steps": [
+        "A = 0.8",
+        "B = −0.8"
+      ],
+      "answer": "B = −0.8"
+    },
+    "try": "-(1*1 + 3)/(1^2 + 2^2)"
+  },
+  "C = p − aA": {
+    "title": "Quadratic factor: the constant over the quadratic",
+    "about": "Matching the x terms in px + q = A(x^{2} + b^{2}) + (Bx + C)(x − a) gives p = −aB + C = aA + C.",
+    "assumptions": [
+      "b ≠ 0, so x^{2} + b^{2} has no real roots",
+      "The numerator's degree is less than 3"
+    ],
+    "vars": [
+      [
+        "p",
+        "coefficient of x in the numerator",
+        ""
+      ],
+      [
+        "a",
+        "root of the linear factor",
+        ""
+      ],
+      [
+        "A",
+        "coefficient over x − a",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "A = (pa + q)/(a^{2} + b^{2})",
+        "over the linear factor"
+      ],
+      [
+        "B = −A",
+        "x coefficient over the quadratic"
+      ]
+    ],
+    "example": {
+      "problem": "Split (x + 3)/((x − 1)(x^{2} + 4)) into partial fractions. Find C.",
+      "steps": [
+        "p = 1, a = 1, A = 0.8",
+        "C = 1 − 1·0.8"
+      ],
+      "answer": "C = 0.2"
+    },
+    "try": "1 - 1*0.8"
+  },
+  "Σ_{k=1}^{n} 1 = n": {
+    "title": "Sum of n ones",
+    "about": "Adding 1 once for each k from 1 to n gives n. More generally a constant c summed n times is cn.",
+    "assumptions": [
+      "n a positive integer"
+    ],
+    "vars": [
+      [
+        "k",
+        "summation index",
+        ""
+      ],
+      [
+        "n",
+        "number of terms, a positive integer",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Σ_{k=1}^{n} k = n(n + 1)/2",
+        "next power"
+      ]
+    ],
+    "example": {
+      "problem": "Evaluate Σ_{k=1}^{50} 4.",
+      "steps": [
+        "= 4 Σ_{k=1}^{50} 1 = 4 · 50"
+      ],
+      "answer": "200"
+    },
+    "try": "sum(4, k, 1, 50)"
+  },
+  "Σ_{k=1}^{n} k = n(n + 1)/2": {
+    "title": "Sum of the first n integers",
+    "about": "Gauss's trick: pair 1 with n, 2 with n − 1, and so on; each pair sums to n + 1 and there are n/2 pairs. The triangular numbers.",
+    "assumptions": [
+      "n a positive integer"
+    ],
+    "vars": [
+      [
+        "k",
+        "summation index",
+        ""
+      ],
+      [
+        "n",
+        "number of terms, a positive integer",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Σ_{k=1}^{n} k^{2} = n(n + 1)(2n + 1)/6",
+        "squares"
+      ],
+      [
+        "Σ_{k=1}^{n} (a + (k − 1)d) = n(2a + (n − 1)d)/2",
+        "any arithmetic series"
+      ]
+    ],
+    "example": {
+      "problem": "Add the integers 1 through 100.",
+      "steps": [
+        "= 100 · 101/2"
+      ],
+      "answer": "5050"
+    },
+    "try": "sum(k, k, 1, 100)"
+  },
+  "Σ_{k=1}^{n} k^{2} = n(n + 1)(2n + 1)/6": {
+    "title": "Sum of the first n squares",
+    "about": "Closed form for 1 + 4 + 9 + … + n^{2}. It appears in Riemann sums for ∫x^{2} dx and in moments of inertia of discrete masses.",
+    "assumptions": [
+      "n a positive integer"
+    ],
+    "vars": [
+      [
+        "k",
+        "summation index",
+        ""
+      ],
+      [
+        "n",
+        "number of terms, a positive integer",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Σ_{k=1}^{n} k = n(n + 1)/2",
+        "first powers"
+      ],
+      [
+        "Σ_{k=1}^{n} k^{3} = (n(n + 1)/2)^{2}",
+        "cubes"
+      ]
+    ],
+    "example": {
+      "problem": "Evaluate 1^{2} + 2^{2} + … + 10^{2}.",
+      "steps": [
+        "= 10 · 11 · 21/6 = 2310/6"
+      ],
+      "answer": "385"
+    },
+    "try": "sum(k^2, k, 1, 10)"
+  },
+  "Σ_{k=1}^{n} k^{3} = (n(n + 1)/2)^{2}": {
+    "title": "Sum of the first n cubes",
+    "about": "The sum of the first n cubes is the square of the sum of the first n integers (Nicomachus's theorem).",
+    "assumptions": [
+      "n a positive integer"
+    ],
+    "vars": [
+      [
+        "k",
+        "summation index",
+        ""
+      ],
+      [
+        "n",
+        "number of terms, a positive integer",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Σ_{k=1}^{n} k = n(n + 1)/2",
+        "its square root"
+      ],
+      [
+        "Σ_{k=1}^{n} k^{2} = n(n + 1)(2n + 1)/6",
+        "squares"
+      ]
+    ],
+    "example": {
+      "problem": "Evaluate 1^{3} + 2^{3} + … + 10^{3}.",
+      "steps": [
+        "= (10 · 11/2)^{2} = 55^{2}"
+      ],
+      "answer": "3025"
+    },
+    "try": "sum(k^3, k, 1, 10)"
+  },
+  "Σ_{k=1}^{n} (2k − 1) = n^{2}": {
+    "title": "Sum of the first n odd numbers",
+    "about": "1 + 3 + 5 + … + (2n − 1) = n^{2}: each odd number adds an L-shaped border to an (n − 1) × (n − 1) square.",
+    "assumptions": [
+      "n a positive integer"
+    ],
+    "vars": [
+      [
+        "k",
+        "summation index",
+        ""
+      ],
+      [
+        "n",
+        "number of terms, a positive integer",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Σ_{k=1}^{n} k = n(n + 1)/2",
+        "gives 2 · n(n + 1)/2 − n = n^{2}"
+      ]
+    ],
+    "example": {
+      "problem": "Add the first 20 odd numbers (1 + 3 + … + 39).",
+      "steps": [
+        "n = 20",
+        "= 20^{2}"
+      ],
+      "answer": "400"
+    },
+    "try": "sum(2k - 1, k, 1, 20)"
+  },
+  "Σ_{k=1}^{n} (a + (k − 1)d) = n(2a + (n − 1)d)/2": {
+    "title": "Arithmetic series",
+    "about": "Sum of n terms that go up by a fixed step d. It equals n times the average of the first and last terms, n(a + ℓ)/2.",
+    "assumptions": [
+      "n a positive integer"
+    ],
+    "vars": [
+      [
+        "k",
+        "summation index",
+        ""
+      ],
+      [
+        "n",
+        "number of terms, a positive integer",
+        ""
+      ],
+      [
+        "a",
+        "first term",
+        ""
+      ],
+      [
+        "d",
+        "common difference",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Σ_{k=1}^{n} k = n(n + 1)/2",
+        "a = d = 1"
+      ],
+      [
+        "Σ_{k=1}^{n} ar^{k−1} = a(1 − r^{n})/(1 − r)",
+        "geometric series"
+      ]
+    ],
+    "example": {
+      "problem": "Seats in a theatre: 5 in the first row, 3 more in each row after, 20 rows. How many seats?",
+      "steps": [
+        "a = 5, d = 3, n = 20",
+        "= 20(10 + 19 · 3)/2 = 10 · 67"
+      ],
+      "answer": "670"
+    },
+    "try": "sum(5 + (k - 1)*3, k, 1, 20)"
+  },
+  "Σ_{k=1}^{n} ar^{k−1} = a(1 − r^{n})/(1 − r)": {
+    "title": "Finite geometric series",
+    "about": "Sum of n terms each r times the last. Multiply the sum by r and subtract: everything but the first and last term cancels. Used for loan payments, compound growth and settling of feedback loops.",
+    "assumptions": [
+      "r ≠ 1 (when r = 1 the sum is na)",
+      "n a positive integer"
+    ],
+    "vars": [
+      [
+        "k",
+        "summation index",
+        ""
+      ],
+      [
+        "n",
+        "number of terms, a positive integer",
+        ""
+      ],
+      [
+        "a",
+        "first term",
+        ""
+      ],
+      [
+        "r",
+        "common ratio",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Σ_{k=0}^{∞} ar^{k} = a/(1 − r)",
+        "infinite series, |r| < 1"
+      ],
+      [
+        "Σ_{k=1}^{n} (a + (k − 1)d) = n(2a + (n − 1)d)/2",
+        "arithmetic series"
+      ]
+    ],
+    "example": {
+      "problem": "Evaluate 3 + 6 + 12 + … for 10 terms.",
+      "steps": [
+        "a = 3, r = 2, n = 10",
+        "= 3(1 − 2^{10})/(1 − 2) = 3 · 1023"
+      ],
+      "answer": "3069"
+    },
+    "try": "sum(3*2^(k - 1), k, 1, 10)"
+  },
+  "Σ_{k=0}^{∞} ar^{k} = a/(1 − r)": {
+    "title": "Infinite geometric series",
+    "about": "Let n → ∞ in the finite sum: r^{n} → 0 when |r| < 1. Gives repeating decimals as fractions, total distance of a bouncing ball, and the 1/(1 − z^{−1}) of the z-transform.",
+    "assumptions": [
+      "|r| < 1; otherwise the series diverges"
+    ],
+    "vars": [
+      [
+        "k",
+        "summation index",
+        ""
+      ],
+      [
+        "a",
+        "first term",
+        ""
+      ],
+      [
+        "r",
+        "common ratio",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Σ_{k=1}^{n} ar^{k−1} = a(1 − r^{n})/(1 − r)",
+        "finite version"
+      ],
+      [
+        "Σ_{k=1}^{∞} kr^{k} = r/(1 − r)^{2}",
+        "weighted by k"
+      ]
+    ],
+    "example": {
+      "problem": "Evaluate 10 + 6 + 3.6 + 2.16 + …",
+      "steps": [
+        "a = 10, r = 0.6",
+        "= 10/(1 − 0.6) = 10/0.4"
+      ],
+      "answer": "25"
+    },
+    "try": "sum(10*0.6^k, k, 0, inf)"
+  },
+  "Σ_{k=1}^{∞} kr^{k} = r/(1 − r)^{2}": {
+    "title": "Arithmetic–geometric series",
+    "about": "Differentiate Σ r^{k} = 1/(1 − r) with respect to r and multiply by r. It gives expected values such as the mean of a geometric distribution.",
+    "assumptions": [
+      "|r| < 1"
+    ],
+    "vars": [
+      [
+        "k",
+        "summation index",
+        ""
+      ],
+      [
+        "r",
+        "ratio",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Σ_{k=0}^{∞} ar^{k} = a/(1 − r)",
+        "the series it is derived from"
+      ]
+    ],
+    "example": {
+      "problem": "Evaluate 1/2 + 2/4 + 3/8 + 4/16 + …",
+      "steps": [
+        "r = 1/2",
+        "= (1/2)/(1/2)^{2} = (1/2)/(1/4)"
+      ],
+      "answer": "2"
+    },
+    "try": "sum(k*0.5^k, k, 1, inf)"
+  },
+  "Σ_{k=0}^{∞} x^{k}/k! = e^{x}": {
+    "title": "Taylor series of e^{x}",
+    "about": "The exponential function's Maclaurin series. It converges for every x, and fast: a handful of terms gives e^{x} accurately for small x.",
+    "assumptions": [
+      "Converges for every real or complex x",
+      "0! = 1 and x^{0} = 1"
+    ],
+    "vars": [
+      [
+        "k",
+        "summation index",
+        ""
+      ],
+      [
+        "x",
+        "any real or complex number",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Σ_{k=0}^{n} C(n, k) = 2^{n}",
+        "another closed-form series"
+      ],
+      [
+        "e^{ln x} = x",
+        "e^{x} and ln"
+      ]
+    ],
+    "example": {
+      "problem": "Evaluate 1 + 2 + 2^{2}/2! + 2^{3}/3! + …",
+      "steps": [
+        "x = 2",
+        "= e^{2}"
+      ],
+      "answer": "e^{2} ≈ 7.389"
+    },
+    "try": "sum(2^k/k!, k, 0, inf)"
+  },
+  "Σ_{k=0}^{n} C(n, k) = 2^{n}": {
+    "title": "Sum of binomial coefficients",
+    "about": "Set a = b = 1 in the binomial theorem. Counting: each of n items is either in or out of a subset, so there are 2^{n} subsets in all, and C(n, k) of them have size k.",
+    "assumptions": [
+      "n a non-negative integer"
+    ],
+    "vars": [
+      [
+        "k",
+        "summation index",
+        ""
+      ],
+      [
+        "n",
+        "number of items, a non-negative integer",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "(a + b)^{n} = Σ_{k=0}^{n} C(n, k) a^{n−k}b^{k}",
+        "binomial theorem"
+      ]
+    ],
+    "example": {
+      "problem": "How many subsets does a 6-element set have? Add row 6 of Pascal's triangle.",
+      "steps": [
+        "1 + 6 + 15 + 20 + 15 + 6 + 1",
+        "= 2^{6}"
+      ],
+      "answer": "64"
+    },
+    "try": "sum(nCr(6, k), k, 0, 6)"
+  }
+}

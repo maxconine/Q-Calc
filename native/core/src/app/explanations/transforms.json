@@ -1,0 +1,4458 @@
+{
+  "Σ_{i=1}^{n} i = n(n + 1)/2": {
+    "title": "Sum of the first n integers (arithmetic series)",
+    "about": "Adding 1 + 2 + … + n gives n(n + 1)/2. It counts the work of a doubly nested loop where the inner loop runs i times, which is why such loops are Θ(n^{2}).",
+    "assumptions": [
+      "n is a non-negative integer; the empty sum (n = 0) is 0",
+      "For a general arithmetic series a, a + d, …, the sum is (number of terms)(first + last)/2"
+    ],
+    "vars": [
+      [
+        "n",
+        "number of terms (the last integer added)",
+        ""
+      ],
+      [
+        "i",
+        "summation index",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Σ_{i=1}^{n} i^{2} = n(n + 1)(2n + 1)/6",
+        "sum of squares"
+      ],
+      [
+        "Σ_{i=1}^{n} i^{3} = (n(n + 1)/2)^{2}",
+        "sum of cubes"
+      ],
+      [
+        "Σ_{i=0}^{n−1} (a + id) = n(2a + (n − 1)d)/2",
+        "general arithmetic series"
+      ]
+    ],
+    "example": {
+      "problem": "A loop compares every pair of 100 items once (inner loop runs i times for i = 1 … 99). How many comparisons?",
+      "steps": [
+        "Comparisons = Σ_{i=1}^{99} i",
+        "= 99 × 100/2",
+        "= 4950"
+      ],
+      "answer": "4950 comparisons"
+    },
+    "try": "sum(i, i, 1, 99)"
+  },
+  "Σ_{i=0}^{n} 2^{i} = 2^{n+1} − 1": {
+    "title": "Sum of powers of two (geometric series)",
+    "about": "1 + 2 + 4 + … + 2^{n} is one less than the next power of two. It is why a full binary tree of height n has 2^{n+1} − 1 nodes, and why doubling a dynamic array costs O(1) amortized per insert.",
+    "assumptions": [
+      "n is a non-negative integer",
+      "It is the ratio-2 case of the geometric series; for ratio r ≠ 1 use (r^{n+1} − 1)/(r − 1)"
+    ],
+    "vars": [
+      [
+        "n",
+        "highest exponent (n + 1 terms)",
+        ""
+      ],
+      [
+        "i",
+        "summation index",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Σ_{i=0}^{n} r^{i} = (r^{n+1} − 1)/(r − 1)",
+        "any ratio r ≠ 1"
+      ],
+      [
+        "Σ_{i=0}^{∞} r^{i} = 1/(1 − r)",
+        "infinite series, |r| < 1"
+      ]
+    ],
+    "example": {
+      "problem": "How many nodes are in a complete binary tree with levels 0 through 9?",
+      "steps": [
+        "Level i holds 2^{i} nodes",
+        "Total = Σ_{i=0}^{9} 2^{i} = 2^{10} − 1",
+        "= 1023"
+      ],
+      "answer": "1023 nodes"
+    },
+    "try": "sum(2^i, i, 0, 9)"
+  },
+  "T(n) = a T(n/b) + f(n)": {
+    "title": "Divide-and-conquer recurrence (master theorem form)",
+    "about": "A recursive algorithm that splits a problem of size n into a pieces of size n/b and does f(n) extra work satisfies this recurrence. The master theorem solves it by comparing f(n) with n^{log_{b} a}, the number of leaves in the recursion tree.",
+    "assumptions": [
+      "The subproblems are all the same size n/b, with a ≥ 1 and b > 1",
+      "f(n) is asymptotically positive; floors and ceilings in n/b don't change the result",
+      "There are gaps between the three cases (e.g. f(n) = n^{log_{b} a}/log n); then the master theorem says nothing and you use a recursion tree or Akra–Bazzi"
+    ],
+    "vars": [
+      [
+        "T(n)",
+        "running time on an input of size n",
+        ""
+      ],
+      [
+        "a",
+        "number of subproblems per call",
+        ""
+      ],
+      [
+        "b",
+        "factor the input shrinks by per call",
+        ""
+      ],
+      [
+        "f(n)",
+        "work done outside the recursive calls (split and combine)",
+        ""
+      ],
+      [
+        "n",
+        "input size",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "T(n) = Θ(n^{log_{b} a})",
+        "case 1: f(n) = O(n^{log_{b} a − ε})"
+      ],
+      [
+        "T(n) = Θ(n^{log_{b} a} log n)",
+        "case 2: f(n) = Θ(n^{log_{b} a})"
+      ],
+      [
+        "T(n) = Θ(f(n))",
+        "case 3: f(n) = Ω(n^{log_{b} a + ε}) and a f(n/b) ≤ c f(n), c < 1"
+      ]
+    ],
+    "example": {
+      "problem": "Merge sort splits into 2 halves and merges in linear time. Solve T(n) = 2T(n/2) + n.",
+      "steps": [
+        "a = 2, b = 2, so n^{log_{2} 2} = n^{1}",
+        "f(n) = n = Θ(n^{1}): case 2, levels equal",
+        "T(n) = Θ(n log n)"
+      ],
+      "answer": "T(n) = Θ(n log n)"
+    }
+  },
+  "T(n) = Θ(n^{log_{b} a})": {
+    "title": "Master theorem case 1: the leaves dominate",
+    "about": "When the work outside the recursion, f(n), grows polynomially slower than n^{log_{b} a}, the cost of the a^{log_{b} n} = n^{log_{b} a} leaves dominates and sets the running time.",
+    "assumptions": [
+      "Needs f(n) = O(n^{log_{b} a − ε}) for some ε > 0, polynomially smaller, not just smaller by a log factor",
+      "The subproblems are all the same size n/b, with a ≥ 1 and b > 1"
+    ],
+    "vars": [
+      [
+        "T(n)",
+        "running time on an input of size n",
+        ""
+      ],
+      [
+        "a",
+        "number of subproblems per call",
+        ""
+      ],
+      [
+        "b",
+        "factor the input shrinks by per call",
+        ""
+      ],
+      [
+        "f(n)",
+        "work done outside the recursive calls (split and combine)",
+        ""
+      ],
+      [
+        "n",
+        "input size",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "T(n) = Θ(n^{log_{b} a})",
+        "case 1: f(n) = O(n^{log_{b} a − ε})"
+      ],
+      [
+        "T(n) = Θ(n^{log_{b} a} log n)",
+        "case 2: f(n) = Θ(n^{log_{b} a})"
+      ],
+      [
+        "T(n) = Θ(f(n))",
+        "case 3: f(n) = Ω(n^{log_{b} a + ε}) and a f(n/b) ≤ c f(n), c < 1"
+      ]
+    ],
+    "example": {
+      "problem": "Karatsuba multiplication makes 3 recursive multiplications of half-size numbers plus linear work: T(n) = 3T(n/2) + n. Find its order.",
+      "steps": [
+        "a = 3, b = 2: log_{2} 3 ≈ 1.585",
+        "f(n) = n = O(n^{1.585 − ε}) with ε ≈ 0.5: case 1",
+        "T(n) = Θ(n^{log_{2} 3}) ≈ Θ(n^{1.585})"
+      ],
+      "answer": "Θ(n^{1.585})"
+    },
+    "try": "log(3, 2)"
+  },
+  "T(n) = Θ(n^{log_{b} a} log n)": {
+    "title": "Master theorem case 2: every level costs the same",
+    "about": "When f(n) matches n^{log_{b} a}, each of the log_{b} n levels of the recursion tree does about the same work, so the total is that work times the number of levels.",
+    "assumptions": [
+      "Needs f(n) = Θ(n^{log_{b} a}) exactly; if f(n) = Θ(n^{log_{b} a} log^{k} n) the answer becomes Θ(n^{log_{b} a} log^{k+1} n)",
+      "The subproblems are all the same size n/b, with a ≥ 1 and b > 1"
+    ],
+    "vars": [
+      [
+        "T(n)",
+        "running time on an input of size n",
+        ""
+      ],
+      [
+        "a",
+        "number of subproblems per call",
+        ""
+      ],
+      [
+        "b",
+        "factor the input shrinks by per call",
+        ""
+      ],
+      [
+        "f(n)",
+        "work done outside the recursive calls (split and combine)",
+        ""
+      ],
+      [
+        "n",
+        "input size",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "T(n) = Θ(n^{log_{b} a})",
+        "case 1: f(n) = O(n^{log_{b} a − ε})"
+      ],
+      [
+        "T(n) = Θ(n^{log_{b} a} log n)",
+        "case 2: f(n) = Θ(n^{log_{b} a})"
+      ],
+      [
+        "T(n) = Θ(f(n))",
+        "case 3: f(n) = Ω(n^{log_{b} a + ε}) and a f(n/b) ≤ c f(n), c < 1"
+      ]
+    ],
+    "example": {
+      "problem": "Binary search does one comparison and recurses on half: T(n) = T(n/2) + 1. Find its order, and the number of levels for n = 1,000,000.",
+      "steps": [
+        "a = 1, b = 2: n^{log_{2} 1} = n^{0} = 1",
+        "f(n) = 1 = Θ(1): case 2",
+        "T(n) = Θ(log n); levels ≈ log_{2}(10^{6}) ≈ 19.9, so about 20 comparisons"
+      ],
+      "answer": "Θ(log n), about 20 comparisons"
+    },
+    "try": "log(1000000, 2)"
+  },
+  "T(n) = Θ(f(n))": {
+    "title": "Master theorem case 3: the root's work dominates",
+    "about": "When f(n) grows polynomially faster than n^{log_{b} a}, the top-level split and combine cost more than everything below, and the running time is just f(n).",
+    "assumptions": [
+      "Needs f(n) = Ω(n^{log_{b} a + ε}) for some ε > 0",
+      "And the regularity condition a f(n/b) ≤ c f(n) for some c < 1 and large n, so the work shrinks geometrically down the tree (it holds for ordinary polynomials)",
+      "The subproblems are all the same size n/b, with a ≥ 1 and b > 1"
+    ],
+    "vars": [
+      [
+        "T(n)",
+        "running time on an input of size n",
+        ""
+      ],
+      [
+        "a",
+        "number of subproblems per call",
+        ""
+      ],
+      [
+        "b",
+        "factor the input shrinks by per call",
+        ""
+      ],
+      [
+        "f(n)",
+        "work done outside the recursive calls (split and combine)",
+        ""
+      ],
+      [
+        "n",
+        "input size",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "T(n) = Θ(n^{log_{b} a})",
+        "case 1: f(n) = O(n^{log_{b} a − ε})"
+      ],
+      [
+        "T(n) = Θ(n^{log_{b} a} log n)",
+        "case 2: f(n) = Θ(n^{log_{b} a})"
+      ],
+      [
+        "T(n) = Θ(f(n))",
+        "case 3: f(n) = Ω(n^{log_{b} a + ε}) and a f(n/b) ≤ c f(n), c < 1"
+      ]
+    ],
+    "example": {
+      "problem": "Solve T(n) = 2T(n/2) + n^{2}.",
+      "steps": [
+        "a = 2, b = 2: n^{log_{2} 2} = n",
+        "f(n) = n^{2} = Ω(n^{1 + ε}) with ε = 1",
+        "Regularity: 2(n/2)^{2} = n^{2}/2 ≤ (1/2) n^{2}, c = 1/2 < 1",
+        "Case 3: T(n) = Θ(n^{2})"
+      ],
+      "answer": "T(n) = Θ(n^{2})"
+    }
+  },
+  "α = n/m": {
+    "title": "Hash table load factor",
+    "about": "The load factor is the average number of keys per bucket. It sets the expected cost of a lookup, so tables resize (typically doubling m) once α passes a threshold.",
+    "assumptions": [
+      "Assumes simple uniform hashing: each key is equally likely to land in any bucket, independently",
+      "Chaining tolerates α > 1; open addressing needs α < 1 and slows sharply as α → 1"
+    ],
+    "vars": [
+      [
+        "α",
+        "load factor, keys per bucket",
+        ""
+      ],
+      [
+        "n",
+        "number of keys stored",
+        ""
+      ],
+      [
+        "m",
+        "number of buckets (slots)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "1 + α",
+        "expected probes, chaining (successful search ≈ 1 + α/2)"
+      ],
+      [
+        "1/(1 − α)",
+        "expected probes for an unsuccessful search, open addressing"
+      ]
+    ],
+    "example": {
+      "problem": "A hash table with open addressing has 1024 slots holding 750 keys. Find α and the expected probes for an unsuccessful search.",
+      "steps": [
+        "α = 750/1024 = 0.732",
+        "Probes ≈ 1/(1 − 0.732) = 3.73"
+      ],
+      "answer": "α ≈ 0.732, about 3.73 probes"
+    },
+    "try": "1/(1 - 750/1024)"
+  },
+  "P ≈ 1 − e^{−n^{2}/(2m)}": {
+    "title": "Birthday bound: chance of a hash collision",
+    "about": "With n items hashed into m equally likely values, the probability that at least two share a value is about 1 − e^{−n^{2}/(2m)}. Collisions become likely once n is near √m, far sooner than intuition suggests.",
+    "assumptions": [
+      "Hash values are uniform and independent",
+      "An approximation good for n ≪ m; the exact value is 1 − Π_{k=0}^{n−1}(1 − k/m)",
+      "Some texts use n(n − 1) in place of n^{2}; the difference is small for large n"
+    ],
+    "vars": [
+      [
+        "P",
+        "probability of at least one collision",
+        ""
+      ],
+      [
+        "n",
+        "number of items hashed",
+        ""
+      ],
+      [
+        "m",
+        "number of possible hash values",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "n ≈ √(2m ln 2) ≈ 1.18√m",
+        "items for a 50% chance"
+      ],
+      [
+        "n ≈ √(2m ln(1/(1 − P)))",
+        "items for collision probability P"
+      ]
+    ],
+    "example": {
+      "problem": "How likely is a collision among 23 people's birthdays (m = 365)?",
+      "steps": [
+        "n^{2}/(2m) = 529/730 = 0.725",
+        "P ≈ 1 − e^{−0.725} = 0.516"
+      ],
+      "answer": "P ≈ 0.516 (about 52%)"
+    },
+    "try": "1 - e^(-23^2/(2*365))"
+  },
+  "N = 2^{n}": {
+    "title": "Number of values in n bits",
+    "about": "Each bit doubles the number of distinct patterns, so n bits can represent 2^{n} different values: unsigned integers 0 to 2^{n} − 1, or −2^{n−1} to 2^{n−1} − 1 in two's complement.",
+    "assumptions": [
+      "Counts distinct bit patterns; how they map to values (unsigned, signed, floating point) is a separate choice"
+    ],
+    "vars": [
+      [
+        "N",
+        "number of distinct values",
+        ""
+      ],
+      [
+        "n",
+        "number of bits",
+        "bit"
+      ]
+    ],
+    "related": [
+      [
+        "n = log_{2}(N)",
+        "bits needed for N values"
+      ],
+      [
+        "0 … 2^{n} − 1",
+        "unsigned range"
+      ],
+      [
+        "−2^{n−1} … 2^{n−1} − 1",
+        "two's-complement range"
+      ]
+    ],
+    "example": {
+      "problem": "How many distinct addresses does a 32-bit IPv4 address allow?",
+      "steps": [
+        "N = 2^{32}",
+        "= 4,294,967,296"
+      ],
+      "answer": "4,294,967,296 (about 4.29 × 10^{9})"
+    },
+    "try": "2^32"
+  },
+  "n = log_{2}(N)": {
+    "title": "Bits needed to encode N values",
+    "about": "To give each of N things its own binary code you need log_{2}(N) bits, rounded up to a whole bit. It is also the number of yes/no questions binary search needs to find one item among N.",
+    "assumptions": [
+      "Round up: n = ⌈log_{2} N⌉ for a fixed-width code",
+      "Assumes every value gets a code of the same length; variable-length codes average down to the entropy H"
+    ],
+    "vars": [
+      [
+        "n",
+        "number of bits",
+        "bit"
+      ],
+      [
+        "N",
+        "number of distinct values to represent",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "N = 2^{n}",
+        "values in n bits"
+      ],
+      [
+        "log_{2}(N) = ln(N)/ln(2)",
+        "change of base"
+      ]
+    ],
+    "example": {
+      "problem": "How many bits are needed to give each of 1000 sensors a unique ID?",
+      "steps": [
+        "log_{2}(1000) = 9.97",
+        "Round up: 10 bits (2^{10} = 1024 ≥ 1000)"
+      ],
+      "answer": "log_{2}(1000) ≈ 9.97, so 10 bits"
+    },
+    "try": "log(1000, 2)"
+  },
+  "H = −Σ p_{i} log_{2}(p_{i})": {
+    "title": "Shannon entropy",
+    "about": "Entropy is the average information per symbol from a source, in bits. It is the lower bound on the average code length of any lossless compression of that source.",
+    "assumptions": [
+      "The p_{i} are probabilities that sum to 1; a term with p_{i} = 0 counts as 0",
+      "Symbols are independent draws; correlated sources (like English text) have a lower entropy rate",
+      "With ln instead of log_{2} the unit is nats"
+    ],
+    "vars": [
+      [
+        "H",
+        "entropy, average information per symbol",
+        "bit"
+      ],
+      [
+        "p_{i}",
+        "probability of symbol i",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "H_{max} = log_{2}(N)",
+        "N equally likely symbols"
+      ],
+      [
+        "L ≥ H",
+        "average length of any lossless code"
+      ]
+    ],
+    "example": {
+      "problem": "A source emits A, B, C with probabilities 0.5, 0.25, 0.25. Find its entropy.",
+      "steps": [
+        "H = −(0.5 log_{2} 0.5 + 0.25 log_{2} 0.25 + 0.25 log_{2} 0.25)",
+        "= 0.5(1) + 0.25(2) + 0.25(2)",
+        "= 1.5 bits"
+      ],
+      "answer": "H = 1.5 bits per symbol"
+    },
+    "try": "-(0.5 log(0.5, 2) + 2*0.25 log(0.25, 2))"
+  },
+  "S = 1/((1 − p) + p/s)": {
+    "title": "Amdahl's law: overall speedup",
+    "about": "Speeding up only part of a program by a factor s speeds up the whole by S. The untouched fraction 1 − p caps the speedup at 1/(1 − p) no matter how large s gets.",
+    "assumptions": [
+      "The fraction p is measured as a share of the original run time",
+      "The workload size is fixed (strong scaling); if the problem grows with the processors, Gustafson's law applies",
+      "Ignores the overhead of communication and synchronization, which lowers S in practice"
+    ],
+    "vars": [
+      [
+        "S",
+        "overall speedup",
+        ""
+      ],
+      [
+        "p",
+        "fraction of the original time that is sped up",
+        ""
+      ],
+      [
+        "s",
+        "speedup of that fraction (e.g. number of cores)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "S_{max} = 1/(1 − p)",
+        "limit as s → ∞"
+      ],
+      [
+        "S = (1 − p) + p s",
+        "Gustafson's scaled speedup"
+      ]
+    ],
+    "example": {
+      "problem": "90% of a program parallelizes perfectly. What is the speedup on 8 cores?",
+      "steps": [
+        "S = 1/((1 − 0.9) + 0.9/8)",
+        "= 1/(0.1 + 0.1125)",
+        "= 4.71"
+      ],
+      "answer": "S ≈ 4.71 (limit 10 with infinitely many cores)"
+    },
+    "try": "1/((1 - 0.9) + 0.9/8)"
+  },
+  "t = N CPI/f": {
+    "title": "CPU time (the iron law of performance)",
+    "about": "Run time is instructions executed × average clock cycles per instruction ÷ clock frequency. It shows the three levers: fewer instructions, fewer cycles each, or a faster clock.",
+    "assumptions": [
+      "CPI is an average over the actual instruction mix and includes stalls (cache misses, branch mispredictions)",
+      "Ignores time waiting on I/O or other processes"
+    ],
+    "vars": [
+      [
+        "t",
+        "CPU execution time",
+        "s"
+      ],
+      [
+        "N",
+        "instruction count",
+        ""
+      ],
+      [
+        "CPI",
+        "average clock cycles per instruction",
+        ""
+      ],
+      [
+        "f",
+        "clock frequency",
+        "Hz"
+      ]
+    ],
+    "related": [
+      [
+        "CPI = Σ CPI_{k} (N_{k}/N)",
+        "weighted over instruction classes"
+      ],
+      [
+        "IPC = 1/CPI",
+        "instructions per cycle"
+      ],
+      [
+        "T_{clk} = 1/f",
+        "clock period"
+      ]
+    ],
+    "example": {
+      "problem": "A program runs 2 × 10^{9} instructions at a CPI of 1.5 on a 3 GHz processor. How long does it take?",
+      "steps": [
+        "t = (2 × 10^{9})(1.5)/(3 × 10^{9} Hz)",
+        "= 1 s"
+      ],
+      "answer": "t = 1 s"
+    },
+    "try": "2e9 * 1.5 / 3 GHz to s"
+  },
+  "AMAT = t_{hit} + m t_{miss}": {
+    "title": "Average memory access time",
+    "about": "Every access pays the cache hit time; the fraction that miss also pay the miss penalty. It is how cache size, associativity and multi-level caches are compared.",
+    "assumptions": [
+      "m is the miss rate per access at this level (0 to 1)",
+      "t_{miss} is the extra time to fetch from the next level; for multi-level caches it is itself an AMAT",
+      "Ignores overlap of misses (out-of-order or non-blocking caches hide part of the penalty)"
+    ],
+    "vars": [
+      [
+        "AMAT",
+        "average memory access time",
+        "s"
+      ],
+      [
+        "t_{hit}",
+        "hit time",
+        "s"
+      ],
+      [
+        "m",
+        "miss rate",
+        ""
+      ],
+      [
+        "t_{miss}",
+        "miss penalty",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "AMAT = t_{L1} + m_{L1}(t_{L2} + m_{L2} t_{mem})",
+        "two-level cache"
+      ]
+    ],
+    "example": {
+      "problem": "An L1 cache hits in 1 ns, misses 5% of the time, and a miss costs 100 ns. Find the AMAT.",
+      "steps": [
+        "AMAT = 1 ns + 0.05 × 100 ns",
+        "= 6 ns"
+      ],
+      "answer": "AMAT = 6 ns"
+    },
+    "try": "1 ns + 0.05 * 100 ns"
+  },
+  "t = L/R": {
+    "title": "Transmission delay",
+    "about": "The time to push all of a packet's bits onto the link: its length divided by the link's bit rate. It depends on the packet and the link speed, not on distance.",
+    "assumptions": [
+      "R is the link's data rate (bits per second), not the signal's propagation speed",
+      "Watch units: packet sizes are often in bytes (× 8 bits) and rates use powers of 10 (1 Mb/s = 10^{6} b/s)"
+    ],
+    "vars": [
+      [
+        "t",
+        "transmission delay",
+        "s"
+      ],
+      [
+        "L",
+        "packet length",
+        "bit"
+      ],
+      [
+        "R",
+        "link transmission rate",
+        "bit/s"
+      ]
+    ],
+    "related": [
+      [
+        "t = d/s",
+        "propagation delay"
+      ],
+      [
+        "t_{total} = t_{trans} + t_{prop} + t_{queue} + t_{proc}",
+        "one-hop delay"
+      ]
+    ],
+    "example": {
+      "problem": "How long does it take to transmit a 1500-byte packet on a 100 Mb/s link?",
+      "steps": [
+        "L = 1500 × 8 = 12,000 bits",
+        "t = 12,000/(100 × 10^{6}) s",
+        "= 120 μs"
+      ],
+      "answer": "t = 120 μs"
+    },
+    "try": "12000 / (100e6 Hz) to us"
+  },
+  "t = d/s": {
+    "title": "Propagation delay",
+    "about": "The time for a signal to travel the length of a link: distance over propagation speed. It is independent of the packet size and the bit rate.",
+    "assumptions": [
+      "s is the signal speed in the medium: about 2 × 10^{8} m/s in copper or fibre (≈ 2/3 c), 3 × 10^{8} m/s in air or vacuum"
+    ],
+    "vars": [
+      [
+        "t",
+        "propagation delay",
+        "s"
+      ],
+      [
+        "d",
+        "length of the link",
+        "m"
+      ],
+      [
+        "s",
+        "propagation speed in the medium",
+        "m/s"
+      ]
+    ],
+    "related": [
+      [
+        "t = L/R",
+        "transmission delay"
+      ],
+      [
+        "RTT ≈ 2 t_{prop}",
+        "round trip, ignoring other delays"
+      ]
+    ],
+    "example": {
+      "problem": "Light in fibre travels at 2 × 10^{8} m/s. What is the one-way propagation delay over 4000 km of fibre?",
+      "steps": [
+        "t = 4 × 10^{6} m/(2 × 10^{8} m/s)",
+        "= 0.02 s = 20 ms"
+      ],
+      "answer": "t = 20 ms"
+    },
+    "try": "4000 km / (2e8 m/s) to ms"
+  },
+  "B = R RTT": {
+    "title": "Bandwidth-delay product",
+    "about": "The amount of data in flight on a link: the rate times the round-trip time. A sender's window (TCP window, buffer) must be at least this big to keep the link fully used.",
+    "assumptions": [
+      "Uses the round-trip time, since the sender waits a full RTT for acknowledgements; some texts use the one-way delay for 'bits on the wire'",
+      "R is the bottleneck rate along the path"
+    ],
+    "vars": [
+      [
+        "B",
+        "bandwidth-delay product (data in flight)",
+        "bit"
+      ],
+      [
+        "R",
+        "link rate",
+        "bit/s"
+      ],
+      [
+        "RTT",
+        "round-trip time",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "throughput ≤ W/RTT",
+        "window-limited throughput for window W"
+      ]
+    ],
+    "example": {
+      "problem": "A 1 Gb/s path has a 50 ms round-trip time. How large a window keeps it full?",
+      "steps": [
+        "B = 10^{9} b/s × 0.05 s = 5 × 10^{7} bits",
+        "÷ 8 = 6.25 × 10^{6} bytes = 6.25 MB"
+      ],
+      "answer": "B = 5 × 10^{7} bits = 6.25 MB"
+    },
+    "try": "1e9 * 0.05 / 8 / 1e6"
+  },
+  "ŷ = w · x + b": {
+    "title": "Linear model",
+    "about": "A linear model predicts a weighted sum of the input features plus a bias. It is linear regression when ŷ is used directly, and the score inside logistic regression and every neuron of a network.",
+    "assumptions": [
+      "The output is linear in each feature; curved relations need engineered features (x^{2}, log x) or a nonlinear model",
+      "For least squares, errors should be independent with constant variance for the usual confidence intervals"
+    ],
+    "vars": [
+      [
+        "ŷ",
+        "predicted value",
+        ""
+      ],
+      [
+        "w",
+        "weight vector, one weight per feature",
+        ""
+      ],
+      [
+        "x",
+        "feature vector",
+        ""
+      ],
+      [
+        "b",
+        "bias (intercept)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "w = (X^{T} X)^{−1} X^{T} y",
+        "least-squares weights"
+      ],
+      [
+        "σ(w · x + b)",
+        "logistic regression probability"
+      ]
+    ],
+    "example": {
+      "problem": "A house-price model has w = (150, 10,000) for (area in m^{2}, bedrooms) and b = 20,000. Predict the price of a 120 m^{2}, 3-bedroom house.",
+      "steps": [
+        "w · x = 150 × 120 + 10,000 × 3 = 18,000 + 30,000 = 48,000",
+        "ŷ = 48,000 + 20,000 = 68,000"
+      ],
+      "answer": "ŷ = 68,000"
+    },
+    "try": "150*120 + 10000*3 + 20000"
+  },
+  "w = (X^{T} X)^{−1} X^{T} y": {
+    "title": "Normal equation: least-squares weights",
+    "about": "The weights that minimise the squared error of a linear model, found in one step from the data matrix X and targets y, without gradient descent.",
+    "assumptions": [
+      "X^{T} X must be invertible: more examples than features and no feature an exact combination of others; otherwise use the pseudo-inverse or ridge regression",
+      "Add a column of ones to X to fit the bias",
+      "Costs O(d^{3}) in the number of features d, so gradient descent wins for very many features"
+    ],
+    "vars": [
+      [
+        "w",
+        "weight vector",
+        ""
+      ],
+      [
+        "X",
+        "data matrix, one row per example (n × d)",
+        ""
+      ],
+      [
+        "y",
+        "vector of targets (length n)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "w = (X^{T} X + λI)^{−1} X^{T} y",
+        "ridge (L2-regularized) regression"
+      ],
+      [
+        "m = (nΣxy − ΣxΣy)/(nΣx^{2} − (Σx)^{2})",
+        "slope of a one-feature fit"
+      ]
+    ],
+    "example": {
+      "problem": "Fit y = w_{0} + w_{1}x to the points (0, 1), (1, 3), (2, 5).",
+      "steps": [
+        "X has rows (1, 0), (1, 1), (1, 2); X^{T} X = [[3, 3], [3, 5]], X^{T} y = (9, 13)",
+        "(X^{T} X)^{−1} = (1/6)[[5, −3], [−3, 3]]",
+        "w = (1/6)(5·9 − 3·13, −3·9 + 3·13) = (1/6)(6, 12) = (1, 2)"
+      ],
+      "answer": "w_{0} = 1, w_{1} = 2, so y = 1 + 2x"
+    }
+  },
+  "σ(z) = 1/(1 + e^{−z})": {
+    "title": "Sigmoid (logistic) function",
+    "about": "The sigmoid squashes any real number into (0, 1), so it turns a linear score into a probability in logistic regression and binary classifiers. σ(0) = 1/2.",
+    "assumptions": [
+      "Saturates for large |z|: its gradient σ(1 − σ) vanishes, which slows training of deep networks (ReLU avoids this)",
+      "For large negative z compute it as e^{z}/(1 + e^{z}) to avoid overflow"
+    ],
+    "vars": [
+      [
+        "σ(z)",
+        "output, a probability between 0 and 1",
+        ""
+      ],
+      [
+        "z",
+        "input score (logit)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "σ′(z) = σ(z)(1 − σ(z))",
+        "derivative"
+      ],
+      [
+        "z = ln(p/(1 − p))",
+        "inverse (logit)"
+      ],
+      [
+        "σ(−z) = 1 − σ(z)",
+        "symmetry"
+      ]
+    ],
+    "example": {
+      "problem": "A logistic regression scores an email z = 2. What probability of spam does it give?",
+      "steps": [
+        "σ(2) = 1/(1 + e^{−2})",
+        "= 1/(1 + 0.1353)",
+        "= 0.881"
+      ],
+      "answer": "σ(2) ≈ 0.881"
+    },
+    "try": "1/(1 + e^-2)"
+  },
+  "p_{i} = e^{z_{i}}/(Σ_{j} e^{z_{j}})": {
+    "title": "Softmax",
+    "about": "Softmax turns a vector of scores (logits) into probabilities that are positive and sum to 1, with the largest score getting the largest share. It is the output layer of multi-class classifiers.",
+    "assumptions": [
+      "Subtracting max(z) from every z_{i} first gives the same result and avoids overflow",
+      "Only differences between scores matter: adding a constant to all z_{i} changes nothing",
+      "With two classes it reduces to the sigmoid of z_{1} − z_{2}"
+    ],
+    "vars": [
+      [
+        "p_{i}",
+        "probability of class i",
+        ""
+      ],
+      [
+        "z_{i}",
+        "score (logit) for class i",
+        ""
+      ],
+      [
+        "j",
+        "index over all classes",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "L = −ln(p_{true})",
+        "cross-entropy loss with a one-hot label"
+      ],
+      [
+        "∂L/∂z_{i} = p_{i} − y_{i}",
+        "gradient of softmax + cross-entropy"
+      ]
+    ],
+    "example": {
+      "problem": "A classifier gives scores (2, 1, 0.1) for three classes. Find the probability of the first class.",
+      "steps": [
+        "e^{2} = 7.389, e^{1} = 2.718, e^{0.1} = 1.105; sum = 11.212",
+        "p_{1} = 7.389/11.212 = 0.659"
+      ],
+      "answer": "p_{1} ≈ 0.659 (then 0.242, 0.099)"
+    },
+    "try": "e^2/(e^2 + e^1 + e^0.1)"
+  },
+  "f(x) = max(0, x)": {
+    "title": "ReLU (rectified linear unit)",
+    "about": "ReLU passes positive inputs unchanged and zeroes negative ones. It is the default activation in deep networks because it is cheap and its gradient doesn't vanish for positive inputs.",
+    "assumptions": [
+      "Not differentiable at 0; the gradient there is taken as 0 (or 1)",
+      "A unit whose input stays negative gets zero gradient and stops learning ('dying ReLU'); Leaky ReLU max(αx, x) keeps a small slope"
+    ],
+    "vars": [
+      [
+        "f(x)",
+        "activation output",
+        ""
+      ],
+      [
+        "x",
+        "input (pre-activation)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "f′(x) = 1 for x > 0, 0 for x < 0",
+        "derivative"
+      ],
+      [
+        "max(αx, x)",
+        "Leaky ReLU, small α such as 0.01"
+      ]
+    ],
+    "example": {
+      "problem": "A layer's pre-activations are (−2, 0.5, 3). What does ReLU output?",
+      "steps": [
+        "max(0, −2) = 0",
+        "max(0, 0.5) = 0.5",
+        "max(0, 3) = 3"
+      ],
+      "answer": "(0, 0.5, 3)"
+    }
+  },
+  "MSE = (1/n) Σ (y_{i} − ŷ_{i})^{2}": {
+    "title": "Mean squared error",
+    "about": "The average of the squared differences between targets and predictions. It is the standard loss for regression; squaring punishes large errors heavily.",
+    "assumptions": [
+      "Sensitive to outliers; mean absolute error is more robust",
+      "Its units are the target's units squared; RMSE = √MSE is back in the target's units",
+      "Minimising it is maximum likelihood when the errors are Gaussian with constant variance"
+    ],
+    "vars": [
+      [
+        "MSE",
+        "mean squared error",
+        ""
+      ],
+      [
+        "n",
+        "number of examples",
+        ""
+      ],
+      [
+        "y_{i}",
+        "true value of example i",
+        ""
+      ],
+      [
+        "ŷ_{i}",
+        "predicted value of example i",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "RMSE = √MSE",
+        "root mean squared error"
+      ],
+      [
+        "MAE = (1/n) Σ |y_{i} − ŷ_{i}|",
+        "mean absolute error"
+      ],
+      [
+        "R^{2} = 1 − MSE/Var(y)",
+        "fraction of variance explained"
+      ]
+    ],
+    "example": {
+      "problem": "Targets (3, 5, 2) are predicted as (2.5, 5, 4). Find the MSE.",
+      "steps": [
+        "Errors: 0.5, 0, −2",
+        "Squares: 0.25, 0, 4",
+        "MSE = 4.25/3 = 1.417"
+      ],
+      "answer": "MSE ≈ 1.417"
+    },
+    "try": "(0.5^2 + 0^2 + 2^2)/3"
+  },
+  "L = −Σ y_{i} ln(ŷ_{i})": {
+    "title": "Cross-entropy loss",
+    "about": "The loss for classification: minus the log of the probability the model gave the true class. Confident wrong answers are punished heavily; a perfect prediction costs 0.",
+    "assumptions": [
+      "y is a probability distribution over classes, usually one-hot (1 for the true class), so only that class's term survives",
+      "ŷ_{i} must be > 0; clip it or compute from logits to avoid ln(0)",
+      "Averaged over a batch in practice"
+    ],
+    "vars": [
+      [
+        "L",
+        "cross-entropy loss",
+        ""
+      ],
+      [
+        "y_{i}",
+        "true probability of class i (1 for the true class)",
+        ""
+      ],
+      [
+        "ŷ_{i}",
+        "predicted probability of class i",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "L = −(y ln ŷ + (1 − y) ln(1 − ŷ))",
+        "binary cross-entropy"
+      ],
+      [
+        "H(p, q) = H(p) + D_{KL}(p ‖ q)",
+        "relation to KL divergence"
+      ]
+    ],
+    "example": {
+      "problem": "A classifier gives the true class probability 0.7. What is the loss? And at 0.1?",
+      "steps": [
+        "L = −ln(0.7) = 0.357",
+        "At 0.1: −ln(0.1) = 2.303"
+      ],
+      "answer": "L ≈ 0.357 (2.303 at 0.1)"
+    },
+    "try": "-ln(0.7)"
+  },
+  "D = Σ p_{i} ln(p_{i}/q_{i})": {
+    "title": "Kullback–Leibler divergence",
+    "about": "KL divergence measures how much a distribution q differs from a reference p: the extra information needed when q is used to code data from p. It is zero only when the two are equal.",
+    "assumptions": [
+      "Not symmetric: D(p ‖ q) ≠ D(q ‖ p), so it is not a distance",
+      "Infinite if some q_{i} = 0 where p_{i} > 0; terms with p_{i} = 0 count as 0",
+      "In nats with ln; use log_{2} for bits"
+    ],
+    "vars": [
+      [
+        "D",
+        "KL divergence of q from p",
+        ""
+      ],
+      [
+        "p_{i}",
+        "reference (true) probability of outcome i",
+        ""
+      ],
+      [
+        "q_{i}",
+        "approximating probability of outcome i",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "D ≥ 0",
+        "Gibbs' inequality"
+      ],
+      [
+        "H(p, q) = H(p) + D",
+        "cross-entropy decomposition"
+      ]
+    ],
+    "example": {
+      "problem": "A fair coin p = (0.5, 0.5) is modelled as q = (0.9, 0.1). Find D(p ‖ q).",
+      "steps": [
+        "D = 0.5 ln(0.5/0.9) + 0.5 ln(0.5/0.1)",
+        "= 0.5(−0.588) + 0.5(1.609)",
+        "= 0.511 nats"
+      ],
+      "answer": "D ≈ 0.511 nats"
+    },
+    "try": "0.5 ln(0.5/0.9) + 0.5 ln(0.5/0.1)"
+  },
+  "L + λ ‖w‖^{2}": {
+    "title": "L2 regularization (weight decay, ridge)",
+    "about": "Adding λ times the squared length of the weight vector to the loss pulls weights toward zero, which reduces overfitting. Larger λ means simpler, smoother models.",
+    "assumptions": [
+      "The bias is usually left out of ‖w‖^{2}",
+      "Features should be on similar scales, since the penalty treats every weight alike",
+      "Choose λ by validation; too large underfits"
+    ],
+    "vars": [
+      [
+        "L",
+        "original loss (e.g. MSE)",
+        ""
+      ],
+      [
+        "λ",
+        "regularization strength",
+        ""
+      ],
+      [
+        "w",
+        "weight vector",
+        ""
+      ],
+      [
+        "‖w‖^{2}",
+        "sum of squared weights Σ w_{j}^{2}",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "w ← w − η(∇L + 2λw)",
+        "gradient step: weights decay each step"
+      ],
+      [
+        "L + λ Σ |w_{j}|",
+        "L1 (lasso), drives weights to exactly 0"
+      ],
+      [
+        "w = (X^{T} X + λI)^{−1} X^{T} y",
+        "ridge closed form"
+      ]
+    ],
+    "example": {
+      "problem": "A model has loss 0.8 and weights (2, −1, 0.5). With λ = 0.01, what is the regularized loss?",
+      "steps": [
+        "‖w‖^{2} = 4 + 1 + 0.25 = 5.25",
+        "0.8 + 0.01 × 5.25 = 0.8525"
+      ],
+      "answer": "0.8525"
+    },
+    "try": "0.8 + 0.01*(2^2 + 1^2 + 0.5^2)"
+  },
+  "w ← w − η ∇L": {
+    "title": "Gradient descent update",
+    "about": "Each step moves the weights a small distance against the gradient of the loss, the direction of steepest decrease. Repeated, it walks downhill to a minimum.",
+    "assumptions": [
+      "η too large overshoots and diverges; too small crawls",
+      "Finds a local minimum; only a convex loss guarantees the global one",
+      "Stochastic gradient descent uses the gradient on a mini-batch, a noisy but cheap estimate"
+    ],
+    "vars": [
+      [
+        "w",
+        "weights (parameters)",
+        ""
+      ],
+      [
+        "η",
+        "learning rate (step size)",
+        ""
+      ],
+      [
+        "∇L",
+        "gradient of the loss with respect to w",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "v ← βv + ∇L, w ← w − ηv",
+        "momentum"
+      ],
+      [
+        "η < 2/L_{max}",
+        "stability for a quadratic with largest curvature L_{max}"
+      ]
+    ],
+    "example": {
+      "problem": "Minimise L(w) = (w − 3)^{2} from w = 0 with η = 0.1. Where is w after one step and after two?",
+      "steps": [
+        "∇L = 2(w − 3) = −6 at w = 0",
+        "w = 0 − 0.1(−6) = 0.6",
+        "∇L = 2(0.6 − 3) = −4.8; w = 0.6 + 0.48 = 1.08"
+      ],
+      "answer": "w = 0.6, then 1.08 (heading to 3)"
+    },
+    "try": "0.6 - 0.1*2*(0.6 - 3)"
+  },
+  "P = TP/(TP + FP)": {
+    "title": "Precision",
+    "about": "Of everything the model flagged positive, the fraction that really is. High precision means few false alarms.",
+    "assumptions": [
+      "Undefined when the model flags nothing (TP + FP = 0)",
+      "Trades off against recall: raising the decision threshold usually raises precision and lowers recall"
+    ],
+    "vars": [
+      [
+        "P",
+        "precision",
+        ""
+      ],
+      [
+        "TP",
+        "true positives",
+        ""
+      ],
+      [
+        "FP",
+        "false positives",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "R = TP/(TP + FN)",
+        "recall"
+      ],
+      [
+        "F_{1} = 2PR/(P + R)",
+        "their harmonic mean"
+      ]
+    ],
+    "example": {
+      "problem": "A spam filter flags 50 emails; 45 are spam. Find its precision.",
+      "steps": [
+        "TP = 45, FP = 5",
+        "P = 45/50 = 0.9"
+      ],
+      "answer": "P = 0.9"
+    },
+    "try": "45/(45 + 5)"
+  },
+  "R = TP/(TP + FN)": {
+    "title": "Recall (sensitivity, true positive rate)",
+    "about": "Of all the real positives, the fraction the model caught. High recall means few misses, which matters for screening and fraud detection.",
+    "assumptions": [
+      "Undefined if there are no real positives",
+      "Trades off against precision; flagging everything gives recall 1"
+    ],
+    "vars": [
+      [
+        "R",
+        "recall",
+        ""
+      ],
+      [
+        "TP",
+        "true positives",
+        ""
+      ],
+      [
+        "FN",
+        "false negatives (missed positives)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "P = TP/(TP + FP)",
+        "precision"
+      ],
+      [
+        "TN/(TN + FP)",
+        "specificity"
+      ]
+    ],
+    "example": {
+      "problem": "There are 60 spam emails; the filter catches 45 of them. Find its recall.",
+      "steps": [
+        "TP = 45, FN = 15",
+        "R = 45/60 = 0.75"
+      ],
+      "answer": "R = 0.75"
+    },
+    "try": "45/(45 + 15)"
+  },
+  "F_{1} = 2PR/(P + R)": {
+    "title": "F1 score",
+    "about": "The harmonic mean of precision and recall, a single score that is high only when both are. It is preferred over accuracy for imbalanced classes.",
+    "assumptions": [
+      "Weights precision and recall equally; F_{β} weights recall β times as much",
+      "Ignores true negatives"
+    ],
+    "vars": [
+      [
+        "F_{1}",
+        "F1 score, 0 to 1",
+        ""
+      ],
+      [
+        "P",
+        "precision",
+        ""
+      ],
+      [
+        "R",
+        "recall",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "F_{1} = 2TP/(2TP + FP + FN)",
+        "from counts"
+      ],
+      [
+        "F_{β} = (1 + β^{2})PR/(β^{2}P + R)",
+        "weighted form"
+      ]
+    ],
+    "example": {
+      "problem": "A filter has precision 0.9 and recall 0.75. Find F1.",
+      "steps": [
+        "F_{1} = 2(0.9)(0.75)/(0.9 + 0.75)",
+        "= 1.35/1.65",
+        "= 0.818"
+      ],
+      "answer": "F_{1} ≈ 0.818"
+    },
+    "try": "2*0.9*0.75/(0.9 + 0.75)"
+  },
+  "A = (TP + TN)/(TP + TN + FP + FN)": {
+    "title": "Accuracy",
+    "about": "The fraction of all predictions that are correct. Simple, but misleading when one class is rare.",
+    "assumptions": [
+      "With imbalanced classes a trivial model scores high: always predicting 'not fraud' is 99% accurate if 1% is fraud. Use precision, recall or F1 there"
+    ],
+    "vars": [
+      [
+        "A",
+        "accuracy",
+        ""
+      ],
+      [
+        "TP",
+        "true positives",
+        ""
+      ],
+      [
+        "TN",
+        "true negatives",
+        ""
+      ],
+      [
+        "FP",
+        "false positives",
+        ""
+      ],
+      [
+        "FN",
+        "false negatives",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "1 − A",
+        "error rate"
+      ],
+      [
+        "(TPR + TNR)/2",
+        "balanced accuracy"
+      ]
+    ],
+    "example": {
+      "problem": "Of 1000 emails, a filter gets TP = 45, TN = 930, FP = 5, FN = 20. Find its accuracy.",
+      "steps": [
+        "A = (45 + 930)/1000",
+        "= 0.975"
+      ],
+      "answer": "A = 0.975"
+    },
+    "try": "(45 + 930)/(45 + 930 + 5 + 20)"
+  },
+  "cos(θ) = (a · b)/(|a| |b|)": {
+    "title": "Cosine similarity",
+    "about": "The cosine of the angle between two vectors: 1 when they point the same way, 0 when perpendicular, −1 when opposite. It compares text embeddings and documents regardless of their length.",
+    "assumptions": [
+      "Neither vector may be zero",
+      "Ignores magnitude: (1, 1) and (5, 5) have similarity 1",
+      "For non-negative vectors (word counts) it lies between 0 and 1"
+    ],
+    "vars": [
+      [
+        "θ",
+        "angle between the vectors",
+        "rad"
+      ],
+      [
+        "a, b",
+        "the two vectors",
+        ""
+      ],
+      [
+        "a · b",
+        "dot product Σ a_{i} b_{i}",
+        ""
+      ],
+      [
+        "|a|, |b|",
+        "their lengths",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "1 − cos(θ)",
+        "cosine distance"
+      ],
+      [
+        "|a| = √(Σ a_{i}^{2})",
+        "vector length"
+      ]
+    ],
+    "example": {
+      "problem": "Find the cosine similarity of a = (1, 2, 3) and b = (2, 1, 0).",
+      "steps": [
+        "a · b = 2 + 2 + 0 = 4",
+        "|a| = √14 = 3.742, |b| = √5 = 2.236",
+        "cos θ = 4/(3.742 × 2.236) = 0.478"
+      ],
+      "answer": "cos(θ) ≈ 0.478"
+    },
+    "try": "4/(sqrt(14) sqrt(5))"
+  },
+  "T^{2} = 4π^{2} a^{3}/(G M)": {
+    "title": "Kepler's third law",
+    "about": "The square of an orbit's period is proportional to the cube of its semi-major axis. Given one, it finds the other, or weighs the central body from an orbiting moon or planet.",
+    "assumptions": [
+      "The orbiting body's mass m is small next to M; otherwise use G(M + m)",
+      "Only the two bodies interact (no perturbations), Newtonian gravity",
+      "a is the semi-major axis, measured from the centre of the central body, not from its surface"
+    ],
+    "vars": [
+      [
+        "T",
+        "orbital period",
+        "s"
+      ],
+      [
+        "a",
+        "semi-major axis (radius for a circle)",
+        "m"
+      ],
+      [
+        "G",
+        "gravitational constant, 6.674 × 10^{−11}",
+        "m^{3}/(kg·s^{2})"
+      ],
+      [
+        "M",
+        "mass of the central body",
+        "kg"
+      ]
+    ],
+    "related": [
+      [
+        "T^{2} = a^{3}",
+        "around the Sun, with T in years and a in AU"
+      ],
+      [
+        "v = √(GM/r)",
+        "circular orbit speed"
+      ]
+    ],
+    "example": {
+      "problem": "A GPS satellite orbits with a = 26,560 km around the Earth (M = 5.972 × 10^{24} kg). Find its period.",
+      "steps": [
+        "T = 2π √(a^{3}/(GM))",
+        "a^{3} = (2.656 × 10^{7} m)^{3} = 1.874 × 10^{22} m^{3}",
+        "GM = 3.986 × 10^{14} m^{3}/s^{2}",
+        "T = 2π √(4.70 × 10^{7}) s = 43,080 s ≈ 11.97 h"
+      ],
+      "answer": "T ≈ 11.97 h"
+    },
+    "try": "2 pi sqrt((26560 km)^3 / (6.674e-11 m^3/(kg s^2) * 5.972e24 kg)) to h"
+  },
+  "v = √(G M/r)": {
+    "title": "Circular orbital speed",
+    "about": "The speed at which gravity supplies exactly the centripetal force for a circular orbit of radius r. Lower orbits are faster.",
+    "assumptions": [
+      "A circular orbit; for an ellipse use vis-viva",
+      "The orbiting mass is small next to M",
+      "r is measured from the centre of the central body"
+    ],
+    "vars": [
+      [
+        "v",
+        "orbital speed",
+        "m/s"
+      ],
+      [
+        "G",
+        "gravitational constant, 6.674 × 10^{−11}",
+        "m^{3}/(kg·s^{2})"
+      ],
+      [
+        "M",
+        "mass of the central body",
+        "kg"
+      ],
+      [
+        "r",
+        "orbit radius from the body's centre",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "v_{e} = √2 v",
+        "escape speed at the same r"
+      ],
+      [
+        "T = 2πr/v",
+        "period"
+      ],
+      [
+        "v^{2} = GM(2/r − 1/a)",
+        "vis-viva, any orbit"
+      ]
+    ],
+    "example": {
+      "problem": "The ISS orbits about 420 km above the Earth (radius 6371 km, M = 5.972 × 10^{24} kg). How fast does it go?",
+      "steps": [
+        "r = 6371 + 420 = 6791 km",
+        "v = √(3.986 × 10^{14}/6.791 × 10^{6}) m/s",
+        "= 7.66 km/s"
+      ],
+      "answer": "v ≈ 7.66 km/s"
+    },
+    "try": "sqrt(6.674e-11 m^3/(kg s^2) * 5.972e24 kg / 6791 km) to km/s"
+  },
+  "v_{e} = √(2 G M/r)": {
+    "title": "Escape velocity",
+    "about": "The launch speed at which kinetic energy just equals the gravitational potential energy needed to coast to infinity. It does not depend on the direction or on the escaping mass.",
+    "assumptions": [
+      "No air drag and no thrust after launch",
+      "Measured relative to the body, ignoring its rotation and other bodies",
+      "r is from the body's centre (the surface radius for a launch from the ground)"
+    ],
+    "vars": [
+      [
+        "v_{e}",
+        "escape speed",
+        "m/s"
+      ],
+      [
+        "G",
+        "gravitational constant, 6.674 × 10^{−11}",
+        "m^{3}/(kg·s^{2})"
+      ],
+      [
+        "M",
+        "mass of the central body",
+        "kg"
+      ],
+      [
+        "r",
+        "distance from the body's centre",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "v_{e} = √2 v_{circ}",
+        "versus circular orbit speed"
+      ],
+      [
+        "r_{s} = 2GM/c^{2}",
+        "where v_{e} would reach c"
+      ]
+    ],
+    "example": {
+      "problem": "Find the escape speed from the Earth's surface (M = 5.972 × 10^{24} kg, R = 6371 km).",
+      "steps": [
+        "v_{e} = √(2 × 3.986 × 10^{14}/6.371 × 10^{6}) m/s",
+        "= √(1.251 × 10^{8}) m/s",
+        "= 11.19 km/s"
+      ],
+      "answer": "v_{e} ≈ 11.2 km/s"
+    },
+    "try": "sqrt(2 * 6.674e-11 m^3/(kg s^2) * 5.972e24 kg / 6371 km) to km/s"
+  },
+  "v^{2} = G M (2/r − 1/a)": {
+    "title": "Vis-viva equation",
+    "about": "Gives an orbiting body's speed at any distance r on an ellipse with semi-major axis a. It is energy conservation for a Kepler orbit and the workhorse of transfer-orbit (Hohmann) calculations.",
+    "assumptions": [
+      "Two-body Newtonian motion with the orbiting mass small next to M",
+      "a > 0 for an ellipse; a → ∞ gives escape speed; a < 0 for a hyperbola",
+      "r and a measured from the central body's centre"
+    ],
+    "vars": [
+      [
+        "v",
+        "speed at distance r",
+        "m/s"
+      ],
+      [
+        "G",
+        "gravitational constant, 6.674 × 10^{−11}",
+        "m^{3}/(kg·s^{2})"
+      ],
+      [
+        "M",
+        "mass of the central body",
+        "kg"
+      ],
+      [
+        "r",
+        "current distance from the body's centre",
+        "m"
+      ],
+      [
+        "a",
+        "semi-major axis of the orbit",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "a = (r_{p} + r_{a})/2",
+        "from perigee and apogee"
+      ],
+      [
+        "E = −GMm/(2a)",
+        "orbital energy"
+      ]
+    ],
+    "example": {
+      "problem": "A Hohmann transfer from 6,671 km to 42,164 km (geostationary) radius has a = 24,418 km. Find the speed at perigee (Earth GM = 3.986 × 10^{14} m^{3}/s^{2}).",
+      "steps": [
+        "v^{2} = 3.986 × 10^{14}(2/6.671 × 10^{6} − 1/2.4418 × 10^{7})",
+        "= 3.986 × 10^{14}(2.998 × 10^{−7} − 4.095 × 10^{−8})",
+        "v = 10.16 km/s"
+      ],
+      "answer": "v ≈ 10.16 km/s"
+    },
+    "try": "sqrt(3.986e14 m^3/s^2 * (2/(6671 km) - 1/(24418 km))) to km/s"
+  },
+  "g = G M/r^{2}": {
+    "title": "Gravitational acceleration (surface gravity)",
+    "about": "Newton's law of gravitation gives the acceleration a mass M produces at distance r. At a planet's surface r is its radius; higher up, g falls with the square of the distance from the centre.",
+    "assumptions": [
+      "The body is spherically symmetric (then it acts as a point mass at its centre)",
+      "Outside the body; inside a uniform sphere g grows linearly with r",
+      "Ignores rotation, which lowers apparent g at the equator by about 0.3%"
+    ],
+    "vars": [
+      [
+        "g",
+        "gravitational acceleration",
+        "m/s^{2}"
+      ],
+      [
+        "G",
+        "gravitational constant, 6.674 × 10^{−11}",
+        "m^{3}/(kg·s^{2})"
+      ],
+      [
+        "M",
+        "mass of the central body",
+        "kg"
+      ],
+      [
+        "r",
+        "distance from the body's centre",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "F = GMm/r^{2}",
+        "force on a mass m"
+      ],
+      [
+        "g(h) = g_{0}(R/(R + h))^{2}",
+        "at altitude h"
+      ]
+    ],
+    "example": {
+      "problem": "Find the surface gravity of Mars (M = 6.417 × 10^{23} kg, R = 3390 km).",
+      "steps": [
+        "g = 6.674 × 10^{−11} × 6.417 × 10^{23}/(3.39 × 10^{6})^{2}",
+        "= 4.283 × 10^{13}/1.149 × 10^{13}",
+        "= 3.73 m/s^{2}"
+      ],
+      "answer": "g ≈ 3.73 m/s^{2}"
+    },
+    "try": "6.674e-11 m^3/(kg s^2) * 6.417e23 kg / (3390 km)^2 to m/s^2"
+  },
+  "r_{s} = 2 G M/c^{2}": {
+    "title": "Schwarzschild radius",
+    "about": "The radius of the event horizon of a non-rotating black hole of mass M: compressed inside it, not even light escapes. It is where the Newtonian escape speed would equal c.",
+    "assumptions": [
+      "A non-rotating, uncharged mass (Schwarzschild solution); a spinning (Kerr) hole's horizon is smaller",
+      "General relativity; the Newtonian derivation happens to give the same formula"
+    ],
+    "vars": [
+      [
+        "r_{s}",
+        "Schwarzschild radius",
+        "m"
+      ],
+      [
+        "G",
+        "gravitational constant, 6.674 × 10^{−11}",
+        "m^{3}/(kg·s^{2})"
+      ],
+      [
+        "M",
+        "mass of the central body",
+        "kg"
+      ],
+      [
+        "c",
+        "speed of light, 2.998 × 10^{8}",
+        "m/s"
+      ]
+    ],
+    "related": [
+      [
+        "r_{s} ≈ 2.95 km × (M/M_{☉})",
+        "in solar masses"
+      ],
+      [
+        "v_{e} = √(2GM/r)",
+        "escape velocity"
+      ]
+    ],
+    "example": {
+      "problem": "Find the Schwarzschild radius of the Sun (M = 1.989 × 10^{30} kg).",
+      "steps": [
+        "r_{s} = 2(6.674 × 10^{−11})(1.989 × 10^{30})/(2.998 × 10^{8})^{2}",
+        "= 2.655 × 10^{20}/8.988 × 10^{16}",
+        "= 2954 m"
+      ],
+      "answer": "r_{s} ≈ 2.95 km"
+    },
+    "try": "2 * 6.674e-11 m^3/(kg s^2) * 1.989e30 kg / (2.998e8 m/s)^2 to km"
+  },
+  "L = 4π R^{2} σ T^{4}": {
+    "title": "Stefan–Boltzmann law: a star's luminosity",
+    "about": "A star's total power output is its surface area times σT^{4}. Doubling the temperature multiplies the luminosity by 16; with L and T known, it gives the star's radius.",
+    "assumptions": [
+      "The star radiates as a black body; T is the effective (surface) temperature",
+      "Spherical star of radius R"
+    ],
+    "vars": [
+      [
+        "L",
+        "luminosity (total radiated power)",
+        "W"
+      ],
+      [
+        "R",
+        "radius of the star",
+        "m"
+      ],
+      [
+        "σ",
+        "Stefan–Boltzmann constant, 5.670 × 10^{−8}",
+        "W/(m^{2}·K^{4})"
+      ],
+      [
+        "T",
+        "effective surface temperature",
+        "K"
+      ]
+    ],
+    "related": [
+      [
+        "F = L/(4πd^{2})",
+        "flux at distance d"
+      ],
+      [
+        "λ_{max} = b/T",
+        "Wien's peak"
+      ],
+      [
+        "L/L_{☉} = (R/R_{☉})^{2}(T/T_{☉})^{4}",
+        "in solar units"
+      ]
+    ],
+    "example": {
+      "problem": "Find the Sun's luminosity (R = 6.96 × 10^{8} m, T = 5772 K).",
+      "steps": [
+        "L = 4π(6.96 × 10^{8})^{2}(5.670 × 10^{−8})(5772)^{4}",
+        "= 6.087 × 10^{18} m^{2} × 5.670 × 10^{−8} × 1.110 × 10^{15}",
+        "= 3.83 × 10^{26} W"
+      ],
+      "answer": "L ≈ 3.83 × 10^{26} W"
+    },
+    "try": "4 pi (6.96e8 m)^2 * 5.670e-8 W/(m^2 K^4) * (5772 K)^4 to W"
+  },
+  "λ_{max} = b/T": {
+    "title": "Wien's displacement law",
+    "about": "A black body's spectrum peaks at a wavelength inversely proportional to its temperature: hot stars look blue, cool stars red. From a star's colour it gives the surface temperature.",
+    "assumptions": [
+      "Black-body emission",
+      "This is the peak per unit wavelength; per unit frequency the peak sits elsewhere"
+    ],
+    "vars": [
+      [
+        "λ_{max}",
+        "wavelength of peak emission",
+        "m"
+      ],
+      [
+        "b",
+        "Wien's constant, 2.898 × 10^{−3}",
+        "m·K"
+      ],
+      [
+        "T",
+        "temperature",
+        "K"
+      ]
+    ],
+    "related": [
+      [
+        "L = 4πR^{2}σT^{4}",
+        "total power"
+      ],
+      [
+        "f_{max} ≈ 5.879 × 10^{10} Hz/K × T",
+        "peak in frequency"
+      ]
+    ],
+    "example": {
+      "problem": "The Sun's surface is at 5772 K. Where does its spectrum peak?",
+      "steps": [
+        "λ_{max} = 2.898 × 10^{−3} m·K/5772 K",
+        "= 5.02 × 10^{−7} m = 502 nm (green)"
+      ],
+      "answer": "λ_{max} ≈ 502 nm"
+    },
+    "try": "2.898e-3 m K / 5772 K to nm"
+  },
+  "F = L/(4π d^{2})": {
+    "title": "Flux: the inverse-square law",
+    "about": "Light spreads over a sphere of area 4πd^{2}, so the power per unit area received falls with the square of the distance. With measured flux and known luminosity it gives the distance (a standard candle).",
+    "assumptions": [
+      "The source radiates equally in all directions",
+      "No absorption by dust or gas on the way (extinction)",
+      "Distances short enough to ignore cosmological redshift"
+    ],
+    "vars": [
+      [
+        "F",
+        "flux (power per unit area) at the observer",
+        "W/m^{2}"
+      ],
+      [
+        "L",
+        "luminosity of the source",
+        "W"
+      ],
+      [
+        "d",
+        "distance to the source",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "m_{1} − m_{2} = −2.5 log_{10}(F_{1}/F_{2})",
+        "magnitudes from fluxes"
+      ],
+      [
+        "L = 4πR^{2}σT^{4}",
+        "luminosity"
+      ]
+    ],
+    "example": {
+      "problem": "The Sun (L = 3.828 × 10^{26} W) is 1.496 × 10^{11} m from the Earth. What flux reaches the Earth?",
+      "steps": [
+        "F = 3.828 × 10^{26}/(4π(1.496 × 10^{11})^{2})",
+        "= 3.828 × 10^{26}/2.812 × 10^{23}",
+        "= 1361 W/m^{2} (the solar constant)"
+      ],
+      "answer": "F ≈ 1361 W/m^{2}"
+    },
+    "try": "3.828e26 W / (4 pi (1.496e11 m)^2) to W/m^2"
+  },
+  "m − M = 5 log_{10}(d) − 5": {
+    "title": "Distance modulus",
+    "about": "The difference between how bright a star looks (apparent magnitude m) and how bright it would look from 10 parsecs (absolute magnitude M) gives its distance. Each 5 magnitudes is a factor of 10 in distance.",
+    "assumptions": [
+      "d is in parsecs",
+      "Ignores extinction; with dust add A: m − M = 5 log_{10} d − 5 + A",
+      "Magnitudes run backwards: larger is fainter"
+    ],
+    "vars": [
+      [
+        "m",
+        "apparent magnitude",
+        ""
+      ],
+      [
+        "M",
+        "absolute magnitude (as seen from 10 pc)",
+        ""
+      ],
+      [
+        "d",
+        "distance",
+        "pc"
+      ]
+    ],
+    "related": [
+      [
+        "d = 10^{(m − M + 5)/5}",
+        "solved for distance"
+      ],
+      [
+        "m_{1} − m_{2} = −2.5 log_{10}(F_{1}/F_{2})",
+        "magnitude and flux"
+      ]
+    ],
+    "example": {
+      "problem": "A Cepheid has absolute magnitude M = −4 and appears at m = 11. How far away is it?",
+      "steps": [
+        "m − M = 15",
+        "d = 10^{(15 + 5)/5} = 10^{4} pc",
+        "= 10,000 pc"
+      ],
+      "answer": "d = 10,000 pc (10 kpc)"
+    },
+    "try": "10^((11 - (-4) + 5)/5)"
+  },
+  "d = 1/p": {
+    "title": "Parallax distance",
+    "about": "As the Earth orbits, a nearby star shifts against distant ones. Half that annual shift, the parallax angle p in arcseconds, gives the distance in parsecs directly; this is the definition of the parsec.",
+    "assumptions": [
+      "p in arcseconds gives d in parsecs",
+      "Small angles; reliable out to a few thousand parsecs with Gaia",
+      "1 pc = 3.086 × 10^{16} m = 3.26 light-years"
+    ],
+    "vars": [
+      [
+        "d",
+        "distance",
+        "pc"
+      ],
+      [
+        "p",
+        "parallax angle",
+        "arcsec"
+      ]
+    ],
+    "related": [
+      [
+        "1 pc = 206,265 AU",
+        "parsec in astronomical units"
+      ],
+      [
+        "m − M = 5 log_{10}(d) − 5",
+        "distance modulus"
+      ]
+    ],
+    "example": {
+      "problem": "Proxima Centauri has a parallax of 0.768 arcsec. How far is it, in parsecs and light-years?",
+      "steps": [
+        "d = 1/0.768 = 1.302 pc",
+        "× 3.262 ly/pc = 4.25 ly"
+      ],
+      "answer": "d ≈ 1.30 pc ≈ 4.25 ly"
+    },
+    "try": "1/0.768"
+  },
+  "v = H_{0} d": {
+    "title": "Hubble's law",
+    "about": "Distant galaxies recede at a speed proportional to their distance, the signature of an expanding universe. Measuring a galaxy's redshift (and so v) gives its distance.",
+    "assumptions": [
+      "H_{0} ≈ 70 km/s/Mpc (measurements range 67–73)",
+      "Valid for galaxies far enough that their own motions (a few hundred km/s) are small, and near enough that v ≪ c",
+      "Beyond z ≈ 0.1 the expansion history matters"
+    ],
+    "vars": [
+      [
+        "v",
+        "recession speed",
+        "m/s"
+      ],
+      [
+        "H_{0}",
+        "Hubble constant",
+        "km/(s·Mpc)"
+      ],
+      [
+        "d",
+        "distance",
+        "Mpc"
+      ]
+    ],
+    "related": [
+      [
+        "v ≈ cz",
+        "speed from redshift, z ≪ 1"
+      ],
+      [
+        "t ≈ 1/H_{0}",
+        "Hubble time, about 14 billion years"
+      ]
+    ],
+    "example": {
+      "problem": "A galaxy recedes at 7000 km/s. With H_{0} = 70 km/s/Mpc, how far away is it?",
+      "steps": [
+        "d = v/H_{0}",
+        "= 7000/70 Mpc",
+        "= 100 Mpc"
+      ],
+      "answer": "d = 100 Mpc"
+    },
+    "try": "7000/70"
+  },
+  "z = Δλ/λ": {
+    "title": "Redshift",
+    "about": "The fractional stretch of a spectral line's wavelength. Positive z means the source is moving away (or space has expanded); for small z the speed is about cz.",
+    "assumptions": [
+      "λ is the rest (laboratory) wavelength and Δλ = λ_{obs} − λ_{rest}",
+      "v ≈ cz only for z ≪ 1; for larger z use relativistic or cosmological relations",
+      "Negative z is a blueshift (approaching)"
+    ],
+    "vars": [
+      [
+        "z",
+        "redshift",
+        ""
+      ],
+      [
+        "Δλ",
+        "observed minus rest wavelength",
+        "m"
+      ],
+      [
+        "λ",
+        "rest wavelength",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "v ≈ cz",
+        "recession speed, z ≪ 1"
+      ],
+      [
+        "1 + z = √((1 + β)/(1 − β))",
+        "relativistic Doppler, β = v/c"
+      ],
+      [
+        "1 + z = a_{now}/a_{then}",
+        "cosmological"
+      ]
+    ],
+    "example": {
+      "problem": "The hydrogen-alpha line (656.3 nm at rest) is seen at 662.9 nm. Find z and the speed.",
+      "steps": [
+        "Δλ = 6.6 nm",
+        "z = 6.6/656.3 = 0.01006",
+        "v ≈ cz = 3.0 × 10^{5} × 0.01006 ≈ 3016 km/s"
+      ],
+      "answer": "z ≈ 0.0101, v ≈ 3016 km/s"
+    },
+    "try": "(662.9 - 656.3)/656.3"
+  },
+  "A = P(1 + r t)": {
+    "title": "Simple interest",
+    "about": "With simple interest you earn interest only on the original principal, so the balance grows by the same amount each period. Used for short-term loans, bonds' accrued interest and some car loans.",
+    "assumptions": [
+      "r and t use the same time unit (annual rate with years)",
+      "Interest is not reinvested"
+    ],
+    "vars": [
+      [
+        "A",
+        "amount after time t",
+        "$"
+      ],
+      [
+        "P",
+        "principal",
+        "$"
+      ],
+      [
+        "r",
+        "interest rate per period (decimal)",
+        ""
+      ],
+      [
+        "t",
+        "time, in periods",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "I = Prt",
+        "interest earned"
+      ],
+      [
+        "A = P(1 + r/n)^{nt}",
+        "compound interest"
+      ]
+    ],
+    "example": {
+      "problem": "$5,000 is lent at 6% simple interest for 3 years. How much is repaid?",
+      "steps": [
+        "A = 5000(1 + 0.06 × 3)",
+        "= 5000 × 1.18",
+        "= $5,900"
+      ],
+      "answer": "A = $5,900"
+    },
+    "try": "5000*(1 + 0.06*3)"
+  },
+  "A = P(1 + r/n)^{n t}": {
+    "title": "Compound interest",
+    "about": "Interest added n times a year earns interest itself, so the balance grows exponentially. More frequent compounding helps a little, approaching continuous compounding.",
+    "assumptions": [
+      "The rate r is a nominal annual rate, compounded n times per year, held constant",
+      "No deposits or withdrawals in between (add an annuity for those)"
+    ],
+    "vars": [
+      [
+        "A",
+        "amount after t years",
+        "$"
+      ],
+      [
+        "P",
+        "principal",
+        "$"
+      ],
+      [
+        "r",
+        "nominal annual rate (decimal)",
+        ""
+      ],
+      [
+        "n",
+        "compounding periods per year",
+        ""
+      ],
+      [
+        "t",
+        "time",
+        "yr"
+      ]
+    ],
+    "related": [
+      [
+        "APY = (1 + r/n)^{n} − 1",
+        "effective annual yield"
+      ],
+      [
+        "A = Pe^{rt}",
+        "continuous limit"
+      ],
+      [
+        "t ≈ 72/r",
+        "doubling time"
+      ]
+    ],
+    "example": {
+      "problem": "$10,000 at 5% compounded monthly for 10 years grows to how much?",
+      "steps": [
+        "A = 10,000(1 + 0.05/12)^{120}",
+        "= 10,000 × 1.6470",
+        "= $16,470.09"
+      ],
+      "answer": "A ≈ $16,470.09"
+    },
+    "try": "10000 (1 + 0.05/12)^(12*10)"
+  },
+  "A = P e^{r t}": {
+    "title": "Continuous compounding",
+    "about": "The limit of compounding infinitely often. It is the natural model for exponential growth and decay, and the form used in derivative pricing.",
+    "assumptions": [
+      "r is the continuously compounded annual rate, constant",
+      "Only slightly more than daily compounding in practice"
+    ],
+    "vars": [
+      [
+        "A",
+        "amount after time t",
+        "$"
+      ],
+      [
+        "P",
+        "principal",
+        "$"
+      ],
+      [
+        "r",
+        "continuous annual rate (decimal)",
+        ""
+      ],
+      [
+        "t",
+        "time",
+        "yr"
+      ]
+    ],
+    "related": [
+      [
+        "e^{r} − 1",
+        "effective annual rate"
+      ],
+      [
+        "t = ln(2)/r",
+        "exact doubling time"
+      ],
+      [
+        "PV = FV e^{−rt}",
+        "continuous discounting"
+      ]
+    ],
+    "example": {
+      "problem": "$10,000 grows at 5% continuously compounded for 10 years. Find the amount.",
+      "steps": [
+        "A = 10,000 e^{0.5}",
+        "= 10,000 × 1.64872",
+        "= $16,487.21"
+      ],
+      "answer": "A ≈ $16,487.21"
+    },
+    "try": "10000 e^(0.05*10)"
+  },
+  "t ≈ 72/r": {
+    "title": "Rule of 72: doubling time",
+    "about": "Dividing 72 by the annual growth rate in percent estimates how many years it takes to double. A quick mental check on any compound growth.",
+    "assumptions": [
+      "r is in percent per period (8 for 8%), and t comes out in the same periods",
+      "Most accurate for rates around 6–10%; for continuous growth 69.3/r is exact",
+      "Assumes constant compounded growth"
+    ],
+    "vars": [
+      [
+        "t",
+        "doubling time",
+        "yr"
+      ],
+      [
+        "r",
+        "growth rate",
+        "%"
+      ]
+    ],
+    "related": [
+      [
+        "t = ln(2)/ln(1 + r)",
+        "exact, r as a decimal"
+      ],
+      [
+        "t = 69.3/r",
+        "continuous compounding"
+      ]
+    ],
+    "example": {
+      "problem": "How long does money take to double at 8% a year? Compare with the exact time.",
+      "steps": [
+        "t ≈ 72/8 = 9 years",
+        "Exact: ln 2/ln 1.08 = 9.006 years"
+      ],
+      "answer": "t ≈ 9 years (exact 9.006)"
+    },
+    "try": "72/8"
+  },
+  "PV = FV/(1 + r)^{n}": {
+    "title": "Present value",
+    "about": "A sum received n periods from now is worth less today, because today's money could be invested at rate r. Discounting brings future cash back to today's value.",
+    "assumptions": [
+      "r is the discount rate per period and n the number of periods",
+      "A single lump sum; a stream of payments needs NPV or the annuity formulas"
+    ],
+    "vars": [
+      [
+        "PV",
+        "present value",
+        "$"
+      ],
+      [
+        "FV",
+        "future value",
+        "$"
+      ],
+      [
+        "r",
+        "discount rate per period (decimal)",
+        ""
+      ],
+      [
+        "n",
+        "number of periods",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "FV = PV(1 + r)^{n}",
+        "future value"
+      ],
+      [
+        "NPV = Σ C_{t}/(1 + r)^{t}",
+        "a stream of cash flows"
+      ]
+    ],
+    "example": {
+      "problem": "What is $10,000 received in 5 years worth today at a 6% discount rate?",
+      "steps": [
+        "PV = 10,000/1.06^{5}",
+        "= 10,000/1.33823",
+        "= $7,472.58"
+      ],
+      "answer": "PV ≈ $7,472.58"
+    },
+    "try": "10000/1.06^5"
+  },
+  "NPV = Σ C_{t}/(1 + r)^{t}": {
+    "title": "Net present value",
+    "about": "The sum of all cash flows, each discounted back to today. A project with positive NPV earns more than the discount rate and adds value.",
+    "assumptions": [
+      "C_{0} is usually the (negative) initial investment at t = 0",
+      "Cash flows at the end of each period, with a constant discount rate",
+      "The rate at which NPV = 0 is the internal rate of return (IRR)"
+    ],
+    "vars": [
+      [
+        "NPV",
+        "net present value",
+        "$"
+      ],
+      [
+        "C_{t}",
+        "net cash flow at period t",
+        "$"
+      ],
+      [
+        "r",
+        "discount rate per period",
+        ""
+      ],
+      [
+        "t",
+        "period number, from 0",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "PV = FV/(1 + r)^{n}",
+        "one cash flow"
+      ],
+      [
+        "NPV(IRR) = 0",
+        "internal rate of return"
+      ]
+    ],
+    "example": {
+      "problem": "A project costs $1,000 now and returns $400 a year for 3 years. At 8%, is it worth it?",
+      "steps": [
+        "NPV = −1000 + 400/1.08 + 400/1.08^{2} + 400/1.08^{3}",
+        "= −1000 + 370.37 + 342.94 + 317.53",
+        "= $30.84 > 0, so yes"
+      ],
+      "answer": "NPV ≈ $30.84"
+    },
+    "try": "-1000 + sum(400/1.08^t, t, 1, 3)"
+  },
+  "CAGR = (V_{f}/V_{i})^{1/n} − 1": {
+    "title": "Compound annual growth rate",
+    "about": "The constant yearly rate that would take a value from its start to its end over n years. It smooths a bumpy history into one comparable number.",
+    "assumptions": [
+      "Uses only the start and end values; says nothing about volatility in between",
+      "Ignores deposits and withdrawals along the way",
+      "n is the number of years (periods) between the two values"
+    ],
+    "vars": [
+      [
+        "CAGR",
+        "compound annual growth rate (decimal)",
+        ""
+      ],
+      [
+        "V_{f}",
+        "final value",
+        "$"
+      ],
+      [
+        "V_{i}",
+        "initial value",
+        "$"
+      ],
+      [
+        "n",
+        "number of years",
+        "yr"
+      ]
+    ],
+    "related": [
+      [
+        "V_{f} = V_{i}(1 + CAGR)^{n}",
+        "inverse"
+      ]
+    ],
+    "example": {
+      "problem": "An investment grew from $10,000 to $18,000 over 5 years. Find the CAGR.",
+      "steps": [
+        "CAGR = (18,000/10,000)^{1/5} − 1",
+        "= 1.8^{0.2} − 1",
+        "= 0.1247 = 12.47%"
+      ],
+      "answer": "CAGR ≈ 12.47%"
+    },
+    "try": "(18000/10000)^(1/5) - 1"
+  },
+  "FV = PMT ((1 + r)^{n} − 1)/r": {
+    "title": "Future value of an annuity",
+    "about": "What a series of equal payments, each earning compound interest, grows to after n periods. Used for savings plans and retirement contributions.",
+    "assumptions": [
+      "Payments at the end of each period (ordinary annuity); for payments at the start multiply by (1 + r)",
+      "r is the rate per payment period (annual rate/12 for monthly payments) and n the number of payments",
+      "r ≠ 0; with r = 0, FV = n PMT"
+    ],
+    "vars": [
+      [
+        "FV",
+        "future value",
+        "$"
+      ],
+      [
+        "PMT",
+        "payment each period",
+        "$"
+      ],
+      [
+        "r",
+        "interest rate per period",
+        ""
+      ],
+      [
+        "n",
+        "number of payments",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "PV = PMT (1 − (1 + r)^{−n})/r",
+        "present value of the annuity"
+      ],
+      [
+        "FV = PV(1 + r)^{n}",
+        "linking the two"
+      ]
+    ],
+    "example": {
+      "problem": "You save $200 a month for 30 years at 6% a year compounded monthly. How much do you have?",
+      "steps": [
+        "r = 0.06/12 = 0.005, n = 360",
+        "FV = 200(1.005^{360} − 1)/0.005",
+        "= 200 × 1004.52 = $200,903.01"
+      ],
+      "answer": "FV ≈ $200,903"
+    },
+    "try": "200 (1.005^360 - 1)/0.005"
+  },
+  "PV = PMT (1 − (1 + r)^{−n})/r": {
+    "title": "Present value of an annuity",
+    "about": "What a series of equal future payments is worth today. It prices a pension, a lottery paid in instalments, or the loan a given payment can support.",
+    "assumptions": [
+      "Payments at the end of each period; for payments at the start multiply by (1 + r)",
+      "r is the rate per payment period and n the number of payments",
+      "As n → ∞ it tends to PMT/r (a perpetuity)"
+    ],
+    "vars": [
+      [
+        "PV",
+        "present value",
+        "$"
+      ],
+      [
+        "PMT",
+        "payment each period",
+        "$"
+      ],
+      [
+        "r",
+        "discount rate per period",
+        ""
+      ],
+      [
+        "n",
+        "number of payments",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "PV = PMT/r",
+        "perpetuity"
+      ],
+      [
+        "M = Pr/(1 − (1 + r)^{−n})",
+        "the same equation solved for the payment"
+      ]
+    ],
+    "example": {
+      "problem": "What are 20 yearly payments of $5,000 worth today at 7%?",
+      "steps": [
+        "PV = 5000(1 − 1.07^{−20})/0.07",
+        "= 5000 × 10.594",
+        "= $52,970.07"
+      ],
+      "answer": "PV ≈ $52,970"
+    },
+    "try": "5000 (1 - 1.07^-20)/0.07"
+  },
+  "M = P r/(1 − (1 + r)^{−n})": {
+    "title": "Loan (mortgage) payment",
+    "about": "The fixed payment that pays off a loan of P, interest included, in n equal instalments. Early payments are mostly interest; later ones mostly principal.",
+    "assumptions": [
+      "Fixed rate, with r the rate per payment period (annual rate/12 for monthly)",
+      "Payments at the end of each period",
+      "Excludes taxes, insurance and fees"
+    ],
+    "vars": [
+      [
+        "M",
+        "payment per period",
+        "$"
+      ],
+      [
+        "P",
+        "amount borrowed (principal)",
+        "$"
+      ],
+      [
+        "r",
+        "interest rate per period",
+        ""
+      ],
+      [
+        "n",
+        "number of payments",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "n M − P",
+        "total interest paid"
+      ],
+      [
+        "PV = PMT(1 − (1 + r)^{−n})/r",
+        "the annuity it comes from"
+      ]
+    ],
+    "example": {
+      "problem": "A $300,000 mortgage at 6% a year over 30 years, paid monthly. Find the payment.",
+      "steps": [
+        "r = 0.06/12 = 0.005, n = 360",
+        "M = 300,000 × 0.005/(1 − 1.005^{−360})",
+        "= 1500/0.83396 = $1,798.65"
+      ],
+      "answer": "M ≈ $1,798.65 per month"
+    },
+    "try": "300000*0.005/(1 - 1.005^-360)"
+  },
+  "ROI = gain/cost": {
+    "title": "Return on investment",
+    "about": "Net gain divided by what you put in, usually given as a percentage. A quick way to compare investments.",
+    "assumptions": [
+      "'gain' here is the net profit (final value − cost); some write (final − cost)/cost explicitly",
+      "Ignores how long it took; annualize with CAGR to compare investments of different lengths",
+      "Ignores risk"
+    ],
+    "vars": [
+      [
+        "ROI",
+        "return on investment (decimal, × 100 for %)",
+        ""
+      ],
+      [
+        "gain",
+        "net profit (value received − cost)",
+        "$"
+      ],
+      [
+        "cost",
+        "amount invested",
+        "$"
+      ]
+    ],
+    "related": [
+      [
+        "CAGR = (V_{f}/V_{i})^{1/n} − 1",
+        "annualized return"
+      ]
+    ],
+    "example": {
+      "problem": "A $2,000 marketing campaign brings in $2,600 of extra profit. Find the ROI.",
+      "steps": [
+        "gain = 2600 − 2000 = 600",
+        "ROI = 600/2000 = 0.30 = 30%"
+      ],
+      "answer": "ROI = 30%"
+    },
+    "try": "(2600 - 2000)/2000"
+  },
+  "Q = F/(p − v)": {
+    "title": "Break-even quantity",
+    "about": "The number of units to sell before profit turns positive: fixed costs divided by the contribution margin, what each unit adds after its own variable cost.",
+    "assumptions": [
+      "Constant price and variable cost per unit, whatever the volume",
+      "Fixed costs stay fixed over the range considered",
+      "p > v; otherwise you never break even"
+    ],
+    "vars": [
+      [
+        "Q",
+        "break-even quantity",
+        "units"
+      ],
+      [
+        "F",
+        "fixed costs",
+        "$"
+      ],
+      [
+        "p",
+        "price per unit",
+        "$"
+      ],
+      [
+        "v",
+        "variable cost per unit",
+        "$"
+      ]
+    ],
+    "related": [
+      [
+        "profit = (p − v)Q − F",
+        "at any volume"
+      ],
+      [
+        "F/((p − v)/p)",
+        "break-even revenue"
+      ]
+    ],
+    "example": {
+      "problem": "A café has $6,000 a month in fixed costs and sells coffee for $4.50 that costs $1.50 to make. How many cups to break even?",
+      "steps": [
+        "p − v = 4.50 − 1.50 = $3.00",
+        "Q = 6000/3 = 2000 cups"
+      ],
+      "answer": "Q = 2000 cups a month"
+    },
+    "try": "6000/(4.50 - 1.50)"
+  },
+  "r_{real} = (1 + r)/(1 + i) − 1": {
+    "title": "Real interest rate (Fisher equation)",
+    "about": "The growth in purchasing power after inflation. A 5% return in a year of 3% inflation leaves you only about 1.94% richer in goods.",
+    "assumptions": [
+      "r and i are rates over the same period, as decimals",
+      "The approximation r_{real} ≈ r − i is fine when both are small",
+      "Uses the realized (or expected) inflation rate; taxes are ignored"
+    ],
+    "vars": [
+      [
+        "r_{real}",
+        "real interest rate",
+        ""
+      ],
+      [
+        "r",
+        "nominal interest rate",
+        ""
+      ],
+      [
+        "i",
+        "inflation rate",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "r_{real} ≈ r − i",
+        "small rates"
+      ],
+      [
+        "(1 + r) = (1 + r_{real})(1 + i)",
+        "exact form"
+      ]
+    ],
+    "example": {
+      "problem": "A savings account pays 5% while inflation is 3%. What is the real return?",
+      "steps": [
+        "r_{real} = 1.05/1.03 − 1",
+        "= 0.01942 = 1.94%"
+      ],
+      "answer": "r_{real} ≈ 1.94%"
+    },
+    "try": "1.05/1.03 - 1"
+  },
+  "F(s) = ∫_{0}^{∞} f(t) e^{−st} dt": {
+    "title": "Laplace transform (one-sided definition)",
+    "about": "The Laplace transform turns a function of time into a function of complex frequency s. Derivatives become multiplication by s, so linear differential equations with initial conditions become algebra.",
+    "assumptions": [
+      "The integral converges only for Re(s) greater than some σ_{0} (the region of convergence); f must grow no faster than an exponential e^{σ_{0}t}",
+      "f is piecewise continuous; the lower limit is taken as 0⁻ so an impulse at t = 0 is included",
+      "One-sided: it ignores f for t < 0, and brings initial conditions in through the derivative rule"
+    ],
+    "vars": [
+      [
+        "f(t)",
+        "time function, taken as 0 for t < 0",
+        ""
+      ],
+      [
+        "F(s)",
+        "its Laplace transform",
+        ""
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "f(t) = (1/2πj) ∫_{σ−j∞}^{σ+j∞} F(s) e^{st} ds",
+        "inverse transform (in practice: partial fractions and a table)"
+      ],
+      [
+        "F(jω)",
+        "Fourier transform, when the region includes the jω axis"
+      ]
+    ],
+    "example": {
+      "problem": "Find the Laplace transform of e^{−2t} from the definition, and evaluate it at s = 3.",
+      "steps": [
+        "F(s) = ∫_{0}^{∞} e^{−2t} e^{−st} dt = ∫_{0}^{∞} e^{−(s+2)t} dt",
+        "= [−e^{−(s+2)t}/(s + 2)]_{0}^{∞} = 1/(s + 2), converging for Re(s) > −2",
+        "At s = 3: 1/5 = 0.2"
+      ],
+      "answer": "F(s) = 1/(s + 2); F(3) = 0.2"
+    },
+    "try": "integral(e^(-2t) e^(-3t), t, 0, 30)"
+  },
+  "u(t) ‖ 1/s": {
+    "title": "Laplace pair: unit step",
+    "about": "The unit step switches on at t = 0 and stays at 1; its transform is 1/s, a pole at the origin. Any constant input c (a battery switched on, a constant force) becomes c/s.",
+    "assumptions": [
+      "One-sided transform: only t ≥ 0 counts, so every pair stands for f(t) u(t)",
+      "Region of convergence Re(s) > 0"
+    ],
+    "vars": [
+      [
+        "u(t)",
+        "unit step: 0 for t < 0, 1 for t ≥ 0",
+        ""
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "δ(t) ↔ 1",
+        "impulse, the step's derivative"
+      ],
+      [
+        "t ↔ 1/s^{2}",
+        "ramp, the step's integral"
+      ],
+      [
+        "Y(s) → y(t)",
+        "invert by partial fractions, then read each term off this table"
+      ]
+    ],
+    "example": {
+      "problem": "Solve y′ + 2y = u(t) with y(0) = 0, and find y at t = 1 s.",
+      "steps": [
+        "sY + 2Y = 1/s, so Y = 1/(s(s + 2))",
+        "Partial fractions: Y = (1/2)(1/s − 1/(s + 2))",
+        "y = (1 − e^{−2t})/2; at t = 1: (1 − e^{−2})/2 = 0.432"
+      ],
+      "answer": "y(t) = (1 − e^{−2t})/2; y(1) ≈ 0.432"
+    },
+    "try": "(1 - e^-2)/2"
+  },
+  "t ‖ 1/s^{2}": {
+    "title": "Laplace pair: unit ramp",
+    "about": "A ramp rising at slope 1 transforms to 1/s^{2}, a double pole at the origin. It is the input for steady-state tracking error (velocity error constant) in control.",
+    "assumptions": [
+      "One-sided transform: only t ≥ 0 counts, so every pair stands for f(t) u(t)",
+      "Region of convergence Re(s) > 0"
+    ],
+    "vars": [
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "t^{n} ↔ n!/s^{n+1}",
+        "general power"
+      ],
+      [
+        "u(t) ↔ 1/s",
+        "step"
+      ],
+      [
+        "Y(s) → y(t)",
+        "invert by partial fractions, then read each term off this table"
+      ]
+    ],
+    "example": {
+      "problem": "Solve y′ + y = t with y(0) = 0, and find y(2).",
+      "steps": [
+        "sY + Y = 1/s^{2}, Y = 1/(s^{2}(s + 1))",
+        "Partial fractions: 1/s^{2} − 1/s + 1/(s + 1)",
+        "y = t − 1 + e^{−t}; y(2) = 1 + e^{−2} = 1.135"
+      ],
+      "answer": "y(t) = t − 1 + e^{−t}; y(2) ≈ 1.135"
+    },
+    "try": "2 - 1 + e^-2"
+  },
+  "t^{n} ‖ n!/s^{n+1}": {
+    "title": "Laplace pair: power of t",
+    "about": "Each power of t adds one more pole at the origin. Read backwards, it inverts any term c/s^{k}.",
+    "assumptions": [
+      "One-sided transform: only t ≥ 0 counts, so every pair stands for f(t) u(t)",
+      "n is a non-negative integer (for real n use Γ(n + 1)/s^{n+1})",
+      "Region of convergence Re(s) > 0"
+    ],
+    "vars": [
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ],
+      [
+        "n",
+        "power, 0, 1, 2, …",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "t^{n} e^{−at} ↔ n!/(s + a)^{n+1}",
+        "shifted by a decaying exponential"
+      ],
+      [
+        "t f(t) ↔ −dF/ds",
+        "the property behind it"
+      ]
+    ],
+    "example": {
+      "problem": "Find the inverse transform of 12/s^{5} and evaluate it at t = 2.",
+      "steps": [
+        "12/s^{5} = (12/4!) · 4!/s^{5}, with n = 4",
+        "f(t) = (12/24) t^{4} = t^{4}/2",
+        "f(2) = 16/2 = 8"
+      ],
+      "answer": "f(t) = t^{4}/2; f(2) = 8"
+    },
+    "try": "12/24 * 2^4"
+  },
+  "e^{−at} ‖ 1/(s + a)": {
+    "title": "Laplace pair: decaying exponential",
+    "about": "A single real pole at s = −a is an exponential with time constant 1/a. Most partial-fraction terms invert with this pair.",
+    "assumptions": [
+      "One-sided transform: only t ≥ 0 counts, so every pair stands for f(t) u(t)",
+      "Region of convergence Re(s) > −a",
+      "a may be negative (a growing exponential, unstable pole in the right half plane) or complex"
+    ],
+    "vars": [
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ],
+      [
+        "a",
+        "decay rate (pole at s = −a)",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "t e^{−at} ↔ 1/(s + a)^{2}",
+        "repeated pole"
+      ],
+      [
+        "τ = 1/a",
+        "time constant"
+      ],
+      [
+        "Y(s) → y(t)",
+        "invert by partial fractions, then read each term off this table"
+      ]
+    ],
+    "example": {
+      "problem": "Find y(t) for Y(s) = 5/((s + 1)(s + 3)), and its value at t = 1.",
+      "steps": [
+        "Residues: at s = −1, 5/2; at s = −3, 5/(−2)",
+        "Y = 2.5/(s + 1) − 2.5/(s + 3)",
+        "y = 2.5(e^{−t} − e^{−3t}); y(1) = 2.5(0.3679 − 0.0498) = 0.795"
+      ],
+      "answer": "y(t) = 2.5(e^{−t} − e^{−3t}); y(1) ≈ 0.795"
+    },
+    "try": "2.5 (e^-1 - e^-3)"
+  },
+  "t e^{−at} ‖ 1/(s + a)^{2}": {
+    "title": "Laplace pair: repeated real pole",
+    "about": "A double pole at s = −a gives t e^{−at}, which rises then decays. It is the critically damped response.",
+    "assumptions": [
+      "One-sided transform: only t ≥ 0 counts, so every pair stands for f(t) u(t)",
+      "Region of convergence Re(s) > −a"
+    ],
+    "vars": [
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ],
+      [
+        "a",
+        "decay rate (pole at s = −a)",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "t^{n} e^{−at} ↔ n!/(s + a)^{n+1}",
+        "higher-order poles"
+      ],
+      [
+        "e^{−at} ↔ 1/(s + a)",
+        "simple pole"
+      ]
+    ],
+    "example": {
+      "problem": "A critically damped system y″ + 4y′ + 4y = 0 starts with y(0) = 0, y′(0) = 1. Find y(t) and its peak.",
+      "steps": [
+        "s^{2}Y − 1 + 4sY + 4Y = 0, so Y = 1/(s + 2)^{2}",
+        "y = t e^{−2t}",
+        "Peak where y′ = 0: t = 1/2, y = 0.5 e^{−1} = 0.184"
+      ],
+      "answer": "y = t e^{−2t}; peak 0.184 at t = 0.5"
+    },
+    "try": "0.5 e^-1"
+  },
+  "t^{n} e^{−at} ‖ n!/(s + a)^{n+1}": {
+    "title": "Laplace pair: pole of order n + 1",
+    "about": "The general repeated real pole. Combining the power rule with the frequency shift, it inverts any term c/(s + a)^{k} in a partial-fraction expansion.",
+    "assumptions": [
+      "One-sided transform: only t ≥ 0 counts, so every pair stands for f(t) u(t)",
+      "n a non-negative integer",
+      "Region of convergence Re(s) > −a"
+    ],
+    "vars": [
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ],
+      [
+        "a",
+        "decay rate (pole at s = −a)",
+        "s^{−1}"
+      ],
+      [
+        "n",
+        "one less than the pole's order",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "e^{−at} f(t) ↔ F(s + a)",
+        "frequency shift, the rule behind it"
+      ],
+      [
+        "t^{n} ↔ n!/s^{n+1}",
+        "a = 0"
+      ]
+    ],
+    "example": {
+      "problem": "Invert F(s) = 2/(s + 1)^{3} and find f(2).",
+      "steps": [
+        "n + 1 = 3 so n = 2, and n! = 2 matches the numerator",
+        "f(t) = t^{2} e^{−t}",
+        "f(2) = 4e^{−2} = 0.541"
+      ],
+      "answer": "f(t) = t^{2} e^{−t}; f(2) ≈ 0.541"
+    },
+    "try": "2^2 e^-2"
+  },
+  "sin(ωt) ‖ ω/(s^{2} + ω^{2})": {
+    "title": "Laplace pair: sine",
+    "about": "A pair of poles on the imaginary axis at ±jω is an undamped oscillation. The ω in the numerator marks a sine; a numerator s marks a cosine.",
+    "assumptions": [
+      "One-sided transform: only t ≥ 0 counts, so every pair stands for f(t) u(t)",
+      "Region of convergence Re(s) > 0",
+      "ω in rad/s; the argument ωt is in radians"
+    ],
+    "vars": [
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ],
+      [
+        "ω",
+        "angular frequency",
+        "rad/s"
+      ]
+    ],
+    "related": [
+      [
+        "cos(ωt) ↔ s/(s^{2} + ω^{2})",
+        "cosine"
+      ],
+      [
+        "e^{−at} sin(ωt) ↔ ω/((s + a)^{2} + ω^{2})",
+        "damped"
+      ]
+    ],
+    "example": {
+      "problem": "Invert Y(s) = 10/(s^{2} + 25) and evaluate at t = 0.3 s.",
+      "steps": [
+        "ω = 5, so 10/(s^{2} + 25) = 2 · 5/(s^{2} + 25)",
+        "y = 2 sin(5t)",
+        "y(0.3) = 2 sin(1.5 rad) = 1.995"
+      ],
+      "answer": "y = 2 sin(5t); y(0.3) ≈ 1.995"
+    },
+    "try": "2 sin(1.5 rad)"
+  },
+  "cos(ωt) ‖ s/(s^{2} + ω^{2})": {
+    "title": "Laplace pair: cosine",
+    "about": "The cosine has the same poles ±jω as the sine but a zero at the origin. It appears when an oscillator starts from a displacement rather than a push.",
+    "assumptions": [
+      "One-sided transform: only t ≥ 0 counts, so every pair stands for f(t) u(t)",
+      "Region of convergence Re(s) > 0",
+      "ω in rad/s; ωt in radians"
+    ],
+    "vars": [
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ],
+      [
+        "ω",
+        "angular frequency",
+        "rad/s"
+      ]
+    ],
+    "related": [
+      [
+        "sin(ωt) ↔ ω/(s^{2} + ω^{2})",
+        "sine"
+      ],
+      [
+        "e^{−at} cos(ωt) ↔ (s + a)/((s + a)^{2} + ω^{2})",
+        "damped"
+      ]
+    ],
+    "example": {
+      "problem": "A spring-mass system x″ + 9x = 0 is released from x(0) = 0.1 m at rest. Find x at t = 1 s.",
+      "steps": [
+        "s^{2}X − 0.1s + 9X = 0, X = 0.1 s/(s^{2} + 9)",
+        "x = 0.1 cos(3t)",
+        "x(1) = 0.1 cos(3 rad) = −0.099 m"
+      ],
+      "answer": "x = 0.1 cos(3t) m; x(1) ≈ −0.099 m"
+    },
+    "try": "0.1 cos(3 rad)"
+  },
+  "e^{−at} sin(ωt) ‖ ω/((s + a)^{2} + ω^{2})": {
+    "title": "Laplace pair: damped sine",
+    "about": "Complex poles at −a ± jω give an oscillation at ω inside an e^{−at} envelope: the underdamped response. Complete the square in the denominator to use it.",
+    "assumptions": [
+      "One-sided transform: only t ≥ 0 counts, so every pair stands for f(t) u(t)",
+      "Region of convergence Re(s) > −a"
+    ],
+    "vars": [
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ],
+      [
+        "a",
+        "decay rate (pole at s = −a)",
+        "s^{−1}"
+      ],
+      [
+        "ω",
+        "damped angular frequency",
+        "rad/s"
+      ]
+    ],
+    "related": [
+      [
+        "e^{−at} cos(ωt) ↔ (s + a)/((s + a)^{2} + ω^{2})",
+        "damped cosine"
+      ],
+      [
+        "s^{2} + 2ζω_{n}s + ω_{n}^{2}",
+        "a = ζω_{n}, ω = ω_{n}√(1 − ζ^{2})"
+      ]
+    ],
+    "example": {
+      "problem": "Invert Y(s) = 1/(s^{2} + 2s + 5) and evaluate at t = 0.5.",
+      "steps": [
+        "Complete the square: s^{2} + 2s + 5 = (s + 1)^{2} + 4, so a = 1, ω = 2",
+        "Y = (1/2) · 2/((s + 1)^{2} + 4), y = 0.5 e^{−t} sin(2t)",
+        "y(0.5) = 0.5 e^{−0.5} sin(1 rad) = 0.255"
+      ],
+      "answer": "y = 0.5 e^{−t} sin(2t); y(0.5) ≈ 0.255"
+    },
+    "try": "0.5 e^-0.5 sin(1 rad)"
+  },
+  "e^{−at} cos(ωt) ‖ (s + a)/((s + a)^{2} + ω^{2})": {
+    "title": "Laplace pair: damped cosine",
+    "about": "The damped cosine has the same complex poles as the damped sine; its numerator is s + a. A general numerator splits into a multiple of (s + a) plus a multiple of ω.",
+    "assumptions": [
+      "One-sided transform: only t ≥ 0 counts, so every pair stands for f(t) u(t)",
+      "Region of convergence Re(s) > −a"
+    ],
+    "vars": [
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ],
+      [
+        "a",
+        "decay rate (pole at s = −a)",
+        "s^{−1}"
+      ],
+      [
+        "ω",
+        "damped angular frequency",
+        "rad/s"
+      ]
+    ],
+    "related": [
+      [
+        "e^{−at} sin(ωt) ↔ ω/((s + a)^{2} + ω^{2})",
+        "damped sine"
+      ]
+    ],
+    "example": {
+      "problem": "Invert Y(s) = (s + 3)/(s^{2} + 2s + 5) and evaluate at t = 0.5.",
+      "steps": [
+        "Denominator (s + 1)^{2} + 4; numerator s + 3 = (s + 1) + 2",
+        "Y = (s + 1)/((s + 1)^{2} + 4) + 2/((s + 1)^{2} + 4)",
+        "y = e^{−t}(cos 2t + sin 2t); y(0.5) = e^{−0.5}(cos 1 + sin 1) = 0.838"
+      ],
+      "answer": "y = e^{−t}(cos 2t + sin 2t); y(0.5) ≈ 0.838"
+    },
+    "try": "e^-0.5 (cos(1 rad) + sin(1 rad))"
+  },
+  "sinh(at) ‖ a/(s^{2} − a^{2})": {
+    "title": "Laplace pair: hyperbolic sine",
+    "about": "Real poles at ±a; sinh(at) = (e^{at} − e^{−at})/2. It shows up in unstable systems and beam or heat problems where the denominator is s^{2} − a^{2}.",
+    "assumptions": [
+      "One-sided transform: only t ≥ 0 counts, so every pair stands for f(t) u(t)",
+      "Region of convergence Re(s) > |a|"
+    ],
+    "vars": [
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ],
+      [
+        "a",
+        "pole location (poles at ±a)",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "cosh(at) ↔ s/(s^{2} − a^{2})",
+        "hyperbolic cosine"
+      ],
+      [
+        "a/(s^{2} − a^{2}) = (1/2)(1/(s − a) − 1/(s + a))",
+        "as partial fractions"
+      ]
+    ],
+    "example": {
+      "problem": "Invert Y(s) = 4/(s^{2} − 4) and evaluate at t = 1.",
+      "steps": [
+        "a = 2: 4/(s^{2} − 4) = 2 · 2/(s^{2} − 4)",
+        "y = 2 sinh(2t)",
+        "y(1) = 2 sinh 2 = 7.254"
+      ],
+      "answer": "y = 2 sinh(2t); y(1) ≈ 7.254"
+    },
+    "try": "2 sinh(2)"
+  },
+  "cosh(at) ‖ s/(s^{2} − a^{2})": {
+    "title": "Laplace pair: hyperbolic cosine",
+    "about": "Real poles at ±a with a zero at the origin; cosh(at) = (e^{at} + e^{−at})/2.",
+    "assumptions": [
+      "One-sided transform: only t ≥ 0 counts, so every pair stands for f(t) u(t)",
+      "Region of convergence Re(s) > |a|"
+    ],
+    "vars": [
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ],
+      [
+        "a",
+        "pole location (poles at ±a)",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "sinh(at) ↔ a/(s^{2} − a^{2})",
+        "hyperbolic sine"
+      ],
+      [
+        "s/(s^{2} − a^{2}) = (1/2)(1/(s − a) + 1/(s + a))",
+        "as partial fractions"
+      ]
+    ],
+    "example": {
+      "problem": "Solve y″ − 9y = 0 with y(0) = 1, y′(0) = 0, and find y(0.5).",
+      "steps": [
+        "s^{2}Y − s − 9Y = 0, Y = s/(s^{2} − 9)",
+        "y = cosh(3t)",
+        "y(0.5) = cosh 1.5 = 2.352"
+      ],
+      "answer": "y = cosh(3t); y(0.5) ≈ 2.352"
+    },
+    "try": "cosh(1.5)"
+  },
+  "f(t − a) u(t − a), a ≥ 0 ‖ e^{−as} F(s)": {
+    "title": "Laplace property: time shift (delay)",
+    "about": "Delaying a signal by a seconds multiplies its transform by e^{−as}. An e^{−as} factor in a transform means 'this part switches on at t = a'.",
+    "assumptions": [
+      "One-sided transform: only t ≥ 0 counts, so every pair stands for f(t) u(t); the u(t − a) matters: the shifted function is zero before t = a",
+      "a ≥ 0 (a delay, not an advance)"
+    ],
+    "vars": [
+      [
+        "f(t)",
+        "time function, taken as 0 for t < 0",
+        ""
+      ],
+      [
+        "F(s)",
+        "its Laplace transform",
+        ""
+      ],
+      [
+        "a",
+        "delay",
+        "s"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "u(t − a) ↔ e^{−as}/s",
+        "delayed step"
+      ],
+      [
+        "δ(t − a) ↔ e^{−as}",
+        "delayed impulse"
+      ]
+    ],
+    "example": {
+      "problem": "Invert e^{−2s}/(s + 1) and evaluate at t = 1 and t = 3.",
+      "steps": [
+        "1/(s + 1) ↔ e^{−t}, and e^{−2s} delays it by 2",
+        "f(t) = e^{−(t−2)} u(t − 2)",
+        "f(1) = 0; f(3) = e^{−1} = 0.368"
+      ],
+      "answer": "f = e^{−(t−2)} u(t − 2); f(1) = 0, f(3) ≈ 0.368"
+    },
+    "try": "e^-(3-2)"
+  },
+  "e^{−at} f(t) ‖ F(s + a)": {
+    "title": "Laplace property: frequency shift (exponential damping)",
+    "about": "Multiplying by e^{−at} shifts the transform left by a: every pole moves from p to p − a. It turns the plain sine and cosine pairs into the damped ones.",
+    "assumptions": [
+      "One-sided transform: only t ≥ 0 counts, so every pair stands for f(t) u(t)",
+      "If F converges for Re(s) > σ_{0}, F(s + a) converges for Re(s) > σ_{0} − a"
+    ],
+    "vars": [
+      [
+        "f(t)",
+        "time function, taken as 0 for t < 0",
+        ""
+      ],
+      [
+        "F(s)",
+        "its Laplace transform",
+        ""
+      ],
+      [
+        "a",
+        "exponential rate",
+        "s^{−1}"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "e^{−at} cos(ωt) ↔ (s + a)/((s + a)^{2} + ω^{2})",
+        "an example of it"
+      ]
+    ],
+    "example": {
+      "problem": "Invert (s + 2)/((s + 2)^{2} + 9) and evaluate at t = 0.5.",
+      "steps": [
+        "s/(s^{2} + 9) ↔ cos 3t, shifted by a = 2",
+        "f = e^{−2t} cos(3t)",
+        "f(0.5) = e^{−1} cos(1.5 rad) = 0.026"
+      ],
+      "answer": "f = e^{−2t} cos(3t); f(0.5) ≈ 0.026"
+    },
+    "try": "e^-1 cos(1.5 rad)"
+  },
+  "f(at), a > 0 ‖ (1/a) F(s/a)": {
+    "title": "Laplace property: time scaling",
+    "about": "Speeding a signal up by a factor a stretches its transform by a in s and scales it by 1/a.",
+    "assumptions": [
+      "One-sided transform: only t ≥ 0 counts, so every pair stands for f(t) u(t)",
+      "a > 0; a negative a would reverse time, which the one-sided transform can't represent"
+    ],
+    "vars": [
+      [
+        "f(t)",
+        "time function, taken as 0 for t < 0",
+        ""
+      ],
+      [
+        "F(s)",
+        "its Laplace transform",
+        ""
+      ],
+      [
+        "a",
+        "time-scale factor",
+        ""
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "f(t − a) u(t − a) ↔ e^{−as} F(s)",
+        "time shift"
+      ]
+    ],
+    "example": {
+      "problem": "From sin t ↔ 1/(s^{2} + 1), find the transform of sin(3t) and its value at s = 2.",
+      "steps": [
+        "F(s/3)/3 = (1/3) · 1/((s/3)^{2} + 1)",
+        "= (1/3) · 9/(s^{2} + 9) = 3/(s^{2} + 9), matching the sine pair",
+        "At s = 2: 3/13 = 0.231"
+      ],
+      "answer": "3/(s^{2} + 9); 0.231 at s = 2"
+    },
+    "try": "(1/3)/((2/3)^2 + 1)"
+  },
+  "df/dt ‖ s F(s) − f(0)": {
+    "title": "Laplace property: derivative",
+    "about": "Differentiation becomes multiplication by s, minus the initial value. This is what turns an initial-value problem into algebra, with the initial condition built in.",
+    "assumptions": [
+      "One-sided transform: only t ≥ 0 counts, so every pair stands for f(t) u(t)",
+      "f(0) is the value just before t = 0 (0⁻); with a jump at 0 that is the value before the jump",
+      "f must be of exponential order so its transform exists"
+    ],
+    "vars": [
+      [
+        "f(t)",
+        "time function, taken as 0 for t < 0",
+        ""
+      ],
+      [
+        "F(s)",
+        "its Laplace transform",
+        ""
+      ],
+      [
+        "f(0)",
+        "initial value",
+        ""
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "d^{2}f/dt^{2} ↔ s^{2}F(s) − s f(0) − f′(0)",
+        "second derivative"
+      ],
+      [
+        "∫_{0}^{t} f(τ) dτ ↔ F(s)/s",
+        "integral"
+      ]
+    ],
+    "example": {
+      "problem": "Solve y′ + 3y = 0 with y(0) = 2, and find y(0.5).",
+      "steps": [
+        "sY − 2 + 3Y = 0",
+        "Y = 2/(s + 3), so y = 2e^{−3t}",
+        "y(0.5) = 2e^{−1.5} = 0.446"
+      ],
+      "answer": "y = 2e^{−3t}; y(0.5) ≈ 0.446"
+    },
+    "try": "2 e^-1.5"
+  },
+  "d^{2}f/dt^{2} ‖ s^{2} F(s) − s f(0) − f′(0)": {
+    "title": "Laplace property: second derivative",
+    "about": "Two derivatives give s^{2}F(s) minus terms carrying the initial position and velocity. It solves second-order systems: springs, RLC circuits.",
+    "assumptions": [
+      "One-sided transform: only t ≥ 0 counts, so every pair stands for f(t) u(t)",
+      "f(0) and f′(0) are the values at 0⁻"
+    ],
+    "vars": [
+      [
+        "f(t)",
+        "time function, taken as 0 for t < 0",
+        ""
+      ],
+      [
+        "F(s)",
+        "its Laplace transform",
+        ""
+      ],
+      [
+        "f(0)",
+        "initial value",
+        ""
+      ],
+      [
+        "f′(0)",
+        "initial slope",
+        ""
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "d^{n}f/dt^{n} ↔ s^{n}F − s^{n−1}f(0) − … − f^{(n−1)}(0)",
+        "n-th derivative"
+      ],
+      [
+        "df/dt ↔ sF(s) − f(0)",
+        "first derivative"
+      ]
+    ],
+    "example": {
+      "problem": "Solve y″ + 5y′ + 6y = 0 with y(0) = 1, y′(0) = 0, and find y(1).",
+      "steps": [
+        "s^{2}Y − s + 5(sY − 1) + 6Y = 0",
+        "Y = (s + 5)/((s + 2)(s + 3)) = 3/(s + 2) − 2/(s + 3)",
+        "y = 3e^{−2t} − 2e^{−3t}; y(1) = 0.406 − 0.100 = 0.306"
+      ],
+      "answer": "y = 3e^{−2t} − 2e^{−3t}; y(1) ≈ 0.306"
+    },
+    "try": "3 e^-2 - 2 e^-3"
+  },
+  "∫_{0}^{t} f(τ) dτ ‖ F(s)/s": {
+    "title": "Laplace property: integral",
+    "about": "Integrating from 0 to t divides the transform by s. A factor 1/s in a transform means 'the running integral of the rest'.",
+    "assumptions": [
+      "One-sided transform: only t ≥ 0 counts, so every pair stands for f(t) u(t)",
+      "The integral starts at 0, so no initial-value term appears"
+    ],
+    "vars": [
+      [
+        "f(t)",
+        "time function, taken as 0 for t < 0",
+        ""
+      ],
+      [
+        "F(s)",
+        "its Laplace transform",
+        ""
+      ],
+      [
+        "τ",
+        "integration variable",
+        "s"
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "df/dt ↔ sF(s) − f(0)",
+        "derivative, its inverse"
+      ],
+      [
+        "u(t) ↔ 1/s",
+        "integral of an impulse"
+      ]
+    ],
+    "example": {
+      "problem": "Invert 1/(s(s^{2} + 1)) and evaluate at t = π.",
+      "steps": [
+        "1/(s^{2} + 1) ↔ sin t, and 1/s integrates it",
+        "f = ∫_{0}^{t} sin τ dτ = 1 − cos t",
+        "f(π) = 1 − (−1) = 2"
+      ],
+      "answer": "f = 1 − cos t; f(π) = 2"
+    },
+    "try": "1 - cos(pi rad)"
+  },
+  "t f(t) ‖ −dF/ds": {
+    "title": "Laplace property: multiplication by t",
+    "about": "Multiplying by t differentiates the transform with respect to s (and flips its sign). It generates the repeated-pole pairs and handles resonance terms like t sin t.",
+    "assumptions": [
+      "One-sided transform: only t ≥ 0 counts, so every pair stands for f(t) u(t)",
+      "Same region of convergence as F"
+    ],
+    "vars": [
+      [
+        "f(t)",
+        "time function, taken as 0 for t < 0",
+        ""
+      ],
+      [
+        "F(s)",
+        "its Laplace transform",
+        ""
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "t^{n} f(t) ↔ (−1)^{n} d^{n}F/ds^{n}",
+        "repeated"
+      ],
+      [
+        "t e^{−at} ↔ 1/(s + a)^{2}",
+        "an example of it"
+      ]
+    ],
+    "example": {
+      "problem": "Find the transform of t sin t and its value at s = 1.",
+      "steps": [
+        "sin t ↔ 1/(s^{2} + 1)",
+        "t sin t ↔ −d/ds (s^{2} + 1)^{−1} = 2s/(s^{2} + 1)^{2}",
+        "At s = 1: 2/4 = 0.5"
+      ],
+      "answer": "2s/(s^{2} + 1)^{2}; 0.5 at s = 1"
+    },
+    "try": "2*1/(1^2 + 1)^2"
+  },
+  "f(t) ∗ g(t) ‖ F(s) G(s)": {
+    "title": "Laplace property: convolution",
+    "about": "Convolution in time is multiplication in s. A system's output is its impulse response convolved with the input, so Y(s) = H(s)X(s).",
+    "assumptions": [
+      "One-sided transform: only t ≥ 0 counts, so every pair stands for f(t) u(t); the convolution is (f ∗ g)(t) = ∫_{0}^{t} f(τ) g(t − τ) dτ",
+      "Valid where both transforms converge"
+    ],
+    "vars": [
+      [
+        "f(t), g(t)",
+        "time functions",
+        ""
+      ],
+      [
+        "F(s), G(s)",
+        "their transforms",
+        ""
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "Y(s) = H(s) X(s)",
+        "system output"
+      ],
+      [
+        "(f ∗ g)(t) = ∫_{0}^{t} f(τ) g(t − τ) dτ",
+        "the convolution integral"
+      ]
+    ],
+    "example": {
+      "problem": "Find the inverse of 1/((s + 1)(s + 2)) as e^{−t} ∗ e^{−2t}, and its value at t = 1.",
+      "steps": [
+        "∫_{0}^{t} e^{−τ} e^{−2(t−τ)} dτ = e^{−2t}(e^{t} − 1)",
+        "= e^{−t} − e^{−2t}",
+        "At t = 1: 0.368 − 0.135 = 0.233"
+      ],
+      "answer": "e^{−t} − e^{−2t}; 0.233 at t = 1"
+    },
+    "try": "integral(e^(-x) e^(-2(1 - x)), x, 0, 1)"
+  },
+  "f(0⁺) = lim_{s→∞} s F(s)": {
+    "title": "Initial value theorem",
+    "about": "The value just after t = 0 can be read from the transform's behaviour at large s, without inverting it. A quick check on a partial-fraction answer.",
+    "assumptions": [
+      "F(s) must be strictly proper (numerator degree below denominator's); otherwise f has an impulse at 0 and the limit doesn't exist",
+      "Gives f(0⁺), which differs from f(0⁻) if f jumps at 0"
+    ],
+    "vars": [
+      [
+        "f(0⁺)",
+        "value just after t = 0",
+        ""
+      ],
+      [
+        "F(s)",
+        "its Laplace transform",
+        ""
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "f(∞) = lim_{s→0} s F(s)",
+        "final value theorem"
+      ]
+    ],
+    "example": {
+      "problem": "Find f(0⁺) for F(s) = (2s + 3)/(s^{2} + 3s + 2).",
+      "steps": [
+        "sF = (2s^{2} + 3s)/(s^{2} + 3s + 2)",
+        "As s → ∞, sF → 2",
+        "Check: F = 1/(s + 1) + 1/(s + 2), f = e^{−t} + e^{−2t}, f(0) = 2"
+      ],
+      "answer": "f(0⁺) = 2"
+    }
+  },
+  "f(∞) = lim_{s→0} s F(s)": {
+    "title": "Final value theorem",
+    "about": "The steady-state value of f can be read from the transform near s = 0. It gives steady-state error and DC gain in control.",
+    "assumptions": [
+      "Only if f settles: every pole of sF(s) is in the open left half-plane",
+      "It gives wrong answers otherwise: for F = 1/(s^{2} + 1) (sin t) it returns 0, though sin t never settles"
+    ],
+    "vars": [
+      [
+        "f(∞)",
+        "steady-state value",
+        ""
+      ],
+      [
+        "F(s)",
+        "its Laplace transform",
+        ""
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "f(0⁺) = lim_{s→∞} s F(s)",
+        "initial value theorem"
+      ],
+      [
+        "H(0)",
+        "DC gain of a stable system"
+      ]
+    ],
+    "example": {
+      "problem": "A step response has Y(s) = 10/(s(s + 5)). What value does y settle to?",
+      "steps": [
+        "sY = 10/(s + 5), with its only pole at −5 (stable)",
+        "s → 0: 10/5 = 2",
+        "Check: y = 2(1 − e^{−5t}) → 2"
+      ],
+      "answer": "y(∞) = 2"
+    },
+    "try": "10/(0 + 5)"
+  },
+  "X(z) = Σ_{n=−∞}^{∞} x[n] z^{−n}": {
+    "title": "z transform (two-sided definition)",
+    "about": "The z transform turns a sequence into a function of the complex variable z; each z^{−1} is a delay of one sample. It is the discrete-time counterpart of the Laplace transform, used to analyse digital filters and difference equations.",
+    "assumptions": [
+      "The sum converges only in an annulus r_{1} < |z| < r_{2}, the region of convergence (ROC); a transform is incomplete without it",
+      "Right-sided sequences have ROCs outside a circle, left-sided inside one, two-sided in a ring",
+      "A system is stable when its ROC includes the unit circle |z| = 1; there X(e^{jω}) is the DTFT"
+    ],
+    "vars": [
+      [
+        "X(z)",
+        "z transform of x[n]",
+        ""
+      ],
+      [
+        "x[n]",
+        "discrete-time sequence",
+        ""
+      ],
+      [
+        "z",
+        "complex variable",
+        ""
+      ],
+      [
+        "n",
+        "sample index",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "z = e^{sT}",
+        "link to the Laplace variable, sample period T"
+      ],
+      [
+        "X(e^{jω})",
+        "DTFT, on the unit circle"
+      ],
+      [
+        "x[n] = (1/2πj) ∮ X(z) z^{n−1} dz",
+        "inverse"
+      ]
+    ],
+    "example": {
+      "problem": "Find X(z) for x = {1, 2, 3} at n = 0, 1, 2 (zero elsewhere), and evaluate it at z = 2.",
+      "steps": [
+        "X(z) = 1 + 2z^{−1} + 3z^{−2}, ROC all z ≠ 0",
+        "At z = 2: 1 + 1 + 0.75"
+      ],
+      "answer": "X(z) = 1 + 2z^{−1} + 3z^{−2}; X(2) = 2.75"
+    },
+    "try": "1 + 2*2^-1 + 3*2^-2"
+  },
+  "u[n] ‖ 1/(1 − z^{−1})": {
+    "title": "z-transform pair: unit step",
+    "about": "The discrete step is 1 for n ≥ 0. Its transform has a pole at z = 1, which is also the transfer function of an accumulator y[n] = y[n − 1] + x[n].",
+    "assumptions": [
+      "ROC |z| > 1: the geometric series Σ z^{−n} converges only there",
+      "The pole sits on the unit circle, so the accumulator is marginally stable"
+    ],
+    "vars": [
+      [
+        "u[n]",
+        "unit step: 1 for n ≥ 0, 0 otherwise",
+        ""
+      ],
+      [
+        "z",
+        "complex variable",
+        ""
+      ],
+      [
+        "n",
+        "sample index",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "a^{n} u[n] ↔ 1/(1 − az^{−1})",
+        "general a"
+      ],
+      [
+        "δ[n] ↔ 1",
+        "impulse"
+      ]
+    ],
+    "example": {
+      "problem": "Check the pair at z = 2, inside the ROC, by summing the series.",
+      "steps": [
+        "Σ_{n≥0} 2^{−n} = 1 + 1/2 + 1/4 + …",
+        "Formula: 1/(1 − 1/2) = 2",
+        "At z = 1/2, outside the ROC, the terms 2^{n} grow and the sum diverges"
+      ],
+      "answer": "X(2) = 2"
+    },
+    "try": "sum(2^-n, n, 0, 100)"
+  },
+  "a^{n} u[n] ‖ 1/(1 − az^{−1})": {
+    "title": "z-transform pair: causal exponential",
+    "about": "A right-sided geometric sequence has a single pole at z = a. It is the impulse response of the first-order recursive filter y[n] = a y[n − 1] + x[n].",
+    "assumptions": [
+      "ROC |z| > |a|, outside the pole",
+      "Stable (ROC includes |z| = 1) only if |a| < 1",
+      "The same formula with ROC |z| < |a| is the left-sided −a^{n} u[−n − 1]"
+    ],
+    "vars": [
+      [
+        "a",
+        "ratio (pole location), real or complex",
+        ""
+      ],
+      [
+        "z",
+        "complex variable",
+        ""
+      ],
+      [
+        "n",
+        "sample index",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "−a^{n} u[−n − 1] ↔ 1/(1 − az^{−1})",
+        "same formula, |z| < |a|"
+      ],
+      [
+        "H(1) = 1/(1 − a)",
+        "DC gain"
+      ]
+    ],
+    "example": {
+      "problem": "The filter y[n] = 0.5 y[n − 1] + x[n] has h[n] = 0.5^{n} u[n]. Find its DC gain H(1).",
+      "steps": [
+        "H(z) = 1/(1 − 0.5z^{−1}), ROC |z| > 0.5 includes z = 1",
+        "H(1) = 1/(1 − 0.5) = 2",
+        "Check: Σ 0.5^{n} = 2"
+      ],
+      "answer": "H(1) = 2"
+    },
+    "try": "sum(0.5^n, n, 0, 100)"
+  },
+  "−a^{n} u[−n − 1] ‖ 1/(1 − az^{−1})": {
+    "title": "z-transform pair: anticausal exponential",
+    "about": "A left-sided sequence (nonzero only for n ≤ −1) has the same formula as a^{n}u[n] but the opposite ROC. It is why a z transform must state its ROC to be inverted uniquely.",
+    "assumptions": [
+      "ROC |z| < |a|, inside the pole",
+      "Stable (ROC includes |z| = 1) only if |a| > 1",
+      "Anticausal: a real-time system can't produce it, but offline processing can"
+    ],
+    "vars": [
+      [
+        "a",
+        "pole location",
+        ""
+      ],
+      [
+        "z",
+        "complex variable",
+        ""
+      ],
+      [
+        "n",
+        "sample index",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "a^{n} u[n] ↔ 1/(1 − az^{−1})",
+        "same formula, |z| > |a|"
+      ]
+    ],
+    "example": {
+      "problem": "X(z) = 1/(1 − 2z^{−1}) with ROC |z| < 2 (which contains the unit circle). Find x[n] and check X(1).",
+      "steps": [
+        "ROC inside the pole: x[n] = −2^{n} u[−n − 1] = −1/2, −1/4, … at n = −1, −2, …",
+        "X(1) = 1/(1 − 2) = −1",
+        "Sum: −(1/2 + 1/4 + …) = −1"
+      ],
+      "answer": "x[n] = −2^{n} for n ≤ −1; X(1) = −1"
+    },
+    "try": "-sum(2^-k, k, 1, 100)"
+  },
+  "n a^{n} u[n] ‖ az^{−1}/(1 − az^{−1})^{2}": {
+    "title": "z-transform pair: n times an exponential (double pole)",
+    "about": "A double pole at z = a gives n a^{n}, the discrete version of t e^{−at}. It follows from the n x[n] ↔ −z dX/dz property.",
+    "assumptions": [
+      "ROC |z| > |a|",
+      "Stable if |a| < 1"
+    ],
+    "vars": [
+      [
+        "a",
+        "pole location (double)",
+        ""
+      ],
+      [
+        "z",
+        "complex variable",
+        ""
+      ],
+      [
+        "n",
+        "sample index",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "a^{n} u[n] ↔ 1/(1 − az^{−1})",
+        "single pole"
+      ],
+      [
+        "n x[n] ↔ −z dX/dz",
+        "the property behind it"
+      ]
+    ],
+    "example": {
+      "problem": "With a = 0.5, evaluate the transform at z = 1 and check it by summing the sequence.",
+      "steps": [
+        "Formula: 0.5/(1 − 0.5)^{2} = 0.5/0.25 = 2",
+        "Series: Σ n 0.5^{n} = 0.5 + 0.5 + 0.375 + 0.25 + … = 2"
+      ],
+      "answer": "X(1) = 2"
+    },
+    "try": "sum(n*0.5^n, n, 0, 200)"
+  },
+  "cos(ω_{o}n) u[n] ‖ (1 − cos(ω_{o}) z^{−1})/(1 − 2cos(ω_{o}) z^{−1} + z^{−2})": {
+    "title": "z-transform pair: causal cosine",
+    "about": "A cosine switched on at n = 0 has poles on the unit circle at e^{±jω_{o}}. Its denominator gives a two-pole digital oscillator.",
+    "assumptions": [
+      "ROC |z| > 1",
+      "Poles on the unit circle: marginally stable, a sustained oscillation",
+      "ω_{o} in radians per sample (0 to π)"
+    ],
+    "vars": [
+      [
+        "ω_{o}",
+        "digital frequency",
+        "rad/sample"
+      ],
+      [
+        "z",
+        "complex variable",
+        ""
+      ],
+      [
+        "n",
+        "sample index",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "r^{n} cos(ω_{o}n) u[n] ↔ (1 − r cos(ω_{o}) z^{−1})/(1 − 2r cos(ω_{o}) z^{−1} + r^{2} z^{−2})",
+        "damped, ROC |z| > r"
+      ],
+      [
+        "sin(ω_{o}n) u[n] ↔ sin(ω_{o}) z^{−1}/(1 − 2cos(ω_{o}) z^{−1} + z^{−2})",
+        "sine"
+      ]
+    ],
+    "example": {
+      "problem": "With ω_{o} = π/3, write the difference equation the pair implies and run it from an impulse for four samples.",
+      "steps": [
+        "2cos(π/3) = 1: X = (1 − 0.5z^{−1})/(1 − z^{−1} + z^{−2})",
+        "y[n] = y[n − 1] − y[n − 2] + x[n] − 0.5x[n − 1]",
+        "y = 1, 0.5, −0.5, −1, … = cos(πn/3); at n = 3, cos π = −1"
+      ],
+      "answer": "y = 1, 0.5, −0.5, −1 (y[3] = −1)"
+    },
+    "try": "cos(pi rad)"
+  },
+  "sin(ω_{o}n) u[n] ‖ sin(ω_{o}) z^{−1}/(1 − 2cos(ω_{o}) z^{−1} + z^{−2})": {
+    "title": "z-transform pair: causal sine",
+    "about": "A sine switched on at n = 0 has the same unit-circle poles as the cosine, with a numerator sin(ω_{o})z^{−1}. Driving that system with an impulse generates a sampled sine wave.",
+    "assumptions": [
+      "ROC |z| > 1",
+      "Poles on the unit circle: marginally stable",
+      "ω_{o} in radians per sample"
+    ],
+    "vars": [
+      [
+        "ω_{o}",
+        "digital frequency",
+        "rad/sample"
+      ],
+      [
+        "z",
+        "complex variable",
+        ""
+      ],
+      [
+        "n",
+        "sample index",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "cos(ω_{o}n) u[n] ↔ (1 − cos(ω_{o}) z^{−1})/(1 − 2cos(ω_{o}) z^{−1} + z^{−2})",
+        "cosine"
+      ]
+    ],
+    "example": {
+      "problem": "With ω_{o} = π/2, find the oscillator's difference equation and its output for n = 0 … 4.",
+      "steps": [
+        "sin(π/2) = 1, cos(π/2) = 0: X = z^{−1}/(1 + z^{−2})",
+        "y[n] = −y[n − 2] + x[n − 1]",
+        "From an impulse: 0, 1, 0, −1, 0 = sin(πn/2); y[3] = sin(3π/2) = −1"
+      ],
+      "answer": "y = 0, 1, 0, −1, 0 (y[3] = −1)"
+    },
+    "try": "sin(3 pi/2 rad)"
+  },
+  "x[n − n_{o}] ‖ z^{−n_{o}} X(z)": {
+    "title": "z-transform property: time shift",
+    "about": "Delaying a sequence by n_{o} samples multiplies its transform by z^{−n_{o}}. This is why z^{−1} is drawn as a one-sample delay block in filter diagrams.",
+    "assumptions": [
+      "Two-sided transform; the ROC is unchanged except possibly at z = 0 or ∞",
+      "For the one-sided transform, a delay also brings in initial-condition terms"
+    ],
+    "vars": [
+      [
+        "x[n]",
+        "discrete-time sequence",
+        ""
+      ],
+      [
+        "X(z)",
+        "z transform of x[n]",
+        ""
+      ],
+      [
+        "n_{o}",
+        "delay in samples (negative for an advance)",
+        ""
+      ],
+      [
+        "z",
+        "complex variable",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "H(z) = Σ b_{k} z^{−k}/(1 + Σ a_{k} z^{−k})",
+        "transfer function of a difference equation"
+      ]
+    ],
+    "example": {
+      "problem": "An echo filter y[n] = x[n] + 0.5x[n − 3]. Find H(z) and the gain at ω = π/3, where z^{−3} = e^{−jπ} = −1.",
+      "steps": [
+        "H(z) = 1 + 0.5z^{−3}",
+        "At DC (z = 1): 1.5",
+        "At ω = π/3: 1 + 0.5(−1) = 0.5"
+      ],
+      "answer": "H(z) = 1 + 0.5z^{−3}; gain 0.5 at ω = π/3"
+    },
+    "try": "1 + 0.5 cos(pi rad)"
+  },
+  "a^{n} x[n] ‖ X(z/a)": {
+    "title": "z-transform property: multiplication by a^{n} (scaling in z)",
+    "about": "Multiplying a sequence by a^{n} scales the z-plane: every pole and zero moves from p to a p. It turns the step into a geometric sequence and a cosine into a damped one.",
+    "assumptions": [
+      "If X converges for r_{1} < |z| < r_{2}, the result converges for |a| r_{1} < |z| < |a| r_{2}"
+    ],
+    "vars": [
+      [
+        "x[n]",
+        "discrete-time sequence",
+        ""
+      ],
+      [
+        "X(z)",
+        "z transform of x[n]",
+        ""
+      ],
+      [
+        "a",
+        "scale factor, real or complex",
+        ""
+      ],
+      [
+        "z",
+        "complex variable",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "a^{n} u[n] ↔ 1/(1 − az^{−1})",
+        "the step scaled"
+      ],
+      [
+        "e^{jω_{o}n} x[n] ↔ X(e^{−jω_{o}} z)",
+        "modulation"
+      ]
+    ],
+    "example": {
+      "problem": "From u[n] ↔ 1/(1 − z^{−1}), find the transform of 0.8^{n} u[n] and its value at z = 1.",
+      "steps": [
+        "Replace z by z/0.8: 1/(1 − 0.8z^{−1})",
+        "ROC |z| > 0.8",
+        "At z = 1: 1/0.2 = 5 (= Σ 0.8^{n})"
+      ],
+      "answer": "1/(1 − 0.8z^{−1}); 5 at z = 1"
+    },
+    "try": "sum(0.8^n, n, 0, 300)"
+  },
+  "n x[n] ‖ −z dX/dz": {
+    "title": "z-transform property: multiplication by n",
+    "about": "Multiplying a sequence by n corresponds to differentiating its transform and multiplying by −z. It produces the repeated-pole pairs.",
+    "assumptions": [
+      "Same ROC as X(z), except possibly z = 0 or ∞"
+    ],
+    "vars": [
+      [
+        "x[n]",
+        "discrete-time sequence",
+        ""
+      ],
+      [
+        "X(z)",
+        "z transform of x[n]",
+        ""
+      ],
+      [
+        "n",
+        "sample index",
+        ""
+      ],
+      [
+        "z",
+        "complex variable",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "n a^{n} u[n] ↔ az^{−1}/(1 − az^{−1})^{2}",
+        "the result for a^{n}u[n]"
+      ],
+      [
+        "t f(t) ↔ −dF/ds",
+        "Laplace counterpart"
+      ]
+    ],
+    "example": {
+      "problem": "From a^{n}u[n] ↔ z/(z − a), find the transform of n a^{n} u[n] and check it at a = 0.5, z = 2.",
+      "steps": [
+        "−z d/dz [z/(z − a)] = −z · (−a)/(z − a)^{2} = az/(z − a)^{2}",
+        "= az^{−1}/(1 − az^{−1})^{2}",
+        "At a = 0.5, z = 2: 1/1.5^{2} = 0.444, and Σ n 0.25^{n} = 0.444"
+      ],
+      "answer": "az/(z − a)^{2}; 0.444 at a = 0.5, z = 2"
+    },
+    "try": "sum(n*0.25^n, n, 0, 200)"
+  },
+  "x[−n] ‖ X(1/z)": {
+    "title": "z-transform property: time reversal",
+    "about": "Flipping a sequence in time replaces z by 1/z: poles move to their reciprocals and the ROC turns inside out.",
+    "assumptions": [
+      "If X converges for r_{1} < |z| < r_{2}, X(1/z) converges for 1/r_{2} < |z| < 1/r_{1}",
+      "A causal sequence becomes anticausal"
+    ],
+    "vars": [
+      [
+        "x[n]",
+        "discrete-time sequence",
+        ""
+      ],
+      [
+        "X(z)",
+        "z transform of x[n]",
+        ""
+      ],
+      [
+        "n",
+        "sample index",
+        ""
+      ],
+      [
+        "z",
+        "complex variable",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "x[n − n_{o}] ↔ z^{−n_{o}} X(z)",
+        "time shift"
+      ]
+    ],
+    "example": {
+      "problem": "Reverse x[n] = 0.5^{n} u[n]. Find the transform, its ROC, and its value at z = 1.",
+      "steps": [
+        "X(z) = 1/(1 − 0.5z^{−1}), |z| > 0.5",
+        "x[−n] = 2^{n} u[−n] ↔ 1/(1 − 0.5z), ROC |z| < 2",
+        "At z = 1: 1/0.5 = 2 (= 1 + 1/2 + 1/4 + …)"
+      ],
+      "answer": "1/(1 − 0.5z), |z| < 2; 2 at z = 1"
+    },
+    "try": "sum(2^-k, k, 0, 100)"
+  },
+  "x[n] ∗ h[n] ‖ X(z) H(z)": {
+    "title": "z-transform property: convolution",
+    "about": "Convolving two sequences multiplies their transforms. A digital filter's output is Y(z) = H(z)X(z), and multiplying polynomials in z^{−1} is convolving their coefficients.",
+    "assumptions": [
+      "ROC contains at least the intersection of the two ROCs (larger if poles cancel)",
+      "Convolution: y[n] = Σ_{k} x[k] h[n − k]"
+    ],
+    "vars": [
+      [
+        "x[n]",
+        "discrete-time sequence",
+        ""
+      ],
+      [
+        "h[n]",
+        "impulse response",
+        ""
+      ],
+      [
+        "X(z)",
+        "z transform of x[n]",
+        ""
+      ],
+      [
+        "H(z)",
+        "transfer function",
+        ""
+      ],
+      [
+        "z",
+        "complex variable",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Y(z) = H(z) X(z)",
+        "filter output"
+      ],
+      [
+        "f(t) ∗ g(t) ↔ F(s) G(s)",
+        "Laplace counterpart"
+      ]
+    ],
+    "example": {
+      "problem": "Convolve x = {1, 1} with h = {1, 2, 1} using z transforms.",
+      "steps": [
+        "X = 1 + z^{−1}, H = 1 + 2z^{−1} + z^{−2}",
+        "XH = 1 + 3z^{−1} + 3z^{−2} + z^{−3}",
+        "y = {1, 3, 3, 1}"
+      ],
+      "answer": "y = {1, 3, 3, 1}"
+    }
+  }
+}

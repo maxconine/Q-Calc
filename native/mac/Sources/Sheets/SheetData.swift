@@ -57,6 +57,7 @@ final class SheetData {
                                                "lead": (i["lead"] as? [String] ?? []).map(runs)]
                     if let copies = i["leadCopy"] { item["leadCopy"] = copies }
                     if let line = i["open"] { item["open"] = line }
+                    if let explain = i["explain"] { item["explain"] = explain }
                     if let parts = i["parts"] as? [[String: Any]] {
                         item["parts"] = parts.map { part -> [String: Any] in
                             ["doc": logic.string("lib/identities", "sheetMathDocument", [part["typst"] as? String ?? ""]) ?? "", "copy": part["copy"] as? String ?? ""]
@@ -143,6 +144,18 @@ final class SheetData {
                 done(sheet)
             }
         }
+    }
+
+    private var plainSheets: [IdentitySheet]?
+
+    /// Every sheet, for a sheet's search through all of them: typeset where one has been drawn already, else its
+    /// rows as plain runs (the search lists them; a click copies and explains as on their own sheet). Built once.
+    func allSheets() -> [IdentitySheet] {
+        if plainSheets == nil {
+            let ids = logic.call("lib/identities", "nativeSheetIds", []) as? [String] ?? []
+            plainSheets = ids.compactMap { id in raw(id).flatMap { IdentitySheet($0) } }
+        }
+        return (plainSheets ?? []).map { drawnSheets[$0.id] ?? $0 }
     }
 
     /// a cell that's only words: this and the words, in place of a document

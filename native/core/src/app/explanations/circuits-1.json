@@ -1,0 +1,3551 @@
+{
+  "V = I R": {
+    "title": "Ohm's law: voltage, current and resistance",
+    "about": "The voltage across a resistor equals the current through it times its resistance. It is the starting point for nearly every DC circuit calculation: given any two of V, I and R, it gives the third.",
+    "assumptions": [
+      "The element is a linear (ohmic) resistor: R does not change with V or I",
+      "Temperature is steady; a real resistor's R drifts as it heats (a lamp filament can change several times over)",
+      "Passive sign convention: current enters the terminal marked +",
+      "Fails for diodes, LEDs, transistors and other nonlinear devices, where V and I are not proportional"
+    ],
+    "vars": [
+      [
+        "V",
+        "voltage across the resistor",
+        "V"
+      ],
+      [
+        "I",
+        "current through the resistor",
+        "A"
+      ],
+      [
+        "R",
+        "resistance",
+        "Ω"
+      ]
+    ],
+    "related": [
+      [
+        "I = V/R",
+        "current from voltage"
+      ],
+      [
+        "P = VI = I^{2}R",
+        "power the resistor dissipates"
+      ],
+      [
+        "G = 1/R",
+        "conductance, in siemens"
+      ]
+    ],
+    "example": {
+      "problem": "A 12 V battery drives a 470 Ω resistor. What current flows?",
+      "steps": [
+        "I = V/R = 12 V / 470 Ω",
+        "I = 0.02553 A = 25.5 mA"
+      ],
+      "answer": "I ≈ 25.5 mA"
+    },
+    "try": "12 V / 470 ohm to mA"
+  },
+  "P = V I = I^{2} R = V^{2}/R": {
+    "title": "Electrical power in a resistor",
+    "about": "Power is voltage times current. For a resistor, Ohm's law turns this into I²R or V²/R, so you can use whichever two quantities you know. It sets a resistor's power rating and how hot it runs.",
+    "assumptions": [
+      "P = VI holds for any two-terminal element at an instant; I²R and V²/R need an ohmic resistor",
+      "Passive sign convention: P > 0 means the element absorbs power",
+      "For AC, use rms values to get average power in a resistor"
+    ],
+    "vars": [
+      [
+        "P",
+        "power absorbed",
+        "W"
+      ],
+      [
+        "V",
+        "voltage across the element",
+        "V"
+      ],
+      [
+        "I",
+        "current through the element",
+        "A"
+      ],
+      [
+        "R",
+        "resistance",
+        "Ω"
+      ]
+    ],
+    "related": [
+      [
+        "V = IR",
+        "Ohm's law"
+      ],
+      [
+        "E = Pt",
+        "energy over a time t"
+      ]
+    ],
+    "example": {
+      "problem": "A 220 Ω resistor sits across 5 V. How much power does it dissipate, and is a 1/8 W part enough?",
+      "steps": [
+        "P = V^{2}/R = (5 V)^{2} / 220 Ω",
+        "P = 0.1136 W = 114 mW",
+        "114 mW is close to 125 mW, so use a 1/4 W part for margin"
+      ],
+      "answer": "P ≈ 114 mW"
+    },
+    "try": "5 V * 5 V / 220 ohm to mW"
+  },
+  "Σ I = 0": {
+    "title": "Kirchhoff's current law (KCL)",
+    "about": "The currents into a node sum to zero: whatever flows in must flow out. Writing KCL at each node is the basis of nodal analysis.",
+    "assumptions": [
+      "Charge is conserved and does not pile up at the node (lumped circuit: the circuit is small compared with the signal's wavelength)",
+      "Pick one sign for currents entering and the opposite for leaving, and keep it for every branch",
+      "Also holds for any closed surface around part of a circuit (a supernode)"
+    ],
+    "vars": [
+      [
+        "I",
+        "each branch current at the node, + entering, − leaving",
+        "A"
+      ]
+    ],
+    "related": [
+      [
+        "Σ V = 0",
+        "KVL, around a loop"
+      ],
+      [
+        "Σ I_{in} = Σ I_{out}",
+        "same law, as in = out"
+      ]
+    ],
+    "example": {
+      "problem": "Three wires meet at a node. 2.5 A and 1.2 A flow in on two of them. What flows in the third?",
+      "steps": [
+        "2.5 A + 1.2 A + I_{3} = 0",
+        "I_{3} = −3.7 A, so 3.7 A flows out"
+      ],
+      "answer": "3.7 A out of the node"
+    },
+    "try": "2.5 A + 1.2 A"
+  },
+  "Σ V = 0": {
+    "title": "Kirchhoff's voltage law (KVL)",
+    "about": "Around any closed loop the voltage rises and drops add to zero, because voltage is a difference in potential and you return to where you started. Writing KVL around each loop is the basis of mesh analysis.",
+    "assumptions": [
+      "Lumped circuit: no changing magnetic flux threads the loop from outside (fails near transformers or at high frequency)",
+      "Go around the loop in one direction and count rises and drops with consistent signs"
+    ],
+    "vars": [
+      [
+        "V",
+        "each element's voltage around the loop, + for a drop and − for a rise (or the reverse)",
+        "V"
+      ]
+    ],
+    "related": [
+      [
+        "Σ I = 0",
+        "KCL, at a node"
+      ],
+      [
+        "V = IR",
+        "the drop across each resistor"
+      ]
+    ],
+    "example": {
+      "problem": "A 9 V battery drives two resistors in series. One drops 3.3 V. What does the other drop?",
+      "steps": [
+        "−9 V + 3.3 V + V_{2} = 0",
+        "V_{2} = 9 − 3.3 = 5.7 V"
+      ],
+      "answer": "V_{2} = 5.7 V"
+    },
+    "try": "9 V - 3.3 V"
+  },
+  "V_{out} = V_{in} R_{2}/(R_{1} + R_{2})": {
+    "title": "Voltage divider",
+    "about": "Two resistors in series split the input voltage in proportion to their resistances; the output is taken across R₂. Use it to scale down a voltage, bias a transistor, or read a sensor.",
+    "assumptions": [
+      "No load current is drawn from the output; a load R_{L} sits in parallel with R₂ and lowers V_{out}",
+      "Keep the load at least about 10 times R₂ for the formula to stay within 10%",
+      "The source is ideal (no internal resistance), or that resistance is added to R₁"
+    ],
+    "vars": [
+      [
+        "V_{out}",
+        "voltage across R₂",
+        "V"
+      ],
+      [
+        "V_{in}",
+        "voltage across the series pair",
+        "V"
+      ],
+      [
+        "R_{1}",
+        "top resistor",
+        "Ω"
+      ],
+      [
+        "R_{2}",
+        "bottom resistor, across which the output is taken",
+        "Ω"
+      ]
+    ],
+    "related": [
+      [
+        "I = V_{in}/(R_{1} + R_{2})",
+        "current through both"
+      ],
+      [
+        "R_{2} ‖ R_{L} = R_{2}R_{L}/(R_{2} + R_{L})",
+        "with a load on the output"
+      ]
+    ],
+    "example": {
+      "problem": "Scale 12 V down for a 3.3 V ADC with R₁ = 10 kΩ and R₂ = 3.3 kΩ.",
+      "steps": [
+        "V_{out} = 12 V × 3.3 kΩ / (10 kΩ + 3.3 kΩ)",
+        "V_{out} = 12 × 0.2481 = 2.98 V"
+      ],
+      "answer": "V_{out} ≈ 2.98 V"
+    },
+    "try": "12 V * 3.3 kΩ / (10 kΩ + 3.3 kΩ)"
+  },
+  "I_{1} = I R_{2}/(R_{1} + R_{2})": {
+    "title": "Current divider",
+    "about": "Two resistors in parallel share a current inversely to their resistances: the current through R₁ uses the other resistor, R₂, on top. The smaller resistor carries more.",
+    "assumptions": [
+      "Exactly two parallel branches; for more, use I_{k} = I G_{k}/ΣG",
+      "Ideal, linear resistors",
+      "I is the total current entering the parallel pair"
+    ],
+    "vars": [
+      [
+        "I_{1}",
+        "current through R₁",
+        "A"
+      ],
+      [
+        "I",
+        "total current into the pair",
+        "A"
+      ],
+      [
+        "R_{1}",
+        "resistance of the branch of interest",
+        "Ω"
+      ],
+      [
+        "R_{2}",
+        "resistance of the other branch",
+        "Ω"
+      ]
+    ],
+    "related": [
+      [
+        "I_{2} = I R_{1}/(R_{1} + R_{2})",
+        "current through the other branch"
+      ],
+      [
+        "I_{k} = I G_{k}/(G_{1} + G_{2} + …)",
+        "any number of branches, with G = 1/R"
+      ]
+    ],
+    "example": {
+      "problem": "50 mA enters a 100 Ω and a 400 Ω resistor in parallel. How much goes through the 100 Ω?",
+      "steps": [
+        "I_{1} = 50 mA × 400 Ω / (100 Ω + 400 Ω)",
+        "I_{1} = 50 × 0.8 = 40 mA"
+      ],
+      "answer": "I_{1} = 40 mA"
+    },
+    "try": "50 mA * 400 ohm / (100 ohm + 400 ohm) to mA"
+  },
+  "R ‖ R_{1} + R_{2} ‖ R_{1}R_{2}/(R_{1} + R_{2})": {
+    "title": "Resistors in series and in parallel",
+    "about": "Resistors in series add. Two in parallel give the product over the sum, always less than the smaller one. Combining them step by step reduces a network to a single equivalent resistance.",
+    "assumptions": [
+      "Series: the same current flows through each; parallel: the same voltage is across each",
+      "Ideal resistors, wires with no resistance",
+      "For more than two in parallel: 1/R = 1/R_{1} + 1/R_{2} + …"
+    ],
+    "vars": [
+      [
+        "R",
+        "equivalent resistance",
+        "Ω"
+      ],
+      [
+        "R_{1}",
+        "first resistor",
+        "Ω"
+      ],
+      [
+        "R_{2}",
+        "second resistor",
+        "Ω"
+      ]
+    ],
+    "related": [
+      [
+        "1/R = 1/R_{1} + 1/R_{2} + 1/R_{3}",
+        "any number in parallel"
+      ],
+      [
+        "R/n",
+        "n equal resistors R in parallel"
+      ]
+    ],
+    "example": {
+      "problem": "Find the equivalent of 1 kΩ and 2.2 kΩ in parallel, and in series.",
+      "steps": [
+        "Series: 1 + 2.2 = 3.2 kΩ",
+        "Parallel: (1 × 2.2)/(1 + 2.2) = 2.2/3.2 = 0.6875 kΩ"
+      ],
+      "answer": "687.5 Ω in parallel; 3.2 kΩ in series"
+    },
+    "try": "1 kΩ * 2.2 kΩ / (1 kΩ + 2.2 kΩ) to ohm"
+  },
+  "L ‖ L_{1} + L_{2} ‖ L_{1}L_{2}/(L_{1} + L_{2})": {
+    "title": "Inductors in series and in parallel",
+    "about": "Inductors combine like resistors: series add, two in parallel give the product over the sum.",
+    "assumptions": [
+      "No mutual coupling between the inductors (their magnetic fields don't link); coupled coils add ±2M in series",
+      "Ideal inductors with no winding resistance",
+      "For more than two in parallel: 1/L = 1/L_{1} + 1/L_{2} + …"
+    ],
+    "vars": [
+      [
+        "L",
+        "equivalent inductance",
+        "H"
+      ],
+      [
+        "L_{1}",
+        "first inductor",
+        "H"
+      ],
+      [
+        "L_{2}",
+        "second inductor",
+        "H"
+      ]
+    ],
+    "related": [
+      [
+        "L = L_{1} + L_{2} ± 2M",
+        "series, with mutual inductance M"
+      ],
+      [
+        "v = L di/dt",
+        "an inductor's voltage"
+      ]
+    ],
+    "example": {
+      "problem": "A 10 mH and a 15 mH inductor, uncoupled, are wired in parallel. What is the equivalent?",
+      "steps": [
+        "L = (10 × 15)/(10 + 15) mH",
+        "L = 150/25 = 6 mH"
+      ],
+      "answer": "L = 6 mH (25 mH in series)"
+    },
+    "try": "10 mH * 15 mH / (10 mH + 15 mH) to mH"
+  },
+  "C ‖ C_{1}C_{2}/(C_{1} + C_{2}) ‖ C_{1} + C_{2}": {
+    "title": "Capacitors in series and in parallel",
+    "about": "Capacitors combine the opposite way to resistors: in parallel they add, and two in series give the product over the sum, less than the smaller one.",
+    "assumptions": [
+      "Ideal capacitors with no leakage",
+      "In series each capacitor holds the same charge, so the smaller one takes the larger share of the voltage",
+      "For more than two in series: 1/C = 1/C_{1} + 1/C_{2} + …"
+    ],
+    "vars": [
+      [
+        "C",
+        "equivalent capacitance",
+        "F"
+      ],
+      [
+        "C_{1}",
+        "first capacitor",
+        "F"
+      ],
+      [
+        "C_{2}",
+        "second capacitor",
+        "F"
+      ]
+    ],
+    "related": [
+      [
+        "Q = CV",
+        "charge on a capacitor"
+      ],
+      [
+        "V_{1} = V C_{2}/(C_{1} + C_{2})",
+        "voltage on C₁ in a series pair"
+      ]
+    ],
+    "example": {
+      "problem": "A 4.7 µF and a 10 µF capacitor are in series. What is the equivalent?",
+      "steps": [
+        "C = (4.7 × 10)/(4.7 + 10) µF",
+        "C = 47/14.7 = 3.20 µF"
+      ],
+      "answer": "C ≈ 3.20 µF (14.7 µF in parallel)"
+    },
+    "try": "4.7 uF * 10 uF / (4.7 uF + 10 uF) to uF"
+  },
+  "V_{out} = V_{s} (R_{2}/(R_{1} + R_{2}) − R_{4}/(R_{3} + R_{4}))": {
+    "title": "Wheatstone bridge output",
+    "about": "Two voltage dividers fed by the same source; the output is the difference between their midpoints. When the ratios match, R₁/R₂ = R₃/R₄, the bridge balances and the output is zero, so a small change in one resistor (a strain gauge or RTD) shows up as a small voltage.",
+    "assumptions": [
+      "The output is read by a meter that draws no current (high input impedance)",
+      "Ideal source with no internal resistance",
+      "Linear resistors; for a single gauge the output is only roughly linear in its small change ΔR"
+    ],
+    "vars": [
+      [
+        "V_{out}",
+        "voltage between the two midpoints",
+        "V"
+      ],
+      [
+        "V_{s}",
+        "supply voltage across the bridge",
+        "V"
+      ],
+      [
+        "R_{1}, R_{2}",
+        "top and bottom resistors of the first divider (output across R₂)",
+        "Ω"
+      ],
+      [
+        "R_{3}, R_{4}",
+        "top and bottom resistors of the second divider (output across R₄)",
+        "Ω"
+      ]
+    ],
+    "related": [
+      [
+        "R_{1}R_{4} = R_{2}R_{3}",
+        "balance condition (V_{out} = 0)"
+      ],
+      [
+        "V_{out} ≈ V_{s} ΔR/(4R)",
+        "quarter bridge, one gauge changing by ΔR"
+      ]
+    ],
+    "example": {
+      "problem": "A bridge on 5 V has R₁ = R₃ = R₄ = 350 Ω and a strain gauge R₂ = 351 Ω. Find the output.",
+      "steps": [
+        "351/(350 + 351) = 0.500713",
+        "350/(350 + 350) = 0.5",
+        "V_{out} = 5 V × 0.000713 = 3.57 mV"
+      ],
+      "answer": "V_{out} ≈ 3.57 mV"
+    },
+    "try": "5 V * (351/(350+351) - 350/(350+350)) to mV"
+  },
+  "R_{1} = R_{b} R_{c}/(R_{a} + R_{b} + R_{c})": {
+    "title": "Delta-to-wye (Δ–Y) conversion",
+    "about": "Replaces three resistors in a triangle (delta) with three in a star (wye) that look the same from the three terminals. Each wye resistor is the product of the two delta resistors next to its terminal over the sum of all three. Use it to untangle bridges that aren't series or parallel.",
+    "assumptions": [
+      "R₁ connects to the terminal that R_{b} and R_{c} share; R_{a} is the delta resistor opposite it",
+      "Linear resistors (the same works for impedances in AC)",
+      "Equivalent only as seen from the three terminals, not inside"
+    ],
+    "vars": [
+      [
+        "R_{1}",
+        "wye resistor at terminal 1",
+        "Ω"
+      ],
+      [
+        "R_{a}",
+        "delta resistor opposite terminal 1",
+        "Ω"
+      ],
+      [
+        "R_{b}, R_{c}",
+        "the two delta resistors touching terminal 1",
+        "Ω"
+      ]
+    ],
+    "related": [
+      [
+        "R_{2} = R_{a}R_{c}/(R_{a} + R_{b} + R_{c})",
+        "the other wye resistors, by the same pattern"
+      ],
+      [
+        "R_{Y} = R_{Δ}/3",
+        "balanced: all three equal"
+      ],
+      [
+        "R_{a} = (R_{1}R_{2} + R_{2}R_{3} + R_{3}R_{1})/R_{1}",
+        "the reverse, wye to delta"
+      ]
+    ],
+    "example": {
+      "problem": "A delta has R_{a} = 30 Ω, R_{b} = 20 Ω, R_{c} = 50 Ω. Find R₁.",
+      "steps": [
+        "R_{a} + R_{b} + R_{c} = 100 Ω",
+        "R_{1} = (20 × 50)/100 = 10 Ω"
+      ],
+      "answer": "R_{1} = 10 Ω"
+    },
+    "try": "20 ohm * 50 ohm / (30 ohm + 20 ohm + 50 ohm)"
+  },
+  "R_{a} = (R_{1}R_{2} + R_{2}R_{3} + R_{3}R_{1})/R_{1}": {
+    "title": "Wye-to-delta (Y–Δ) conversion",
+    "about": "Replaces three resistors in a star (wye) with three in a triangle (delta) that look the same from the terminals. Each delta resistor is the sum of the pairwise products over the wye resistor opposite it.",
+    "assumptions": [
+      "R_{a} is the delta resistor opposite terminal 1, and R₁ is the wye resistor at terminal 1",
+      "Linear resistors (works for impedances too)",
+      "Equivalent only from the three terminals"
+    ],
+    "vars": [
+      [
+        "R_{a}",
+        "delta resistor opposite terminal 1",
+        "Ω"
+      ],
+      [
+        "R_{1}",
+        "wye resistor at terminal 1",
+        "Ω"
+      ],
+      [
+        "R_{2}, R_{3}",
+        "wye resistors at terminals 2 and 3",
+        "Ω"
+      ]
+    ],
+    "related": [
+      [
+        "R_{b} = (R_{1}R_{2} + R_{2}R_{3} + R_{3}R_{1})/R_{2}",
+        "the others, by the same pattern"
+      ],
+      [
+        "R_{Δ} = 3R_{Y}",
+        "balanced"
+      ],
+      [
+        "R_{1} = R_{b}R_{c}/(R_{a} + R_{b} + R_{c})",
+        "the reverse, delta to wye"
+      ]
+    ],
+    "example": {
+      "problem": "A wye has R₁ = 10 Ω, R₂ = 15 Ω, R₃ = 6 Ω. Find R_{a}.",
+      "steps": [
+        "R_{1}R_{2} + R_{2}R_{3} + R_{3}R_{1} = 150 + 90 + 60 = 300 Ω²",
+        "R_{a} = 300/10 = 30 Ω"
+      ],
+      "answer": "R_{a} = 30 Ω"
+    },
+    "try": "(10*15 + 15*6 + 6*10)/10"
+  },
+  "V_{th} = V_{oc}": {
+    "title": "Thévenin voltage: the open-circuit voltage",
+    "about": "Any linear two-terminal network acts like a single source V_{th} in series with a resistance R_{th}. V_{th} is the voltage across the terminals with nothing connected. Use it to study how a network drives different loads without re-solving the whole circuit.",
+    "assumptions": [
+      "The network is linear (resistors, linear dependent sources, independent sources)",
+      "Equivalent only at the two terminals; power inside the network is not the same",
+      "Remove the load before finding V_{oc}"
+    ],
+    "vars": [
+      [
+        "V_{th}",
+        "Thévenin equivalent voltage",
+        "V"
+      ],
+      [
+        "V_{oc}",
+        "voltage across the open terminals",
+        "V"
+      ]
+    ],
+    "related": [
+      [
+        "R_{th} = V_{oc}/I_{sc}",
+        "Thévenin resistance"
+      ],
+      [
+        "I_{L} = V_{th}/(R_{th} + R_{L})",
+        "current into a load"
+      ],
+      [
+        "I_{N} = I_{sc}",
+        "Norton equivalent"
+      ]
+    ],
+    "example": {
+      "problem": "A 12 V source feeds a divider of 6 kΩ (top) and 3 kΩ (bottom). Find V_{th} across the 3 kΩ, then the load voltage with a 2 kΩ load.",
+      "steps": [
+        "V_{th} = 12 × 3/(6 + 3) = 4 V",
+        "R_{th} = 6 ‖ 3 = 2 kΩ",
+        "V_{L} = 4 V × 2/(2 + 2) = 2 V"
+      ],
+      "answer": "V_{th} = 4 V; 2 V across a 2 kΩ load"
+    },
+    "try": "12 V * 3 kΩ / (6 kΩ + 3 kΩ)"
+  },
+  "R_{th} = V_{oc}/I_{sc}": {
+    "title": "Thévenin resistance",
+    "about": "The Thévenin resistance is the open-circuit voltage over the short-circuit current. With only independent sources you can instead turn them off (voltage sources shorted, current sources opened) and find the resistance seen from the terminals.",
+    "assumptions": [
+      "Linear network",
+      "With dependent sources, use V_{oc}/I_{sc} or a test source; don't turn the dependent sources off",
+      "If V_{oc} = I_{sc} = 0, apply a test source to find R_{th}"
+    ],
+    "vars": [
+      [
+        "R_{th}",
+        "Thévenin (and Norton) resistance",
+        "Ω"
+      ],
+      [
+        "V_{oc}",
+        "open-circuit voltage",
+        "V"
+      ],
+      [
+        "I_{sc}",
+        "current through a short across the terminals",
+        "A"
+      ]
+    ],
+    "related": [
+      [
+        "V_{th} = V_{oc}",
+        "Thévenin voltage"
+      ],
+      [
+        "I_{N} = I_{sc}",
+        "Norton current"
+      ],
+      [
+        "V_{th} = I_{N}R_{th}",
+        "converting between the two"
+      ]
+    ],
+    "example": {
+      "problem": "A sensor reads 4.5 V open and delivers 1.5 mA into a short. What is its output resistance?",
+      "steps": [
+        "R_{th} = 4.5 V / 1.5 mA",
+        "R_{th} = 3000 Ω = 3 kΩ"
+      ],
+      "answer": "R_{th} = 3 kΩ"
+    },
+    "try": "4.5 V / 1.5 mA to kΩ"
+  },
+  "I_{N} = I_{sc}": {
+    "title": "Norton current: the short-circuit current",
+    "about": "A linear two-terminal network also acts like a current source I_{N} in parallel with R_{N} = R_{th}. I_{N} is the current that flows through a wire shorting the terminals. Norton suits parallel loads; Thévenin suits series ones.",
+    "assumptions": [
+      "Linear network",
+      "R_{N} = R_{th}",
+      "Equivalent only at the terminals"
+    ],
+    "vars": [
+      [
+        "I_{N}",
+        "Norton equivalent current",
+        "A"
+      ],
+      [
+        "I_{sc}",
+        "short-circuit current at the terminals",
+        "A"
+      ]
+    ],
+    "related": [
+      [
+        "I_{N} = V_{th}/R_{th}",
+        "from the Thévenin equivalent"
+      ],
+      [
+        "I_{L} = I_{N} R_{N}/(R_{N} + R_{L})",
+        "current into a load (current divider)"
+      ]
+    ],
+    "example": {
+      "problem": "A network has V_{th} = 10 V and R_{th} = 2.5 kΩ. Find its Norton current.",
+      "steps": [
+        "I_{N} = V_{th}/R_{th} = 10 V / 2.5 kΩ",
+        "I_{N} = 4 mA, in parallel with 2.5 kΩ"
+      ],
+      "answer": "I_{N} = 4 mA"
+    },
+    "try": "10 V / 2.5 kΩ to mA"
+  },
+  "Q = C V": {
+    "title": "Charge on a capacitor",
+    "about": "A capacitor stores charge in proportion to the voltage across it; the constant is its capacitance. One farad holds one coulomb per volt.",
+    "assumptions": [
+      "Ideal, linear capacitor: C does not depend on V (ceramic X7R/Y5V parts can lose much of C under DC bias)",
+      "No leakage, so the charge stays put with no current flowing",
+      "+Q on one plate, −Q on the other"
+    ],
+    "vars": [
+      [
+        "Q",
+        "charge on the positive plate",
+        "C"
+      ],
+      [
+        "C",
+        "capacitance",
+        "F"
+      ],
+      [
+        "V",
+        "voltage across the capacitor",
+        "V"
+      ]
+    ],
+    "related": [
+      [
+        "C = ε₀ε_{r} A/d",
+        "parallel-plate capacitor"
+      ],
+      [
+        "E = (1/2)CV^{2}",
+        "energy stored"
+      ],
+      [
+        "i = C dv/dt",
+        "current"
+      ]
+    ],
+    "example": {
+      "problem": "A 470 µF capacitor is charged to 25 V. How much charge does it hold?",
+      "steps": [
+        "Q = 470 × 10^{−6} F × 25 V",
+        "Q = 0.01175 C = 11.75 mC"
+      ],
+      "answer": "Q = 11.75 mC"
+    },
+    "try": "470 uF * 25 V to mC"
+  },
+  "i = C dv/dt": {
+    "title": "Capacitor current",
+    "about": "Current flows into a capacitor only while its voltage changes, in proportion to how fast. A steady (DC) voltage draws no current, so a capacitor is an open circuit at DC, and its voltage cannot jump instantly.",
+    "assumptions": [
+      "Ideal, linear capacitor (constant C, no leakage or ESR)",
+      "Passive sign convention: i enters the + terminal",
+      "Infinite current would be needed to step v, so v is continuous in a real circuit"
+    ],
+    "vars": [
+      [
+        "i",
+        "current into the capacitor",
+        "A"
+      ],
+      [
+        "C",
+        "capacitance",
+        "F"
+      ],
+      [
+        "dv/dt",
+        "rate of change of its voltage",
+        "V/s"
+      ]
+    ],
+    "related": [
+      [
+        "v(t) = v(0) + (1/C)∫i dt",
+        "the integral form"
+      ],
+      [
+        "Z_{C} = 1/(jωC)",
+        "impedance for sinusoids"
+      ],
+      [
+        "Δv = IΔt/C",
+        "constant current charging"
+      ]
+    ],
+    "example": {
+      "problem": "A 100 nF capacitor's voltage ramps from 0 to 5 V in 10 µs. What current flows?",
+      "steps": [
+        "dv/dt = 5 V / 10 µs = 5 × 10^{5} V/s",
+        "i = 100 nF × 5 × 10^{5} V/s = 0.05 A"
+      ],
+      "answer": "i = 50 mA"
+    },
+    "try": "100 nF * 5 V / 10 us to mA"
+  },
+  "v = L di/dt": {
+    "title": "Inductor voltage",
+    "about": "An inductor develops a voltage only while its current changes, in proportion to how fast. A steady (DC) current sees a short circuit, and the current cannot jump instantly, which is why breaking an inductive circuit causes a spark.",
+    "assumptions": [
+      "Ideal, linear inductor: no winding resistance, core not saturated",
+      "Passive sign convention",
+      "The current is continuous; a sudden interruption gives a large voltage spike (hence flyback diodes)"
+    ],
+    "vars": [
+      [
+        "v",
+        "voltage across the inductor",
+        "V"
+      ],
+      [
+        "L",
+        "inductance",
+        "H"
+      ],
+      [
+        "di/dt",
+        "rate of change of its current",
+        "A/s"
+      ]
+    ],
+    "related": [
+      [
+        "i(t) = i(0) + (1/L)∫v dt",
+        "the integral form"
+      ],
+      [
+        "Z_{L} = jωL",
+        "impedance for sinusoids"
+      ],
+      [
+        "E = (1/2)LI^{2}",
+        "energy stored"
+      ]
+    ],
+    "example": {
+      "problem": "The current in a 2 mH inductor falls from 1.5 A to 0 in 3 µs. What voltage appears?",
+      "steps": [
+        "di/dt = −1.5 A / 3 µs = −5 × 10^{5} A/s",
+        "v = 2 mH × (−5 × 10^{5} A/s) = −1000 V"
+      ],
+      "answer": "|v| = 1000 V (a 1 kV spike)"
+    },
+    "try": "2 mH * 1.5 A / 3 us"
+  },
+  "E = (1/2) C V^{2}": {
+    "title": "Energy stored in a capacitor",
+    "about": "The energy stored in a capacitor's electric field grows with the square of its voltage. Doubling the voltage stores four times the energy.",
+    "assumptions": [
+      "Ideal, linear capacitor",
+      "Measured from zero charge",
+      "Charging through a resistor from a fixed source loses as much energy in the resistor as ends up stored"
+    ],
+    "vars": [
+      [
+        "E",
+        "stored energy",
+        "J"
+      ],
+      [
+        "C",
+        "capacitance",
+        "F"
+      ],
+      [
+        "V",
+        "voltage across the capacitor",
+        "V"
+      ]
+    ],
+    "related": [
+      [
+        "E = Q^{2}/(2C) = QV/2",
+        "in terms of charge"
+      ],
+      [
+        "E = (1/2)LI^{2}",
+        "inductor energy"
+      ]
+    ],
+    "example": {
+      "problem": "A camera flash charges a 220 µF capacitor to 330 V. How much energy does it store?",
+      "steps": [
+        "E = 0.5 × 220 × 10^{−6} F × (330 V)^{2}",
+        "E = 0.5 × 220 × 10^{−6} × 108900 = 11.98 J"
+      ],
+      "answer": "E ≈ 12.0 J"
+    },
+    "try": "0.5 * 220 uF * (330 V)^2 to J"
+  },
+  "E = (1/2) L I^{2}": {
+    "title": "Energy stored in an inductor",
+    "about": "The energy stored in an inductor's magnetic field grows with the square of its current. This is the energy released as a spike when the current is interrupted, and what a boost converter moves each cycle.",
+    "assumptions": [
+      "Ideal, linear inductor (core not saturated)",
+      "Measured from zero current"
+    ],
+    "vars": [
+      [
+        "E",
+        "stored energy",
+        "J"
+      ],
+      [
+        "L",
+        "inductance",
+        "H"
+      ],
+      [
+        "I",
+        "current through the inductor",
+        "A"
+      ]
+    ],
+    "related": [
+      [
+        "E = (1/2)CV^{2}",
+        "capacitor energy"
+      ],
+      [
+        "v = L di/dt",
+        "inductor voltage"
+      ]
+    ],
+    "example": {
+      "problem": "A 47 µH inductor carries 3 A. How much energy does it store?",
+      "steps": [
+        "E = 0.5 × 47 × 10^{−6} H × (3 A)^{2}",
+        "E = 0.5 × 47 × 10^{−6} × 9 = 2.115 × 10^{−4} J"
+      ],
+      "answer": "E ≈ 211.5 µJ"
+    },
+    "try": "0.5 * 47 uH * (3 A)^2 to uJ"
+  },
+  "Z_{R} = R": {
+    "title": "Impedance of a resistor",
+    "about": "A resistor's impedance is just its resistance: real, the same at every frequency, with voltage and current in phase.",
+    "assumptions": [
+      "Ideal resistor; real ones gain a little series inductance and parallel capacitance at high frequency",
+      "Sinusoidal steady state (phasors)"
+    ],
+    "vars": [
+      [
+        "Z_{R}",
+        "impedance of the resistor",
+        "Ω"
+      ],
+      [
+        "R",
+        "resistance",
+        "Ω"
+      ]
+    ],
+    "related": [
+      [
+        "Z_{L} = jωL",
+        "inductor"
+      ],
+      [
+        "Z_{C} = 1/(jωC)",
+        "capacitor"
+      ],
+      [
+        "V = IZ",
+        "Ohm's law for phasors"
+      ]
+    ],
+    "example": {
+      "problem": "A 1 kΩ resistor carries a 5 mA rms current at 60 Hz. What rms voltage is across it, and what is its phase?",
+      "steps": [
+        "V = IZ_{R} = 5 mA × 1 kΩ = 5 V",
+        "Z_{R} is real, so V and I are in phase (0°)"
+      ],
+      "answer": "5 V rms, in phase with the current"
+    },
+    "try": "5 mA * 1 kΩ"
+  },
+  "Z_{L} = jωL": {
+    "title": "Impedance of an inductor",
+    "about": "An inductor's impedance is purely imaginary and grows with frequency: it passes DC and blocks high frequencies. The voltage leads the current by 90°.",
+    "assumptions": [
+      "Ideal inductor (no winding resistance, no self-capacitance)",
+      "Sinusoidal steady state",
+      "ω is angular frequency in rad/s, ω = 2πf"
+    ],
+    "vars": [
+      [
+        "Z_{L}",
+        "impedance of the inductor",
+        "Ω"
+      ],
+      [
+        "j",
+        "imaginary unit, √(−1)",
+        ""
+      ],
+      [
+        "ω",
+        "angular frequency",
+        "rad/s"
+      ],
+      [
+        "L",
+        "inductance",
+        "H"
+      ]
+    ],
+    "related": [
+      [
+        "X_{L} = ωL",
+        "reactance (the magnitude)"
+      ],
+      [
+        "Z_{C} = 1/(jωC)",
+        "capacitor"
+      ],
+      [
+        "v = L di/dt",
+        "the time-domain law"
+      ]
+    ],
+    "example": {
+      "problem": "Find the impedance of a 10 mH inductor at 1 kHz.",
+      "steps": [
+        "ω = 2π × 1000 = 6283 rad/s",
+        "Z_{L} = j × 6283 × 0.01 = j62.8 Ω"
+      ],
+      "answer": "Z_{L} ≈ j62.8 Ω"
+    },
+    "try": "2 pi * 1 kHz * 10 mH to ohm"
+  },
+  "Z_{C} = 1/(jωC)": {
+    "title": "Impedance of a capacitor",
+    "about": "A capacitor's impedance is purely imaginary and negative, and shrinks as frequency rises: it blocks DC and passes high frequencies. The current leads the voltage by 90°.",
+    "assumptions": [
+      "Ideal capacitor (no ESR, no leakage, no lead inductance)",
+      "Sinusoidal steady state",
+      "1/j = −j, so Z_{C} = −j/(ωC)"
+    ],
+    "vars": [
+      [
+        "Z_{C}",
+        "impedance of the capacitor",
+        "Ω"
+      ],
+      [
+        "j",
+        "imaginary unit",
+        ""
+      ],
+      [
+        "ω",
+        "angular frequency",
+        "rad/s"
+      ],
+      [
+        "C",
+        "capacitance",
+        "F"
+      ]
+    ],
+    "related": [
+      [
+        "Z_{C} = −j/(ωC)",
+        "the same, with j on top"
+      ],
+      [
+        "|X_{C}| = 1/(ωC)",
+        "reactance"
+      ],
+      [
+        "Z_{L} = jωL",
+        "inductor"
+      ]
+    ],
+    "example": {
+      "problem": "Find the impedance of a 1 µF capacitor at 1 kHz.",
+      "steps": [
+        "ω = 2π × 1000 = 6283 rad/s",
+        "1/(ωC) = 1/(6283 × 10^{−6}) = 159.2 Ω",
+        "Z_{C} = −j159.2 Ω"
+      ],
+      "answer": "Z_{C} ≈ −j159.2 Ω"
+    },
+    "try": "1 / (2 pi * 1 kHz * 1 uF) to ohm"
+  },
+  "V_{rms} = V_{peak}/√2": {
+    "title": "RMS value of a sine wave",
+    "about": "The rms (root-mean-square) value of a sine wave is its peak over √2. It is the DC voltage that would heat a resistor equally, and the number mains voltages and meters quote.",
+    "assumptions": [
+      "Pure sinusoid with no DC offset",
+      "Other waveforms differ: square wave V_{rms} = V_{peak}, triangle V_{peak}/√3",
+      "Cheap meters that aren't 'true rms' read wrong on non-sine waves"
+    ],
+    "vars": [
+      [
+        "V_{rms}",
+        "root-mean-square voltage",
+        "V"
+      ],
+      [
+        "V_{peak}",
+        "peak (amplitude) voltage",
+        "V"
+      ]
+    ],
+    "related": [
+      [
+        "V_{pp} = 2V_{peak}",
+        "peak-to-peak"
+      ],
+      [
+        "P = V_{rms}^{2}/R",
+        "average power in a resistor"
+      ],
+      [
+        "I_{rms} = I_{peak}/√2",
+        "same for current"
+      ]
+    ],
+    "example": {
+      "problem": "US mains is 120 V rms. What is its peak voltage?",
+      "steps": [
+        "V_{peak} = √2 × V_{rms}",
+        "V_{peak} = 1.4142 × 120 = 169.7 V"
+      ],
+      "answer": "V_{peak} ≈ 169.7 V"
+    },
+    "try": "120 V * sqrt(2)"
+  },
+  "τ = R C": {
+    "title": "RC time constant",
+    "about": "The time constant of a resistor-capacitor circuit sets how fast the capacitor charges or discharges. After one τ the voltage has covered 63% of the way to its final value; after 5τ it is within 1%.",
+    "assumptions": [
+      "One capacitor and the Thévenin resistance R it sees (turn off the sources to find it)",
+      "Ideal, linear components",
+      "The input changes as a step, then stays put"
+    ],
+    "vars": [
+      [
+        "τ",
+        "time constant",
+        "s"
+      ],
+      [
+        "R",
+        "resistance seen by the capacitor",
+        "Ω"
+      ],
+      [
+        "C",
+        "capacitance",
+        "F"
+      ]
+    ],
+    "related": [
+      [
+        "x(t) = x(∞) + (x(0) − x(∞)) e^{−t/τ}",
+        "the response"
+      ],
+      [
+        "f_{c} = 1/(2πRC)",
+        "cutoff frequency"
+      ],
+      [
+        "τ = L/R",
+        "RL circuit"
+      ]
+    ],
+    "example": {
+      "problem": "A 10 kΩ resistor charges a 47 µF capacitor. Find τ and the time to be within 1% of the final voltage.",
+      "steps": [
+        "τ = 10 kΩ × 47 µF = 0.47 s",
+        "About 5τ = 2.35 s to settle within 1%"
+      ],
+      "answer": "τ = 0.47 s; settled after about 2.35 s"
+    },
+    "try": "10 kΩ * 47 uF to s"
+  },
+  "τ = L/R": {
+    "title": "RL time constant",
+    "about": "The time constant of a resistor-inductor circuit sets how fast its current rises or decays. A larger inductance or a smaller resistance slows it down.",
+    "assumptions": [
+      "One inductor and the Thévenin resistance it sees, including its own winding resistance",
+      "Ideal, linear components (core not saturated)",
+      "A step input"
+    ],
+    "vars": [
+      [
+        "τ",
+        "time constant",
+        "s"
+      ],
+      [
+        "L",
+        "inductance",
+        "H"
+      ],
+      [
+        "R",
+        "resistance seen by the inductor",
+        "Ω"
+      ]
+    ],
+    "related": [
+      [
+        "τ = RC",
+        "RC circuit"
+      ],
+      [
+        "i(t) = (V/R)(1 − e^{−t/τ})",
+        "current rising after a step"
+      ]
+    ],
+    "example": {
+      "problem": "A relay coil has L = 0.2 H and R = 80 Ω. Find its time constant.",
+      "steps": [
+        "τ = 0.2 H / 80 Ω",
+        "τ = 0.0025 s = 2.5 ms"
+      ],
+      "answer": "τ = 2.5 ms"
+    },
+    "try": "0.2 H / 80 ohm to ms"
+  },
+  "x(t) = x(∞) + (x(0) − x(∞)) e^{−t/τ}": {
+    "title": "First-order step response",
+    "about": "Every voltage and current in a first-order RC or RL circuit moves exponentially from its starting value to its final value. Find three numbers (initial, final, τ) and you have the whole response.",
+    "assumptions": [
+      "One energy-storing element (or ones that reduce to one), linear components",
+      "The input is constant for t > 0 (a step); t = 0 is the moment of switching",
+      "x(0) is the value just after switching: capacitor voltage and inductor current don't jump",
+      "x(∞): treat a capacitor as open and an inductor as short at DC"
+    ],
+    "vars": [
+      [
+        "x(t)",
+        "the voltage or current at time t",
+        "V or A"
+      ],
+      [
+        "x(0)",
+        "its value just after switching",
+        "V or A"
+      ],
+      [
+        "x(∞)",
+        "its final steady value",
+        "V or A"
+      ],
+      [
+        "t",
+        "time since switching",
+        "s"
+      ],
+      [
+        "τ",
+        "time constant, RC or L/R",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "τ = RC",
+        "RC circuit"
+      ],
+      [
+        "τ = L/R",
+        "RL circuit"
+      ],
+      [
+        "t = τ ln((x(0) − x(∞))/(x(t) − x(∞)))",
+        "time to reach a value"
+      ]
+    ],
+    "example": {
+      "problem": "A capacitor at 0 V charges toward 5 V with τ = 1 ms. What is its voltage after 2 ms?",
+      "steps": [
+        "v(t) = 5 + (0 − 5) e^{−2/1}",
+        "v = 5 − 5 × 0.1353 = 4.32 V"
+      ],
+      "answer": "v(2 ms) ≈ 4.32 V"
+    },
+    "try": "5 + (0 - 5) e^(-2/1)"
+  },
+  "f_{c} = 1/(2πRC)": {
+    "title": "RC cutoff frequency",
+    "about": "The corner frequency of a first-order RC filter, where the output has fallen to 1/√2 (−3 dB) of the passband and the phase is shifted 45°. Below it a low-pass passes; above it a high-pass passes.",
+    "assumptions": [
+      "A single-pole RC filter driven by a low-impedance source",
+      "The load doesn't draw significant current (buffer it, or the load changes R and the corner)",
+      "Ideal components"
+    ],
+    "vars": [
+      [
+        "f_{c}",
+        "cutoff (−3 dB) frequency",
+        "Hz"
+      ],
+      [
+        "R",
+        "resistance",
+        "Ω"
+      ],
+      [
+        "C",
+        "capacitance",
+        "F"
+      ]
+    ],
+    "related": [
+      [
+        "ω_{c} = 1/(RC)",
+        "in rad/s"
+      ],
+      [
+        "H = 1/(1 + jωRC)",
+        "low-pass response"
+      ],
+      [
+        "f_{c} = R/(2πL)",
+        "RL filter"
+      ]
+    ],
+    "example": {
+      "problem": "Find the cutoff of a low-pass filter with R = 1.6 kΩ and C = 100 nF.",
+      "steps": [
+        "RC = 1600 × 100 × 10^{−9} = 1.6 × 10^{−4} s",
+        "f_{c} = 1/(2π × 1.6 × 10^{−4}) = 994.7 Hz"
+      ],
+      "answer": "f_{c} ≈ 995 Hz"
+    },
+    "try": "1 / (2 pi * 1.6 kΩ * 100 nF) to Hz"
+  },
+  "ω_{0} = 1/√(LC)": {
+    "title": "LC resonant frequency",
+    "about": "The frequency at which an inductor's and capacitor's reactances are equal and cancel. A series LC circuit looks like a short there and a parallel one like an open; it is how radios tune and how oscillators pick a frequency.",
+    "assumptions": [
+      "Ideal L and C; resistance shifts the peak a little in a parallel tank and damps the response",
+      "In rad/s; divide by 2π for hertz"
+    ],
+    "vars": [
+      [
+        "ω_{0}",
+        "resonant (undamped natural) frequency",
+        "rad/s"
+      ],
+      [
+        "L",
+        "inductance",
+        "H"
+      ],
+      [
+        "C",
+        "capacitance",
+        "F"
+      ]
+    ],
+    "related": [
+      [
+        "f_{0} = 1/(2π√(LC))",
+        "in hertz"
+      ],
+      [
+        "X_{L} = X_{C}",
+        "the resonance condition"
+      ],
+      [
+        "Q = (1/R)√(L/C)",
+        "quality factor, series"
+      ]
+    ],
+    "example": {
+      "problem": "Find the resonant frequency of a 10 µH inductor and a 253 pF capacitor.",
+      "steps": [
+        "LC = 10 × 10^{−6} × 253 × 10^{−12} = 2.53 × 10^{−15} s^{2}",
+        "ω_{0} = 1/√(2.53 × 10^{−15}) = 1.988 × 10^{7} rad/s",
+        "f_{0} = ω_{0}/2π = 3.16 MHz"
+      ],
+      "answer": "ω_{0} ≈ 1.99 × 10^{7} rad/s (f_{0} ≈ 3.16 MHz)"
+    },
+    "try": "1 / sqrt(10 uH * 253 pF) / (2 pi) to MHz"
+  },
+  "Q = (1/R) √(L/C)": {
+    "title": "Quality factor of a series RLC circuit",
+    "about": "Q measures how sharp the resonance is: stored energy over energy lost per radian. High Q means a narrow peak and slow decay; in a series circuit, a smaller R gives a higher Q.",
+    "assumptions": [
+      "R, L and C all in series (R includes coil resistance and source resistance)",
+      "Ideal, linear components",
+      "At resonance the L and C voltages are each Q times the source voltage"
+    ],
+    "vars": [
+      [
+        "Q",
+        "quality factor",
+        ""
+      ],
+      [
+        "R",
+        "series resistance",
+        "Ω"
+      ],
+      [
+        "L",
+        "inductance",
+        "H"
+      ],
+      [
+        "C",
+        "capacitance",
+        "F"
+      ]
+    ],
+    "related": [
+      [
+        "Q = ω_{0}L/R = 1/(ω_{0}RC)",
+        "the same, at resonance"
+      ],
+      [
+        "BW = ω_{0}/Q",
+        "bandwidth"
+      ],
+      [
+        "ζ = 1/(2Q)",
+        "damping ratio"
+      ]
+    ],
+    "example": {
+      "problem": "A series RLC has R = 10 Ω, L = 1 mH, C = 100 nF. Find Q.",
+      "steps": [
+        "√(L/C) = √(10^{−3}/10^{−7}) = √10000 = 100 Ω",
+        "Q = 100/10 = 10"
+      ],
+      "answer": "Q = 10"
+    },
+    "try": "sqrt(1 mH / 100 nF) / 10 ohm"
+  },
+  "Q = R √(C/L)": {
+    "title": "Quality factor of a parallel RLC circuit",
+    "about": "For R, L and C in parallel, Q rises with R: a larger parallel resistance drains less energy. It is the inverse of the series formula.",
+    "assumptions": [
+      "R, L and C all in parallel (a coil's series resistance must be converted to an equivalent parallel one first)",
+      "Ideal, linear components"
+    ],
+    "vars": [
+      [
+        "Q",
+        "quality factor",
+        ""
+      ],
+      [
+        "R",
+        "parallel resistance",
+        "Ω"
+      ],
+      [
+        "C",
+        "capacitance",
+        "F"
+      ],
+      [
+        "L",
+        "inductance",
+        "H"
+      ]
+    ],
+    "related": [
+      [
+        "Q = R/(ω_{0}L) = ω_{0}RC",
+        "the same, at resonance"
+      ],
+      [
+        "Q = (1/R)√(L/C)",
+        "series RLC"
+      ],
+      [
+        "BW = ω_{0}/Q = 1/(RC)",
+        "bandwidth"
+      ]
+    ],
+    "example": {
+      "problem": "A parallel tank has R = 10 kΩ, L = 1 mH, C = 100 nF. Find Q.",
+      "steps": [
+        "√(C/L) = √(10^{−7}/10^{−3}) = 0.01 S",
+        "Q = 10000 × 0.01 = 100"
+      ],
+      "answer": "Q = 100"
+    },
+    "try": "10 kΩ * sqrt(100 nF / 1 mH)"
+  },
+  "dB = 20 log_{10}(V_{out}/V_{in})": {
+    "title": "Voltage gain in decibels",
+    "about": "Gain in decibels is 20 log₁₀ of the voltage ratio. Decibels turn multiplication into addition, so cascaded gains add. ×10 is +20 dB, ×2 is about +6 dB, and 1/√2 is −3 dB.",
+    "assumptions": [
+      "For voltage (or current) ratios; for power ratios use 10 log₁₀(P_{out}/P_{in})",
+      "The two forms agree only when both voltages are across the same resistance",
+      "Use magnitudes"
+    ],
+    "vars": [
+      [
+        "dB",
+        "gain in decibels",
+        ""
+      ],
+      [
+        "V_{out}",
+        "output voltage amplitude",
+        "V"
+      ],
+      [
+        "V_{in}",
+        "input voltage amplitude",
+        "V"
+      ]
+    ],
+    "related": [
+      [
+        "dB = 10 log_{10}(P_{out}/P_{in})",
+        "power ratio"
+      ],
+      [
+        "V_{out}/V_{in} = 10^{dB/20}",
+        "back to a ratio"
+      ],
+      [
+        "|H|_{dB} = 20 log_{10}|H|",
+        "transfer function magnitude"
+      ]
+    ],
+    "example": {
+      "problem": "An amplifier turns 25 mV into 2 V. What is its gain in dB?",
+      "steps": [
+        "Ratio = 2/0.025 = 80",
+        "dB = 20 log₁₀(80) = 20 × 1.903 = 38.06 dB"
+      ],
+      "answer": "≈ 38.1 dB"
+    },
+    "try": "20 log10(2 V / 25 mV)"
+  },
+  "V_{out}/V_{in} = −R_{f}/R_{in}": {
+    "title": "Inverting op amp gain",
+    "about": "An op amp with the input fed through R_{in} to the inverting input and R_{f} from output back to it. The gain is set by the resistor ratio alone, and the minus sign flips the signal. The input resistance is R_{in}.",
+    "assumptions": [
+      "Ideal op amp: infinite open-loop gain, no input current, output swings freely",
+      "Non-inverting input at ground (or a reference)",
+      "Output stays inside the supply rails, and the frequency is well below GBW divided by the noise gain 1 + R_{f}/R_{in}"
+    ],
+    "vars": [
+      [
+        "V_{out}",
+        "output voltage",
+        "V"
+      ],
+      [
+        "V_{in}",
+        "input voltage",
+        "V"
+      ],
+      [
+        "R_{f}",
+        "feedback resistor, output to inverting input",
+        "Ω"
+      ],
+      [
+        "R_{in}",
+        "input resistor",
+        "Ω"
+      ]
+    ],
+    "related": [
+      [
+        "V_{out}/V_{in} = 1 + R_{f}/R_{g}",
+        "non-inverting"
+      ],
+      [
+        "V_{out} = −R_{f}(V_{1}/R_{1} + V_{2}/R_{2})",
+        "summing amplifier"
+      ],
+      [
+        "V_{+} = V_{−}",
+        "virtual short"
+      ]
+    ],
+    "example": {
+      "problem": "An inverting amplifier has R_{in} = 10 kΩ and R_{f} = 47 kΩ. What is the output for a 0.2 V input?",
+      "steps": [
+        "Gain = −47/10 = −4.7",
+        "V_{out} = −4.7 × 0.2 V = −0.94 V"
+      ],
+      "answer": "V_{out} = −0.94 V (gain −4.7)"
+    },
+    "try": "-47 kΩ / 10 kΩ * 0.2 V"
+  },
+  "V_{out}/V_{in} = 1 + R_{f}/R_{g}": {
+    "title": "Non-inverting op amp gain",
+    "about": "The signal goes into the non-inverting input; R_{f} and R_{g} form a divider that feeds part of the output back. The gain is at least 1, the signal keeps its sign, and the input impedance is very high.",
+    "assumptions": [
+      "Ideal op amp",
+      "R_{g} goes from the inverting input to ground; R_{f} from the output to the inverting input",
+      "Output within the rails; bandwidth ≈ GBW/(1 + R_{f}/R_{g})"
+    ],
+    "vars": [
+      [
+        "V_{out}",
+        "output voltage",
+        "V"
+      ],
+      [
+        "V_{in}",
+        "input voltage",
+        "V"
+      ],
+      [
+        "R_{f}",
+        "feedback resistor",
+        "Ω"
+      ],
+      [
+        "R_{g}",
+        "resistor from inverting input to ground",
+        "Ω"
+      ]
+    ],
+    "related": [
+      [
+        "V_{out} = V_{in}",
+        "voltage follower (R_{f} = 0 or R_{g} open)"
+      ],
+      [
+        "V_{out}/V_{in} = −R_{f}/R_{in}",
+        "inverting"
+      ],
+      [
+        "GBW = A f",
+        "bandwidth limit"
+      ]
+    ],
+    "example": {
+      "problem": "Amplify a 50 mV sensor signal with R_{f} = 90 kΩ and R_{g} = 10 kΩ.",
+      "steps": [
+        "Gain = 1 + 90/10 = 10",
+        "V_{out} = 10 × 50 mV = 0.5 V"
+      ],
+      "answer": "V_{out} = 0.5 V (gain 10)"
+    },
+    "try": "(1 + 90 kΩ / 10 kΩ) * 50 mV to V"
+  },
+  "v(t) = V_{m} cos(ωt + φ)": {
+    "title": "Sinusoidal voltage",
+    "about": "A sinusoid is set by its amplitude, angular frequency and phase. In a linear circuit every voltage and current shares the source's frequency, differing only in amplitude and phase, which is why phasors work.",
+    "assumptions": [
+      "Steady state: transients have died away",
+      "Cosine is the reference; a sine is a cosine shifted by −90°",
+      "ωt is in radians, so φ should be in the same units when you add them"
+    ],
+    "vars": [
+      [
+        "v(t)",
+        "instantaneous voltage",
+        "V"
+      ],
+      [
+        "V_{m}",
+        "amplitude (peak)",
+        "V"
+      ],
+      [
+        "ω",
+        "angular frequency",
+        "rad/s"
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "φ",
+        "phase angle",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "V = V_{m}∠φ",
+        "its phasor"
+      ],
+      [
+        "ω = 2πf",
+        "angular frequency"
+      ],
+      [
+        "V_{rms} = V_{m}/√2",
+        "rms value"
+      ]
+    ],
+    "example": {
+      "problem": "v(t) = 170 cos(377t + 30°) V. What is v at t = 2 ms?",
+      "steps": [
+        "377 × 0.002 = 0.754 rad = 43.2°",
+        "v = 170 cos(43.2° + 30°) = 170 cos(73.2°)",
+        "v = 170 × 0.289 = 49.1 V"
+      ],
+      "answer": "v(2 ms) ≈ 49.1 V"
+    },
+    "try": "170 cos(377 * 0.002 * 180/pi + 30)"
+  },
+  "V = V_{m} ∠φ": {
+    "title": "Phasor form of a sinusoid",
+    "about": "A phasor is a complex number holding a sinusoid's amplitude and phase; the shared frequency is left implied. With phasors, derivatives become multiplication by jω and circuits are solved with complex algebra, like DC circuits with impedances.",
+    "assumptions": [
+      "Linear circuit in sinusoidal steady state at one frequency",
+      "Here the magnitude is the peak V_{m}; power formulas often use rms phasors instead, so check which",
+      "Only sinusoids of the same frequency can be added as phasors"
+    ],
+    "vars": [
+      [
+        "V",
+        "phasor voltage",
+        "V"
+      ],
+      [
+        "V_{m}",
+        "magnitude (amplitude)",
+        "V"
+      ],
+      [
+        "φ",
+        "phase angle",
+        "rad or °"
+      ]
+    ],
+    "related": [
+      [
+        "V = V_{m}(cos φ + j sin φ)",
+        "rectangular form"
+      ],
+      [
+        "V = V_{m}e^{jφ}",
+        "exponential form"
+      ],
+      [
+        "v(t) = Re{V e^{jωt}}",
+        "back to time"
+      ]
+    ],
+    "example": {
+      "problem": "Write 10∠36.87° V in rectangular form.",
+      "steps": [
+        "Real part: 10 cos(36.87°) = 8.00",
+        "Imaginary part: 10 sin(36.87°) = 6.00",
+        "V = 8 + j6 V"
+      ],
+      "answer": "V = 8 + j6 V"
+    },
+    "try": "10 cos(36.87)"
+  },
+  "ω = 2πf": {
+    "title": "Angular frequency",
+    "about": "Angular frequency is the rate of a sinusoid's phase, in radians per second; one cycle is 2π radians. Impedances and transfer functions use ω, while datasheets and meters quote f in hertz.",
+    "assumptions": [
+      "Exact by definition",
+      "Watch the units: ω in rad/s, f in Hz; mixing them is a factor of 6.28 error"
+    ],
+    "vars": [
+      [
+        "ω",
+        "angular frequency",
+        "rad/s"
+      ],
+      [
+        "f",
+        "frequency",
+        "Hz"
+      ]
+    ],
+    "related": [
+      [
+        "T = 1/f = 2π/ω",
+        "period"
+      ],
+      [
+        "Z_{L} = jωL",
+        "uses ω"
+      ]
+    ],
+    "example": {
+      "problem": "Find the angular frequency of 60 Hz mains.",
+      "steps": [
+        "ω = 2π × 60",
+        "ω = 376.99 rad/s"
+      ],
+      "answer": "ω ≈ 377 rad/s"
+    },
+    "try": "2 pi * 60"
+  },
+  "Z = R + jX": {
+    "title": "Impedance",
+    "about": "Impedance is the AC generalization of resistance: the ratio of voltage phasor to current phasor. Its real part, resistance, dissipates power; its imaginary part, reactance, stores and returns it. X > 0 is inductive, X < 0 capacitive.",
+    "assumptions": [
+      "Linear circuit in sinusoidal steady state",
+      "Z depends on frequency through X",
+      "Impedances combine in series and parallel like resistors"
+    ],
+    "vars": [
+      [
+        "Z",
+        "impedance",
+        "Ω"
+      ],
+      [
+        "R",
+        "resistance (real part)",
+        "Ω"
+      ],
+      [
+        "X",
+        "reactance (imaginary part)",
+        "Ω"
+      ],
+      [
+        "j",
+        "imaginary unit",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "|Z| = √(R^{2} + X^{2})",
+        "magnitude"
+      ],
+      [
+        "θ = arctan(X/R)",
+        "angle"
+      ],
+      [
+        "Y = 1/Z",
+        "admittance"
+      ]
+    ],
+    "example": {
+      "problem": "A 30 Ω resistor in series with an inductor of reactance 40 Ω. Find |Z| and its angle.",
+      "steps": [
+        "Z = 30 + j40 Ω",
+        "|Z| = √(30^{2} + 40^{2}) = 50 Ω",
+        "θ = arctan(40/30) = 53.13°"
+      ],
+      "answer": "Z = 50∠53.13° Ω"
+    },
+    "try": "sqrt(30^2 + 40^2)"
+  },
+  "Y = 1/Z = G + jB": {
+    "title": "Admittance",
+    "about": "Admittance is the reciprocal of impedance. Admittances in parallel add, which makes parallel circuits easier. G is conductance and B is susceptance; note G ≠ 1/R unless the impedance is purely resistive.",
+    "assumptions": [
+      "Linear circuit in sinusoidal steady state",
+      "For Z = R + jX: G = R/(R^{2} + X^{2}) and B = −X/(R^{2} + X^{2})"
+    ],
+    "vars": [
+      [
+        "Y",
+        "admittance",
+        "S"
+      ],
+      [
+        "Z",
+        "impedance",
+        "Ω"
+      ],
+      [
+        "G",
+        "conductance (real part)",
+        "S"
+      ],
+      [
+        "B",
+        "susceptance (imaginary part)",
+        "S"
+      ]
+    ],
+    "related": [
+      [
+        "Y = Y_{1} + Y_{2}",
+        "parallel elements"
+      ],
+      [
+        "Y_{C} = jωC",
+        "capacitor"
+      ],
+      [
+        "Y_{L} = 1/(jωL)",
+        "inductor"
+      ]
+    ],
+    "example": {
+      "problem": "Find the admittance of Z = 30 + j40 Ω.",
+      "steps": [
+        "R^{2} + X^{2} = 900 + 1600 = 2500",
+        "G = 30/2500 = 0.012 S",
+        "B = −40/2500 = −0.016 S"
+      ],
+      "answer": "Y = 0.012 − j0.016 S (12 − j16 mS)"
+    },
+    "try": "30/(30^2 + 40^2)"
+  },
+  "X_{L} = ωL": {
+    "title": "Inductive reactance",
+    "about": "The magnitude of an inductor's impedance. It rises in proportion to frequency, so inductors choke high frequencies.",
+    "assumptions": [
+      "Ideal inductor",
+      "Sinusoidal steady state; ω in rad/s"
+    ],
+    "vars": [
+      [
+        "X_{L}",
+        "inductive reactance",
+        "Ω"
+      ],
+      [
+        "ω",
+        "angular frequency",
+        "rad/s"
+      ],
+      [
+        "L",
+        "inductance",
+        "H"
+      ]
+    ],
+    "related": [
+      [
+        "X_{L} = 2πfL",
+        "in terms of f"
+      ],
+      [
+        "Z_{L} = jX_{L}",
+        "impedance"
+      ],
+      [
+        "|X_{C}| = 1/(ωC)",
+        "capacitive reactance"
+      ]
+    ],
+    "example": {
+      "problem": "Find the reactance of a 100 mH inductor at 60 Hz.",
+      "steps": [
+        "ω = 2π × 60 = 377 rad/s",
+        "X_{L} = 377 × 0.1 = 37.7 Ω"
+      ],
+      "answer": "X_{L} ≈ 37.7 Ω"
+    },
+    "try": "2 pi * 60 Hz * 100 mH to ohm"
+  },
+  "|X_{C}| = 1/(ωC)": {
+    "title": "Capacitive reactance",
+    "about": "The magnitude of a capacitor's impedance. It falls as frequency rises, so capacitors pass high frequencies and block DC. (As a signed reactance, X_{C} = −1/(ωC).)",
+    "assumptions": [
+      "Ideal capacitor",
+      "Sinusoidal steady state; ω in rad/s"
+    ],
+    "vars": [
+      [
+        "X_{C}",
+        "capacitive reactance",
+        "Ω"
+      ],
+      [
+        "ω",
+        "angular frequency",
+        "rad/s"
+      ],
+      [
+        "C",
+        "capacitance",
+        "F"
+      ]
+    ],
+    "related": [
+      [
+        "|X_{C}| = 1/(2πfC)",
+        "in terms of f"
+      ],
+      [
+        "Z_{C} = −j/(ωC)",
+        "impedance"
+      ],
+      [
+        "X_{L} = ωL",
+        "inductive reactance"
+      ]
+    ],
+    "example": {
+      "problem": "Find the reactance of a 10 µF capacitor at 60 Hz.",
+      "steps": [
+        "ωC = 377 × 10^{−5} = 3.77 × 10^{−3} S",
+        "|X_{C}| = 1/(3.77 × 10^{−3}) = 265.3 Ω"
+      ],
+      "answer": "|X_{C}| ≈ 265 Ω"
+    },
+    "try": "1 / (2 pi * 60 Hz * 10 uF) to ohm"
+  },
+  "P = V_{rms} I_{rms} cos(θ)": {
+    "title": "Real (average) AC power",
+    "about": "The average power a load actually consumes, in watts. Only the part of the current in phase with the voltage delivers power; cos θ, the power factor, accounts for the rest.",
+    "assumptions": [
+      "Sinusoidal steady state, single phase",
+      "θ = θ_{v} − θ_{i}, the impedance angle of the load",
+      "Use rms values; with peak values multiply by 1/2"
+    ],
+    "vars": [
+      [
+        "P",
+        "real (average) power",
+        "W"
+      ],
+      [
+        "V_{rms}",
+        "rms voltage",
+        "V"
+      ],
+      [
+        "I_{rms}",
+        "rms current",
+        "A"
+      ],
+      [
+        "θ",
+        "angle by which voltage leads current",
+        "rad or °"
+      ]
+    ],
+    "related": [
+      [
+        "P = I_{rms}^{2}R",
+        "only the resistance dissipates"
+      ],
+      [
+        "Q = V_{rms}I_{rms} sin(θ)",
+        "reactive power"
+      ],
+      [
+        "PF = cos(θ)",
+        "power factor"
+      ]
+    ],
+    "example": {
+      "problem": "A motor draws 8 A rms from 230 V rms with the current lagging by 30°. What real power does it take?",
+      "steps": [
+        "P = 230 × 8 × cos(30°)",
+        "P = 1840 × 0.866 = 1593.5 W"
+      ],
+      "answer": "P ≈ 1.59 kW"
+    },
+    "try": "230 V * 8 A * cos(30) to kW"
+  },
+  "Q = V_{rms} I_{rms} sin(θ)": {
+    "title": "Reactive power",
+    "about": "Reactive power is the energy that sloshes back and forth between the source and the load's inductors and capacitors each cycle, in volt-amperes reactive (VAR). It does no net work but still loads wires and generators.",
+    "assumptions": [
+      "Sinusoidal steady state",
+      "θ = θ_{v} − θ_{i}; Q > 0 for an inductive (lagging) load, Q < 0 for a capacitive one",
+      "rms values"
+    ],
+    "vars": [
+      [
+        "Q",
+        "reactive power",
+        "VAR"
+      ],
+      [
+        "V_{rms}",
+        "rms voltage",
+        "V"
+      ],
+      [
+        "I_{rms}",
+        "rms current",
+        "A"
+      ],
+      [
+        "θ",
+        "impedance angle of the load",
+        "rad or °"
+      ]
+    ],
+    "related": [
+      [
+        "Q = I_{rms}^{2}X",
+        "from the reactance"
+      ],
+      [
+        "P = V_{rms}I_{rms} cos(θ)",
+        "real power"
+      ],
+      [
+        "|S|^{2} = P^{2} + Q^{2}",
+        "power triangle"
+      ]
+    ],
+    "example": {
+      "problem": "The same motor, 8 A at 230 V lagging 30°. What reactive power does it draw?",
+      "steps": [
+        "Q = 230 × 8 × sin(30°)",
+        "Q = 1840 × 0.5 = 920 VAR"
+      ],
+      "answer": "Q = 920 VAR"
+    },
+    "try": "230 * 8 * sin(30)"
+  },
+  "S = V_{rms} I_{rms}^{*} = P + jQ": {
+    "title": "Complex power",
+    "about": "Complex power packs real and reactive power into one number: P is its real part and Q its imaginary part. Its magnitude |S| is the apparent power in volt-amperes, which sets the size of wires, transformers and generators.",
+    "assumptions": [
+      "Sinusoidal steady state, rms phasors",
+      "The current is conjugated (*) so that the angle of S is θ_{v} − θ_{i}",
+      "Complex power is conserved: the sum over a circuit's elements is zero"
+    ],
+    "vars": [
+      [
+        "S",
+        "complex power",
+        "VA"
+      ],
+      [
+        "V_{rms}",
+        "rms voltage phasor",
+        "V"
+      ],
+      [
+        "I_{rms}^{*}",
+        "complex conjugate of the rms current phasor",
+        "A"
+      ],
+      [
+        "P",
+        "real power",
+        "W"
+      ],
+      [
+        "Q",
+        "reactive power",
+        "VAR"
+      ]
+    ],
+    "related": [
+      [
+        "|S| = V_{rms}I_{rms} = √(P^{2} + Q^{2})",
+        "apparent power"
+      ],
+      [
+        "S = I_{rms}^{2}Z",
+        "from the impedance"
+      ],
+      [
+        "PF = P/|S|",
+        "power factor"
+      ]
+    ],
+    "example": {
+      "problem": "A load takes 1.2 kW and 0.9 kVAR. Find its apparent power.",
+      "steps": [
+        "S = 1200 + j900 VA",
+        "|S| = √(1200^{2} + 900^{2}) = 1500 VA"
+      ],
+      "answer": "|S| = 1.5 kVA"
+    },
+    "try": "sqrt(1200^2 + 900^2)"
+  },
+  "PF = P/|S| = cos(θ)": {
+    "title": "Power factor",
+    "about": "The share of the apparent power that does real work. A PF of 1 means a purely resistive load; a low PF means extra current for the same work, so utilities charge for it and engineers correct it with capacitors.",
+    "assumptions": [
+      "Sinusoidal voltage and current; with distorted (non-sine) currents, PF also drops from harmonics and is no longer just cos θ",
+      "θ is the load's impedance angle; say 'lagging' for inductive and 'leading' for capacitive"
+    ],
+    "vars": [
+      [
+        "PF",
+        "power factor, 0 to 1",
+        ""
+      ],
+      [
+        "P",
+        "real power",
+        "W"
+      ],
+      [
+        "|S|",
+        "apparent power",
+        "VA"
+      ],
+      [
+        "θ",
+        "angle between voltage and current",
+        "rad or °"
+      ]
+    ],
+    "related": [
+      [
+        "Q_{C} = P(tan θ_{1} − tan θ_{2})",
+        "capacitor VAR to correct from θ₁ to θ₂"
+      ],
+      [
+        "S = P + jQ",
+        "complex power"
+      ]
+    ],
+    "example": {
+      "problem": "A factory draws 120 kW at 150 kVA. What is its power factor and angle?",
+      "steps": [
+        "PF = 120/150 = 0.8",
+        "θ = arccos(0.8) = 36.87°"
+      ],
+      "answer": "PF = 0.8 (θ ≈ 36.9°)"
+    },
+    "try": "acos(120/150)"
+  },
+  "Z_{L} = Z_{th}^{*}": {
+    "title": "Maximum power transfer (AC)",
+    "about": "A load draws the most average power from a source when its impedance is the complex conjugate of the source's Thévenin impedance: the same resistance, opposite reactance, so the reactances cancel. Then half the power is lost in the source.",
+    "assumptions": [
+      "Linear source in sinusoidal steady state; the load can be chosen freely",
+      "Efficiency at the match is only 50%, so power systems don't match; it is used in RF, audio and antennas",
+      "If the load must be purely resistive, the best is R_{L} = |Z_{th}|"
+    ],
+    "vars": [
+      [
+        "Z_{L}",
+        "load impedance",
+        "Ω"
+      ],
+      [
+        "Z_{th}^{*}",
+        "complex conjugate of the source's Thévenin impedance",
+        "Ω"
+      ]
+    ],
+    "related": [
+      [
+        "P_{max} = V_{th}^{2}/(4R_{th})",
+        "the power at the match (V rms)"
+      ],
+      [
+        "R_{L} = R_{th}",
+        "DC case"
+      ]
+    ],
+    "example": {
+      "problem": "A source has Z_{th} = 50 + j30 Ω. What load takes the most power, and what component gives its reactance at 1 MHz?",
+      "steps": [
+        "Z_{L} = 50 − j30 Ω",
+        "A −30 Ω reactance is a capacitor: C = 1/(ωX) = 1/(2π × 10^{6} × 30) = 5.31 nF"
+      ],
+      "answer": "Z_{L} = 50 − j30 Ω (50 Ω in series with 5.31 nF)"
+    },
+    "try": "1 / (2 pi * 1 MHz * 30 ohm) to nF"
+  },
+  "P_{max} = V_{th}^{2}/(4R_{th})": {
+    "title": "Maximum power delivered to a matched load",
+    "about": "The most power a source can deliver, reached when the load matches it (R_{L} = R_{th}, or Z_{L} = Z_{th}^{*} in AC). Half the source voltage then appears across the load.",
+    "assumptions": [
+      "V_{th} is the rms Thévenin voltage (use V_{peak}^{2}/(8R_{th}) for a peak value)",
+      "Matched load",
+      "Linear source"
+    ],
+    "vars": [
+      [
+        "P_{max}",
+        "maximum average power to the load",
+        "W"
+      ],
+      [
+        "V_{th}",
+        "Thévenin voltage, rms",
+        "V"
+      ],
+      [
+        "R_{th}",
+        "Thévenin resistance (real part of Z_{th})",
+        "Ω"
+      ]
+    ],
+    "related": [
+      [
+        "Z_{L} = Z_{th}^{*}",
+        "the matching condition"
+      ],
+      [
+        "P_{L} = V_{th}^{2}R_{L}/(R_{th} + R_{L})^{2}",
+        "power into any resistive load (DC)"
+      ]
+    ],
+    "example": {
+      "problem": "A signal generator puts out 2 V rms open-circuit behind 50 Ω. What is the most power it can deliver?",
+      "steps": [
+        "P_{max} = (2 V)^{2}/(4 × 50 Ω)",
+        "P_{max} = 4/200 = 0.02 W"
+      ],
+      "answer": "P_{max} = 20 mW"
+    },
+    "try": "(2 V)^2 / (4 * 50 ohm) to mW"
+  },
+  "V_{L} = √3 V_{ph}": {
+    "title": "Wye line voltage",
+    "about": "In a balanced wye (star) system the voltage between two lines is √3 times the voltage from a line to neutral, and leads it by 30°. That is why 120 V phases give 208 V line to line.",
+    "assumptions": [
+      "Balanced three-phase system, positive (abc) sequence",
+      "Phase voltages are line-to-neutral",
+      "Magnitudes; the line voltage leads its phase voltage by 30°"
+    ],
+    "vars": [
+      [
+        "V_{L}",
+        "line-to-line voltage",
+        "V"
+      ],
+      [
+        "V_{ph}",
+        "phase (line-to-neutral) voltage",
+        "V"
+      ]
+    ],
+    "related": [
+      [
+        "I_{L} = I_{ph}",
+        "wye currents"
+      ],
+      [
+        "P = √3 V_{L}I_{L} cos(θ)",
+        "total power"
+      ],
+      [
+        "V_{L} = V_{ph}",
+        "delta"
+      ]
+    ],
+    "example": {
+      "problem": "A wye system has 277 V from each line to neutral. What is the line-to-line voltage?",
+      "steps": [
+        "V_{L} = √3 × 277",
+        "V_{L} = 479.8 V"
+      ],
+      "answer": "V_{L} ≈ 480 V"
+    },
+    "try": "sqrt(3) * 277 V"
+  },
+  "I_{L} = I_{ph}": {
+    "title": "Wye line current",
+    "about": "In a wye connection each line feeds exactly one phase, so the line current is the phase current. In a balanced system the neutral carries no current.",
+    "assumptions": [
+      "Wye (star) connection",
+      "Balanced load for the neutral current to be zero"
+    ],
+    "vars": [
+      [
+        "I_{L}",
+        "line current",
+        "A"
+      ],
+      [
+        "I_{ph}",
+        "phase current",
+        "A"
+      ]
+    ],
+    "related": [
+      [
+        "V_{L} = √3 V_{ph}",
+        "wye voltages"
+      ],
+      [
+        "I_{ph} = V_{ph}/|Z_{ph}|",
+        "phase current from the load"
+      ]
+    ],
+    "example": {
+      "problem": "A balanced wye load has 10 Ω per phase on a 208 V (line) system. Find the line current.",
+      "steps": [
+        "V_{ph} = 208/√3 = 120.1 V",
+        "I_{ph} = 120.1/10 = 12.0 A",
+        "I_{L} = I_{ph} = 12.0 A"
+      ],
+      "answer": "I_{L} ≈ 12.0 A"
+    },
+    "try": "208 V / sqrt(3) / 10 ohm"
+  },
+  "V_{L} = V_{ph}": {
+    "title": "Delta line voltage",
+    "about": "In a delta connection each phase sits directly between two lines, so the phase voltage equals the line voltage.",
+    "assumptions": [
+      "Delta connection (no neutral)",
+      "Magnitudes"
+    ],
+    "vars": [
+      [
+        "V_{L}",
+        "line-to-line voltage",
+        "V"
+      ],
+      [
+        "V_{ph}",
+        "voltage across one phase",
+        "V"
+      ]
+    ],
+    "related": [
+      [
+        "I_{L} = √3 I_{ph}",
+        "delta currents"
+      ],
+      [
+        "V_{L} = √3 V_{ph}",
+        "wye"
+      ]
+    ],
+    "example": {
+      "problem": "A delta load with 24 Ω per phase is on a 480 V line. Find the phase current.",
+      "steps": [
+        "V_{ph} = V_{L} = 480 V",
+        "I_{ph} = 480/24 = 20 A"
+      ],
+      "answer": "I_{ph} = 20 A"
+    },
+    "try": "480 V / 24 ohm"
+  },
+  "I_{L} = √3 I_{ph}": {
+    "title": "Delta line current",
+    "about": "In a balanced delta, each line current is the difference of two phase currents 120° apart, so it is √3 times larger than the phase current and lags it by 30°.",
+    "assumptions": [
+      "Balanced delta connection, positive sequence",
+      "Magnitudes"
+    ],
+    "vars": [
+      [
+        "I_{L}",
+        "line current",
+        "A"
+      ],
+      [
+        "I_{ph}",
+        "current in one phase of the delta",
+        "A"
+      ]
+    ],
+    "related": [
+      [
+        "V_{L} = V_{ph}",
+        "delta voltages"
+      ],
+      [
+        "P = √3 V_{L}I_{L} cos(θ)",
+        "total power"
+      ]
+    ],
+    "example": {
+      "problem": "Each phase of a delta load carries 20 A. Find the line current.",
+      "steps": [
+        "I_{L} = √3 × 20",
+        "I_{L} = 34.64 A"
+      ],
+      "answer": "I_{L} ≈ 34.6 A"
+    },
+    "try": "sqrt(3) * 20 A"
+  },
+  "P = √3 V_{L} I_{L} cos(θ)": {
+    "title": "Balanced three-phase power",
+    "about": "Total real power in a balanced three-phase load, from line quantities. It works for wye and delta alike, since the √3 absorbs the conversion to phase values.",
+    "assumptions": [
+      "Balanced load and supply",
+      "V_{L} and I_{L} are rms line values",
+      "θ is the per-phase impedance angle (between phase voltage and phase current), not the angle between line quantities"
+    ],
+    "vars": [
+      [
+        "P",
+        "total real power",
+        "W"
+      ],
+      [
+        "V_{L}",
+        "line-to-line voltage, rms",
+        "V"
+      ],
+      [
+        "I_{L}",
+        "line current, rms",
+        "A"
+      ],
+      [
+        "θ",
+        "load impedance angle",
+        "rad or °"
+      ]
+    ],
+    "related": [
+      [
+        "P = 3V_{ph}I_{ph} cos(θ)",
+        "per-phase form"
+      ],
+      [
+        "|S| = √3 V_{L}I_{L}",
+        "apparent power"
+      ],
+      [
+        "Q = √3 V_{L}I_{L} sin(θ)",
+        "reactive power"
+      ]
+    ],
+    "example": {
+      "problem": "A 480 V three-phase motor draws 40 A at a power factor of 0.85. What power does it take?",
+      "steps": [
+        "P = √3 × 480 × 40 × 0.85",
+        "P = 28 267 W"
+      ],
+      "answer": "P ≈ 28.3 kW"
+    },
+    "try": "sqrt(3) * 480 V * 40 A * 0.85 to kW"
+  },
+  "V_{1}/V_{2} = N_{1}/N_{2}": {
+    "title": "Ideal transformer voltage ratio",
+    "about": "Both windings link the same magnetic flux, so each turn sees the same voltage: the voltages are in the ratio of the turns. More turns on the secondary steps the voltage up.",
+    "assumptions": [
+      "Ideal transformer: no winding resistance, no leakage flux, infinite core permeability, no core loss",
+      "AC only; a transformer does not pass DC",
+      "Dot convention sets the polarity"
+    ],
+    "vars": [
+      [
+        "V_{1}",
+        "primary voltage",
+        "V"
+      ],
+      [
+        "V_{2}",
+        "secondary voltage",
+        "V"
+      ],
+      [
+        "N_{1}",
+        "primary turns",
+        ""
+      ],
+      [
+        "N_{2}",
+        "secondary turns",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "I_{1}/I_{2} = N_{2}/N_{1}",
+        "current ratio"
+      ],
+      [
+        "V_{1}I_{1} = V_{2}I_{2}",
+        "power is conserved"
+      ],
+      [
+        "Z_{in} = (N_{1}/N_{2})^{2}Z_{L}",
+        "reflected impedance"
+      ]
+    ],
+    "example": {
+      "problem": "A transformer with 1000 primary turns and 50 secondary turns runs from 230 V. What is the secondary voltage?",
+      "steps": [
+        "V_{2} = V_{1} N_{2}/N_{1}",
+        "V_{2} = 230 × 50/1000 = 11.5 V"
+      ],
+      "answer": "V_{2} = 11.5 V"
+    },
+    "try": "230 V * 50 / 1000"
+  },
+  "I_{1}/I_{2} = N_{2}/N_{1}": {
+    "title": "Ideal transformer current ratio",
+    "about": "Currents go in the inverse ratio of the turns, so power in equals power out: stepping voltage down steps current up.",
+    "assumptions": [
+      "Ideal transformer (no losses, no magnetizing current)",
+      "Currents defined with the dot convention"
+    ],
+    "vars": [
+      [
+        "I_{1}",
+        "primary current",
+        "A"
+      ],
+      [
+        "I_{2}",
+        "secondary current",
+        "A"
+      ],
+      [
+        "N_{1}",
+        "primary turns",
+        ""
+      ],
+      [
+        "N_{2}",
+        "secondary turns",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "V_{1}/V_{2} = N_{1}/N_{2}",
+        "voltage ratio"
+      ],
+      [
+        "N_{1}I_{1} = N_{2}I_{2}",
+        "ampere-turns balance"
+      ]
+    ],
+    "example": {
+      "problem": "The 1000:50 transformer above supplies 4 A on its secondary. What does the primary draw?",
+      "steps": [
+        "I_{1} = I_{2} N_{2}/N_{1}",
+        "I_{1} = 4 × 50/1000 = 0.2 A"
+      ],
+      "answer": "I_{1} = 0.2 A"
+    },
+    "try": "4 A * 50 / 1000"
+  },
+  "Z_{in} = (N_{1}/N_{2})^{2} Z_{L}": {
+    "title": "Impedance reflected through a transformer",
+    "about": "A load on the secondary looks, from the primary, like the load times the turns ratio squared. Transformers are used this way to match impedances, such as a speaker to an amplifier.",
+    "assumptions": [
+      "Ideal transformer",
+      "Works for complex impedances: the ratio is real, so the angle is unchanged"
+    ],
+    "vars": [
+      [
+        "Z_{in}",
+        "impedance seen at the primary",
+        "Ω"
+      ],
+      [
+        "N_{1}",
+        "primary turns",
+        ""
+      ],
+      [
+        "N_{2}",
+        "secondary turns",
+        ""
+      ],
+      [
+        "Z_{L}",
+        "load impedance on the secondary",
+        "Ω"
+      ]
+    ],
+    "related": [
+      [
+        "N_{1}/N_{2} = √(Z_{in}/Z_{L})",
+        "turns ratio to match"
+      ],
+      [
+        "V_{1}/V_{2} = N_{1}/N_{2}",
+        "voltage ratio"
+      ]
+    ],
+    "example": {
+      "problem": "An 8 Ω speaker sits on the secondary of a 10:1 transformer. What does the amplifier see?",
+      "steps": [
+        "Z_{in} = 10^{2} × 8 Ω",
+        "Z_{in} = 800 Ω"
+      ],
+      "answer": "Z_{in} = 800 Ω"
+    },
+    "try": "(10/1)^2 * 8 ohm"
+  },
+  "α = R/(2L)": {
+    "title": "Neper frequency of a series RLC circuit",
+    "about": "α is the exponential decay rate of a series RLC circuit's natural response. Compared with ω₀ it decides whether the response is overdamped, critically damped or underdamped.",
+    "assumptions": [
+      "R, L and C in series (source turned off)",
+      "Ideal, linear components"
+    ],
+    "vars": [
+      [
+        "α",
+        "neper (damping) frequency",
+        "1/s"
+      ],
+      [
+        "R",
+        "series resistance",
+        "Ω"
+      ],
+      [
+        "L",
+        "inductance",
+        "H"
+      ]
+    ],
+    "related": [
+      [
+        "α = 1/(2RC)",
+        "parallel RLC"
+      ],
+      [
+        "ζ = α/ω_{0}",
+        "damping ratio"
+      ],
+      [
+        "s = −α ± √(α^{2} − ω_{0}^{2})",
+        "natural roots"
+      ]
+    ],
+    "example": {
+      "problem": "A series RLC has R = 100 Ω and L = 10 mH. Find α.",
+      "steps": [
+        "α = 100/(2 × 0.01)",
+        "α = 5000 s^{−1}"
+      ],
+      "answer": "α = 5000 s^{−1}"
+    },
+    "try": "100 / (2 * 10e-3)"
+  },
+  "α = 1/(2RC)": {
+    "title": "Neper frequency of a parallel RLC circuit",
+    "about": "The decay rate of a parallel RLC circuit's natural response. Here a larger R means less damping, the opposite of the series case.",
+    "assumptions": [
+      "R, L and C in parallel (source turned off)",
+      "Ideal, linear components"
+    ],
+    "vars": [
+      [
+        "α",
+        "neper (damping) frequency",
+        "1/s"
+      ],
+      [
+        "R",
+        "parallel resistance",
+        "Ω"
+      ],
+      [
+        "C",
+        "capacitance",
+        "F"
+      ]
+    ],
+    "related": [
+      [
+        "α = R/(2L)",
+        "series RLC"
+      ],
+      [
+        "ζ = α/ω_{0}",
+        "damping ratio"
+      ]
+    ],
+    "example": {
+      "problem": "A parallel RLC has R = 2 kΩ and C = 0.5 µF. Find α.",
+      "steps": [
+        "α = 1/(2 × 2000 × 0.5 × 10^{−6})",
+        "α = 1/0.002 = 500 s^{−1}"
+      ],
+      "answer": "α = 500 s^{−1}"
+    },
+    "try": "1 / (2 * 2000 * 0.5e-6)"
+  },
+  "ζ = α/ω_{0}": {
+    "title": "Damping ratio",
+    "about": "The damping ratio compares the decay rate with the natural frequency. ζ > 1 is overdamped (no ringing), ζ = 1 critically damped (fastest without overshoot), ζ < 1 underdamped (rings).",
+    "assumptions": [
+      "A second-order linear system (RLC circuit, mass-spring-damper)",
+      "α and ω₀ for the same circuit topology"
+    ],
+    "vars": [
+      [
+        "ζ",
+        "damping ratio",
+        ""
+      ],
+      [
+        "α",
+        "neper frequency",
+        "1/s"
+      ],
+      [
+        "ω_{0}",
+        "undamped natural frequency",
+        "rad/s"
+      ]
+    ],
+    "related": [
+      [
+        "ζ = 1/(2Q)",
+        "from the quality factor"
+      ],
+      [
+        "ω_{d} = ω_{0}√(1 − ζ^{2})",
+        "damped frequency"
+      ],
+      [
+        "%OS = 100 e^{−πζ/√(1 − ζ^{2})}",
+        "overshoot"
+      ]
+    ],
+    "example": {
+      "problem": "A series RLC has R = 100 Ω, L = 10 mH and C = 1 µF. Find ζ.",
+      "steps": [
+        "α = 100/(2 × 0.01) = 5000 s^{−1}",
+        "ω_{0} = 1/√(0.01 × 10^{−6}) = 10000 rad/s",
+        "ζ = 5000/10000 = 0.5 (underdamped)"
+      ],
+      "answer": "ζ = 0.5"
+    },
+    "try": "(100 ohm / (2 * 10 mH)) * sqrt(10 mH * 1 uF)"
+  },
+  "s = −α ± √(α^{2} − ω_{0}^{2})": {
+    "title": "Natural roots of an RLC circuit",
+    "about": "The roots of the characteristic equation s² + 2αs + ω₀² = 0. They set the shape of the natural response: two real roots (overdamped), a repeated root (critical) or a complex pair (underdamped, ringing at ω_{d}).",
+    "assumptions": [
+      "Second-order linear circuit with constant R, L, C",
+      "α > ω₀: real distinct; α = ω₀: repeated; α < ω₀: s = −α ± jω_{d}"
+    ],
+    "vars": [
+      [
+        "s",
+        "natural frequencies (roots)",
+        "1/s"
+      ],
+      [
+        "α",
+        "neper frequency",
+        "1/s"
+      ],
+      [
+        "ω_{0}",
+        "undamped natural frequency",
+        "rad/s"
+      ]
+    ],
+    "related": [
+      [
+        "x(t) = A_{1}e^{s_{1}t} + A_{2}e^{s_{2}t}",
+        "overdamped response"
+      ],
+      [
+        "x(t) = e^{−αt}(B_{1} cos ω_{d}t + B_{2} sin ω_{d}t)",
+        "underdamped"
+      ],
+      [
+        "x(t) = (D_{1} + D_{2}t)e^{−αt}",
+        "critically damped"
+      ]
+    ],
+    "example": {
+      "problem": "A circuit has α = 5000 s^{−1} and ω₀ = 3000 rad/s. Find its roots.",
+      "steps": [
+        "√(5000^{2} − 3000^{2}) = √(16 × 10^{6}) = 4000",
+        "s₁ = −5000 + 4000 = −1000 s^{−1}",
+        "s₂ = −5000 − 4000 = −9000 s^{−1} (overdamped)"
+      ],
+      "answer": "s = −1000 and −9000 s^{−1}"
+    },
+    "try": "-5000 + sqrt(5000^2 - 3000^2)"
+  },
+  "ω_{d} = √(ω_{0}^{2} − α^{2})": {
+    "title": "Damped natural frequency",
+    "about": "The frequency at which an underdamped circuit actually rings. It is a bit below ω₀; the more damping, the lower it is, until it reaches zero at critical damping.",
+    "assumptions": [
+      "Underdamped: α < ω₀",
+      "Second-order linear circuit"
+    ],
+    "vars": [
+      [
+        "ω_{d}",
+        "damped (ringing) frequency",
+        "rad/s"
+      ],
+      [
+        "ω_{0}",
+        "undamped natural frequency",
+        "rad/s"
+      ],
+      [
+        "α",
+        "neper frequency",
+        "1/s"
+      ]
+    ],
+    "related": [
+      [
+        "ω_{d} = ω_{0}√(1 − ζ^{2})",
+        "with the damping ratio"
+      ],
+      [
+        "t_{p} = π/ω_{d}",
+        "peak time"
+      ]
+    ],
+    "example": {
+      "problem": "A series RLC has ω₀ = 10000 rad/s and α = 5000 s^{−1}. Find the ringing frequency.",
+      "steps": [
+        "ω_{d} = √(10000^{2} − 5000^{2})",
+        "ω_{d} = √(7.5 × 10^{7}) = 8660 rad/s"
+      ],
+      "answer": "ω_{d} ≈ 8660 rad/s (1.38 kHz)"
+    },
+    "try": "sqrt(10000^2 - 5000^2)"
+  },
+  "BW = ω_{0}/Q": {
+    "title": "Bandwidth of a resonant circuit",
+    "about": "The width of the resonance peak between its two half-power (−3 dB) frequencies. Higher Q means a narrower band, which is how a tuned circuit selects one station.",
+    "assumptions": [
+      "Second-order resonant circuit",
+      "In rad/s; with f₀ in Hz the bandwidth comes out in Hz",
+      "The half-power frequencies sit almost symmetrically about ω₀ when Q is high (above about 10)"
+    ],
+    "vars": [
+      [
+        "BW",
+        "bandwidth between the −3 dB points",
+        "rad/s"
+      ],
+      [
+        "ω_{0}",
+        "resonant frequency",
+        "rad/s"
+      ],
+      [
+        "Q",
+        "quality factor",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "BW = R/L",
+        "series RLC"
+      ],
+      [
+        "BW = 1/(RC)",
+        "parallel RLC"
+      ],
+      [
+        "ω_{1,2} ≈ ω_{0} ∓ BW/2",
+        "half-power frequencies (high Q)"
+      ]
+    ],
+    "example": {
+      "problem": "An AM radio tank resonates at 1 MHz with Q = 50. What is its bandwidth in Hz?",
+      "steps": [
+        "BW = f₀/Q = 1 000 000/50",
+        "BW = 20 000 Hz"
+      ],
+      "answer": "BW = 20 kHz"
+    },
+    "try": "1 MHz / 50 to kHz"
+  },
+  "H(s) = ω_{0}^{2}/(s^{2} + 2ζω_{0} s + ω_{0}^{2})": {
+    "title": "Standard second-order transfer function",
+    "about": "The canonical second-order low-pass system with unity DC gain. ω₀ sets its speed and ζ its damping; the step-response formulas (overshoot, peak time, settling time) all come from it.",
+    "assumptions": [
+      "Linear time-invariant system with two poles and no zeros",
+      "The output across C of a series RLC with input across all three fits this form",
+      "A zero or a third pole changes the step response"
+    ],
+    "vars": [
+      [
+        "H(s)",
+        "transfer function",
+        ""
+      ],
+      [
+        "s",
+        "Laplace variable",
+        "1/s"
+      ],
+      [
+        "ω_{0}",
+        "natural frequency",
+        "rad/s"
+      ],
+      [
+        "ζ",
+        "damping ratio",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "s = −ζω_{0} ± ω_{0}√(ζ^{2} − 1)",
+        "poles"
+      ],
+      [
+        "%OS = 100 e^{−πζ/√(1 − ζ^{2})}",
+        "overshoot"
+      ],
+      [
+        "|H(jω_{0})| = 1/(2ζ)",
+        "gain at ω₀"
+      ]
+    ],
+    "example": {
+      "problem": "A series RLC with output across C has L = 10 mH, C = 1 µF and R = 100 Ω. Find ω₀ and ζ, and the gain at ω₀.",
+      "steps": [
+        "ω₀ = 1/√(LC) = 10000 rad/s",
+        "2ζω₀ = R/L = 10000, so ζ = 0.5",
+        "|H(jω₀)| = 1/(2ζ) = 1"
+      ],
+      "answer": "ω₀ = 10⁴ rad/s, ζ = 0.5, |H(jω₀)| = 1"
+    },
+    "try": "1 / sqrt(10e-3 * 1e-6)"
+  },
+  "%OS = 100 e^{−πζ/√(1 − ζ^{2})}": {
+    "title": "Percent overshoot of a second-order step response",
+    "about": "How far an underdamped system's step response overshoots its final value, as a percent. It depends only on ζ: about 16% at ζ = 0.5, 4.3% at 0.707, none at 1.",
+    "assumptions": [
+      "Standard second-order system with no zeros, unit step input",
+      "Underdamped: 0 < ζ < 1"
+    ],
+    "vars": [
+      [
+        "%OS",
+        "percent overshoot",
+        ""
+      ],
+      [
+        "ζ",
+        "damping ratio",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "ζ = −ln(%OS/100)/√(π^{2} + ln^{2}(%OS/100))",
+        "ζ from a measured overshoot"
+      ],
+      [
+        "t_{p} = π/ω_{d}",
+        "time of the peak"
+      ]
+    ],
+    "example": {
+      "problem": "Find the overshoot for ζ = 0.5.",
+      "steps": [
+        "√(1 − 0.25) = 0.866",
+        "πζ/0.866 = 1.814",
+        "%OS = 100 e^{−1.814} = 16.3%"
+      ],
+      "answer": "%OS ≈ 16.3%"
+    },
+    "try": "100 e^(-pi * 0.5 / sqrt(1 - 0.5^2))"
+  },
+  "t_{p} = π/ω_{d}": {
+    "title": "Peak time",
+    "about": "The time for an underdamped step response to reach its first (highest) peak: half a period of the ringing.",
+    "assumptions": [
+      "Standard second-order system, no zeros, step input",
+      "Underdamped (ζ < 1)"
+    ],
+    "vars": [
+      [
+        "t_{p}",
+        "time to the first peak",
+        "s"
+      ],
+      [
+        "ω_{d}",
+        "damped frequency, ω₀√(1 − ζ^{2})",
+        "rad/s"
+      ]
+    ],
+    "related": [
+      [
+        "ω_{d} = √(ω_{0}^{2} − α^{2})",
+        "damped frequency"
+      ],
+      [
+        "%OS = 100 e^{−πζ/√(1 − ζ^{2})}",
+        "height of that peak"
+      ]
+    ],
+    "example": {
+      "problem": "A system has ω₀ = 10000 rad/s and ζ = 0.5. When does it peak?",
+      "steps": [
+        "ω_{d} = 10000 × √(1 − 0.25) = 8660 rad/s",
+        "t_{p} = π/8660 = 3.63 × 10^{−4} s"
+      ],
+      "answer": "t_{p} ≈ 0.363 ms"
+    },
+    "try": "pi / (10000 sqrt(1 - 0.5^2)) * 1000"
+  },
+  "t_{s} ≈ 4/(ζω_{0})": {
+    "title": "Settling time (2%)",
+    "about": "Roughly how long the step response takes to stay within 2% of its final value. It is four time constants of the decaying envelope e^{−ζω₀t}.",
+    "assumptions": [
+      "Standard second-order system, underdamped",
+      "An approximation from the envelope (e^{−4} ≈ 1.8%); poorer as ζ nears 1",
+      "For a 5% band use about 3/(ζω₀)"
+    ],
+    "vars": [
+      [
+        "t_{s}",
+        "2% settling time",
+        "s"
+      ],
+      [
+        "ζ",
+        "damping ratio",
+        ""
+      ],
+      [
+        "ω_{0}",
+        "natural frequency",
+        "rad/s"
+      ]
+    ],
+    "related": [
+      [
+        "ζω_{0} = α",
+        "the envelope's decay rate"
+      ],
+      [
+        "t_{p} = π/ω_{d}",
+        "peak time"
+      ]
+    ],
+    "example": {
+      "problem": "A system has ω₀ = 10000 rad/s and ζ = 0.5. Estimate its settling time.",
+      "steps": [
+        "ζω₀ = 5000 s^{−1}",
+        "t_{s} ≈ 4/5000 = 8 × 10^{−4} s"
+      ],
+      "answer": "t_{s} ≈ 0.8 ms"
+    },
+    "try": "4 / (0.5 * 10000) * 1000"
+  },
+  "t_{r} ≈ 1.8/ω_{0}": {
+    "title": "Rise time (approximate)",
+    "about": "A rule of thumb for the 10–90% rise time of a second-order step response. It holds best near ζ = 0.5; it shows that rise time shrinks as natural frequency grows.",
+    "assumptions": [
+      "Standard second-order system",
+      "Rough: accurate for ζ around 0.5; more damping makes the rise slower",
+      "For a first-order system, t_{r} = 2.2τ ≈ 0.35/f_{c}"
+    ],
+    "vars": [
+      [
+        "t_{r}",
+        "10–90% rise time",
+        "s"
+      ],
+      [
+        "ω_{0}",
+        "natural frequency",
+        "rad/s"
+      ]
+    ],
+    "related": [
+      [
+        "t_{r} ≈ 0.35/f_{BW}",
+        "first-order, from bandwidth"
+      ],
+      [
+        "t_{p} = π/ω_{d}",
+        "peak time"
+      ]
+    ],
+    "example": {
+      "problem": "Estimate the rise time of a system with ω₀ = 10000 rad/s.",
+      "steps": [
+        "t_{r} ≈ 1.8/10000",
+        "t_{r} ≈ 1.8 × 10^{−4} s"
+      ],
+      "answer": "t_{r} ≈ 0.18 ms"
+    },
+    "try": "1.8 / 10000 * 1000"
+  },
+  "H = 1/(1 + jωRC)": {
+    "title": "First-order RC low-pass filter",
+    "about": "The output taken across the capacitor of a series RC. Low frequencies pass with gain near 1; above the corner ω = 1/RC the gain falls at 20 dB per decade and the phase heads to −90°.",
+    "assumptions": [
+      "Driven by a low-impedance source, with a high-impedance load",
+      "Ideal R and C",
+      "Sinusoidal steady state"
+    ],
+    "vars": [
+      [
+        "H",
+        "transfer function V_{out}/V_{in}",
+        ""
+      ],
+      [
+        "ω",
+        "angular frequency",
+        "rad/s"
+      ],
+      [
+        "R",
+        "series resistance",
+        "Ω"
+      ],
+      [
+        "C",
+        "capacitance, output taken across it",
+        "F"
+      ]
+    ],
+    "related": [
+      [
+        "|H| = 1/√(1 + (ωRC)^{2})",
+        "magnitude"
+      ],
+      [
+        "∠H = −arctan(ωRC)",
+        "phase"
+      ],
+      [
+        "f_{c} = 1/(2πRC)",
+        "corner"
+      ]
+    ],
+    "example": {
+      "problem": "A low-pass has R = 1 kΩ and C = 100 nF. Find |H| at 5 kHz.",
+      "steps": [
+        "ωRC = 2π × 5000 × 1000 × 10^{−7} = 3.142",
+        "|H| = 1/√(1 + 3.142^{2}) = 0.303"
+      ],
+      "answer": "|H| ≈ 0.303 (−10.4 dB)"
+    },
+    "try": "1 / sqrt(1 + (2 pi * 5 kHz * 1 kΩ * 100 nF)^2)"
+  },
+  "H = jωRC/(1 + jωRC)": {
+    "title": "First-order RC high-pass filter",
+    "about": "The output taken across the resistor of a series RC. DC is blocked; above the corner ω = 1/RC the gain approaches 1. Below it the gain rises at 20 dB per decade, and the phase falls from +90° to 0.",
+    "assumptions": [
+      "Low-impedance source, high-impedance load",
+      "Ideal R and C",
+      "Sinusoidal steady state"
+    ],
+    "vars": [
+      [
+        "H",
+        "transfer function V_{out}/V_{in}",
+        ""
+      ],
+      [
+        "ω",
+        "angular frequency",
+        "rad/s"
+      ],
+      [
+        "R",
+        "resistance, output taken across it",
+        "Ω"
+      ],
+      [
+        "C",
+        "series capacitance",
+        "F"
+      ]
+    ],
+    "related": [
+      [
+        "|H| = ωRC/√(1 + (ωRC)^{2})",
+        "magnitude"
+      ],
+      [
+        "∠H = 90° − arctan(ωRC)",
+        "phase"
+      ],
+      [
+        "f_{c} = 1/(2πRC)",
+        "corner"
+      ]
+    ],
+    "example": {
+      "problem": "An audio coupling network has C = 10 µF and R = 10 kΩ. Find |H| at 20 Hz.",
+      "steps": [
+        "ωRC = 2π × 20 × 10^{4} × 10^{−5} = 12.57",
+        "|H| = 12.57/√(1 + 12.57^{2}) = 0.9968"
+      ],
+      "answer": "|H| ≈ 0.997 (−0.03 dB)"
+    },
+    "try": "x / sqrt(1 + x^2); x = 2 pi * 20 * 10000 * 10e-6"
+  },
+  "f_{c} = R/(2πL)": {
+    "title": "RL filter cutoff frequency",
+    "about": "The corner frequency of a first-order RL filter, where the gain is −3 dB. Output across R makes a low-pass; across L, a high-pass.",
+    "assumptions": [
+      "Single R and L in series, low-impedance source, light load",
+      "R includes the coil's own resistance",
+      "Ideal inductor"
+    ],
+    "vars": [
+      [
+        "f_{c}",
+        "cutoff frequency",
+        "Hz"
+      ],
+      [
+        "R",
+        "resistance",
+        "Ω"
+      ],
+      [
+        "L",
+        "inductance",
+        "H"
+      ]
+    ],
+    "related": [
+      [
+        "ω_{c} = R/L",
+        "in rad/s"
+      ],
+      [
+        "τ = L/R",
+        "time constant"
+      ],
+      [
+        "f_{c} = 1/(2πRC)",
+        "RC filter"
+      ]
+    ],
+    "example": {
+      "problem": "A speaker crossover uses a 1 mH inductor feeding an 8 Ω woofer. Where is the corner?",
+      "steps": [
+        "f_{c} = 8/(2π × 0.001)",
+        "f_{c} = 1273 Hz"
+      ],
+      "answer": "f_{c} ≈ 1.27 kHz"
+    },
+    "try": "8 ohm / (2 pi * 1 mH) to Hz"
+  },
+  "|H|_{dB} = 20 log_{10}|H|": {
+    "title": "Transfer function magnitude in decibels",
+    "about": "The Bode magnitude plot shows 20 log₁₀ of the gain against log frequency. On that scale cascaded stages add and each pole or zero bends the plot by ±20 dB/decade.",
+    "assumptions": [
+      "|H| is a voltage (or current) ratio",
+      "0 dB is unity gain; negative dB is attenuation"
+    ],
+    "vars": [
+      [
+        "|H|_{dB}",
+        "gain in decibels",
+        ""
+      ],
+      [
+        "|H|",
+        "magnitude of the transfer function",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "|H| = 10^{|H|_{dB}/20}",
+        "back to a ratio"
+      ],
+      [
+        "−3 dB = 1/√2",
+        "half power"
+      ],
+      [
+        "20 dB/decade",
+        "slope per pole or zero"
+      ]
+    ],
+    "example": {
+      "problem": "A filter's gain at some frequency is 0.05. Express it in dB.",
+      "steps": [
+        "|H|_{dB} = 20 log₁₀(0.05)",
+        "= 20 × (−1.301) = −26.0 dB"
+      ],
+      "answer": "|H|_{dB} ≈ −26.0 dB"
+    },
+    "try": "20 log10(0.05)"
+  },
+  "−3 dB and ±45°": {
+    "title": "First-order corner: −3 dB and 45°",
+    "about": "At the corner frequency of a single pole, the gain is 1/√2 of its passband value (−3 dB, half power) and the phase is shifted 45°: −45° for a pole, +45° for a zero. The asymptotic Bode plot is off by the most, 3 dB, exactly there.",
+    "assumptions": [
+      "A single real pole or zero, well separated from others",
+      "−3 dB: 20 log₁₀(1/√2) = −3.01 dB"
+    ],
+    "vars": [],
+    "related": [
+      [
+        "f_{c} = 1/(2πRC)",
+        "RC corner"
+      ],
+      [
+        "|H| = 1/√2",
+        "the same gain as a ratio"
+      ],
+      [
+        "±5.7° at f_{c}/10 and 10f_{c}",
+        "phase a decade either side"
+      ]
+    ],
+    "example": {
+      "problem": "Show that a single-pole low-pass is −3 dB at its corner.",
+      "steps": [
+        "At ω = 1/RC: |H| = 1/√(1 + 1) = 0.7071",
+        "20 log₁₀(0.7071) = −3.01 dB",
+        "∠H = −arctan(1) = −45°"
+      ],
+      "answer": "−3.01 dB and −45°"
+    },
+    "try": "20 log10(1/sqrt(2))"
+  },
+  "20 dB/decade": {
+    "title": "Bode slope per pole or zero",
+    "about": "Far past its corner, each pole makes the gain fall by 20 dB for every tenfold rise in frequency (6 dB per octave); each zero makes it rise by the same. An n-th order filter rolls off at 20n dB/decade.",
+    "assumptions": [
+      "Valid well beyond the corner (asymptote)",
+      "Real poles and zeros; a complex pair gives 40 dB/decade with a resonant peak near the corner if ζ is small"
+    ],
+    "vars": [],
+    "related": [
+      [
+        "6 dB/octave",
+        "the same slope per doubling"
+      ],
+      [
+        "|H|_{dB} = 20 log_{10}|H|",
+        "the Bode magnitude"
+      ]
+    ],
+    "example": {
+      "problem": "A second-order low-pass has its corner at 1 kHz. Roughly how much does it attenuate at 20 kHz?",
+      "steps": [
+        "Two poles: 40 dB/decade",
+        "20 kHz is log₁₀(20) = 1.301 decades above the corner",
+        "Attenuation ≈ 40 × 1.301 = 52.0 dB"
+      ],
+      "answer": "≈ 52 dB down"
+    },
+    "try": "40 log10(20)"
+  },
+  "V_{+} = V_{−}": {
+    "title": "Virtual short: ideal op amp with negative feedback",
+    "about": "With negative feedback, an ideal op amp drives its output to whatever makes its two inputs equal. Set V₊ = V₋ (and no input current) and op amp circuits reduce to KCL.",
+    "assumptions": [
+      "Negative feedback must be present; with none or with positive feedback (comparators, Schmitt triggers) it fails",
+      "Very large open-loop gain",
+      "Output not saturated at a rail; the rule fails when it is",
+      "Frequency well below the closed-loop bandwidth"
+    ],
+    "vars": [
+      [
+        "V_{+}",
+        "non-inverting input voltage",
+        "V"
+      ],
+      [
+        "V_{−}",
+        "inverting input voltage",
+        "V"
+      ]
+    ],
+    "related": [
+      [
+        "I_{+} = I_{−} = 0",
+        "no input current"
+      ],
+      [
+        "V_{out}/V_{in} = −R_{f}/R_{in}",
+        "inverting amplifier"
+      ]
+    ],
+    "example": {
+      "problem": "An inverting amp has V₊ = 0, R_{in} = 10 kΩ, R_{f} = 33 kΩ and V_{in} = 1 V. Find V_{out} using the virtual short.",
+      "steps": [
+        "V₋ = V₊ = 0, so the input current is 1 V/10 kΩ = 0.1 mA",
+        "The same 0.1 mA flows through R_{f}: V_{out} = 0 − 0.1 mA × 33 kΩ",
+        "V_{out} = −3.3 V"
+      ],
+      "answer": "V_{out} = −3.3 V"
+    },
+    "try": "-1 V / 10 kΩ * 33 kΩ"
+  },
+  "I_{+} = I_{−} = 0": {
+    "title": "No current into an ideal op amp's inputs",
+    "about": "An ideal op amp has infinite input impedance, so no current enters either input. All the current through the input resistor must go through the feedback resistor.",
+    "assumptions": [
+      "Ideal op amp; real input bias currents are pA (CMOS, JFET) to µA (bipolar)",
+      "Bias current through large resistors makes offset errors"
+    ],
+    "vars": [
+      [
+        "I_{+}",
+        "current into the non-inverting input",
+        "A"
+      ],
+      [
+        "I_{−}",
+        "current into the inverting input",
+        "A"
+      ]
+    ],
+    "related": [
+      [
+        "V_{+} = V_{−}",
+        "virtual short"
+      ],
+      [
+        "V_{os} = I_{B} R_{f}",
+        "offset from bias current"
+      ]
+    ],
+    "example": {
+      "problem": "A bipolar op amp with 100 nA bias current has a 1 MΩ feedback resistor. Ideally zero, what output error does the real bias current cause?",
+      "steps": [
+        "Error = I_{B} R_{f} = 100 nA × 1 MΩ",
+        "Error = 0.1 V"
+      ],
+      "answer": "≈ 0.1 V of error"
+    },
+    "try": "100 nA * 1 MΩ"
+  },
+  "GBW = A f": {
+    "title": "Gain-bandwidth product",
+    "about": "For a typical op amp, closed-loop gain times bandwidth is constant. Ask for ten times the gain and you get a tenth of the bandwidth. GBW is on the datasheet (often equal to the unity-gain frequency).",
+    "assumptions": [
+      "Internally compensated op amp with a single dominant pole",
+      "A is the noise gain 1 + R_{f}/R_{g} (for an inverting amp too, not |R_{f}/R_{in}|)",
+      "Small signals; large swings are limited by slew rate instead"
+    ],
+    "vars": [
+      [
+        "GBW",
+        "gain-bandwidth product",
+        "Hz"
+      ],
+      [
+        "A",
+        "closed-loop (noise) gain",
+        ""
+      ],
+      [
+        "f",
+        "closed-loop −3 dB bandwidth",
+        "Hz"
+      ]
+    ],
+    "related": [
+      [
+        "f = GBW/(1 + R_{f}/R_{g})",
+        "bandwidth of an amplifier"
+      ],
+      [
+        "f_{max} = SR/(2πV_{peak})",
+        "full-power bandwidth from slew rate"
+      ]
+    ],
+    "example": {
+      "problem": "An op amp has GBW = 1 MHz. What bandwidth does a non-inverting amplifier with gain 50 have?",
+      "steps": [
+        "f = GBW/A = 1 MHz/50",
+        "f = 20 kHz"
+      ],
+      "answer": "f = 20 kHz"
+    },
+    "try": "1 MHz / 50 to kHz"
+  }
+}

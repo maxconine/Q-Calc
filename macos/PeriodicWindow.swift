@@ -39,12 +39,26 @@ struct PeriodicElement {
 // never key while the bar is up, so the overlay keeps focus and its caret while tiles are clicked; with the bar away
 // a click gives it the keys (without bringing q calc forward), so ⌘W closes it
 final class PeriodicPanel: NSPanel {
-    override var canBecomeKey: Bool { !NSApp.windows.contains { $0 is OverlayPanel && $0.isVisible } }
+    // while the bar is up a click on a row leaves it the keys (its caret stays); a click in a text field (the sheet's
+    // search) takes them, until the panel gives them up
+    private var wantsKeys = false
+    override var canBecomeKey: Bool { wantsKeys || !NSApp.windows.contains { $0 is OverlayPanel && $0.isVisible } }
     override var canBecomeMain: Bool { false }
 
     override func sendEvent(_ event: NSEvent) {
-        if event.type == .leftMouseDown || event.type == .rightMouseDown, !isKeyWindow, canBecomeKey { makeKey() }
+        if event.type == .leftMouseDown || event.type == .rightMouseDown, !isKeyWindow {
+            if let hit = contentView?.hitTest(contentView?.superview?.convert(event.locationInWindow, from: nil) ?? event.locationInWindow),
+               hit is NSTextField || hit is NSText {
+                wantsKeys = true
+            }
+            if canBecomeKey { makeKey() }
+        }
         super.sendEvent(event)
+    }
+
+    override func resignKey() {
+        super.resignKey()
+        wantsKeys = false
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {

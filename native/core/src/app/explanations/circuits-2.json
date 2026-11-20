@@ -1,0 +1,3620 @@
+{
+ "SR = 2πf V_{pk}": {
+  "title": "Slew rate: the full-power bandwidth of an op amp",
+  "about": "An op amp's output can change only so fast, its slew rate SR. A sine of peak V_{pk} and frequency f changes fastest at its zero crossings, at 2πf V_{pk}, so this gives the slew rate a sine needs, or the highest frequency a given op amp can swing to full amplitude without distortion.",
+  "assumptions": [
+   "The output is a sine; a square or triangle wave has a different peak rate of change",
+   "SR is the large-signal limit, set by the current that charges the internal compensation capacitor; it is separate from the small-signal gain-bandwidth limit",
+   "Above this frequency the output turns into a triangle wave whose amplitude falls with frequency"
+  ],
+  "vars": [
+   [
+    "SR",
+    "slew rate, the largest rate of change of the output",
+    "V/s"
+   ],
+   [
+    "f",
+    "frequency of the sine",
+    "Hz"
+   ],
+   [
+    "V_{pk}",
+    "peak output amplitude",
+    "V"
+   ]
+  ],
+  "related": [
+   [
+    "f_{max} = SR/(2πV_{pk})",
+    "full-power bandwidth"
+   ],
+   [
+    "GBW = A_{v} f_{−3dB}",
+    "the small-signal bandwidth limit"
+   ]
+  ],
+  "example": {
+   "problem": "A 741 op amp slews at 0.5 V/µs. What is the highest frequency at which it can deliver a 10 V peak sine?",
+   "steps": [
+    "f_{max} = SR/(2πV_{pk})",
+    "= (0.5 × 10^{6} V/s)/(2π × 10 V)",
+    "= 7.96 kHz"
+   ],
+   "answer": "f_{max} ≈ 7.96 kHz"
+  },
+  "try": "0.5 V/µs / (2 pi * 10 V) to kHz"
+ },
+ "CMRR = 20 log_{10}(A_{d}/A_{cm})": {
+  "title": "Common-mode rejection ratio",
+  "about": "A differential amplifier should amplify the difference between its inputs and ignore what they share. CMRR compares the differential gain with the common-mode gain, in decibels; the higher it is, the better the amplifier rejects noise picked up equally on both inputs.",
+  "assumptions": [
+   "A_{d} and A_{cm} are measured at the same frequency; CMRR falls as frequency rises",
+   "In a difference amplifier built from resistors, resistor mismatch usually limits CMRR far below the op amp's own figure"
+  ],
+  "vars": [
+   [
+    "CMRR",
+    "common-mode rejection ratio",
+    "dB"
+   ],
+   [
+    "A_{d}",
+    "differential-mode gain",
+    ""
+   ],
+   [
+    "A_{cm}",
+    "common-mode gain",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "v_{out} = A_{d} v_{d} + A_{cm} v_{cm}",
+    "output with both kinds of input"
+   ],
+   [
+    "v_{d} = v_{+} − v_{−}, v_{cm} = (v_{+} + v_{−})/2",
+    "differential and common-mode inputs"
+   ]
+  ],
+  "example": {
+   "problem": "An amplifier has a differential gain of 200 000 and a common-mode gain of 2. Find its CMRR.",
+   "steps": [
+    "A_{d}/A_{cm} = 200 000/2 = 10^{5}",
+    "CMRR = 20 log_{10}(10^{5}) = 100 dB"
+   ],
+   "answer": "CMRR = 100 dB"
+  },
+  "try": "20 log10(2e5/2)"
+ },
+ "V_{out} = −R_{f} (V_{1}/R_{1} + V_{2}/R_{2})": {
+  "title": "Inverting summing amplifier",
+  "about": "Several inputs, each through its own resistor, feed the inverting input of an op amp with feedback resistor R_{f}. The inverting input is a virtual ground, so the input currents add there and flow through R_{f}; the output is a weighted, inverted sum. Used in audio mixers and simple DACs.",
+  "assumptions": [
+   "Ideal op amp: infinite gain and input impedance, so the inverting input sits at 0 V (virtual ground)",
+   "Negative feedback is in place and the output stays within the supply rails",
+   "The inputs do not interact, because each sees a virtual ground"
+  ],
+  "vars": [
+   [
+    "V_{out}",
+    "output voltage",
+    "V"
+   ],
+   [
+    "R_{f}",
+    "feedback resistor",
+    "Ω"
+   ],
+   [
+    "V_{1}, V_{2}",
+    "input voltages",
+    "V"
+   ],
+   [
+    "R_{1}, R_{2}",
+    "input resistors",
+    "Ω"
+   ]
+  ],
+  "related": [
+   [
+    "V_{out} = −(R_{f}/R)(V_{1} + V_{2} + …)",
+    "equal input resistors R"
+   ],
+   [
+    "V_{out} = −(R_{f}/R_{1}) V_{in}",
+    "single-input inverting amplifier"
+   ]
+  ],
+  "example": {
+   "problem": "A summing amplifier has R_{f} = 10 kΩ, R_{1} = 10 kΩ and R_{2} = 5 kΩ. The inputs are V_{1} = 1 V and V_{2} = 0.5 V. Find V_{out}.",
+   "steps": [
+    "V_{1}/R_{1} = 1 V/10 kΩ = 0.1 mA",
+    "V_{2}/R_{2} = 0.5 V/5 kΩ = 0.1 mA",
+    "V_{out} = −10 kΩ × 0.2 mA = −2 V"
+   ],
+   "answer": "V_{out} = −2 V"
+  },
+  "try": "-10 kΩ * (1 V/10 kΩ + 0.5 V/5 kΩ)"
+ },
+ "V_{out} = (R_{2}/R_{1})(V_{2} − V_{1})": {
+  "title": "Difference amplifier",
+  "about": "One op amp and four resistors amplify the difference between two voltages. V_{1} goes in through R_{1} to the inverting input, V_{2} through R_{1} to the non-inverting input, which R_{2} ties to ground, and R_{2} is the feedback resistor. Used to measure across a current-sense resistor or bridge.",
+  "assumptions": [
+   "Ideal op amp with negative feedback",
+   "The resistors are matched in pairs (R_{2}/R_{1} the same on both sides); any mismatch lets common-mode voltage through and lowers CMRR",
+   "The sources driving it see unequal, finite input resistances (R_{1} and R_{1} + R_{2}); use an instrumentation amplifier when that matters"
+  ],
+  "vars": [
+   [
+    "V_{out}",
+    "output voltage",
+    "V"
+   ],
+   [
+    "R_{2}",
+    "feedback (and ground-leg) resistor",
+    "Ω"
+   ],
+   [
+    "R_{1}",
+    "input resistor",
+    "Ω"
+   ],
+   [
+    "V_{1}",
+    "voltage at the inverting side",
+    "V"
+   ],
+   [
+    "V_{2}",
+    "voltage at the non-inverting side",
+    "V"
+   ]
+  ],
+  "related": [
+   [
+    "CMRR = 20 log_{10}(A_{d}/A_{cm})",
+    "how well it ignores what V_{1} and V_{2} share"
+   ],
+   [
+    "A_{v} = 1 + 2R/R_{G}",
+    "first stage of a three-op-amp instrumentation amplifier"
+   ]
+  ],
+  "example": {
+   "problem": "A bridge's outputs are 2.05 V and 2.00 V. A difference amplifier with R_{1} = 10 kΩ and R_{2} = 100 kΩ reads it. Find V_{out}.",
+   "steps": [
+    "R_{2}/R_{1} = 100 kΩ/10 kΩ = 10",
+    "V_{2} − V_{1} = 2.05 − 2.00 = 0.05 V",
+    "V_{out} = 10 × 0.05 V = 0.5 V"
+   ],
+   "answer": "V_{out} = 0.5 V"
+  },
+  "try": "(100 kΩ/10 kΩ) * (2.05 V - 2.00 V)"
+ },
+ "V_{out} = −(1/(RC)) ∫ V_{in} dt": {
+  "title": "Op-amp integrator",
+  "about": "An inverting amplifier with a capacitor in place of the feedback resistor. The input current V_{in}/R charges the capacitor, so the output is the inverted, scaled running integral of the input. A constant input gives a ramp; a square wave gives a triangle wave.",
+  "assumptions": [
+   "Ideal op amp with a virtual ground at the inverting input",
+   "Real integrators drift: input offset voltage and bias current are integrated too and slowly saturate the output, so a large resistor is often placed across C to limit the DC gain",
+   "The output must stay within the supply rails; the capacitor starts at a known charge (often reset to zero)"
+  ],
+  "vars": [
+   [
+    "V_{out}",
+    "output voltage",
+    "V"
+   ],
+   [
+    "R",
+    "input resistor",
+    "Ω"
+   ],
+   [
+    "C",
+    "feedback capacitor",
+    "F"
+   ],
+   [
+    "V_{in}",
+    "input voltage",
+    "V"
+   ],
+   [
+    "t",
+    "time",
+    "s"
+   ]
+  ],
+  "related": [
+   [
+    "H(s) = −1/(sRC)",
+    "transfer function"
+   ],
+   [
+    "ΔV_{out} = −V_{in} Δt/(RC)",
+    "constant input over Δt"
+   ]
+  ],
+  "example": {
+   "problem": "An integrator has R = 10 kΩ and C = 1 µF, starting with V_{out} = 0. A constant 1 V is applied for 5 ms. Find V_{out}.",
+   "steps": [
+    "RC = 10 kΩ × 1 µF = 10 ms",
+    "∫ V_{in} dt = 1 V × 5 ms = 5 mV·s",
+    "V_{out} = −(5 mV·s)/(10 ms) = −0.5 V"
+   ],
+   "answer": "V_{out} = −0.5 V"
+  },
+  "try": "-1 * (1 V * 5 ms)/(10 kΩ * 1 µF) to V"
+ },
+ "V_{out} = −RC dV_{in}/dt": {
+  "title": "Op-amp differentiator",
+  "about": "An inverting amplifier with a capacitor as the input element and a resistor as feedback. The capacitor's current is C dV_{in}/dt, which flows through R, so the output is the inverted, scaled rate of change of the input. A ramp gives a constant; a triangle wave gives a square wave.",
+  "assumptions": [
+   "Ideal op amp with a virtual ground",
+   "Its gain rises with frequency, so it amplifies high-frequency noise and can oscillate; practical circuits add a small resistor in series with C to cap the gain",
+   "Steps in the input give spikes limited only by the rails and slew rate"
+  ],
+  "vars": [
+   [
+    "V_{out}",
+    "output voltage",
+    "V"
+   ],
+   [
+    "R",
+    "feedback resistor",
+    "Ω"
+   ],
+   [
+    "C",
+    "input capacitor",
+    "F"
+   ],
+   [
+    "V_{in}",
+    "input voltage",
+    "V"
+   ],
+   [
+    "t",
+    "time",
+    "s"
+   ]
+  ],
+  "related": [
+   [
+    "H(s) = −sRC",
+    "transfer function"
+   ],
+   [
+    "V_{out} = −(1/(RC)) ∫ V_{in} dt",
+    "the integrator, its opposite"
+   ]
+  ],
+  "example": {
+   "problem": "A differentiator has R = 10 kΩ and C = 10 nF. Its input ramps up at 1 V per millisecond. Find V_{out}.",
+   "steps": [
+    "RC = 10 kΩ × 10 nF = 100 µs",
+    "dV_{in}/dt = 1 V/ms = 1000 V/s",
+    "V_{out} = −100 µs × 1000 V/s = −0.1 V"
+   ],
+   "answer": "V_{out} = −0.1 V"
+  },
+  "try": "-10 kΩ * 10 nF * (1 V / 1 ms) to V"
+ },
+ "V_{out} = V_{in}": {
+  "title": "Voltage follower (unity-gain buffer)",
+  "about": "The output is tied straight back to the inverting input, so the op amp makes its output equal its input. The gain is 1, but the input draws almost no current and the output can drive a heavy load, so the buffer stops a load from pulling down a weak source.",
+  "assumptions": [
+   "Ideal op amp: very high input impedance, low output impedance",
+   "The output current stays within the op amp's limit and the voltage within its input and output ranges (check rail-to-rail specs)",
+   "Unity gain is the hardest case for stability; the op amp must be unity-gain stable"
+  ],
+  "vars": [
+   [
+    "V_{out}",
+    "output voltage",
+    "V"
+   ],
+   [
+    "V_{in}",
+    "input voltage",
+    "V"
+   ]
+  ],
+  "related": [
+   [
+    "V_{L} = V_{s} R_{L}/(R_{s} + R_{L})",
+    "what an unbuffered source of resistance R_{s} gives a load R_{L}"
+   ],
+   [
+    "V_{out} = (1 + R_{f}/R_{1}) V_{in}",
+    "non-inverting amplifier; the buffer is R_{f} = 0"
+   ]
+  ],
+  "example": {
+   "problem": "A 2 V sensor with 100 kΩ internal resistance must drive a 1 kΩ load. Compare the load voltage with and without a buffer.",
+   "steps": [
+    "Without: V_{L} = 2 V × 1 kΩ/(100 kΩ + 1 kΩ) = 19.8 mV",
+    "With a buffer the sensor sees a near-infinite load, so V_{out} = V_{in} = 2 V across the 1 kΩ"
+   ],
+   "answer": "19.8 mV without the buffer; 2 V with it"
+  },
+  "try": "2 V * 1 kΩ/(100 kΩ + 1 kΩ) to mV"
+ },
+ "I = I_{S} (e^{V/(nV_{T})} − 1)": {
+  "title": "Shockley diode equation",
+  "about": "Gives a pn-junction diode's current for a voltage across it. Forward-biased, the current rises exponentially, about tenfold for every 60 mV (n = 1); reverse-biased, it settles at the tiny saturation current −I_{S}.",
+  "assumptions": [
+   "Valid in forward bias and modest reverse bias, not in reverse breakdown",
+   "Ignores series resistance, which flattens the curve at high current",
+   "I_{S} roughly doubles every 5 °C, so the forward voltage at fixed current falls about 2 mV/°C",
+   "n is 1 for an ideal junction, up to about 2 in real diodes"
+  ],
+  "vars": [
+   [
+    "I",
+    "diode current",
+    "A"
+   ],
+   [
+    "I_{S}",
+    "saturation current",
+    "A"
+   ],
+   [
+    "V",
+    "voltage across the diode, anode to cathode",
+    "V"
+   ],
+   [
+    "n",
+    "ideality factor, 1 to 2",
+    ""
+   ],
+   [
+    "V_{T}",
+    "thermal voltage, kT/q",
+    "V"
+   ]
+  ],
+  "related": [
+   [
+    "V_{T} = kT/q",
+    "about 25.9 mV at 300 K"
+   ],
+   [
+    "V = nV_{T} ln(I/I_{S})",
+    "solved for voltage, when I ≫ I_{S}"
+   ],
+   [
+    "r_{d} = nV_{T}/I_{D}",
+    "small-signal resistance"
+   ]
+  ],
+  "example": {
+   "problem": "A silicon diode has I_{S} = 10^{−14} A and n = 1 at 300 K (V_{T} = 25.85 mV). Find the current at V = 0.65 V.",
+   "steps": [
+    "V/V_{T} = 0.65/0.02585 = 25.15",
+    "e^{25.15} = 8.3 × 10^{10}",
+    "I = 10^{−14} A × 8.3 × 10^{10} = 0.83 mA"
+   ],
+   "answer": "I ≈ 0.83 mA"
+  },
+  "try": "1e-14 A * (exp(0.65/0.02585) - 1) to mA"
+ },
+ "V_{T} = kT/q": {
+  "title": "Thermal voltage",
+  "about": "The voltage scale of semiconductor physics, set by temperature: kT/q. It appears in the diode equation, BJT transconductance and small-signal resistances. About 25.9 mV at 300 K, often rounded to 25 or 26 mV.",
+  "assumptions": [
+   "T is the junction temperature in kelvin, not the ambient in °C"
+  ],
+  "vars": [
+   [
+    "V_{T}",
+    "thermal voltage",
+    "V"
+   ],
+   [
+    "k",
+    "Boltzmann constant, 1.380649 × 10^{−23} J/K",
+    "J/K"
+   ],
+   [
+    "T",
+    "absolute temperature",
+    "K"
+   ],
+   [
+    "q",
+    "elementary charge, 1.602 × 10^{−19} C",
+    "C"
+   ]
+  ],
+  "related": [
+   [
+    "I = I_{S} (e^{V/(nV_{T})} − 1)",
+    "Shockley diode equation"
+   ],
+   [
+    "g_{m} = I_{C}/V_{T}",
+    "BJT transconductance"
+   ]
+  ],
+  "example": {
+   "problem": "Find the thermal voltage at 300 K.",
+   "steps": [
+    "V_{T} = (1.380649 × 10^{−23} J/K)(300 K)/(1.602 × 10^{−19} C)",
+    "= 25.85 mV"
+   ],
+   "answer": "V_{T} ≈ 25.85 mV"
+  },
+  "try": "boltzmann constant * 300 K / elementary charge to mV"
+ },
+ "r_{d} = nV_{T}/I_{D}": {
+  "title": "Diode small-signal resistance",
+  "about": "For a small signal riding on a DC bias current I_{D}, a diode behaves like a resistor whose value is the slope of its V–I curve at that point. More bias current gives a smaller resistance.",
+  "assumptions": [
+   "The signal is small, a few mV, much less than nV_{T}, so the curve is close to linear",
+   "Ignores the diode's series resistance (add it for large currents) and its capacitance (matters at high frequency)"
+  ],
+  "vars": [
+   [
+    "r_{d}",
+    "small-signal (incremental) resistance",
+    "Ω"
+   ],
+   [
+    "n",
+    "ideality factor",
+    ""
+   ],
+   [
+    "V_{T}",
+    "thermal voltage, kT/q",
+    "V"
+   ],
+   [
+    "I_{D}",
+    "DC bias current",
+    "A"
+   ]
+  ],
+  "related": [
+   [
+    "I = I_{S} (e^{V/(nV_{T})} − 1)",
+    "the large-signal curve it linearizes"
+   ],
+   [
+    "r_{π} = β/g_{m}",
+    "the same idea in a BJT"
+   ]
+  ],
+  "example": {
+   "problem": "A diode with n = 1 is biased at 1 mA at 300 K. Find its small-signal resistance.",
+   "steps": [
+    "r_{d} = (1)(25.85 mV)/(1 mA)",
+    "= 25.85 Ω, about 26 Ω"
+   ],
+   "answer": "r_{d} ≈ 25.85 Ω"
+  },
+  "try": "25.85 mV / 1 mA"
+ },
+ "V_{dc} = V_{m}/π": {
+  "title": "Half-wave rectifier average output",
+  "about": "One diode passes only the positive half of each sine cycle. The output's average (DC) value is the sine's peak over π, about 0.318 V_{m}.",
+  "assumptions": [
+   "Resistive load and no filter capacitor",
+   "Ideal diode; subtract its forward drop (about 0.7 V) from V_{m} for a real one",
+   "V_{m} is the peak, √2 times the RMS rating of a transformer"
+  ],
+  "vars": [
+   [
+    "V_{dc}",
+    "average output voltage",
+    "V"
+   ],
+   [
+    "V_{m}",
+    "peak input voltage",
+    "V"
+   ]
+  ],
+  "related": [
+   [
+    "V_{rms} = V_{m}/2",
+    "RMS of the half-wave output"
+   ],
+   [
+    "V_{dc} = 2V_{m}/π",
+    "full-wave rectifier"
+   ],
+   [
+    "PIV = V_{m}",
+    "peak inverse voltage on the diode"
+   ]
+  ],
+  "example": {
+   "problem": "A 12 V (RMS) transformer feeds a half-wave rectifier with an ideal diode and a resistive load. Find the DC output.",
+   "steps": [
+    "V_{m} = 12√2 = 16.97 V",
+    "V_{dc} = 16.97/π = 5.40 V"
+   ],
+   "answer": "V_{dc} ≈ 5.40 V"
+  },
+  "try": "12 sqrt(2) / pi"
+ },
+ "V_{dc} = 2V_{m}/π": {
+  "title": "Full-wave rectifier average output",
+  "about": "A bridge or center-tapped rectifier flips the negative half-cycles so both halves reach the load. The average is twice the half-wave value, about 0.637 V_{m}, and the ripple is at twice the line frequency.",
+  "assumptions": [
+   "Resistive load and no filter capacitor",
+   "Ideal diodes; a bridge has two diode drops (about 1.4 V) in the path, a center-tapped circuit one",
+   "V_{m} is the peak of the (half-)winding voltage"
+  ],
+  "vars": [
+   [
+    "V_{dc}",
+    "average output voltage",
+    "V"
+   ],
+   [
+    "V_{m}",
+    "peak input voltage",
+    "V"
+   ]
+  ],
+  "related": [
+   [
+    "V_{rms} = V_{m}/√2",
+    "RMS of the full-wave output"
+   ],
+   [
+    "V_{dc} = V_{m}/π",
+    "half-wave rectifier"
+   ],
+   [
+    "V_{r} ≈ I/(fC)",
+    "ripple once a capacitor is added"
+   ]
+  ],
+  "example": {
+   "problem": "A 12 V (RMS) transformer feeds a bridge rectifier with ideal diodes and a resistive load. Find the DC output.",
+   "steps": [
+    "V_{m} = 12√2 = 16.97 V",
+    "V_{dc} = 2 × 16.97/π = 10.8 V"
+   ],
+   "answer": "V_{dc} ≈ 10.8 V"
+  },
+  "try": "2 * 12 sqrt(2) / pi"
+ },
+ "V_{r} ≈ I/(fC)": {
+  "title": "Capacitor-filter ripple voltage",
+  "about": "A capacitor after a rectifier holds the output up between peaks, sagging as the load drains it. Between recharges it loses about I/(fC) volts, where f is the rate of the recharging peaks: the line frequency for half-wave, twice it for full-wave.",
+  "assumptions": [
+   "The ripple is small next to V_{m}, so the load current stays nearly constant and the capacitor discharges for nearly a whole period",
+   "Overestimates slightly, since the capacitor actually recharges before the period ends",
+   "Large capacitors draw short, high current spikes from the diodes and transformer"
+  ],
+  "vars": [
+   [
+    "V_{r}",
+    "peak-to-peak ripple voltage",
+    "V"
+   ],
+   [
+    "I",
+    "load current",
+    "A"
+   ],
+   [
+    "f",
+    "ripple frequency (line frequency, or twice it for full-wave)",
+    "Hz"
+   ],
+   [
+    "C",
+    "filter capacitance",
+    "F"
+   ]
+  ],
+  "related": [
+   [
+    "V_{dc} ≈ V_{m} − V_{r}/2",
+    "average output with ripple"
+   ],
+   [
+    "C = I/(f V_{r})",
+    "capacitor needed for a ripple target"
+   ]
+  ],
+  "example": {
+   "problem": "A full-wave rectifier on 60 Hz mains supplies 0.5 A through a 4700 µF filter capacitor. Find the ripple.",
+   "steps": [
+    "Full-wave, so f = 2 × 60 = 120 Hz",
+    "V_{r} = 0.5 A/(120 Hz × 4700 µF)",
+    "= 0.887 V peak to peak"
+   ],
+   "answer": "V_{r} ≈ 0.887 V"
+  },
+  "try": "0.5 A / (120 Hz * 4700 µF) to V"
+ },
+ "I_{C} = β I_{B}": {
+  "title": "BJT current gain in the active region",
+  "about": "In the forward-active region a small base current controls a collector current β times larger. This is what makes the BJT an amplifier and a switch.",
+  "assumptions": [
+   "Forward-active region: base-emitter junction forward-biased, base-collector reverse-biased (V_{CE} above about 0.2 V)",
+   "β varies widely between parts of the same type (often 50 to 300) and with temperature and current, so good designs don't depend on its exact value",
+   "In saturation I_{C} < βI_{B}"
+  ],
+  "vars": [
+   [
+    "I_{C}",
+    "collector current",
+    "A"
+   ],
+   [
+    "β",
+    "common-emitter current gain (h_{FE})",
+    ""
+   ],
+   [
+    "I_{B}",
+    "base current",
+    "A"
+   ]
+  ],
+  "related": [
+   [
+    "I_{E} = I_{B} + I_{C} = (β + 1) I_{B}",
+    "emitter current"
+   ],
+   [
+    "α = β/(β + 1)",
+    "common-base gain"
+   ],
+   [
+    "I_{C} = I_{S} e^{V_{BE}/V_{T}}",
+    "what really sets I_{C}"
+   ]
+  ],
+  "example": {
+   "problem": "A transistor with β = 100 has a base current of 20 µA. Find the collector current.",
+   "steps": [
+    "I_{C} = 100 × 20 µA",
+    "= 2 mA"
+   ],
+   "answer": "I_{C} = 2 mA"
+  },
+  "try": "100 * 20 µA to mA"
+ },
+ "I_{E} = I_{B} + I_{C}": {
+  "title": "BJT terminal currents (Kirchhoff's current law)",
+  "about": "Everything that enters the base and collector leaves by the emitter (for NPN). Since I_{B} is small, I_{E} is only slightly larger than I_{C}.",
+  "assumptions": [
+   "Holds in every region of operation; it is just Kirchhoff's current law on the transistor",
+   "Currents are taken in their normal directions: into base and collector, out of emitter for NPN, the reverse for PNP"
+  ],
+  "vars": [
+   [
+    "I_{E}",
+    "emitter current",
+    "A"
+   ],
+   [
+    "I_{B}",
+    "base current",
+    "A"
+   ],
+   [
+    "I_{C}",
+    "collector current",
+    "A"
+   ]
+  ],
+  "related": [
+   [
+    "I_{C} = β I_{B}",
+    "active region"
+   ],
+   [
+    "I_{E} = (β + 1) I_{B}",
+    "combined"
+   ],
+   [
+    "I_{C} = α I_{E}",
+    "common-base form"
+   ]
+  ],
+  "example": {
+   "problem": "A BJT in the active region has I_{B} = 20 µA and I_{C} = 2 mA. Find the emitter current.",
+   "steps": [
+    "I_{E} = 20 µA + 2 mA",
+    "= 2.02 mA"
+   ],
+   "answer": "I_{E} = 2.02 mA"
+  },
+  "try": "20 µA + 2 mA to mA"
+ },
+ "α = β/(β + 1)": {
+  "title": "Common-base current gain α",
+  "about": "α is the fraction of the emitter current that reaches the collector, I_{C}/I_{E}. It is just below 1, and a small change in α means a large change in β.",
+  "assumptions": [
+   "Active region, as for β"
+  ],
+  "vars": [
+   [
+    "α",
+    "common-base current gain, I_{C}/I_{E}",
+    ""
+   ],
+   [
+    "β",
+    "common-emitter current gain, I_{C}/I_{B}",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "β = α/(1 − α)",
+    "the inverse"
+   ],
+   [
+    "I_{C} = α I_{E}",
+    "definition"
+   ]
+  ],
+  "example": {
+   "problem": "A transistor has β = 100. Find α.",
+   "steps": [
+    "α = 100/(100 + 1)",
+    "= 0.990"
+   ],
+   "answer": "α ≈ 0.990"
+  },
+  "try": "100/(100 + 1)"
+ },
+ "I_{C} = I_{S} e^{V_{BE}/V_{T}}": {
+  "title": "BJT collector current vs base-emitter voltage",
+  "about": "The collector current depends exponentially on the base-emitter voltage, like a diode. Every 60 mV more V_{BE} gives about ten times the current, which is why V_{BE} stays near 0.6 to 0.7 V over a wide range of currents.",
+  "assumptions": [
+   "Forward-active region, with I_{C} ≫ I_{S} so the −1 of the diode equation is dropped",
+   "Ignores the Early effect (I_{C} rising with V_{CE}) and high-injection effects",
+   "Strongly temperature-dependent: at fixed I_{C}, V_{BE} falls about 2 mV/°C"
+  ],
+  "vars": [
+   [
+    "I_{C}",
+    "collector current",
+    "A"
+   ],
+   [
+    "I_{S}",
+    "saturation (scale) current",
+    "A"
+   ],
+   [
+    "V_{BE}",
+    "base-emitter voltage",
+    "V"
+   ],
+   [
+    "V_{T}",
+    "thermal voltage, kT/q",
+    "V"
+   ]
+  ],
+  "related": [
+   [
+    "V_{BE} = V_{T} ln(I_{C}/I_{S})",
+    "solved for V_{BE}"
+   ],
+   [
+    "g_{m} = I_{C}/V_{T}",
+    "its slope, the transconductance"
+   ],
+   [
+    "ΔV_{BE} = V_{T} ln 10 ≈ 60 mV",
+    "per decade of current"
+   ]
+  ],
+  "example": {
+   "problem": "A BJT has I_{S} = 10^{−15} A. Find I_{C} at V_{BE} = 0.7 V and 300 K (V_{T} = 25.85 mV).",
+   "steps": [
+    "V_{BE}/V_{T} = 0.7/0.02585 = 27.08",
+    "e^{27.08} = 5.76 × 10^{11}",
+    "I_{C} = 10^{−15} A × 5.76 × 10^{11} = 0.576 mA"
+   ],
+   "answer": "I_{C} ≈ 0.576 mA"
+  },
+  "try": "1e-15 A * exp(0.7/0.02585) to mA"
+ },
+ "g_{m} = I_{C}/V_{T}": {
+  "title": "BJT transconductance",
+  "about": "How much the collector current changes per volt of base-emitter signal: the slope of the exponential I_{C}–V_{BE} curve at the bias point. It depends only on the bias current, not on the transistor, and sets the gain of every BJT amplifier.",
+  "assumptions": [
+   "Small-signal: the signal on V_{BE} is much less than V_{T}",
+   "Forward-active region"
+  ],
+  "vars": [
+   [
+    "g_{m}",
+    "transconductance",
+    "S"
+   ],
+   [
+    "I_{C}",
+    "DC collector bias current",
+    "A"
+   ],
+   [
+    "V_{T}",
+    "thermal voltage, kT/q",
+    "V"
+   ]
+  ],
+  "related": [
+   [
+    "r_{π} = β/g_{m}",
+    "base input resistance"
+   ],
+   [
+    "A_{v} = −g_{m} (R_{C} ∥ r_{o})",
+    "common-emitter gain"
+   ],
+   [
+    "g_{m} = 2I_{D}/V_{ov}",
+    "the MOSFET version"
+   ]
+  ],
+  "example": {
+   "problem": "A BJT is biased at I_{C} = 1 mA at 300 K. Find g_{m}.",
+   "steps": [
+    "g_{m} = 1 mA/25.85 mV",
+    "= 38.7 mS (mA/V)"
+   ],
+   "answer": "g_{m} ≈ 38.7 mS (0.0387 S)"
+  },
+  "try": "1 mA / 25.85 mV"
+ },
+ "r_{π} = β/g_{m}": {
+  "title": "BJT small-signal input resistance r_{π}",
+  "about": "The resistance looking into the base, with the emitter grounded, in the hybrid-π model. A base-voltage signal v_{be} drives a base current v_{be}/r_{π}, which is β times smaller than the collector's g_{m} v_{be}.",
+  "assumptions": [
+   "Small-signal, forward-active region",
+   "Low frequency, so the junction capacitances are ignored"
+  ],
+  "vars": [
+   [
+    "r_{π}",
+    "base-emitter small-signal resistance",
+    "Ω"
+   ],
+   [
+    "β",
+    "current gain",
+    ""
+   ],
+   [
+    "g_{m}",
+    "transconductance",
+    "S"
+   ]
+  ],
+  "related": [
+   [
+    "r_{π} = βV_{T}/I_{C} = V_{T}/I_{B}",
+    "the same, from the bias"
+   ],
+   [
+    "r_{e} = α/g_{m} ≈ 1/g_{m}",
+    "resistance looking into the emitter"
+   ]
+  ],
+  "example": {
+   "problem": "A BJT with β = 100 is biased at I_{C} = 1 mA (g_{m} = 38.7 mS). Find r_{π}.",
+   "steps": [
+    "g_{m} = 1 mA/25.85 mV = 38.68 mS",
+    "r_{π} = 100/(38.68 mS)",
+    "= 2.585 kΩ"
+   ],
+   "answer": "r_{π} ≈ 2.585 kΩ"
+  },
+  "try": "100 / (1 mA / 25.85 mV) to kΩ"
+ },
+ "r_{o} = V_{A}/I_{C}": {
+  "title": "Output resistance from the Early effect",
+  "about": "The collector current creeps up as V_{CE} grows (the Early effect), so the transistor's output is not a perfect current source but one with a resistance r_{o} in parallel. Extend the I_{C}–V_{CE} curves backward and they meet at −V_{A}.",
+  "assumptions": [
+   "Small-signal, forward-active region",
+   "V_{A} (Early voltage) is typically 50 to 150 V for discrete parts, less in small IC devices"
+  ],
+  "vars": [
+   [
+    "r_{o}",
+    "small-signal output resistance",
+    "Ω"
+   ],
+   [
+    "V_{A}",
+    "Early voltage",
+    "V"
+   ],
+   [
+    "I_{C}",
+    "DC collector current",
+    "A"
+   ]
+  ],
+  "related": [
+   [
+    "I_{C} = I_{S} e^{V_{BE}/V_{T}} (1 + V_{CE}/V_{A})",
+    "the Early effect in the large-signal equation"
+   ],
+   [
+    "g_{m} r_{o} = V_{A}/V_{T}",
+    "intrinsic gain"
+   ],
+   [
+    "r_{o} = 1/(λ I_{D})",
+    "the MOSFET version"
+   ]
+  ],
+  "example": {
+   "problem": "A BJT with V_{A} = 100 V is biased at I_{C} = 1 mA. Find r_{o}.",
+   "steps": [
+    "r_{o} = 100 V/1 mA",
+    "= 100 kΩ"
+   ],
+   "answer": "r_{o} = 100 kΩ"
+  },
+  "try": "100 V / 1 mA to kΩ"
+ },
+ "A_{v} = −g_{m} (R_{C} ∥ r_{o})": {
+  "title": "Common-emitter amplifier gain",
+  "about": "In a common-emitter stage, the input drives the base, the emitter is grounded for signals, and the output is taken at the collector. The signal current g_{m} v_{be} flows through R_{C} in parallel with r_{o}, giving a large, inverted voltage gain.",
+  "assumptions": [
+   "Small-signal, forward-active region",
+   "Emitter fully bypassed to ground for signals; an unbypassed R_{E} lowers the gain to about −R_{C}/R_{E}",
+   "No load resistor; a load R_{L} goes in parallel with R_{C} and r_{o}",
+   "Midband frequencies: coupling capacitors short, device capacitances open"
+  ],
+  "vars": [
+   [
+    "A_{v}",
+    "voltage gain v_{out}/v_{in}",
+    ""
+   ],
+   [
+    "g_{m}",
+    "transconductance, I_{C}/V_{T}",
+    "S"
+   ],
+   [
+    "R_{C}",
+    "collector resistor",
+    "Ω"
+   ],
+   [
+    "r_{o}",
+    "transistor output resistance",
+    "Ω"
+   ]
+  ],
+  "related": [
+   [
+    "R_{1} ∥ R_{2} = R_{1}R_{2}/(R_{1} + R_{2})",
+    "parallel resistance"
+   ],
+   [
+    "R_{in} = R_{B} ∥ r_{π}",
+    "input resistance"
+   ],
+   [
+    "A_{v} ≈ −R_{C}/(r_{e} + R_{E})",
+    "with emitter degeneration"
+   ]
+  ],
+  "example": {
+   "problem": "A common-emitter stage is biased at I_{C} = 1 mA (g_{m} = 38.7 mS) with R_{C} = 5 kΩ and r_{o} = 100 kΩ. Find A_{v}.",
+   "steps": [
+    "R_{C} ∥ r_{o} = (5 × 100)/(105) kΩ = 4.76 kΩ",
+    "A_{v} = −38.7 mS × 4.76 kΩ",
+    "= −184"
+   ],
+   "answer": "A_{v} ≈ −184"
+  },
+  "try": "-1 * (1 mA / 25.85 mV) * (5 kΩ * 100 kΩ / (5 kΩ + 100 kΩ))"
+ },
+ "V_{ov} = V_{GS} − V_{th}": {
+  "title": "MOSFET overdrive voltage",
+  "about": "How far the gate-source voltage is above threshold. It sets how strongly the channel conducts: the MOSFET is off when V_{ov} ≤ 0, and the drain current and transconductance grow with it.",
+  "assumptions": [
+   "NMOS (for PMOS use the magnitudes, |V_{GS}| − |V_{th}|)",
+   "V_{th} rises with source-body voltage (body effect) and falls with temperature"
+  ],
+  "vars": [
+   [
+    "V_{ov}",
+    "overdrive (effective) voltage",
+    "V"
+   ],
+   [
+    "V_{GS}",
+    "gate-source voltage",
+    "V"
+   ],
+   [
+    "V_{th}",
+    "threshold voltage",
+    "V"
+   ]
+  ],
+  "related": [
+   [
+    "I_{D} = (1/2) μ_{n} C_{ox} (W/L) V_{ov}^{2}",
+    "saturation current"
+   ],
+   [
+    "V_{DS} ≥ V_{ov}",
+    "to stay in saturation"
+   ],
+   [
+    "g_{m} = 2I_{D}/V_{ov}",
+    "transconductance"
+   ]
+  ],
+  "example": {
+   "problem": "An NMOS transistor has V_{th} = 0.6 V and V_{GS} = 1.0 V. Find its overdrive.",
+   "steps": [
+    "V_{ov} = 1.0 V − 0.6 V",
+    "= 0.4 V"
+   ],
+   "answer": "V_{ov} = 0.4 V"
+  },
+  "try": "1.0 V - 0.6 V"
+ },
+ "I_{D} = (1/2) μ_{n} C_{ox} (W/L) V_{ov}^{2}": {
+  "title": "MOSFET drain current in saturation (square law)",
+  "about": "Once the channel is pinched off at the drain, the drain current stops depending on V_{DS} and grows with the square of the overdrive. This is the region used for amplifiers and current sources.",
+  "assumptions": [
+   "Saturation: V_{ov} > 0 and V_{DS} ≥ V_{ov}",
+   "Long-channel square law; short-channel devices follow it loosely (velocity saturation makes I_{D} closer to linear in V_{ov})",
+   "Ignores channel-length modulation; multiply by (1 + λV_{DS}) to include it"
+  ],
+  "vars": [
+   [
+    "I_{D}",
+    "drain current",
+    "A"
+   ],
+   [
+    "μ_{n}",
+    "electron mobility in the channel",
+    "m^{2}/(V·s)"
+   ],
+   [
+    "C_{ox}",
+    "gate-oxide capacitance per area",
+    "F/m^{2}"
+   ],
+   [
+    "W/L",
+    "channel width over length",
+    ""
+   ],
+   [
+    "V_{ov}",
+    "overdrive, V_{GS} − V_{th}",
+    "V"
+   ]
+  ],
+  "related": [
+   [
+    "k_{n}′ = μ_{n} C_{ox}",
+    "process transconductance parameter, A/V^{2}"
+   ],
+   [
+    "I_{D} = μ_{n} C_{ox} (W/L) (V_{ov} V_{DS} − V_{DS}^{2}/2)",
+    "triode region"
+   ],
+   [
+    "g_{m} = 2I_{D}/V_{ov}",
+    "transconductance"
+   ]
+  ],
+  "example": {
+   "problem": "An NMOS has μ_{n}C_{ox} = 200 µA/V^{2}, W/L = 10 and V_{ov} = 0.4 V, in saturation. Find I_{D}.",
+   "steps": [
+    "I_{D} = (1/2)(200 µA/V^{2})(10)(0.4 V)^{2}",
+    "= 0.5 × 2000 µA/V^{2} × 0.16 V^{2}",
+    "= 160 µA"
+   ],
+   "answer": "I_{D} = 160 µA"
+  },
+  "try": "0.5 * 200 µA * 10 * 0.4^2"
+ },
+ "V_{DS} ≥ V_{ov}": {
+  "title": "Condition for MOSFET saturation",
+  "about": "A MOSFET is in saturation, acting as a current source, only while the drain voltage is high enough to pinch off the channel at the drain: V_{DS} at least the overdrive. Below that it is in triode and acts like a resistor. Check this after every saturation calculation.",
+  "assumptions": [
+   "NMOS with V_{ov} > 0; for PMOS use |V_{DS}| ≥ |V_{ov}|",
+   "Equivalent to V_{GD} ≤ V_{th}: the gate is not more than a threshold above the drain"
+  ],
+  "vars": [
+   [
+    "V_{DS}",
+    "drain-source voltage",
+    "V"
+   ],
+   [
+    "V_{ov}",
+    "overdrive, V_{GS} − V_{th}",
+    "V"
+   ]
+  ],
+  "related": [
+   [
+    "V_{DS} < V_{ov}",
+    "triode region"
+   ],
+   [
+    "V_{DS} = V_{DD} − I_{D} R_{D}",
+    "drain voltage with a drain resistor"
+   ]
+  ],
+  "example": {
+   "problem": "An NMOS with V_{ov} = 0.4 V carries I_{D} = 160 µA from a 1.8 V supply through a drain resistor R_{D}. What is the largest R_{D} that keeps it in saturation?",
+   "steps": [
+    "Need V_{DS} = 1.8 V − I_{D}R_{D} ≥ 0.4 V",
+    "R_{D} ≤ (1.8 V − 0.4 V)/160 µA",
+    "= 8.75 kΩ"
+   ],
+   "answer": "R_{D} ≤ 8.75 kΩ"
+  },
+  "try": "(1.8 V - 0.4 V) / 160 µA to kΩ"
+ },
+ "I_{D} = μ_{n} C_{ox} (W/L) (V_{ov} V_{DS} − V_{DS}^{2}/2)": {
+  "title": "MOSFET drain current in the triode region",
+  "about": "With a small drain voltage the channel runs the full length and the MOSFET acts as a voltage-controlled resistor. For very small V_{DS} the current is nearly linear in V_{DS}; this is the region a MOSFET switch sits in when on.",
+  "assumptions": [
+   "Triode: V_{ov} > 0 and V_{DS} < V_{ov}",
+   "Long-channel model",
+   "At V_{DS} = V_{ov} it meets the saturation equation"
+  ],
+  "vars": [
+   [
+    "I_{D}",
+    "drain current",
+    "A"
+   ],
+   [
+    "μ_{n}",
+    "electron mobility",
+    "m^{2}/(V·s)"
+   ],
+   [
+    "C_{ox}",
+    "gate-oxide capacitance per area",
+    "F/m^{2}"
+   ],
+   [
+    "W/L",
+    "channel width over length",
+    ""
+   ],
+   [
+    "V_{ov}",
+    "overdrive, V_{GS} − V_{th}",
+    "V"
+   ],
+   [
+    "V_{DS}",
+    "drain-source voltage",
+    "V"
+   ]
+  ],
+  "related": [
+   [
+    "r_{DS} ≈ 1/(μ_{n} C_{ox} (W/L) V_{ov})",
+    "on-resistance for small V_{DS}"
+   ],
+   [
+    "I_{D} = (1/2) μ_{n} C_{ox} (W/L) V_{ov}^{2}",
+    "saturation"
+   ]
+  ],
+  "example": {
+   "problem": "An NMOS with μ_{n}C_{ox} = 200 µA/V^{2}, W/L = 10 and V_{ov} = 0.4 V has V_{DS} = 0.1 V. Find I_{D}.",
+   "steps": [
+    "V_{ov}V_{DS} − V_{DS}^{2}/2 = 0.04 − 0.005 = 0.035 V^{2}",
+    "I_{D} = 2000 µA/V^{2} × 0.035 V^{2}",
+    "= 70 µA"
+   ],
+   "answer": "I_{D} = 70 µA"
+  },
+  "try": "200 µA * 10 * (0.4*0.1 - 0.1^2/2)"
+ },
+ "g_{m} = 2I_{D}/V_{ov}": {
+  "title": "MOSFET transconductance",
+  "about": "How much the drain current changes per volt of gate signal, at the bias point: the slope of the square-law curve. For a given current, a smaller overdrive gives more g_{m}.",
+  "assumptions": [
+   "Saturation region, small signal",
+   "Long-channel square law; short-channel devices give somewhat less"
+  ],
+  "vars": [
+   [
+    "g_{m}",
+    "transconductance",
+    "S"
+   ],
+   [
+    "I_{D}",
+    "DC drain bias current",
+    "A"
+   ],
+   [
+    "V_{ov}",
+    "overdrive, V_{GS} − V_{th}",
+    "V"
+   ]
+  ],
+  "related": [
+   [
+    "g_{m} = μ_{n} C_{ox} (W/L) V_{ov}",
+    "the same, from the device"
+   ],
+   [
+    "g_{m} = √(2 μ_{n} C_{ox} (W/L) I_{D})",
+    "the same, from the current"
+   ],
+   [
+    "g_{m} = I_{C}/V_{T}",
+    "a BJT, for comparison"
+   ]
+  ],
+  "example": {
+   "problem": "An NMOS is biased at I_{D} = 160 µA with V_{ov} = 0.4 V. Find g_{m}.",
+   "steps": [
+    "g_{m} = 2 × 160 µA/0.4 V",
+    "= 0.8 mS (800 µA/V)"
+   ],
+   "answer": "g_{m} = 0.8 mS (0.0008 S)"
+  },
+  "try": "2 * 160 µA / 0.4 V"
+ },
+ "r_{o} = 1/(λ I_{D})": {
+  "title": "MOSFET output resistance (channel-length modulation)",
+  "about": "In saturation the drain current still rises slightly with V_{DS}, because the pinched-off part of the channel grows and shortens the effective length. That slope is modeled as a resistance r_{o} from drain to source.",
+  "assumptions": [
+   "Saturation region, small signal",
+   "λ is larger for short channels, roughly proportional to 1/L"
+  ],
+  "vars": [
+   [
+    "r_{o}",
+    "small-signal output resistance",
+    "Ω"
+   ],
+   [
+    "λ",
+    "channel-length modulation parameter",
+    "1/V"
+   ],
+   [
+    "I_{D}",
+    "DC drain current",
+    "A"
+   ]
+  ],
+  "related": [
+   [
+    "I_{D} = (1/2) μ_{n} C_{ox} (W/L) V_{ov}^{2} (1 + λV_{DS})",
+    "large-signal form"
+   ],
+   [
+    "V_{A} = 1/λ",
+    "Early voltage"
+   ],
+   [
+    "g_{m} r_{o}",
+    "intrinsic gain"
+   ]
+  ],
+  "example": {
+   "problem": "An NMOS with λ = 0.05 V^{−1} is biased at I_{D} = 160 µA. Find r_{o}.",
+   "steps": [
+    "r_{o} = 1/(0.05 V^{−1} × 160 µA)",
+    "= 1/(8 µA/V) = 125 kΩ"
+   ],
+   "answer": "r_{o} = 125 kΩ"
+  },
+  "try": "1 V / (0.05 * 160 µA) to kΩ"
+ },
+ "A_{v} = −g_{m} (R_{D} ∥ r_{o})": {
+  "title": "Common-source amplifier gain",
+  "about": "The MOSFET counterpart of the common-emitter stage: input at the gate, source grounded for signals, output at the drain. The signal current g_{m} v_{gs} through R_{D} in parallel with r_{o} gives an inverted voltage gain.",
+  "assumptions": [
+   "Saturation region, small signal",
+   "Source fully bypassed; an unbypassed R_{S} lowers the gain to about −g_{m}R_{D}/(1 + g_{m}R_{S})",
+   "No load; a load R_{L} goes in parallel too",
+   "Midband frequencies"
+  ],
+  "vars": [
+   [
+    "A_{v}",
+    "voltage gain v_{out}/v_{in}",
+    ""
+   ],
+   [
+    "g_{m}",
+    "transconductance",
+    "S"
+   ],
+   [
+    "R_{D}",
+    "drain resistor",
+    "Ω"
+   ],
+   [
+    "r_{o}",
+    "transistor output resistance",
+    "Ω"
+   ]
+  ],
+  "related": [
+   [
+    "g_{m} = 2I_{D}/V_{ov}",
+    "transconductance"
+   ],
+   [
+    "A_{v,max} = −g_{m} r_{o}",
+    "intrinsic gain, with an ideal current-source load"
+   ]
+  ],
+  "example": {
+   "problem": "A common-source stage has g_{m} = 0.8 mS, R_{D} = 5 kΩ and r_{o} = 125 kΩ. Find A_{v}.",
+   "steps": [
+    "R_{D} ∥ r_{o} = (5 × 125)/130 kΩ = 4.81 kΩ",
+    "A_{v} = −0.8 mS × 4.81 kΩ",
+    "= −3.85"
+   ],
+   "answer": "A_{v} ≈ −3.85"
+  },
+  "try": "-0.8e-3 * (5000 * 125000 / (5000 + 125000))"
+ },
+ "P = a C V^{2} f": {
+  "title": "CMOS dynamic (switching) power",
+  "about": "Each time a CMOS node switches, its capacitance is charged from the supply and then discharged to ground, spending CV^{2} per full cycle. Multiplied by the clock rate and the fraction of nodes that switch, it gives the chip's switching power. The V^{2} is why lowering the supply saves so much power.",
+  "assumptions": [
+   "Counts only switching power; leakage (static) and short-circuit current are extra",
+   "C is the total switched capacitance; a is the activity factor, the fraction switching each cycle (some texts put a 1/2 here and define a per transition)",
+   "Rail-to-rail swings at the supply voltage V"
+  ],
+  "vars": [
+   [
+    "P",
+    "dynamic power",
+    "W"
+   ],
+   [
+    "a",
+    "activity factor",
+    ""
+   ],
+   [
+    "C",
+    "switched capacitance",
+    "F"
+   ],
+   [
+    "V",
+    "supply voltage",
+    "V"
+   ],
+   [
+    "f",
+    "clock frequency",
+    "Hz"
+   ]
+  ],
+  "related": [
+   [
+    "E = CV^{2}",
+    "energy per charge-discharge cycle"
+   ],
+   [
+    "P_{static} = V I_{leak}",
+    "leakage power"
+   ]
+  ],
+  "example": {
+   "problem": "A processor has 1 nF of switched capacitance, a 1.0 V supply and a 2 GHz clock, and 10 % of its nodes switch each cycle. Find its dynamic power.",
+   "steps": [
+    "P = 0.1 × 1 nF × (1.0 V)^{2} × 2 GHz",
+    "= 0.2 W"
+   ],
+   "answer": "P = 0.2 W"
+  },
+  "try": "0.1 * 1 nF * (1 V)^2 * 2 GHz to W"
+ },
+ "¬(A · B) = ¬A + ¬B": {
+  "title": "De Morgan's law: NOT of an AND",
+  "about": "Inverting an AND is the same as ORing the inverted inputs. In gates: a NAND is an OR with bubbles on its inputs. It lets you move inversions through a circuit and build any logic from NAND gates alone.",
+  "assumptions": [
+   "Holds for any Boolean values; extends to any number of inputs: ¬(A · B · C) = ¬A + ¬B + ¬C"
+  ],
+  "vars": [
+   [
+    "A, B",
+    "Boolean inputs, 0 or 1",
+    ""
+   ],
+   [
+    "·",
+    "AND",
+    ""
+   ],
+   [
+    "+",
+    "OR",
+    ""
+   ],
+   [
+    "¬",
+    "NOT",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "¬(A + B) = ¬A · ¬B",
+    "the other De Morgan law"
+   ],
+   [
+    "¬¬A = A",
+    "double negation"
+   ]
+  ],
+  "example": {
+   "problem": "Simplify ¬(A · ¬B) and check it at A = 1, B = 0.",
+   "steps": [
+    "¬(A · ¬B) = ¬A + ¬¬B = ¬A + B",
+    "At A = 1, B = 0: left side ¬(1 · 1) = 0; right side 0 + 0 = 0"
+   ],
+   "answer": "¬(A · ¬B) = ¬A + B"
+  }
+ },
+ "¬(A + B) = ¬A · ¬B": {
+  "title": "De Morgan's law: NOT of an OR",
+  "about": "Inverting an OR is the same as ANDing the inverted inputs. A NOR gate equals an AND gate with inverted inputs, so NOR alone can also build any logic.",
+  "assumptions": [
+   "Holds for any Boolean values and any number of inputs"
+  ],
+  "vars": [
+   [
+    "A, B",
+    "Boolean inputs, 0 or 1",
+    ""
+   ],
+   [
+    "+",
+    "OR",
+    ""
+   ],
+   [
+    "·",
+    "AND",
+    ""
+   ],
+   [
+    "¬",
+    "NOT",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "¬(A · B) = ¬A + ¬B",
+    "the other De Morgan law"
+   ],
+   [
+    "A + ¬A = 1, A · ¬A = 0",
+    "complements"
+   ]
+  ],
+  "example": {
+   "problem": "An alarm is silent when neither door A nor window B is open: S = ¬(A + B). Write it as an AND and check it at A = 0, B = 0.",
+   "steps": [
+    "S = ¬A · ¬B",
+    "At A = 0, B = 0: ¬(0 + 0) = 1 and 1 · 1 = 1, silent"
+   ],
+   "answer": "S = ¬A · ¬B"
+  }
+ },
+ "A ⊕ B = A · ¬B + ¬A · B": {
+  "title": "Exclusive OR (XOR)",
+  "about": "XOR is 1 when exactly one input is 1, i.e. when the inputs differ. It is the sum bit of a binary adder, the heart of parity checks, and a controlled inverter: A ⊕ 1 = ¬A, A ⊕ 0 = A.",
+  "assumptions": [
+   "Associative and commutative, so a chain of XORs gives 1 when an odd number of inputs are 1"
+  ],
+  "vars": [
+   [
+    "A, B",
+    "Boolean inputs, 0 or 1",
+    ""
+   ],
+   [
+    "⊕",
+    "exclusive OR",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "S = A ⊕ B, C = A · B",
+    "half adder: sum and carry"
+   ],
+   [
+    "¬(A ⊕ B) = A · B + ¬A · ¬B",
+    "XNOR, equality"
+   ]
+  ],
+  "example": {
+   "problem": "Find the even-parity bit for the byte 1011 0010.",
+   "steps": [
+    "XOR all bits: 1 ⊕ 0 ⊕ 1 ⊕ 1 ⊕ 0 ⊕ 0 ⊕ 1 ⊕ 0",
+    "There are four 1s, an even count, so the result is 0",
+    "Parity bit 0 keeps the total number of 1s even"
+   ],
+   "answer": "parity bit = 0"
+  }
+ },
+ "0 to 2^{n} − 1": {
+  "title": "Range of an n-bit unsigned integer",
+  "about": "n bits give 2^{n} different patterns. Read as an unsigned number they cover 0 up to 2^{n} − 1. Adding past the top wraps around to 0 (overflow).",
+  "assumptions": [
+   "Plain binary; each bit k has weight 2^{k}"
+  ],
+  "vars": [
+   [
+    "n",
+    "number of bits",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "−2^{n−1} to 2^{n−1} − 1",
+    "two's complement, signed"
+   ],
+   [
+    "LSB = V_{FS}/2^{n}",
+    "an n-bit converter's step"
+   ]
+  ],
+  "example": {
+   "problem": "What is the largest value an 8-bit and a 16-bit unsigned integer can hold?",
+   "steps": [
+    "8 bits: 2^{8} − 1 = 255",
+    "16 bits: 2^{16} − 1 = 65 535"
+   ],
+   "answer": "255 for 8 bits; 65 535 for 16 bits"
+  },
+  "try": "2^8 - 1"
+ },
+ "−2^{n−1} to 2^{n−1} − 1": {
+  "title": "Range of an n-bit two's-complement integer",
+  "about": "Two's complement gives the top bit a weight of −2^{n−1}, so half the patterns are negative. There is one more negative number than positive, and the same adder works for signed and unsigned numbers. To negate, invert every bit and add 1.",
+  "assumptions": [
+   "Overflow happens when two numbers of the same sign add to a result of the other sign"
+  ],
+  "vars": [
+   [
+    "n",
+    "number of bits, including the sign bit",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "−x = ¬x + 1",
+    "negation"
+   ],
+   [
+    "0 to 2^{n} − 1",
+    "unsigned range"
+   ]
+  ],
+  "example": {
+   "problem": "What range does an 8-bit two's-complement integer cover?",
+   "steps": [
+    "Lowest: −2^{7} = −128",
+    "Highest: 2^{7} − 1 = 127"
+   ],
+   "answer": "−128 to 127"
+  },
+  "try": "2^7 - 1"
+ },
+ "T_{clk} ≥ t_{cq} + t_{logic} + t_{su}": {
+  "title": "Setup-time constraint on the clock period",
+  "about": "Data launched from one flip-flop on a clock edge must get through the logic and settle at the next flip-flop before that flip-flop's setup window closes. The slowest such path, the critical path, sets the shortest clock period.",
+  "assumptions": [
+   "Uses the worst-case (maximum) delays",
+   "Ignores clock skew and jitter; skew that delays the capturing clock adds to the budget, the other way subtracts",
+   "A separate hold-time check uses the shortest path: t_{cq} + t_{logic,min} ≥ t_{hold}"
+  ],
+  "vars": [
+   [
+    "T_{clk}",
+    "clock period",
+    "s"
+   ],
+   [
+    "t_{cq}",
+    "flip-flop clock-to-Q delay",
+    "s"
+   ],
+   [
+    "t_{logic}",
+    "longest combinational logic delay",
+    "s"
+   ],
+   [
+    "t_{su}",
+    "setup time of the capturing flip-flop",
+    "s"
+   ]
+  ],
+  "related": [
+   [
+    "f_{max} = 1/T_{clk}",
+    "highest clock frequency"
+   ],
+   [
+    "t_{cq} + t_{logic,min} ≥ t_{hold}",
+    "hold constraint"
+   ]
+  ],
+  "example": {
+   "problem": "A path has t_{cq} = 50 ps, 800 ps of logic and t_{su} = 30 ps. Find the shortest clock period.",
+   "steps": [
+    "T_{clk} ≥ 50 + 800 + 30 ps",
+    "= 880 ps"
+   ],
+   "answer": "T_{clk} ≥ 880 ps"
+  },
+  "try": "50 ps + 800 ps + 30 ps"
+ },
+ "f_{max} = 1/T_{clk}": {
+  "title": "Maximum clock frequency",
+  "about": "The fastest clock a synchronous circuit can run at is the inverse of its shortest safe clock period, set by the critical path.",
+  "assumptions": [
+   "T_{clk} is the minimum period from the setup constraint, including any skew and jitter margin"
+  ],
+  "vars": [
+   [
+    "f_{max}",
+    "maximum clock frequency",
+    "Hz"
+   ],
+   [
+    "T_{clk}",
+    "minimum clock period",
+    "s"
+   ]
+  ],
+  "related": [
+   [
+    "T_{clk} ≥ t_{cq} + t_{logic} + t_{su}",
+    "the setup constraint"
+   ]
+  ],
+  "example": {
+   "problem": "A design's critical path needs a period of 880 ps. Find f_{max}.",
+   "steps": [
+    "f_{max} = 1/(880 ps)",
+    "= 1.14 GHz"
+   ],
+   "answer": "f_{max} ≈ 1.14 GHz"
+  },
+  "try": "1/(880 ps) to GHz"
+ },
+ "LSB = V_{FS}/2^{n}": {
+  "title": "Converter resolution: one LSB",
+  "about": "An n-bit ADC or DAC splits its full-scale range into 2^{n} steps. One least-significant bit is the size of each step, the smallest change it can resolve.",
+  "assumptions": [
+   "Ideal converter; real ones add offset, gain error and nonlinearity",
+   "Some texts divide by 2^{n} − 1 so the top code reaches full scale exactly"
+  ],
+  "vars": [
+   [
+    "LSB",
+    "voltage of one step",
+    "V"
+   ],
+   [
+    "V_{FS}",
+    "full-scale voltage range",
+    "V"
+   ],
+   [
+    "n",
+    "number of bits",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "V_{out} = V_{ref} D/2^{n}",
+    "DAC output"
+   ],
+   [
+    "SNR = 6.02n + 1.76 dB",
+    "ideal quantization SNR"
+   ],
+   [
+    "e_{q,rms} = LSB/√12",
+    "RMS quantization error"
+   ]
+  ],
+  "example": {
+   "problem": "A 12-bit ADC has a 3.3 V full-scale range. Find one LSB.",
+   "steps": [
+    "LSB = 3.3 V/2^{12} = 3.3 V/4096",
+    "= 0.806 mV"
+   ],
+   "answer": "LSB ≈ 0.806 mV"
+  },
+  "try": "3.3 V / 2^12 to mV"
+ },
+ "V_{out} = V_{ref} D/2^{n}": {
+  "title": "DAC output for a digital code",
+  "about": "An ideal n-bit DAC outputs its code D as that fraction of the reference voltage. The top code 2^{n} − 1 gives one LSB short of V_{ref}.",
+  "assumptions": [
+   "Ideal, unipolar DAC",
+   "D is the unsigned code, 0 to 2^{n} − 1"
+  ],
+  "vars": [
+   [
+    "V_{out}",
+    "output voltage",
+    "V"
+   ],
+   [
+    "V_{ref}",
+    "reference voltage",
+    "V"
+   ],
+   [
+    "D",
+    "input code",
+    ""
+   ],
+   [
+    "n",
+    "number of bits",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "LSB = V_{FS}/2^{n}",
+    "step size"
+   ],
+   [
+    "D = round(V_{in} 2^{n}/V_{ref})",
+    "the ADC, the other way"
+   ]
+  ],
+  "example": {
+   "problem": "A 10-bit DAC with a 5 V reference receives code 300. Find V_{out}.",
+   "steps": [
+    "V_{out} = 5 V × 300/2^{10} = 5 V × 300/1024",
+    "= 1.465 V"
+   ],
+   "answer": "V_{out} ≈ 1.465 V"
+  },
+  "try": "5 V * 300 / 2^10"
+ },
+ "SNR = 6.02n + 1.76 dB": {
+  "title": "Ideal ADC signal-to-noise ratio",
+  "about": "The best SNR an n-bit converter can reach with a full-scale sine input, when quantization error is the only noise. Each extra bit adds about 6 dB.",
+  "assumptions": [
+   "Full-scale sine input; smaller signals lose SNR in proportion",
+   "Quantization error is uniform and uncorrelated with the signal; real converters fall short, described by the effective number of bits"
+  ],
+  "vars": [
+   [
+    "SNR",
+    "signal-to-quantization-noise ratio",
+    "dB"
+   ],
+   [
+    "n",
+    "number of bits",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "ENOB = (SINAD − 1.76)/6.02",
+    "effective number of bits from a measured SINAD"
+   ],
+   [
+    "e_{q,rms} = LSB/√12",
+    "RMS quantization noise"
+   ]
+  ],
+  "example": {
+   "problem": "Find the ideal SNR of a 12-bit ADC.",
+   "steps": [
+    "SNR = 6.02 × 12 + 1.76",
+    "= 74.0 dB"
+   ],
+   "answer": "SNR ≈ 74 dB"
+  },
+  "try": "6.02*12 + 1.76"
+ },
+ "f_{s} ≥ 2 f_{max}": {
+  "title": "Nyquist sampling criterion",
+  "about": "To capture a signal without aliasing, sample it at more than twice its highest frequency. Anything above f_{s}/2 (the Nyquist frequency) folds back and is indistinguishable from a lower frequency.",
+  "assumptions": [
+   "Strictly greater than 2f_{max} for a sine exactly at f_{max}",
+   "Assumes the input is band-limited; an anti-aliasing filter before the ADC enforces it, and its finite roll-off is why real systems sample faster than 2f_{max}"
+  ],
+  "vars": [
+   [
+    "f_{s}",
+    "sampling frequency",
+    "Hz"
+   ],
+   [
+    "f_{max}",
+    "highest frequency in the signal",
+    "Hz"
+   ]
+  ],
+  "related": [
+   [
+    "f_{a} = |f − k f_{s}|",
+    "where an undersampled tone lands"
+   ],
+   [
+    "f_{N} = f_{s}/2",
+    "Nyquist frequency"
+   ]
+  ],
+  "example": {
+   "problem": "Audio extends to 20 kHz. Find the minimum sampling rate, and say why CDs use 44.1 kHz.",
+   "steps": [
+    "f_{s} ≥ 2 × 20 kHz = 40 kHz",
+    "44.1 kHz leaves room for the anti-aliasing filter to roll off between 20 and 22.05 kHz"
+   ],
+   "answer": "f_{s} ≥ 40 kHz"
+  },
+  "try": "2 * 20 kHz"
+ },
+ "f_{a} = |f − k f_{s}|": {
+  "title": "Aliased frequency",
+  "about": "A tone above the Nyquist frequency appears after sampling at a lower frequency: its distance to the nearest multiple of the sampling rate. Choose the integer k that brings f_{a} between 0 and f_{s}/2.",
+  "assumptions": [
+   "Ideal sampling, no anti-aliasing filter",
+   "A real sine; the sign of the frequency is lost"
+  ],
+  "vars": [
+   [
+    "f_{a}",
+    "apparent (aliased) frequency",
+    "Hz"
+   ],
+   [
+    "f",
+    "actual input frequency",
+    "Hz"
+   ],
+   [
+    "k",
+    "integer making f_{a} ≤ f_{s}/2",
+    ""
+   ],
+   [
+    "f_{s}",
+    "sampling frequency",
+    "Hz"
+   ]
+  ],
+  "related": [
+   [
+    "f_{s} ≥ 2 f_{max}",
+    "Nyquist criterion"
+   ]
+  ],
+  "example": {
+   "problem": "A 7 kHz tone is sampled at 10 kHz. At what frequency does it appear?",
+   "steps": [
+    "Nyquist frequency is 5 kHz, so 7 kHz aliases",
+    "Nearest multiple of f_{s}: k = 1",
+    "f_{a} = |7 − 10| kHz = 3 kHz"
+   ],
+   "answer": "f_{a} = 3 kHz"
+  },
+  "try": "10 kHz - 7 kHz"
+ },
+ "dB = 10 log_{10}(P_{2}/P_{1})": {
+  "title": "Decibels from a power ratio",
+  "about": "A ratio of two powers in decibels. Gains add and losses subtract on this scale, which is why it is used through whole signal chains. +3 dB doubles the power, +10 dB is ten times.",
+  "assumptions": [
+   "Both are powers, in the same units",
+   "A negative result is a loss"
+  ],
+  "vars": [
+   [
+    "dB",
+    "power ratio in decibels",
+    "dB"
+   ],
+   [
+    "P_{2}",
+    "output (or compared) power",
+    "W"
+   ],
+   [
+    "P_{1}",
+    "input (reference) power",
+    "W"
+   ]
+  ],
+  "related": [
+   [
+    "dB = 20 log_{10}(V_{2}/V_{1})",
+    "voltage ratio, same impedance"
+   ],
+   [
+    "P_{2}/P_{1} = 10^{dB/10}",
+    "back to a ratio"
+   ],
+   [
+    "dBm = 10 log_{10}(P/(1 mW))",
+    "absolute power"
+   ]
+  ],
+  "example": {
+   "problem": "An amplifier turns a 50 mW input into 2 W. Find its gain in dB.",
+   "steps": [
+    "P_{2}/P_{1} = 2 W/0.05 W = 40",
+    "dB = 10 log_{10}(40) = 16.0 dB"
+   ],
+   "answer": "16.0 dB"
+  },
+  "try": "10 log10(2 W / 50 mW)"
+ },
+ "dB = 20 log_{10}(V_{2}/V_{1})": {
+  "title": "Decibels from a voltage ratio",
+  "about": "Power goes as voltage squared, so a voltage ratio in dB uses 20 log rather than 10 log. ×2 in voltage is +6 dB, ×10 is +20 dB. Used for amplifier gain and Bode plots.",
+  "assumptions": [
+   "Strictly gives the power ratio only when both voltages are across the same resistance; it is used for voltage gain regardless",
+   "Use RMS (or both peak) values, consistently"
+  ],
+  "vars": [
+   [
+    "dB",
+    "ratio in decibels",
+    "dB"
+   ],
+   [
+    "V_{2}",
+    "output voltage",
+    "V"
+   ],
+   [
+    "V_{1}",
+    "input voltage",
+    "V"
+   ]
+  ],
+  "related": [
+   [
+    "dB = 10 log_{10}(P_{2}/P_{1})",
+    "power ratio"
+   ],
+   [
+    "V_{2}/V_{1} = 10^{dB/20}",
+    "back to a ratio"
+   ]
+  ],
+  "example": {
+   "problem": "An amplifier turns a 50 mV input into 2 V. Find its voltage gain in dB.",
+   "steps": [
+    "V_{2}/V_{1} = 2 V/0.05 V = 40",
+    "dB = 20 log_{10}(40) = 32.0 dB"
+   ],
+   "answer": "32.0 dB"
+  },
+  "try": "20 log10(2 V / 50 mV)"
+ },
+ "dBm = 10 log_{10}(P/(1 mW))": {
+  "title": "Power in dBm",
+  "about": "An absolute power level in decibels relative to 1 mW. 0 dBm is 1 mW, 30 dBm is 1 W. Used in RF and telecom, where gains in dB simply add to it.",
+  "assumptions": [
+   "P in the same units as the 1 mW reference",
+   "dBW uses 1 W instead: dBm = dBW + 30"
+  ],
+  "vars": [
+   [
+    "dBm",
+    "power level relative to 1 mW",
+    "dBm"
+   ],
+   [
+    "P",
+    "power",
+    "W"
+   ]
+  ],
+  "related": [
+   [
+    "P = 1 mW × 10^{dBm/10}",
+    "back to watts"
+   ],
+   [
+    "P_{out,dBm} = P_{in,dBm} + G_{dB}",
+    "a gain adds"
+   ]
+  ],
+  "example": {
+   "problem": "Express 50 mW in dBm.",
+   "steps": [
+    "dBm = 10 log_{10}(50 mW/1 mW) = 10 log_{10}(50)",
+    "= 17.0 dBm"
+   ],
+   "answer": "17.0 dBm"
+  },
+  "try": "10 log10(50 mW / 1 mW)"
+ },
+ "v_{n} = √(4 k T R B)": {
+  "title": "Thermal (Johnson–Nyquist) noise of a resistor",
+  "about": "Every resistor above absolute zero produces a random noise voltage from the thermal motion of its electrons. Its RMS value grows with the square root of resistance, temperature and bandwidth, and sets the noise floor of sensitive amplifiers.",
+  "assumptions": [
+   "White noise, the same per hertz at all practical frequencies",
+   "B is the noise bandwidth, slightly wider than the −3 dB bandwidth of a real filter",
+   "Excess (1/f) noise in some resistor types comes on top"
+  ],
+  "vars": [
+   [
+    "v_{n}",
+    "RMS noise voltage",
+    "V"
+   ],
+   [
+    "k",
+    "Boltzmann constant",
+    "J/K"
+   ],
+   [
+    "T",
+    "absolute temperature",
+    "K"
+   ],
+   [
+    "R",
+    "resistance",
+    "Ω"
+   ],
+   [
+    "B",
+    "noise bandwidth",
+    "Hz"
+   ]
+  ],
+  "related": [
+   [
+    "e_{n} = √(4kTR)",
+    "noise density, V/√Hz (about 4 nV/√Hz for 1 kΩ)"
+   ],
+   [
+    "i_{n} = √(4kTB/R)",
+    "as a noise current"
+   ],
+   [
+    "P_{n} = kTB",
+    "available noise power"
+   ]
+  ],
+  "example": {
+   "problem": "Find the RMS noise of a 1 kΩ resistor at 300 K over a 20 kHz audio bandwidth.",
+   "steps": [
+    "4kTRB = 4 × 1.38 × 10^{−23} × 300 × 1000 × 20 000 = 3.31 × 10^{−13} V^{2}",
+    "v_{n} = √(3.31 × 10^{−13}) = 0.576 µV"
+   ],
+   "answer": "v_{n} ≈ 0.576 µV"
+  },
+  "try": "sqrt(4 * boltzmann constant * 300 K * 1 kΩ * 20 kHz) to µV"
+ },
+ "P_{n} = kTB": {
+  "title": "Available thermal noise power",
+  "about": "The noise power a resistor delivers into a matched load, independent of its resistance. At 290 K it is −174 dBm per hertz, the floor every receiver's sensitivity is measured against.",
+  "assumptions": [
+   "Matched load",
+   "White noise over bandwidth B",
+   "T is the source's noise temperature; 290 K is the standard reference"
+  ],
+  "vars": [
+   [
+    "P_{n}",
+    "available noise power",
+    "W"
+   ],
+   [
+    "k",
+    "Boltzmann constant",
+    "J/K"
+   ],
+   [
+    "T",
+    "absolute (noise) temperature",
+    "K"
+   ],
+   [
+    "B",
+    "bandwidth",
+    "Hz"
+   ]
+  ],
+  "related": [
+   [
+    "v_{n} = √(4kTRB)",
+    "the open-circuit noise voltage"
+   ],
+   [
+    "−174 dBm/Hz + 10 log_{10}(B)",
+    "the same in dBm at 290 K"
+   ],
+   [
+    "F = SNR_{in}/SNR_{out}",
+    "noise factor"
+   ]
+  ],
+  "example": {
+   "problem": "Find the thermal noise power at 290 K in a 1 MHz bandwidth, in watts and dBm.",
+   "steps": [
+    "P_{n} = 1.38 × 10^{−23} J/K × 290 K × 10^{6} Hz",
+    "= 4.00 × 10^{−15} W",
+    "In dBm: 10 log_{10}(4.00 × 10^{−12}) = −114 dBm"
+   ],
+   "answer": "P_{n} ≈ 4.00 × 10^{−15} W (−114 dBm)"
+  },
+  "try": "boltzmann constant * 290 K * 1 MHz to W"
+ },
+ "F = SNR_{in}/SNR_{out}": {
+  "title": "Noise factor",
+  "about": "Every amplifier adds some noise, so the signal-to-noise ratio gets worse through it. The noise factor is how many times worse; in dB it is the noise figure, NF = 10 log_{10} F. A perfect amplifier has F = 1 (0 dB).",
+  "assumptions": [
+   "SNR values are linear power ratios, not dB",
+   "Defined with the input noise at the standard 290 K"
+  ],
+  "vars": [
+   [
+    "F",
+    "noise factor",
+    ""
+   ],
+   [
+    "SNR_{in}",
+    "signal-to-noise ratio at the input",
+    ""
+   ],
+   [
+    "SNR_{out}",
+    "signal-to-noise ratio at the output",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "NF = 10 log_{10} F",
+    "noise figure, dB"
+   ],
+   [
+    "F = F_{1} + (F_{2} − 1)/G_{1} + …",
+    "Friis formula for a cascade"
+   ],
+   [
+    "T_{e} = (F − 1) 290 K",
+    "equivalent noise temperature"
+   ]
+  ],
+  "example": {
+   "problem": "A receiver stage has an input SNR of 10 000 and an output SNR of 5000. Find F and the noise figure.",
+   "steps": [
+    "F = 10 000/5000 = 2",
+    "NF = 10 log_{10}(2) = 3.01 dB"
+   ],
+   "answer": "F = 2, NF ≈ 3.01 dB"
+  },
+  "try": "10 log10(10000/5000)"
+ },
+ "C = B log_{2}(1 + S/N)": {
+  "title": "Shannon channel capacity",
+  "about": "The highest data rate any coding scheme can push through a channel of bandwidth B with signal-to-noise ratio S/N with arbitrarily few errors. Real systems approach but never exceed it.",
+  "assumptions": [
+   "Additive white Gaussian noise",
+   "S/N is a linear power ratio, not dB",
+   "A theoretical limit; it says nothing about how to build the code"
+  ],
+  "vars": [
+   [
+    "C",
+    "channel capacity",
+    "bit/s"
+   ],
+   [
+    "B",
+    "bandwidth",
+    "Hz"
+   ],
+   [
+    "S/N",
+    "signal-to-noise power ratio",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "S/N = 10^{SNR_{dB}/10}",
+    "from dB"
+   ],
+   [
+    "C ≈ B × SNR_{dB}/3",
+    "rough rule at high SNR"
+   ]
+  ],
+  "example": {
+   "problem": "A 1 MHz channel has an SNR of 20 dB. Find its capacity.",
+   "steps": [
+    "S/N = 10^{2} = 100",
+    "C = 10^{6} × log_{2}(101) = 10^{6} × 6.658",
+    "≈ 6.66 Mbit/s"
+   ],
+   "answer": "C ≈ 6.66 Mbit/s"
+  },
+  "try": "1e6 * log2(1 + 100)"
+ },
+ "P_{r} = P_{t} G_{t} G_{r} (λ/(4πd))^{2}": {
+  "title": "Friis transmission equation",
+  "about": "The power a receiving antenna collects from a transmitter a distance d away in free space. The (λ/(4πd))^{2} term, the free-space path loss, falls off with the square of distance and of frequency.",
+  "assumptions": [
+   "Free space, line of sight, no reflections or obstructions",
+   "Far field: d much larger than the antennas and than λ",
+   "Antennas matched in impedance and polarization; gains as linear ratios, not dBi"
+  ],
+  "vars": [
+   [
+    "P_{r}",
+    "received power",
+    "W"
+   ],
+   [
+    "P_{t}",
+    "transmitted power",
+    "W"
+   ],
+   [
+    "G_{t}, G_{r}",
+    "transmit and receive antenna gains",
+    ""
+   ],
+   [
+    "λ",
+    "wavelength",
+    "m"
+   ],
+   [
+    "d",
+    "distance between antennas",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "FSPL = (4πd/λ)^{2}",
+    "free-space path loss"
+   ],
+   [
+    "P_{r,dBm} = P_{t,dBm} + G_{t,dBi} + G_{r,dBi} − FSPL_{dB}",
+    "in decibels"
+   ],
+   [
+    "λ = c/f",
+    "wavelength"
+   ]
+  ],
+  "example": {
+   "problem": "A 2.4 GHz link transmits 100 mW through two 3 dBi antennas (gain 2 each) over 100 m. Find the received power.",
+   "steps": [
+    "λ = c/f = 3 × 10^{8}/2.4 × 10^{9} = 0.125 m",
+    "λ/(4πd) = 0.125/(4π × 100) = 9.94 × 10^{−5}; squared: 9.88 × 10^{−9}",
+    "P_{r} = 0.1 W × 2 × 2 × 9.88 × 10^{−9} = 3.95 nW (−54 dBm)"
+   ],
+   "answer": "P_{r} ≈ 3.95 nW (−54 dBm)"
+  },
+  "try": "0.1 W * 2 * 2 * (speed of light / 2.4 GHz / (4 pi * 100 m))^2 to nW"
+ },
+ "c = f λ": {
+  "title": "Wave speed, frequency and wavelength",
+  "about": "An electromagnetic wave travels one wavelength each cycle, so its speed is frequency times wavelength. In vacuum the speed is c; in a cable or dielectric it is slower, v = c/√ε_{r}, and the wavelength shrinks with it.",
+  "assumptions": [
+   "Vacuum (or air, to within 0.03 %)"
+  ],
+  "vars": [
+   [
+    "c",
+    "speed of light, 2.998 × 10^{8} m/s",
+    "m/s"
+   ],
+   [
+    "f",
+    "frequency",
+    "Hz"
+   ],
+   [
+    "λ",
+    "wavelength",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "v = c/√ε_{r}",
+    "speed in a dielectric"
+   ],
+   [
+    "β = 2π/λ",
+    "phase constant"
+   ]
+  ],
+  "example": {
+   "problem": "Find the free-space wavelength of a 2.4 GHz Wi-Fi signal.",
+   "steps": [
+    "λ = c/f = 2.998 × 10^{8} m/s/2.4 × 10^{9} Hz",
+    "= 0.125 m = 12.5 cm"
+   ],
+   "answer": "λ ≈ 12.5 cm"
+  },
+  "try": "speed of light / 2.4 GHz to cm"
+ },
+ "Z_{0} = √(L′/C′)": {
+  "title": "Characteristic impedance of a lossless line",
+  "about": "A transmission line's distributed inductance and capacitance per length give it a characteristic impedance: the ratio of voltage to current in a wave travelling one way along it. A load equal to Z_{0} absorbs the wave with no reflection.",
+  "assumptions": [
+   "Lossless line (R′ and G′ negligible); the general form is √((R′ + jωL′)/(G′ + jωC′))",
+   "Uniform line, TEM mode",
+   "Independent of length and, for a lossless line, of frequency"
+  ],
+  "vars": [
+   [
+    "Z_{0}",
+    "characteristic impedance",
+    "Ω"
+   ],
+   [
+    "L′",
+    "inductance per unit length",
+    "H/m"
+   ],
+   [
+    "C′",
+    "capacitance per unit length",
+    "F/m"
+   ]
+  ],
+  "related": [
+   [
+    "v_{p} = 1/√(L′C′)",
+    "phase velocity"
+   ],
+   [
+    "Z_{0} = (60/√ε_{r}) ln(D/d)",
+    "coaxial cable, diameters D and d"
+   ],
+   [
+    "Γ = (Z_{L} − Z_{0})/(Z_{L} + Z_{0})",
+    "reflection at a load"
+   ]
+  ],
+  "example": {
+   "problem": "A coaxial cable has L′ = 250 nH/m and C′ = 100 pF/m. Find Z_{0}.",
+   "steps": [
+    "Z_{0} = √(250 × 10^{−9}/100 × 10^{−12})",
+    "= √2500 = 50 Ω"
+   ],
+   "answer": "Z_{0} = 50 Ω"
+  },
+  "try": "sqrt(250 nH / 100 pF)"
+ },
+ "v_{p} = 1/√(L′C′)": {
+  "title": "Phase velocity on a lossless line",
+  "about": "How fast a signal travels along a transmission line, set by its inductance and capacitance per length. In a cable it is c/√ε_{r} of the insulation, typically 0.66c for solid polyethylene.",
+  "assumptions": [
+   "Lossless line, TEM mode",
+   "Non-magnetic dielectric, so L′C′ = ε_{r}/c^{2}"
+  ],
+  "vars": [
+   [
+    "v_{p}",
+    "phase velocity",
+    "m/s"
+   ],
+   [
+    "L′",
+    "inductance per unit length",
+    "H/m"
+   ],
+   [
+    "C′",
+    "capacitance per unit length",
+    "F/m"
+   ]
+  ],
+  "related": [
+   [
+    "v_{p} = c/√ε_{r}",
+    "from the dielectric"
+   ],
+   [
+    "t_{d} = l/v_{p}",
+    "delay over a length l"
+   ],
+   [
+    "λ = v_{p}/f",
+    "wavelength on the line"
+   ]
+  ],
+  "example": {
+   "problem": "A cable has L′ = 250 nH/m and C′ = 100 pF/m. Find its phase velocity.",
+   "steps": [
+    "L′C′ = 250 × 10^{−9} × 100 × 10^{−12} = 2.5 × 10^{−17} s^{2}/m^{2}",
+    "v_{p} = 1/√(2.5 × 10^{−17}) = 2 × 10^{8} m/s (0.67c)"
+   ],
+   "answer": "v_{p} = 2 × 10^{8} m/s"
+  },
+  "try": "1/sqrt(250 nH/m * 100 pF/m)"
+ },
+ "β = 2π/λ": {
+  "title": "Phase constant (wavenumber)",
+  "about": "How many radians of phase a wave goes through per metre of travel. It turns a line's length into an electrical length βl, the angle that appears in the input-impedance formula.",
+  "assumptions": [
+   "λ is the wavelength on the line or in the medium, not in free space unless the wave is in free space"
+  ],
+  "vars": [
+   [
+    "β",
+    "phase constant",
+    "rad/m"
+   ],
+   [
+    "λ",
+    "wavelength",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "β = ω/v_{p} = ω√(L′C′)",
+    "the same, from the line"
+   ],
+   [
+    "βl = 2πl/λ",
+    "electrical length"
+   ]
+  ],
+  "example": {
+   "problem": "A line with v_{p} = 2 × 10^{8} m/s carries 100 MHz. Find β.",
+   "steps": [
+    "λ = v_{p}/f = 2 × 10^{8}/10^{8} = 2 m",
+    "β = 2π/2 m = π rad/m ≈ 3.14 rad/m"
+   ],
+   "answer": "β ≈ 3.14 rad/m"
+  },
+  "try": "2 pi / (2e8 m/s / 100 MHz)"
+ },
+ "Γ = (Z_{L} − Z_{0})/(Z_{L} + Z_{0})": {
+  "title": "Reflection coefficient at a load",
+  "about": "When a wave on a line reaches a load that doesn't match Z_{0}, part of it reflects. Γ is the ratio of reflected to incident voltage: 0 for a matched load, −1 for a short, +1 for an open.",
+  "assumptions": [
+   "Z_{L} and Z_{0} may be complex, and so may Γ",
+   "|Γ| ≤ 1 for a passive load"
+  ],
+  "vars": [
+   [
+    "Γ",
+    "voltage reflection coefficient",
+    ""
+   ],
+   [
+    "Z_{L}",
+    "load impedance",
+    "Ω"
+   ],
+   [
+    "Z_{0}",
+    "characteristic impedance of the line",
+    "Ω"
+   ]
+  ],
+  "related": [
+   [
+    "VSWR = (1 + |Γ|)/(1 − |Γ|)",
+    "standing-wave ratio"
+   ],
+   [
+    "RL = −20 log_{10}|Γ|",
+    "return loss, dB"
+   ],
+   [
+    "P_{refl}/P_{inc} = |Γ|^{2}",
+    "reflected power fraction"
+   ]
+  ],
+  "example": {
+   "problem": "A 75 Ω antenna is fed by 50 Ω cable. Find Γ and the fraction of power reflected.",
+   "steps": [
+    "Γ = (75 − 50)/(75 + 50) = 25/125 = 0.2",
+    "|Γ|^{2} = 0.04, so 4 % of the power reflects"
+   ],
+   "answer": "Γ = 0.2 (4 % of the power reflected)"
+  },
+  "try": "(75 - 50)/(75 + 50)"
+ },
+ "VSWR = (1 + |Γ|)/(1 − |Γ|)": {
+  "title": "Voltage standing-wave ratio",
+  "about": "Incident and reflected waves add to a standing wave along the line. VSWR is the ratio of its maximum to minimum amplitude: 1 for a perfect match, growing without limit toward a short or open. It is easy to measure, so antennas are often specified by it.",
+  "assumptions": [
+   "Lossless line between the load and where it is measured; loss makes VSWR look better than it is at the load"
+  ],
+  "vars": [
+   [
+    "VSWR",
+    "voltage standing-wave ratio",
+    ""
+   ],
+   [
+    "|Γ|",
+    "magnitude of the reflection coefficient",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "|Γ| = (VSWR − 1)/(VSWR + 1)",
+    "the inverse"
+   ],
+   [
+    "Γ = (Z_{L} − Z_{0})/(Z_{L} + Z_{0})",
+    "reflection coefficient"
+   ],
+   [
+    "VSWR = Z_{L}/Z_{0}",
+    "real Z_{L} > Z_{0}"
+   ]
+  ],
+  "example": {
+   "problem": "A load has |Γ| = 0.2. Find the VSWR.",
+   "steps": [
+    "VSWR = (1 + 0.2)/(1 − 0.2) = 1.2/0.8",
+    "= 1.5"
+   ],
+   "answer": "VSWR = 1.5"
+  },
+  "try": "(1 + 0.2)/(1 - 0.2)"
+ },
+ "Z_{in} = Z_{0} (Z_{L} + jZ_{0} tan(βl))/(Z_{0} + jZ_{L} tan(βl))": {
+  "title": "Input impedance of a lossless line",
+  "about": "A length of line between a source and a load transforms the load impedance into something else, depending on the line's electrical length βl. This is the basis of stub matching and quarter-wave transformers.",
+  "assumptions": [
+   "Lossless line",
+   "βl in radians; the pattern repeats every half wavelength",
+   "Special cases: a matched load gives Z_{0} at any length; a quarter wave gives Z_{0}^{2}/Z_{L}; a half wave gives Z_{L}"
+  ],
+  "vars": [
+   [
+    "Z_{in}",
+    "impedance looking into the line",
+    "Ω"
+   ],
+   [
+    "Z_{0}",
+    "characteristic impedance",
+    "Ω"
+   ],
+   [
+    "Z_{L}",
+    "load impedance",
+    "Ω"
+   ],
+   [
+    "β",
+    "phase constant, 2π/λ",
+    "rad/m"
+   ],
+   [
+    "l",
+    "line length",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "Z_{in} = Z_{0}^{2}/Z_{L}",
+    "quarter-wave line"
+   ],
+   [
+    "Z_{in} = jZ_{0} tan(βl)",
+    "shorted stub"
+   ],
+   [
+    "Z_{in} = −jZ_{0} cot(βl)",
+    "open stub"
+   ]
+  ],
+  "example": {
+   "problem": "A 100 Ω load sits at the end of an eighth-wavelength of 50 Ω line. Find the input impedance.",
+   "steps": [
+    "l = λ/8, so βl = π/4 and tan(βl) = 1",
+    "Z_{in} = 50 (100 + j50)/(50 + j100)",
+    "= 50 (0.8 − j0.6) = 40 − j30 Ω"
+   ],
+   "answer": "Z_{in} = 40 − j30 Ω"
+  },
+  "try": "50 (100 + 50i)/(50 + 100i)"
+ },
+ "C = εA/d": {
+  "title": "Parallel-plate capacitance",
+  "about": "Two flat plates of area A separated by a gap d store charge in proportion to voltage. Capacitance grows with plate area and with the permittivity of the material between them, and falls as the gap widens.",
+  "assumptions": [
+   "Gap small compared to the plate size, so fringing at the edges is negligible",
+   "Uniform, linear dielectric filling the gap"
+  ],
+  "vars": [
+   [
+    "C",
+    "capacitance",
+    "F"
+   ],
+   [
+    "ε",
+    "permittivity of the dielectric, ε_{r}ε_{0}",
+    "F/m"
+   ],
+   [
+    "A",
+    "plate overlap area",
+    "m^{2}"
+   ],
+   [
+    "d",
+    "separation between the plates",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "ε_{0} = 8.854 × 10^{−12} F/m",
+    "permittivity of free space"
+   ],
+   [
+    "Q = CV, E = CV^{2}/2",
+    "charge and stored energy"
+   ],
+   [
+    "C = 2πεl/ln(b/a)",
+    "coaxial capacitor"
+   ]
+  ],
+  "example": {
+   "problem": "Two 1 cm^{2} plates are 0.1 mm apart in air. Find the capacitance.",
+   "steps": [
+    "C = (8.854 × 10^{−12} F/m)(10^{−4} m^{2})/(10^{−4} m)",
+    "= 8.85 pF"
+   ],
+   "answer": "C ≈ 8.85 pF"
+  },
+  "try": "vacuum permittivity * 1 cm^2 / 0.1 mm to pF"
+ },
+ "L = μN^{2}A/l": {
+  "title": "Inductance of a long solenoid",
+  "about": "A coil of N turns wound along a length l. Each turn adds to the field and each turn links it, so the inductance grows with N^{2}. A magnetic core multiplies it by the core's relative permeability.",
+  "assumptions": [
+   "Long solenoid: length much greater than diameter, so the field inside is uniform and the ends don't matter (short coils have less)",
+   "Linear core material, not saturated"
+  ],
+  "vars": [
+   [
+    "L",
+    "inductance",
+    "H"
+   ],
+   [
+    "μ",
+    "permeability of the core, μ_{r}μ_{0}",
+    "H/m"
+   ],
+   [
+    "N",
+    "number of turns",
+    ""
+   ],
+   [
+    "A",
+    "cross-sectional area",
+    "m^{2}"
+   ],
+   [
+    "l",
+    "length of the coil",
+    "m"
+   ]
+  ],
+  "related": [
+   [
+    "μ_{0} = 4π × 10^{−7} H/m",
+    "permeability of free space"
+   ],
+   [
+    "B = μNI/l",
+    "field inside"
+   ],
+   [
+    "E = LI^{2}/2",
+    "stored energy"
+   ]
+  ],
+  "example": {
+   "problem": "An air-core solenoid has 100 turns, a cross-section of 1 cm^{2} and a length of 5 cm. Find its inductance.",
+   "steps": [
+    "L = (4π × 10^{−7})(100^{2})(10^{−4})/(0.05)",
+    "= 25.1 µH"
+   ],
+   "answer": "L ≈ 25.1 µH"
+  },
+  "try": "vacuum permeability * 100^2 * 1 cm^2 / 5 cm to µH"
+ },
+ "δ = √(2/(ωμσ))": {
+  "title": "Skin depth",
+  "about": "AC current crowds toward a conductor's surface. The skin depth is how far in the current density falls to 1/e (37 %) of its surface value. At high frequency only a thin skin carries current, raising the resistance.",
+  "assumptions": [
+   "Good conductor (σ ≫ ωε)",
+   "Conductor thicker than a few skin depths; flat or large-radius surface"
+  ],
+  "vars": [
+   [
+    "δ",
+    "skin depth",
+    "m"
+   ],
+   [
+    "ω",
+    "angular frequency, 2πf",
+    "rad/s"
+   ],
+   [
+    "μ",
+    "permeability of the conductor",
+    "H/m"
+   ],
+   [
+    "σ",
+    "electrical conductivity",
+    "S/m"
+   ]
+  ],
+  "related": [
+   [
+    "δ = 1/√(πfμσ)",
+    "the same in terms of f"
+   ],
+   [
+    "R_{ac} ≈ l/(σ π D δ)",
+    "AC resistance of a round wire of diameter D ≫ δ"
+   ]
+  ],
+  "example": {
+   "problem": "Find the skin depth in copper (σ = 5.8 × 10^{7} S/m, μ = μ_{0}) at 1 MHz.",
+   "steps": [
+    "ωμσ = 2π × 10^{6} × 4π × 10^{−7} × 5.8 × 10^{7} = 4.58 × 10^{8}",
+    "δ = √(2/4.58 × 10^{8}) = 6.61 × 10^{−5} m",
+    "= 66.1 µm"
+   ],
+   "answer": "δ ≈ 66.1 µm"
+  },
+  "try": "sqrt(2/(2 pi * 1 MHz * vacuum permeability * 5.8e7 / (Ω m))) to µm"
+ },
+ "V = E + I_{a} R_{a}": {
+  "title": "DC motor armature voltage equation",
+  "about": "The supply voltage across a DC motor's armature splits into the back EMF the spinning rotor generates and the drop across the winding's resistance. At stall E = 0, so the current is limited only by R_{a} and is large.",
+  "assumptions": [
+   "Steady state, so the armature inductance's L dI/dt is zero",
+   "Ignores brush drop",
+   "As a generator the current reverses: V = E − I_{a}R_{a}"
+  ],
+  "vars": [
+   [
+    "V",
+    "applied armature voltage",
+    "V"
+   ],
+   [
+    "E",
+    "back EMF",
+    "V"
+   ],
+   [
+    "I_{a}",
+    "armature current",
+    "A"
+   ],
+   [
+    "R_{a}",
+    "armature resistance",
+    "Ω"
+   ]
+  ],
+  "related": [
+   [
+    "E = k ω",
+    "back EMF"
+   ],
+   [
+    "τ = k I_{a}",
+    "torque"
+   ],
+   [
+    "ω = (V − I_{a}R_{a})/k",
+    "speed"
+   ]
+  ],
+  "example": {
+   "problem": "A 24 V DC motor with R_{a} = 1.5 Ω draws 2 A. Find the back EMF.",
+   "steps": [
+    "E = V − I_{a}R_{a} = 24 V − 2 A × 1.5 Ω",
+    "= 21 V"
+   ],
+   "answer": "E = 21 V"
+  },
+  "try": "24 V - 2 A * 1.5 Ω"
+ },
+ "E = k ω": {
+  "title": "Back EMF of a DC motor",
+  "about": "A spinning armature cuts the field and generates a voltage proportional to speed, opposing the supply. This is what limits a motor's speed and current. With SI units, the same constant k is the torque per amp.",
+  "assumptions": [
+   "Constant field (permanent magnet or fixed field current)",
+   "k in V·s/rad equals k in N·m/A"
+  ],
+  "vars": [
+   [
+    "E",
+    "back EMF",
+    "V"
+   ],
+   [
+    "k",
+    "motor (back-EMF) constant",
+    "V·s/rad"
+   ],
+   [
+    "ω",
+    "angular speed",
+    "rad/s"
+   ]
+  ],
+  "related": [
+   [
+    "τ = k I_{a}",
+    "torque, same k"
+   ],
+   [
+    "V = E + I_{a} R_{a}",
+    "armature equation"
+   ],
+   [
+    "ω = 2πn/60",
+    "rpm to rad/s"
+   ]
+  ],
+  "example": {
+   "problem": "A motor has k = 0.05 V·s/rad. Find its back EMF at 3000 rpm.",
+   "steps": [
+    "ω = 3000 × 2π/60 = 314.2 rad/s",
+    "E = 0.05 × 314.2 = 15.7 V"
+   ],
+   "answer": "E ≈ 15.7 V"
+  },
+  "try": "0.05 * 3000 * 2 pi / 60"
+ },
+ "τ = k I_{a}": {
+  "title": "DC motor torque",
+  "about": "A DC motor's torque is proportional to its armature current. The constant is the same k as in the back EMF when SI units are used, since power in equals mechanical power out: EI_{a} = τω.",
+  "assumptions": [
+   "Constant field",
+   "Ignores friction and armature reaction; the useful shaft torque is less by the friction torque"
+  ],
+  "vars": [
+   [
+    "τ",
+    "electromagnetic torque",
+    "N·m"
+   ],
+   [
+    "k",
+    "torque constant",
+    "N·m/A"
+   ],
+   [
+    "I_{a}",
+    "armature current",
+    "A"
+   ]
+  ],
+  "related": [
+   [
+    "E = k ω",
+    "back EMF, same k"
+   ],
+   [
+    "P = τ ω",
+    "mechanical power"
+   ],
+   [
+    "τ_{stall} = kV/R_{a}",
+    "stall torque"
+   ]
+  ],
+  "example": {
+   "problem": "A motor with k = 0.05 N·m/A draws 4 A. Find its torque.",
+   "steps": [
+    "τ = 0.05 N·m/A × 4 A",
+    "= 0.2 N·m"
+   ],
+   "answer": "τ = 0.2 N·m"
+  },
+  "try": "0.05 N m/A * 4 A to N m"
+ },
+ "P = τ ω": {
+  "title": "Mechanical power of a rotating shaft",
+  "about": "Power delivered by a shaft is its torque times its angular speed, with ω in radians per second. Speed in rpm must be converted first.",
+  "assumptions": [
+   "ω in rad/s (multiply rpm by 2π/60)",
+   "Instantaneous; with varying torque use averages carefully"
+  ],
+  "vars": [
+   [
+    "P",
+    "mechanical power",
+    "W"
+   ],
+   [
+    "τ",
+    "torque",
+    "N·m"
+   ],
+   [
+    "ω",
+    "angular speed",
+    "rad/s"
+   ]
+  ],
+  "related": [
+   [
+    "ω = 2πn/60",
+    "from rpm"
+   ],
+   [
+    "η = P_{out}/P_{in}",
+    "efficiency"
+   ],
+   [
+    "P = Fv",
+    "the linear counterpart"
+   ]
+  ],
+  "example": {
+   "problem": "A motor delivers 0.2 N·m at 3000 rpm. Find its output power.",
+   "steps": [
+    "ω = 3000 × 2π/60 = 314.2 rad/s",
+    "P = 0.2 × 314.2 = 62.8 W"
+   ],
+   "answer": "P ≈ 62.8 W"
+  },
+  "try": "0.2 N m * 3000 rpm to W"
+ },
+ "n_{s} = 120f/p": {
+  "title": "Synchronous speed of an AC machine",
+  "about": "The magnetic field in an AC motor's stator rotates at a speed set by the supply frequency and the number of poles. A synchronous motor turns exactly at it; an induction motor runs a little slower.",
+  "assumptions": [
+   "p is the number of poles (not pole pairs)",
+   "n_{s} in rpm, f in Hz"
+  ],
+  "vars": [
+   [
+    "n_{s}",
+    "synchronous speed",
+    "rpm"
+   ],
+   [
+    "f",
+    "supply frequency",
+    "Hz"
+   ],
+   [
+    "p",
+    "number of poles",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "s = (n_{s} − n)/n_{s}",
+    "slip of an induction motor"
+   ],
+   [
+    "ω_{s} = 4πf/p",
+    "the same in rad/s"
+   ]
+  ],
+  "example": {
+   "problem": "Find the synchronous speed of a 4-pole motor on 60 Hz.",
+   "steps": [
+    "n_{s} = 120 × 60/4",
+    "= 1800 rpm"
+   ],
+   "answer": "n_{s} = 1800 rpm"
+  },
+  "try": "120*60/4"
+ },
+ "s = (n_{s} − n)/n_{s}": {
+  "title": "Slip of an induction motor",
+  "about": "An induction motor's rotor must turn slower than the rotating field for current to be induced in it. Slip is that shortfall as a fraction of synchronous speed: 0 at no load, typically 2–5 % at full load, 1 at standstill.",
+  "assumptions": [
+   "Speeds in the same units",
+   "The rotor current's frequency is s f"
+  ],
+  "vars": [
+   [
+    "s",
+    "slip",
+    ""
+   ],
+   [
+    "n_{s}",
+    "synchronous speed",
+    "rpm"
+   ],
+   [
+    "n",
+    "rotor speed",
+    "rpm"
+   ]
+  ],
+  "related": [
+   [
+    "n_{s} = 120f/p",
+    "synchronous speed"
+   ],
+   [
+    "n = n_{s}(1 − s)",
+    "rotor speed"
+   ],
+   [
+    "P_{rotor loss} = s P_{gap}",
+    "rotor copper loss"
+   ]
+  ],
+  "example": {
+   "problem": "A 4-pole, 60 Hz induction motor runs at 1750 rpm. Find its slip.",
+   "steps": [
+    "n_{s} = 1800 rpm",
+    "s = (1800 − 1750)/1800 = 0.0278",
+    "= 2.78 %"
+   ],
+   "answer": "s ≈ 0.0278 (2.78 %)"
+  },
+  "try": "(1800 - 1750)/1800"
+ },
+ "η = P_{out}/P_{in}": {
+  "title": "Efficiency",
+  "about": "The fraction of input power that comes out as useful output. The rest is lost as heat in resistance, friction, core and switching losses.",
+  "assumptions": [
+   "Both powers in the same units, measured at the same operating point",
+   "0 ≤ η ≤ 1 for a passive device"
+  ],
+  "vars": [
+   [
+    "η",
+    "efficiency",
+    ""
+   ],
+   [
+    "P_{out}",
+    "useful output power",
+    "W"
+   ],
+   [
+    "P_{in}",
+    "input power",
+    "W"
+   ]
+  ],
+  "related": [
+   [
+    "P_{loss} = P_{in} − P_{out}",
+    "losses"
+   ],
+   [
+    "η = η_{1} η_{2} …",
+    "stages in cascade"
+   ]
+  ],
+  "example": {
+   "problem": "A motor draws 4 A from 24 V and delivers 80 W of shaft power. Find its efficiency.",
+   "steps": [
+    "P_{in} = 24 V × 4 A = 96 W",
+    "η = 80/96 = 0.833 = 83.3 %"
+   ],
+   "answer": "η ≈ 0.833 (83.3 %)"
+  },
+  "try": "80 W / (24 V * 4 A)"
+ },
+ "V_{out} = D V_{in}": {
+  "title": "Buck converter (step-down)",
+  "about": "A switch chops the input at duty cycle D, and an inductor and capacitor average it, so the output is the input scaled by D. Far more efficient than a linear regulator because the switch is either fully on or fully off.",
+  "assumptions": [
+   "Ideal switch, diode and inductor; steady state",
+   "Continuous conduction mode: the inductor current never falls to zero (at light loads it does and the output rises above DV_{in})",
+   "D is the fraction of each period the switch is on, 0 to 1"
+  ],
+  "vars": [
+   [
+    "V_{out}",
+    "output voltage",
+    "V"
+   ],
+   [
+    "D",
+    "duty cycle",
+    ""
+   ],
+   [
+    "V_{in}",
+    "input voltage",
+    "V"
+   ]
+  ],
+  "related": [
+   [
+    "ΔI_{L} = (V_{in} − V_{out}) D/(L f_{s})",
+    "inductor ripple current"
+   ],
+   [
+    "V_{out} = V_{in}/(1 − D)",
+    "boost"
+   ],
+   [
+    "I_{in} = D I_{out}",
+    "input current, lossless"
+   ]
+  ],
+  "example": {
+   "problem": "A buck converter steps 12 V down with a duty cycle of 0.275. Find the output.",
+   "steps": [
+    "V_{out} = 0.275 × 12 V",
+    "= 3.3 V"
+   ],
+   "answer": "V_{out} = 3.3 V"
+  },
+  "try": "0.275 * 12 V"
+ },
+ "V_{out} = V_{in}/(1 − D)": {
+  "title": "Boost converter (step-up)",
+  "about": "The inductor charges from the input while the switch is on and, when it opens, adds its voltage to the input to push current to the output. The output is always at least the input.",
+  "assumptions": [
+   "Ideal components, steady state, continuous conduction",
+   "Real boosts top out around 4–5× because the switch and inductor resistance make the gain fall as D → 1"
+  ],
+  "vars": [
+   [
+    "V_{out}",
+    "output voltage",
+    "V"
+   ],
+   [
+    "V_{in}",
+    "input voltage",
+    "V"
+   ],
+   [
+    "D",
+    "duty cycle",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "D = 1 − V_{in}/V_{out}",
+    "duty cycle for a target"
+   ],
+   [
+    "I_{in} = I_{out}/(1 − D)",
+    "input current, lossless"
+   ],
+   [
+    "V_{out} = D V_{in}",
+    "buck"
+   ]
+  ],
+  "example": {
+   "problem": "A boost converter runs from 5 V at D = 0.6. Find the output.",
+   "steps": [
+    "V_{out} = 5 V/(1 − 0.6) = 5 V/0.4",
+    "= 12.5 V"
+   ],
+   "answer": "V_{out} = 12.5 V"
+  },
+  "try": "5 V / (1 - 0.6)"
+ },
+ "V_{out} = −D V_{in}/(1 − D)": {
+  "title": "Buck-boost converter (inverting)",
+  "about": "Stores energy in the inductor while the switch is on and dumps it into the output while it is off, giving an output of opposite polarity that can be smaller (D < 0.5) or larger (D > 0.5) than the input.",
+  "assumptions": [
+   "Ideal components, steady state, continuous conduction",
+   "The output is negative with respect to the input's common terminal"
+  ],
+  "vars": [
+   [
+    "V_{out}",
+    "output voltage",
+    "V"
+   ],
+   [
+    "D",
+    "duty cycle",
+    ""
+   ],
+   [
+    "V_{in}",
+    "input voltage",
+    "V"
+   ]
+  ],
+  "related": [
+   [
+    "V_{out} = D V_{in}",
+    "buck"
+   ],
+   [
+    "V_{out} = V_{in}/(1 − D)",
+    "boost"
+   ],
+   [
+    "|V_{out}|/V_{in} = D/(1 − D)",
+    "magnitude"
+   ]
+  ],
+  "example": {
+   "problem": "A buck-boost converter runs from 12 V at D = 0.6. Find the output.",
+   "steps": [
+    "V_{out} = −0.6 × 12 V/(1 − 0.6) = −7.2 V/0.4",
+    "= −18 V"
+   ],
+   "answer": "V_{out} = −18 V"
+  },
+  "try": "-0.6 * 12 V / (1 - 0.6)"
+ },
+ "T = G/(1 + GH)": {
+  "title": "Closed-loop transfer function",
+  "about": "A forward path G with negative feedback H gives an overall transfer function T. When the loop gain GH is large, T ≈ 1/H: the result depends on the feedback, not on the less precise forward gain.",
+  "assumptions": [
+   "Negative feedback (a positive feedback loop has 1 − GH)",
+   "Linear, time-invariant blocks"
+  ],
+  "vars": [
+   [
+    "T",
+    "closed-loop transfer function",
+    ""
+   ],
+   [
+    "G",
+    "forward-path transfer function",
+    ""
+   ],
+   [
+    "H",
+    "feedback-path transfer function",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "GH",
+    "loop gain"
+   ],
+   [
+    "1 + GH = 0",
+    "characteristic equation, the closed-loop poles"
+   ],
+   [
+    "T = G/(1 + G)",
+    "unity feedback"
+   ]
+  ],
+  "example": {
+   "problem": "An amplifier with forward gain G = 100 has feedback H = 0.1. Find the closed-loop gain.",
+   "steps": [
+    "T = 100/(1 + 100 × 0.1) = 100/11",
+    "= 9.09 (close to 1/H = 10)"
+   ],
+   "answer": "T ≈ 9.09"
+  },
+  "try": "100/(1 + 100*0.1)"
+ },
+ "1 + GH = 0": {
+  "title": "Characteristic equation of a feedback loop",
+  "about": "The closed-loop poles are the roots of 1 + G(s)H(s) = 0. They decide stability and the transient response: all roots in the left half-plane means stable; complex roots mean an oscillating, decaying response.",
+  "assumptions": [
+   "Linear, time-invariant system with negative feedback",
+   "Clear the fractions first to get a polynomial in s"
+  ],
+  "vars": [
+   [
+    "G",
+    "forward-path transfer function, G(s)",
+    ""
+   ],
+   [
+    "H",
+    "feedback-path transfer function, H(s)",
+    ""
+   ],
+   [
+    "s",
+    "Laplace variable",
+    "1/s"
+   ]
+  ],
+  "related": [
+   [
+    "T = G/(1 + GH)",
+    "closed loop"
+   ],
+   [
+    "s = −ζω_{n} ± jω_{n}√(1 − ζ^{2})",
+    "second-order poles"
+   ],
+   [
+    "s^{2} + 2ζω_{n}s + ω_{n}^{2} = 0",
+    "standard second-order form"
+   ]
+  ],
+  "example": {
+   "problem": "A unity-feedback loop has G(s) = 5/(s(s + 2)). Find the closed-loop poles.",
+   "steps": [
+    "1 + 5/(s(s + 2)) = 0 → s^{2} + 2s + 5 = 0",
+    "s = (−2 ± √(4 − 20))/2 = −1 ± j2",
+    "Both in the left half-plane: stable, oscillating at 2 rad/s while decaying"
+   ],
+   "answer": "s = −1 ± j2"
+  }
+ },
+ "e_{ss} = 1/(1 + K_{p})": {
+  "title": "Steady-state error to a step, type 0",
+  "about": "A type 0 loop (no integrator in G) following a unit step settles short of it by this much. Raising the gain shrinks the error but never removes it; an integrator does.",
+  "assumptions": [
+   "Unity feedback, unit step input",
+   "Type 0 open loop (no pole at s = 0)",
+   "The closed loop must be stable or there is no steady state"
+  ],
+  "vars": [
+   [
+    "e_{ss}",
+    "steady-state error, as a fraction of the step",
+    ""
+   ],
+   [
+    "K_{p}",
+    "position (static) error constant",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "K_{p} = lim_{s→0} G(s)",
+    "position constant"
+   ],
+   [
+    "e_{ss} = 1/K_{v}",
+    "ramp input, type 1"
+   ],
+   [
+    "e_{ss} = lim_{s→0} sE(s)",
+    "final value theorem"
+   ]
+  ],
+  "example": {
+   "problem": "A type 0 unity-feedback loop has K_{p} = 9. Find the steady-state error to a unit step.",
+   "steps": [
+    "e_{ss} = 1/(1 + 9)",
+    "= 0.1 (10 %)"
+   ],
+   "answer": "e_{ss} = 0.1 (10 %)"
+  },
+  "try": "1/(1 + 9)"
+ },
+ "K_{p} = lim_{s→0} G(s)": {
+  "title": "Position (static) error constant",
+  "about": "The open-loop DC gain: G(s) with s set to zero. It sets the steady-state error to a step. It is infinite when G has an integrator (type 1 or higher), giving zero step error.",
+  "assumptions": [
+   "Unity feedback (with other H, form the equivalent unity-feedback G first)"
+  ],
+  "vars": [
+   [
+    "K_{p}",
+    "position error constant",
+    ""
+   ],
+   [
+    "G(s)",
+    "open-loop transfer function",
+    ""
+   ],
+   [
+    "s",
+    "Laplace variable",
+    "1/s"
+   ]
+  ],
+  "related": [
+   [
+    "e_{ss} = 1/(1 + K_{p})",
+    "step error"
+   ],
+   [
+    "K_{v} = lim_{s→0} sG(s)",
+    "velocity constant"
+   ],
+   [
+    "K_{a} = lim_{s→0} s^{2}G(s)",
+    "acceleration constant"
+   ]
+  ],
+  "example": {
+   "problem": "Find K_{p} and the step error for G(s) = 20/((s + 1)(s + 4)).",
+   "steps": [
+    "K_{p} = 20/((0 + 1)(0 + 4)) = 5",
+    "e_{ss} = 1/(1 + 5) = 0.167"
+   ],
+   "answer": "K_{p} = 5 (e_{ss} ≈ 0.167)"
+  },
+  "try": "20/((0 + 1)(0 + 4))"
+ },
+ "u = K_{p} e + K_{i} ∫ e dt + K_{d} de/dt": {
+  "title": "PID controller in the time domain",
+  "about": "The controller output adds three actions on the error e: proportional (reacts to the present error), integral (removes steady error by accumulating past error) and derivative (damps by reacting to the error's trend).",
+  "assumptions": [
+   "Continuous-time ideal form; digital controllers approximate the integral and derivative",
+   "Real controllers filter the derivative (it amplifies noise) and limit the integral when the output saturates (anti-windup)"
+  ],
+  "vars": [
+   [
+    "u",
+    "controller output",
+    ""
+   ],
+   [
+    "e",
+    "error, setpoint minus measurement",
+    ""
+   ],
+   [
+    "K_{p}",
+    "proportional gain",
+    ""
+   ],
+   [
+    "K_{i}",
+    "integral gain",
+    "1/s"
+   ],
+   [
+    "K_{d}",
+    "derivative gain",
+    "s"
+   ],
+   [
+    "t",
+    "time",
+    "s"
+   ]
+  ],
+  "related": [
+   [
+    "C(s) = K_{p} + K_{i}/s + K_{d} s",
+    "the same in the Laplace domain"
+   ],
+   [
+    "K_{i} = K_{p}/T_{i}, K_{d} = K_{p}T_{d}",
+    "standard (ISA) form"
+   ]
+  ],
+  "example": {
+   "problem": "A PID controller has K_{p} = 2, K_{i} = 0.5 s^{−1}, K_{d} = 0.1 s. Right now e = 3, ∫e dt = 4 s, and de/dt = −1 s^{−1}. Find u.",
+   "steps": [
+    "P: 2 × 3 = 6",
+    "I: 0.5 × 4 = 2",
+    "D: 0.1 × (−1) = −0.1",
+    "u = 6 + 2 − 0.1 = 7.9"
+   ],
+   "answer": "u = 7.9"
+  },
+  "try": "2*3 + 0.5*4 + 0.1*(-1)"
+ },
+ "C(s) = K_{p} + K_{i}/s + K_{d} s": {
+  "title": "PID controller transfer function",
+  "about": "The PID controller in the Laplace domain. The integral term is a pole at the origin, which makes the loop one type higher; the derivative term adds a zero that brings phase lead. Put s = jω to get its frequency response.",
+  "assumptions": [
+   "Ideal form; a real derivative has a filter pole, K_{d}s/(τs + 1)"
+  ],
+  "vars": [
+   [
+    "C(s)",
+    "controller transfer function",
+    ""
+   ],
+   [
+    "K_{p}",
+    "proportional gain",
+    ""
+   ],
+   [
+    "K_{i}",
+    "integral gain",
+    "1/s"
+   ],
+   [
+    "K_{d}",
+    "derivative gain",
+    "s"
+   ],
+   [
+    "s",
+    "Laplace variable",
+    "1/s"
+   ]
+  ],
+  "related": [
+   [
+    "C(s) = (K_{d}s^{2} + K_{p}s + K_{i})/s",
+    "over a common denominator"
+   ],
+   [
+    "u = K_{p} e + K_{i} ∫ e dt + K_{d} de/dt",
+    "time domain"
+   ]
+  ],
+  "example": {
+   "problem": "With K_{p} = 2, K_{i} = 0.5 and K_{d} = 0.1, find C(jω) at ω = 2 rad/s.",
+   "steps": [
+    "K_{i}/(j2) = 0.5/(j2) = −j0.25",
+    "K_{d}(j2) = j0.2",
+    "C(j2) = 2 − j0.25 + j0.2 = 2 − j0.05"
+   ],
+   "answer": "C(j2) = 2 − j0.05"
+  },
+  "try": "2 + 0.5/(2i) + 0.1*2i"
+ }
+}

@@ -1,0 +1,3567 @@
+{
+  "d/dx x^{n} = nx^{n−1}": {
+    "title": "Power rule",
+    "about": "To differentiate a power of x, bring the exponent down in front and lower it by one. It is the most-used rule in calculus and, with the sum rule, differentiates any polynomial term by term.",
+    "assumptions": [
+      "n is any real constant (integer, fraction or negative), not a function of x",
+      "For non-integer n, x > 0 so that x^{n} is defined (x ≠ 0 when n < 1)",
+      "n = 0 gives d/dx 1 = 0: constants have zero slope"
+    ],
+    "vars": [
+      [
+        "x",
+        "the variable you differentiate with respect to",
+        ""
+      ],
+      [
+        "n",
+        "the constant exponent",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "d/dx [c f(x)] = c f′(x)",
+        "constant multiple"
+      ],
+      [
+        "d/dx [f + g] = f′ + g′",
+        "sum rule"
+      ],
+      [
+        "d/dx √x = 1/(2√x)",
+        "n = 1/2"
+      ]
+    ],
+    "example": {
+      "problem": "Find the slope of y = x^{3} at x = 2.",
+      "steps": [
+        "dy/dx = 3x^{2}",
+        "At x = 2: 3 × 2^{2} = 12"
+      ],
+      "answer": "slope = 12"
+    },
+    "try": "d/dx x^3 at x=2"
+  },
+  "d/dx e^{x} = e^{x}": {
+    "title": "Derivative of e^{x}",
+    "about": "The natural exponential is its own derivative: the slope of e^{x} at any point equals its height. That is what makes e the natural base and why e^{x} solves y′ = y.",
+    "assumptions": [
+      "Holds for every real x",
+      "With an inner function use the chain rule: d/dx e^{kx} = k e^{kx}"
+    ],
+    "vars": [
+      [
+        "x",
+        "the variable you differentiate with respect to",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "d/dx e^{u} = e^{u} u′",
+        "chain rule"
+      ],
+      [
+        "d/dx b^{x} = b^{x} ln b",
+        "any base"
+      ]
+    ],
+    "example": {
+      "problem": "A quantity grows as N(t) = 100 e^{0.05t}. How fast is it growing at t = 10?",
+      "steps": [
+        "N′(t) = 100 × 0.05 e^{0.05t} = 5 e^{0.05t}",
+        "At t = 10: 5 e^{0.5} = 5 × 1.6487"
+      ],
+      "answer": "N′(10) ≈ 8.244 per unit time"
+    },
+    "try": "5 e^0.5"
+  },
+  "d/dx b^{x} = b^{x} ln b": {
+    "title": "Derivative of an exponential with base b",
+    "about": "Write b^{x} = e^{x ln b} and use the chain rule: the derivative is the function itself times ln b. Bases above e grow faster than their own value; bases below e grow slower.",
+    "assumptions": [
+      "b > 0 and b ≠ 1, constant",
+      "Holds for every real x",
+      "For 0 < b < 1, ln b < 0 and the function decreases"
+    ],
+    "vars": [
+      [
+        "x",
+        "the variable you differentiate with respect to",
+        ""
+      ],
+      [
+        "b",
+        "the constant base",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "d/dx e^{x} = e^{x}",
+        "b = e, ln e = 1"
+      ],
+      [
+        "∫ b^{x} dx = b^{x}/ln b + C",
+        "the reverse"
+      ]
+    ],
+    "example": {
+      "problem": "Find the slope of y = 2^{x} at x = 3.",
+      "steps": [
+        "dy/dx = 2^{x} ln 2",
+        "At x = 3: 8 × 0.69315"
+      ],
+      "answer": "slope ≈ 5.545"
+    },
+    "try": "d/dx 2^x at x=3"
+  },
+  "d/dx ln x = 1/x": {
+    "title": "Derivative of the natural log",
+    "about": "The slope of ln x is the reciprocal of x: steep near zero and flattening as x grows. It is why logarithmic differentiation works and why ∫ 1/x dx is a log.",
+    "assumptions": [
+      "x > 0, where ln x is defined",
+      "For x < 0, d/dx ln|x| = 1/x as well",
+      "With an inner function: d/dx ln u = u′/u"
+    ],
+    "vars": [
+      [
+        "x",
+        "the positive argument of the log",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "d/dx log_{b}x = 1/(x ln b)",
+        "any base"
+      ],
+      [
+        "∫ 1/x dx = ln|x| + C",
+        "the reverse"
+      ]
+    ],
+    "example": {
+      "problem": "Find the slope of y = ln x at x = 4.",
+      "steps": [
+        "dy/dx = 1/x",
+        "At x = 4: 1/4"
+      ],
+      "answer": "slope = 0.25"
+    },
+    "try": "d/dx ln(x) at x=4"
+  },
+  "d/dx log_{b}x = 1/(x ln b)": {
+    "title": "Derivative of a log with base b",
+    "about": "Change the base to natural logs, log_{b}x = ln x/ln b, and differentiate: the slope is 1/x scaled by 1/ln b. For base 10 the factor is 1/ln 10 ≈ 0.4343.",
+    "assumptions": [
+      "x > 0",
+      "b > 0 and b ≠ 1, constant"
+    ],
+    "vars": [
+      [
+        "x",
+        "the positive argument of the log",
+        ""
+      ],
+      [
+        "b",
+        "the constant base",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "log_{b}(x) = ln(x)/ln(b)",
+        "change of base"
+      ],
+      [
+        "d/dx ln x = 1/x",
+        "b = e"
+      ]
+    ],
+    "example": {
+      "problem": "Find the slope of y = log_{10}x at x = 5.",
+      "steps": [
+        "dy/dx = 1/(x ln 10)",
+        "At x = 5: 1/(5 × 2.302585)"
+      ],
+      "answer": "slope ≈ 0.08686"
+    },
+    "try": "1/(5 ln(10))"
+  },
+  "d/dx sin x = cos x": {
+    "title": "Derivative of sine",
+    "about": "The slope of the sine curve at x is cos x: steepest (slope ±1) where sine crosses zero, flat at its peaks and troughs. Used for velocity in simple harmonic motion and anywhere oscillations appear.",
+    "assumptions": [
+      "x is in radians; in degrees an extra factor π/180 appears",
+      "Holds for every real x",
+      "With an inner function: d/dx sin(kx) = k cos(kx)"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle in radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "d/dx cos x = −sin x",
+        "the companion"
+      ],
+      [
+        "∫ cos x dx = sin x + C",
+        "the reverse"
+      ]
+    ],
+    "example": {
+      "problem": "A mass moves as x(t) = 0.2 sin(3t) m. Find its velocity at t = 0.5 s.",
+      "steps": [
+        "v = dx/dt = 0.2 × 3 cos(3t) = 0.6 cos(3t)",
+        "At t = 0.5: 0.6 cos(1.5 rad) = 0.6 × 0.070737"
+      ],
+      "answer": "v ≈ 0.04244 m/s"
+    },
+    "try": "0.6 cos(1.5 rad)"
+  },
+  "d/dx cos x = −sin x": {
+    "title": "Derivative of cosine",
+    "about": "The slope of the cosine curve at x is −sin x: cosine falls through the first half-turn, where sine is positive. Differentiating cos twice gives −cos, the signature of simple harmonic motion.",
+    "assumptions": [
+      "x is in radians",
+      "Holds for every real x",
+      "Chain rule: d/dx cos(kx) = −k sin(kx)"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle in radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "d/dx sin x = cos x",
+        "the companion"
+      ],
+      [
+        "∫ sin x dx = −cos x + C",
+        "the reverse"
+      ]
+    ],
+    "example": {
+      "problem": "Find the slope of y = cos x at x = π/6.",
+      "steps": [
+        "dy/dx = −sin x",
+        "At x = π/6: −sin(π/6) = −1/2"
+      ],
+      "answer": "slope = −0.5"
+    },
+    "try": "d/dx cos(x rad) at x=pi/6"
+  },
+  "d/dx tan x = sec^{2}x": {
+    "title": "Derivative of tangent",
+    "about": "Differentiate sin x/cos x with the quotient rule: (cos^{2}x + sin^{2}x)/cos^{2}x = 1/cos^{2}x. The tangent is always increasing between its asymptotes, and steeper the closer it gets to them.",
+    "assumptions": [
+      "x in radians",
+      "cos x ≠ 0 (x ≠ π/2 + kπ)"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle in radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "1 + tan^{2}x = sec^{2}x",
+        "an equal form"
+      ],
+      [
+        "∫ sec^{2}x dx = tan x + C",
+        "the reverse"
+      ]
+    ],
+    "example": {
+      "problem": "Find the slope of y = tan x at x = π/4.",
+      "steps": [
+        "dy/dx = sec^{2}x = 1/cos^{2}x",
+        "At x = π/4: 1/(√2/2)^{2} = 1/(1/2)"
+      ],
+      "answer": "slope = 2"
+    },
+    "try": "d/dx tan(x rad) at x=pi/4"
+  },
+  "d/dx cot x = −csc^{2}x": {
+    "title": "Derivative of cotangent",
+    "about": "Differentiate cos x/sin x with the quotient rule: (−sin^{2}x − cos^{2}x)/sin^{2}x = −1/sin^{2}x. The cotangent is always decreasing between its asymptotes.",
+    "assumptions": [
+      "x in radians",
+      "sin x ≠ 0 (x ≠ kπ)"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle in radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "1 + cot^{2}x = csc^{2}x",
+        "an equal form"
+      ],
+      [
+        "∫ csc^{2}x dx = −cot x + C",
+        "the reverse"
+      ]
+    ],
+    "example": {
+      "problem": "Find the slope of y = cot x at x = π/6.",
+      "steps": [
+        "dy/dx = −1/sin^{2}x",
+        "At x = π/6: −1/(1/2)^{2}"
+      ],
+      "answer": "slope = −4"
+    },
+    "try": "d/dx cot(x rad) at x=pi/6"
+  },
+  "d/dx sec x = sec x tan x": {
+    "title": "Derivative of secant",
+    "about": "Write sec x = (cos x)^{−1} and use the chain rule: −(cos x)^{−2}(−sin x) = sin x/cos^{2}x = sec x tan x.",
+    "assumptions": [
+      "x in radians",
+      "cos x ≠ 0 (x ≠ π/2 + kπ)"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle in radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∫ sec x tan x dx = sec x + C",
+        "the reverse"
+      ],
+      [
+        "d/dx csc x = −csc x cot x",
+        "the co-function"
+      ]
+    ],
+    "example": {
+      "problem": "Find the slope of y = sec x at x = π/3.",
+      "steps": [
+        "dy/dx = sec x tan x",
+        "At x = π/3: sec = 2, tan = √3, so 2√3"
+      ],
+      "answer": "slope = 2√3 ≈ 3.464"
+    },
+    "try": "d/dx sec(x rad) at x=pi/3"
+  },
+  "d/dx csc x = −csc x cot x": {
+    "title": "Derivative of cosecant",
+    "about": "Write csc x = (sin x)^{−1} and use the chain rule: −(sin x)^{−2} cos x = −csc x cot x.",
+    "assumptions": [
+      "x in radians",
+      "sin x ≠ 0 (x ≠ kπ)"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle in radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∫ csc x cot x dx = −csc x + C",
+        "the reverse"
+      ],
+      [
+        "d/dx sec x = sec x tan x",
+        "the co-function"
+      ]
+    ],
+    "example": {
+      "problem": "Find the slope of y = csc x at x = π/6.",
+      "steps": [
+        "dy/dx = −csc x cot x",
+        "At x = π/6: csc = 2, cot = √3, so −2√3"
+      ],
+      "answer": "slope = −2√3 ≈ −3.464"
+    },
+    "try": "d/dx csc(x rad) at x=pi/6"
+  },
+  "d/dx arcsin x = 1/√(1 − x^{2})": {
+    "title": "Derivative of arcsine",
+    "about": "If y = arcsin x then sin y = x; differentiate implicitly, cos y · y′ = 1, and cos y = √(1 − x^{2}). It appears whenever you differentiate an angle found from a ratio.",
+    "assumptions": [
+      "−1 < x < 1 (the slope is infinite at x = ±1)",
+      "arcsin returns angles in [−π/2, π/2], in radians"
+    ],
+    "vars": [
+      [
+        "x",
+        "the sine value, −1 < x < 1",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∫ 1/√(1 − x^{2}) dx = arcsin x + C",
+        "the reverse"
+      ],
+      [
+        "d/dx arccos x = −1/√(1 − x^{2})",
+        "the companion"
+      ]
+    ],
+    "example": {
+      "problem": "Find the slope of y = arcsin x at x = 0.6.",
+      "steps": [
+        "dy/dx = 1/√(1 − 0.36) = 1/√0.64 = 1/0.8"
+      ],
+      "answer": "slope = 1.25"
+    },
+    "try": "1/sqrt(1 - 0.6^2)"
+  },
+  "d/dx arccos x = −1/√(1 − x^{2})": {
+    "title": "Derivative of arccosine",
+    "about": "arccos x = π/2 − arcsin x, so its slope is the negative of arcsine's. arccos is decreasing on its whole domain.",
+    "assumptions": [
+      "−1 < x < 1",
+      "arccos returns angles in [0, π], in radians"
+    ],
+    "vars": [
+      [
+        "x",
+        "the cosine value, −1 < x < 1",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "d/dx arcsin x = 1/√(1 − x^{2})",
+        "the companion"
+      ]
+    ],
+    "example": {
+      "problem": "Find the slope of y = arccos x at x = 0.6.",
+      "steps": [
+        "dy/dx = −1/√(1 − 0.6^{2}) = −1/0.8"
+      ],
+      "answer": "slope = −1.25"
+    },
+    "try": "-1/sqrt(1 - 0.6^2)"
+  },
+  "d/dx arctan x = 1/(1 + x^{2})": {
+    "title": "Derivative of arctangent",
+    "about": "If y = arctan x then tan y = x; differentiate implicitly, sec^{2}y · y′ = 1, and sec^{2}y = 1 + x^{2}. Defined for every x, it is the derivative behind ∫ 1/(1 + x^{2}) dx.",
+    "assumptions": [
+      "Holds for every real x",
+      "arctan returns angles in (−π/2, π/2), in radians"
+    ],
+    "vars": [
+      [
+        "x",
+        "any real number",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∫ 1/(1 + x^{2}) dx = arctan x + C",
+        "the reverse"
+      ],
+      [
+        "tan^{−1} x = x − x^{3}/3 + x^{5}/5 − …",
+        "its series"
+      ]
+    ],
+    "example": {
+      "problem": "Find the slope of y = arctan x at x = 2.",
+      "steps": [
+        "dy/dx = 1/(1 + 2^{2}) = 1/5"
+      ],
+      "answer": "slope = 0.2"
+    },
+    "try": "1/(1 + 2^2)"
+  },
+  "(fg)′ = f′g + fg′": {
+    "title": "Product rule",
+    "about": "The derivative of a product is not the product of derivatives: each factor takes a turn being differentiated while the other is held. Use it whenever two functions of x are multiplied.",
+    "assumptions": [
+      "f and g are both differentiable at the point",
+      "Extends to three factors: (fgh)′ = f′gh + fg′h + fgh′"
+    ],
+    "vars": [
+      [
+        "f, g",
+        "differentiable functions of x",
+        ""
+      ],
+      [
+        "′",
+        "derivative with respect to x",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "(f/g)′ = (f′g − fg′)/g^{2}",
+        "quotient rule"
+      ],
+      [
+        "f(g(x))′ = f′(g(x)) g′(x)",
+        "chain rule"
+      ]
+    ],
+    "example": {
+      "problem": "Differentiate y = x^{2} sin x and evaluate at x = π/2.",
+      "steps": [
+        "f = x^{2}, f′ = 2x; g = sin x, g′ = cos x",
+        "y′ = 2x sin x + x^{2} cos x",
+        "At π/2: 2(π/2)(1) + (π/2)^{2}(0) = π"
+      ],
+      "answer": "y′(π/2) = π ≈ 3.1416"
+    },
+    "try": "d/dx x^2 sin(x rad) at x=pi/2"
+  },
+  "(f/g)′ = (f′g − fg′)/g^{2}": {
+    "title": "Quotient rule",
+    "about": "Differentiates one function divided by another: bottom times derivative of the top, minus top times derivative of the bottom, over the bottom squared. The order in the numerator matters.",
+    "assumptions": [
+      "f and g are differentiable at the point",
+      "g ≠ 0 there"
+    ],
+    "vars": [
+      [
+        "f, g",
+        "differentiable functions of x",
+        ""
+      ],
+      [
+        "′",
+        "derivative with respect to x",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "(fg)′ = f′g + fg′",
+        "product rule (write f/g = f · g^{−1})"
+      ]
+    ],
+    "example": {
+      "problem": "Differentiate y = x/(x^{2} + 1) at x = 2.",
+      "steps": [
+        "f = x, f′ = 1; g = x^{2} + 1, g′ = 2x",
+        "y′ = ((x^{2} + 1) − 2x^{2})/(x^{2} + 1)^{2} = (1 − x^{2})/(x^{2} + 1)^{2}",
+        "At x = 2: (1 − 4)/25"
+      ],
+      "answer": "y′(2) = −0.12"
+    },
+    "try": "d/dx x/(x^2 + 1) at x=2"
+  },
+  "f(g(x))′ = f′(g(x)) g′(x)": {
+    "title": "Chain rule",
+    "about": "For a function inside another, differentiate the outside (leaving the inside alone), then multiply by the derivative of the inside. In Leibniz form, dy/dx = dy/du · du/dx.",
+    "assumptions": [
+      "g is differentiable at x and f is differentiable at g(x)",
+      "Chains of any length multiply: each layer contributes its own derivative"
+    ],
+    "vars": [
+      [
+        "f",
+        "the outer function",
+        ""
+      ],
+      [
+        "g",
+        "the inner function of x",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "dy/dx = (dy/du)(du/dx)",
+        "Leibniz form"
+      ],
+      [
+        "(fg)′ = f′g + fg′",
+        "product rule"
+      ]
+    ],
+    "example": {
+      "problem": "Differentiate y = (3x + 1)^{5} at x = 0.",
+      "steps": [
+        "Outer u^{5} → 5u^{4}; inner 3x + 1 → 3",
+        "y′ = 5(3x + 1)^{4} × 3 = 15(3x + 1)^{4}",
+        "At x = 0: 15 × 1"
+      ],
+      "answer": "y′(0) = 15"
+    },
+    "try": "d/dx (3x + 1)^5 at x=0"
+  },
+  "∫ x^{n} dx = x^{n+1}/(n + 1) + C": {
+    "title": "Power rule for integrals",
+    "about": "Reverse the power rule: raise the exponent by one and divide by the new exponent. Integrates any polynomial term by term.",
+    "assumptions": [
+      "n ≠ −1 (that case gives ln|x|)",
+      "n constant; for non-integer n, x > 0",
+      "Add C for an indefinite integral; drop it between limits"
+    ],
+    "vars": [
+      [
+        "x",
+        "the integration variable",
+        ""
+      ],
+      [
+        "n",
+        "constant exponent, n ≠ −1",
+        ""
+      ],
+      [
+        "C",
+        "constant of integration",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∫ 1/x dx = ln|x| + C",
+        "the n = −1 case"
+      ],
+      [
+        "d/dx x^{n} = nx^{n−1}",
+        "the reverse"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_{0}^{3} x^{2} dx.",
+      "steps": [
+        "Antiderivative x^{3}/3",
+        "3^{3}/3 − 0 = 27/3"
+      ],
+      "answer": "9"
+    },
+    "try": "integral(x^2, x, 0, 3)"
+  },
+  "∫ 1/x dx = ln|x| + C": {
+    "title": "Integral of 1/x",
+    "about": "The one power the power rule misses: x^{−1} integrates to a log. The absolute value lets it work for negative x too.",
+    "assumptions": [
+      "x ≠ 0; a definite integral must not cross x = 0",
+      "On x > 0 alone you can write ln x + C"
+    ],
+    "vars": [
+      [
+        "x",
+        "the integration variable, x ≠ 0",
+        ""
+      ],
+      [
+        "C",
+        "constant of integration",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "d/dx ln x = 1/x",
+        "the reverse"
+      ],
+      [
+        "∫ u′/u dx = ln|u| + C",
+        "with an inner function"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_{1}^{e^{2}} 1/x dx.",
+      "steps": [
+        "ln|x| from 1 to e^{2}",
+        "ln e^{2} − ln 1 = 2 − 0"
+      ],
+      "answer": "2"
+    },
+    "try": "integral(1/x, x, 1, e^2)"
+  },
+  "∫ e^{x} dx = e^{x} + C": {
+    "title": "Integral of e^{x}",
+    "about": "Since e^{x} is its own derivative, it is its own antiderivative too. With a linear inner function, ∫ e^{kx} dx = e^{kx}/k + C.",
+    "assumptions": [
+      "Holds for every real x"
+    ],
+    "vars": [
+      [
+        "x",
+        "the integration variable",
+        ""
+      ],
+      [
+        "C",
+        "constant of integration",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∫ e^{kx} dx = e^{kx}/k + C",
+        "linear inside"
+      ],
+      [
+        "∫ b^{x} dx = b^{x}/ln b + C",
+        "any base"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_{0}^{1} e^{x} dx.",
+      "steps": [
+        "e^{x} from 0 to 1",
+        "e − 1"
+      ],
+      "answer": "≈ 1.718"
+    },
+    "try": "integral(e^x, x, 0, 1)"
+  },
+  "∫ b^{x} dx = b^{x}/ln b + C": {
+    "title": "Integral of an exponential with base b",
+    "about": "Reverse of d/dx b^{x} = b^{x} ln b: divide by ln b.",
+    "assumptions": [
+      "b > 0, b ≠ 1, constant"
+    ],
+    "vars": [
+      [
+        "x",
+        "the integration variable",
+        ""
+      ],
+      [
+        "b",
+        "constant base",
+        ""
+      ],
+      [
+        "C",
+        "constant of integration",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "d/dx b^{x} = b^{x} ln b",
+        "the reverse"
+      ],
+      [
+        "∫ e^{x} dx = e^{x} + C",
+        "b = e"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_{0}^{3} 2^{x} dx.",
+      "steps": [
+        "2^{x}/ln 2 from 0 to 3",
+        "(8 − 1)/ln 2 = 7/0.693147"
+      ],
+      "answer": "≈ 10.099"
+    },
+    "try": "integral(2^x, x, 0, 3)"
+  },
+  "∫ sin x dx = −cos x + C": {
+    "title": "Integral of sine",
+    "about": "Since d/dx cos x = −sin x, the antiderivative of sin x is −cos x. Over a whole period the integral is zero; over a half-period it is 2.",
+    "assumptions": [
+      "x in radians",
+      "With kx inside: ∫ sin kx dx = −cos(kx)/k + C"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle in radians",
+        ""
+      ],
+      [
+        "C",
+        "constant of integration",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∫ cos x dx = sin x + C",
+        "the companion"
+      ],
+      [
+        "d/dx cos x = −sin x",
+        "the reverse"
+      ]
+    ],
+    "example": {
+      "problem": "Find the area under one arch of y = sin x, from 0 to π.",
+      "steps": [
+        "[−cos x] from 0 to π",
+        "−cos π + cos 0 = 1 + 1"
+      ],
+      "answer": "2"
+    },
+    "try": "integral(sin(x rad), x, 0, pi)"
+  },
+  "∫ cos x dx = sin x + C": {
+    "title": "Integral of cosine",
+    "about": "Since d/dx sin x = cos x, the antiderivative of cos x is sin x.",
+    "assumptions": [
+      "x in radians",
+      "With kx inside: ∫ cos kx dx = sin(kx)/k + C"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle in radians",
+        ""
+      ],
+      [
+        "C",
+        "constant of integration",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∫ sin x dx = −cos x + C",
+        "the companion"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_{0}^{π/6} cos x dx.",
+      "steps": [
+        "[sin x] from 0 to π/6",
+        "sin(π/6) − sin 0 = 1/2"
+      ],
+      "answer": "0.5"
+    },
+    "try": "integral(cos(x rad), x, 0, pi/6)"
+  },
+  "∫ sec^{2}x dx = tan x + C": {
+    "title": "Integral of sec²x",
+    "about": "Reverse of d/dx tan x = sec^{2}x. Paired with 1 + tan^{2}x = sec^{2}x it also integrates tan^{2}x = sec^{2}x − 1.",
+    "assumptions": [
+      "x in radians",
+      "The interval must not contain π/2 + kπ"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle in radians",
+        ""
+      ],
+      [
+        "C",
+        "constant of integration",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "d/dx tan x = sec^{2}x",
+        "the reverse"
+      ],
+      [
+        "1 + tan^{2}x = sec^{2}x",
+        "to integrate tan^{2}x"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_{0}^{π/4} sec^{2}x dx.",
+      "steps": [
+        "[tan x] from 0 to π/4",
+        "1 − 0"
+      ],
+      "answer": "1"
+    },
+    "try": "integral(1/cos(x rad)^2, x, 0, pi/4)"
+  },
+  "∫ csc^{2}x dx = −cot x + C": {
+    "title": "Integral of csc²x",
+    "about": "Reverse of d/dx cot x = −csc^{2}x.",
+    "assumptions": [
+      "x in radians",
+      "The interval must not contain kπ"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle in radians",
+        ""
+      ],
+      [
+        "C",
+        "constant of integration",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "d/dx cot x = −csc^{2}x",
+        "the reverse"
+      ],
+      [
+        "1 + cot^{2}x = csc^{2}x",
+        "to integrate cot^{2}x"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_{π/4}^{π/2} csc^{2}x dx.",
+      "steps": [
+        "[−cot x] from π/4 to π/2",
+        "−0 + 1"
+      ],
+      "answer": "1"
+    },
+    "try": "integral(1/sin(x rad)^2, x, pi/4, pi/2)"
+  },
+  "∫ sec x tan x dx = sec x + C": {
+    "title": "Integral of sec x tan x",
+    "about": "Reverse of d/dx sec x = sec x tan x.",
+    "assumptions": [
+      "x in radians",
+      "The interval must not contain π/2 + kπ"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle in radians",
+        ""
+      ],
+      [
+        "C",
+        "constant of integration",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "d/dx sec x = sec x tan x",
+        "the reverse"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_{0}^{π/3} sec x tan x dx.",
+      "steps": [
+        "[sec x] from 0 to π/3",
+        "2 − 1"
+      ],
+      "answer": "1"
+    },
+    "try": "integral(tan(x rad)/cos(x rad), x, 0, pi/3)"
+  },
+  "∫ csc x cot x dx = −csc x + C": {
+    "title": "Integral of csc x cot x",
+    "about": "Reverse of d/dx csc x = −csc x cot x.",
+    "assumptions": [
+      "x in radians",
+      "The interval must not contain kπ"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle in radians",
+        ""
+      ],
+      [
+        "C",
+        "constant of integration",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "d/dx csc x = −csc x cot x",
+        "the reverse"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_{π/6}^{π/2} csc x cot x dx.",
+      "steps": [
+        "[−csc x] from π/6 to π/2",
+        "−1 + 2"
+      ],
+      "answer": "1"
+    },
+    "try": "integral(cos(x rad)/sin(x rad)^2, x, pi/6, pi/2)"
+  },
+  "∫ tan x dx = ln|sec x| + C": {
+    "title": "Integral of tangent",
+    "about": "Write tan x = sin x/cos x and substitute u = cos x: −∫ du/u = −ln|cos x| = ln|sec x|.",
+    "assumptions": [
+      "x in radians",
+      "The interval must not contain π/2 + kπ, where tan blows up"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle in radians",
+        ""
+      ],
+      [
+        "C",
+        "constant of integration",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "−ln|cos x| + C",
+        "an equal form"
+      ],
+      [
+        "∫ cot x dx = ln|sin x| + C",
+        "the companion"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_{0}^{π/3} tan x dx.",
+      "steps": [
+        "[ln|sec x|] from 0 to π/3",
+        "ln 2 − ln 1"
+      ],
+      "answer": "ln 2 ≈ 0.6931"
+    },
+    "try": "integral(tan(x rad), x, 0, pi/3)"
+  },
+  "∫ cot x dx = ln|sin x| + C": {
+    "title": "Integral of cotangent",
+    "about": "Write cot x = cos x/sin x and substitute u = sin x: ∫ du/u = ln|sin x|.",
+    "assumptions": [
+      "x in radians",
+      "The interval must not contain kπ"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle in radians",
+        ""
+      ],
+      [
+        "C",
+        "constant of integration",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∫ tan x dx = ln|sec x| + C",
+        "the companion"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_{π/6}^{π/2} cot x dx.",
+      "steps": [
+        "[ln|sin x|] from π/6 to π/2",
+        "ln 1 − ln(1/2)"
+      ],
+      "answer": "ln 2 ≈ 0.6931"
+    },
+    "try": "integral(cos(x rad)/sin(x rad), x, pi/6, pi/2)"
+  },
+  "∫ sec x dx = ln|sec x + tan x| + C": {
+    "title": "Integral of secant",
+    "about": "Multiply top and bottom by sec x + tan x; the numerator becomes the derivative of the denominator, giving a log. It turns up in Mercator's map projection and in trig-substitution integrals.",
+    "assumptions": [
+      "x in radians",
+      "The interval must not contain π/2 + kπ"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle in radians",
+        ""
+      ],
+      [
+        "C",
+        "constant of integration",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∫ csc x dx = −ln|csc x + cot x| + C",
+        "the companion"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_{0}^{π/4} sec x dx.",
+      "steps": [
+        "[ln|sec x + tan x|] from 0 to π/4",
+        "ln(√2 + 1) − ln(1 + 0)"
+      ],
+      "answer": "≈ 0.8814"
+    },
+    "try": "integral(1/cos(x rad), x, 0, pi/4)"
+  },
+  "∫ csc x dx = −ln|csc x + cot x| + C": {
+    "title": "Integral of cosecant",
+    "about": "Multiply top and bottom by csc x + cot x; the numerator is minus the derivative of the denominator, giving a negative log. An equal form is ln|tan(x/2)|.",
+    "assumptions": [
+      "x in radians",
+      "The interval must not contain kπ"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle in radians",
+        ""
+      ],
+      [
+        "C",
+        "constant of integration",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "ln|csc x − cot x| + C",
+        "an equal form"
+      ],
+      [
+        "∫ sec x dx = ln|sec x + tan x| + C",
+        "the companion"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_{π/2}^{2π/3} csc x dx.",
+      "steps": [
+        "At 2π/3: csc = 2/√3, cot = −1/√3, so −ln(1/√3) = ln √3",
+        "At π/2: −ln(1 + 0) = 0",
+        "ln √3 − 0"
+      ],
+      "answer": "ln √3 ≈ 0.5493"
+    },
+    "try": "integral(1/sin(x rad), x, pi/2, 2pi/3)"
+  },
+  "∫ sin^{2}x dx = x/2 − sin 2x/4 + C": {
+    "title": "Integral of sin²x",
+    "about": "Use the power-reducing identity sin^{2}x = (1 − cos 2x)/2 and integrate each term. Over a whole period the average of sin^{2} is 1/2, which is behind RMS values.",
+    "assumptions": [
+      "x in radians"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle in radians",
+        ""
+      ],
+      [
+        "C",
+        "constant of integration",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}x = (1 − cos 2x)/2",
+        "power reduction"
+      ],
+      [
+        "∫ cos^{2}x dx = x/2 + sin 2x/4 + C",
+        "the companion"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_{0}^{π} sin^{2}x dx.",
+      "steps": [
+        "[x/2 − sin 2x/4] from 0 to π",
+        "π/2 − 0 − 0"
+      ],
+      "answer": "π/2 ≈ 1.5708"
+    },
+    "try": "integral(sin(x rad)^2, x, 0, pi)"
+  },
+  "∫ cos^{2}x dx = x/2 + sin 2x/4 + C": {
+    "title": "Integral of cos²x",
+    "about": "Use cos^{2}x = (1 + cos 2x)/2 and integrate each term.",
+    "assumptions": [
+      "x in radians"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle in radians",
+        ""
+      ],
+      [
+        "C",
+        "constant of integration",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "cos^{2}x = (1 + cos 2x)/2",
+        "power reduction"
+      ],
+      [
+        "∫ sin^{2}x dx = x/2 − sin 2x/4 + C",
+        "the companion"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_{0}^{π/4} cos^{2}x dx.",
+      "steps": [
+        "[x/2 + sin 2x/4] from 0 to π/4",
+        "π/8 + 1/4"
+      ],
+      "answer": "≈ 0.6427"
+    },
+    "try": "integral(cos(x rad)^2, x, 0, pi/4)"
+  },
+  "∫ ln x dx = x ln x − x + C": {
+    "title": "Integral of ln x",
+    "about": "Integrate by parts with u = ln x, dv = dx: x ln x − ∫ x · (1/x) dx = x ln x − x.",
+    "assumptions": [
+      "x > 0"
+    ],
+    "vars": [
+      [
+        "x",
+        "the positive integration variable",
+        ""
+      ],
+      [
+        "C",
+        "constant of integration",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∫ u dv = uv − ∫ v du",
+        "the method"
+      ],
+      [
+        "∫ log_{b}x dx = (x ln x − x)/ln b + C",
+        "any base"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_{1}^{e} ln x dx.",
+      "steps": [
+        "[x ln x − x] from 1 to e",
+        "(e − e) − (0 − 1)"
+      ],
+      "answer": "1"
+    },
+    "try": "integral(ln(x), x, 1, e)"
+  },
+  "∫ log_{b}x dx = (x ln x − x)/ln b + C": {
+    "title": "Integral of a log with base b",
+    "about": "Change base, log_{b}x = ln x/ln b, then use ∫ ln x dx = x ln x − x.",
+    "assumptions": [
+      "x > 0",
+      "b > 0, b ≠ 1"
+    ],
+    "vars": [
+      [
+        "x",
+        "the positive integration variable",
+        ""
+      ],
+      [
+        "b",
+        "constant base",
+        ""
+      ],
+      [
+        "C",
+        "constant of integration",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∫ ln x dx = x ln x − x + C",
+        "b = e"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_{1}^{10} log_{10}x dx.",
+      "steps": [
+        "[(x ln x − x)/ln 10] from 1 to 10",
+        "(10 ln 10 − 10 + 1)/ln 10 = 10 − 9/2.302585"
+      ],
+      "answer": "≈ 6.0913"
+    },
+    "try": "integral(log(x, 10), x, 1, 10)"
+  },
+  "∫ 1/√(1 − x^{2}) dx = arcsin x + C": {
+    "title": "Integral giving arcsine",
+    "about": "Reverse of d/dx arcsin x. The substitution x = sin θ turns the root into cos θ and the integral into θ.",
+    "assumptions": [
+      "−1 < x < 1",
+      "The answer is an angle in radians"
+    ],
+    "vars": [
+      [
+        "x",
+        "integration variable, |x| < 1",
+        ""
+      ],
+      [
+        "C",
+        "constant of integration",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∫ 1/√(a^{2} − x^{2}) dx = arcsin(x/a) + C",
+        "scaled form"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_{0}^{1/2} 1/√(1 − x^{2}) dx.",
+      "steps": [
+        "arcsin(1/2) − arcsin 0",
+        "π/6 − 0"
+      ],
+      "answer": "π/6 ≈ 0.5236"
+    },
+    "try": "integral(1/sqrt(1 - x^2), x, 0, 1/2)"
+  },
+  "∫ 1/(1 + x^{2}) dx = arctan x + C": {
+    "title": "Integral giving arctangent",
+    "about": "Reverse of d/dx arctan x. Over the whole real line the integral is π, a classic improper integral.",
+    "assumptions": [
+      "Holds for every real x",
+      "The answer is an angle in radians"
+    ],
+    "vars": [
+      [
+        "x",
+        "integration variable",
+        ""
+      ],
+      [
+        "C",
+        "constant of integration",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∫ 1/(a^{2} + x^{2}) dx = (1/a) arctan(x/a) + C",
+        "scaled form"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_{0}^{1} 1/(1 + x^{2}) dx.",
+      "steps": [
+        "arctan 1 − arctan 0",
+        "π/4"
+      ],
+      "answer": "π/4 ≈ 0.7854"
+    },
+    "try": "integral(1/(1 + x^2), x, 0, 1)"
+  },
+  "∫ 1/√(a^{2} − x^{2}) dx = arcsin(x/a) + C": {
+    "title": "Integral of 1/√(a² − x²)",
+    "about": "Substitute x = a sin θ: dx = a cos θ dθ and the root is a cos θ, leaving ∫ dθ.",
+    "assumptions": [
+      "a > 0",
+      "−a < x < a"
+    ],
+    "vars": [
+      [
+        "x",
+        "integration variable, |x| < a",
+        ""
+      ],
+      [
+        "a",
+        "positive constant",
+        ""
+      ],
+      [
+        "C",
+        "constant of integration",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∫ 1/√(1 − x^{2}) dx = arcsin x + C",
+        "a = 1"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_{0}^{3} 1/√(36 − x^{2}) dx.",
+      "steps": [
+        "a = 6",
+        "arcsin(3/6) − arcsin 0 = π/6"
+      ],
+      "answer": "π/6 ≈ 0.5236"
+    },
+    "try": "integral(1/sqrt(36 - x^2), x, 0, 3)"
+  },
+  "∫ 1/(a^{2} + x^{2}) dx = (1/a) arctan(x/a) + C": {
+    "title": "Integral of 1/(a² + x²)",
+    "about": "Substitute x = a tan θ: dx = a sec^{2}θ dθ and a^{2} + x^{2} = a^{2} sec^{2}θ, leaving (1/a)∫ dθ. Completing the square brings many quadratics to this form.",
+    "assumptions": [
+      "a ≠ 0 (usually a > 0)",
+      "Holds for every real x"
+    ],
+    "vars": [
+      [
+        "x",
+        "integration variable",
+        ""
+      ],
+      [
+        "a",
+        "nonzero constant",
+        ""
+      ],
+      [
+        "C",
+        "constant of integration",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∫ 1/(1 + x^{2}) dx = arctan x + C",
+        "a = 1"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_{0}^{2} 1/(4 + x^{2}) dx.",
+      "steps": [
+        "a = 2",
+        "(1/2)(arctan 1 − arctan 0) = (1/2)(π/4)"
+      ],
+      "answer": "π/8 ≈ 0.3927"
+    },
+    "try": "integral(1/(4 + x^2), x, 0, 2)"
+  },
+  "∫ u dv = uv − ∫ v du": {
+    "title": "Integration by parts",
+    "about": "The product rule run backwards. Pick u to get simpler when differentiated (logs, powers of x) and dv to be easy to integrate (exponentials, trig). The LIATE order (Log, Inverse trig, Algebraic, Trig, Exponential) suggests which factor is u.",
+    "assumptions": [
+      "u and v are differentiable on the interval",
+      "With limits: ∫_{a}^{b} u dv = [uv]_{a}^{b} − ∫_{a}^{b} v du",
+      "It may need repeating, or loop back to the original integral and be solved for it"
+    ],
+    "vars": [
+      [
+        "u",
+        "the factor you differentiate",
+        ""
+      ],
+      [
+        "dv",
+        "the factor you integrate",
+        ""
+      ],
+      [
+        "v",
+        "an antiderivative of dv",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "(fg)′ = f′g + fg′",
+        "where it comes from"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_{0}^{1} x e^{x} dx.",
+      "steps": [
+        "u = x, dv = e^{x} dx → du = dx, v = e^{x}",
+        "∫ x e^{x} dx = x e^{x} − ∫ e^{x} dx = (x − 1)e^{x}",
+        "From 0 to 1: 0 − (−1)"
+      ],
+      "answer": "1"
+    },
+    "try": "integral(x e^x, x, 0, 1)"
+  },
+  "x = (−b ± √(b^{2} − 4ac))/(2a)": {
+    "title": "Quadratic formula",
+    "about": "Solves ax^{2} + bx + c = 0 for any coefficients, found by completing the square. The ± gives the two roots.",
+    "assumptions": [
+      "a ≠ 0 (otherwise the equation is linear)",
+      "The discriminant b^{2} − 4ac decides the roots: > 0 two real, = 0 one repeated, < 0 two complex"
+    ],
+    "vars": [
+      [
+        "a, b, c",
+        "coefficients of ax^{2} + bx + c = 0",
+        ""
+      ],
+      [
+        "x",
+        "a root",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Δ = b^{2} − 4ac",
+        "discriminant"
+      ],
+      [
+        "x_{1} + x_{2} = −b/a, x_{1}x_{2} = c/a",
+        "Vieta's formulas"
+      ]
+    ],
+    "example": {
+      "problem": "Solve 2x^{2} − 3x − 5 = 0.",
+      "steps": [
+        "Δ = 9 + 40 = 49, √Δ = 7",
+        "x = (3 ± 7)/4"
+      ],
+      "answer": "x = 2.5 or x = −1"
+    },
+    "try": "(3 + sqrt(49))/4"
+  },
+  "Δ = b^{2} − 4ac": {
+    "title": "Discriminant",
+    "about": "The part under the root in the quadratic formula. Its sign tells you, without solving, whether a quadratic has two real roots, one repeated root or none (two complex roots).",
+    "assumptions": [
+      "a ≠ 0",
+      "Real coefficients for the sign test to mean real versus complex"
+    ],
+    "vars": [
+      [
+        "Δ",
+        "discriminant",
+        ""
+      ],
+      [
+        "a, b, c",
+        "coefficients of ax^{2} + bx + c",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "x = (−b ± √(b^{2} − 4ac))/(2a)",
+        "where it appears"
+      ]
+    ],
+    "example": {
+      "problem": "How many real roots does x^{2} + 4x + 5 = 0 have?",
+      "steps": [
+        "Δ = 16 − 20 = −4",
+        "Δ < 0: no real roots (two complex)"
+      ],
+      "answer": "Δ = −4, no real roots"
+    },
+    "try": "4^2 - 4*1*5"
+  },
+  "x = −b/(2a)": {
+    "title": "Vertex of a parabola",
+    "about": "The x of the turning point of y = ax^{2} + bx + c, halfway between the roots. It is a minimum when a > 0 and a maximum when a < 0; put it back in to get the extreme value.",
+    "assumptions": [
+      "a ≠ 0"
+    ],
+    "vars": [
+      [
+        "x",
+        "x-coordinate of the vertex (axis of symmetry)",
+        ""
+      ],
+      [
+        "a, b",
+        "coefficients of ax^{2} + bx + c",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "y = a(x − h)^{2} + k",
+        "vertex form, h = −b/(2a)"
+      ]
+    ],
+    "example": {
+      "problem": "A ball's height is h = −4.9t^{2} + 19.6t + 1 m. When is it highest, and how high?",
+      "steps": [
+        "t = −19.6/(2 × −4.9) = 2 s",
+        "h(2) = −19.6 + 39.2 + 1"
+      ],
+      "answer": "t = 2 s, h = 20.6 m"
+    },
+    "try": "-4.9*2^2 + 19.6*2 + 1"
+  },
+  "y = a(x − h)^{2} + k": {
+    "title": "Vertex form of a parabola",
+    "about": "A parabola written to show its vertex (h, k) directly. a sets the width and whether it opens up (a > 0) or down (a < 0). Complete the square to get here from ax^{2} + bx + c.",
+    "assumptions": [
+      "a ≠ 0"
+    ],
+    "vars": [
+      [
+        "(h, k)",
+        "vertex",
+        ""
+      ],
+      [
+        "a",
+        "stretch and direction",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "x = −b/(2a)",
+        "h from standard form"
+      ],
+      [
+        "k = c − b^{2}/(4a)",
+        "k from standard form"
+      ]
+    ],
+    "example": {
+      "problem": "Write y = 2x^{2} − 8x + 3 in vertex form.",
+      "steps": [
+        "h = 8/4 = 2",
+        "k = 2(4) − 16 + 3 = −5",
+        "y = 2(x − 2)^{2} − 5"
+      ],
+      "answer": "y = 2(x − 2)^{2} − 5"
+    },
+    "try": "2*2^2 - 8*2 + 3"
+  },
+  "y = m x + b": {
+    "title": "Slope-intercept form of a line",
+    "about": "A straight line with slope m (rise over run) that crosses the y-axis at b.",
+    "assumptions": [
+      "Not for vertical lines (x = constant), whose slope is undefined"
+    ],
+    "vars": [
+      [
+        "m",
+        "slope, Δy/Δx",
+        ""
+      ],
+      [
+        "b",
+        "y-intercept",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "m = (y_{2} − y_{1})/(x_{2} − x_{1})",
+        "slope from two points"
+      ],
+      [
+        "y − y_{1} = m(x − x_{1})",
+        "point-slope"
+      ]
+    ],
+    "example": {
+      "problem": "A line passes through (1, 3) and (4, 9). Find its equation.",
+      "steps": [
+        "m = (9 − 3)/(4 − 1) = 2",
+        "b = 3 − 2(1) = 1"
+      ],
+      "answer": "y = 2x + 1"
+    },
+    "try": "(9 - 3)/(4 - 1)"
+  },
+  "y − y_{1} = m(x − x_{1})": {
+    "title": "Point-slope form of a line",
+    "about": "The line with slope m through the point (x_{1}, y_{1}). Quickest when you know a point and a slope, as with a tangent line.",
+    "assumptions": [
+      "Not for vertical lines"
+    ],
+    "vars": [
+      [
+        "m",
+        "slope",
+        ""
+      ],
+      [
+        "(x_{1}, y_{1})",
+        "a known point on the line",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "y = m x + b",
+        "slope-intercept"
+      ]
+    ],
+    "example": {
+      "problem": "Find the tangent line to y = x^{2} at x = 3, and its y at x = 3.5.",
+      "steps": [
+        "Point (3, 9), slope 2x = 6",
+        "y − 9 = 6(x − 3)",
+        "At x = 3.5: y = 9 + 6(0.5)"
+      ],
+      "answer": "y = 6x − 9; y(3.5) = 12"
+    },
+    "try": "9 + 6*(3.5 - 3)"
+  },
+  "m_{1} m_{2} = −1": {
+    "title": "Perpendicular slopes",
+    "about": "Two lines are perpendicular when their slopes are negative reciprocals.",
+    "assumptions": [
+      "Neither line is vertical or horizontal (a horizontal line, slope 0, is perpendicular to a vertical one)"
+    ],
+    "vars": [
+      [
+        "m_{1}, m_{2}",
+        "slopes of the two lines",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "m_{1} = m_{2}",
+        "parallel lines"
+      ]
+    ],
+    "example": {
+      "problem": "Find the slope of a line perpendicular to y = 2/3 x + 1.",
+      "steps": [
+        "m_{2} = −1/m_{1} = −1/(2/3)"
+      ],
+      "answer": "m_{2} = −1.5"
+    },
+    "try": "-1/(2/3)"
+  },
+  "(x − h)^{2} + (y − k)^{2} = r^{2}": {
+    "title": "Circle",
+    "about": "Every point at distance r from the centre (h, k), from the distance formula. With h = k = 0 it is x^{2} + y^{2} = r^{2}.",
+    "assumptions": [
+      "r > 0"
+    ],
+    "vars": [
+      [
+        "(h, k)",
+        "centre",
+        ""
+      ],
+      [
+        "r",
+        "radius",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "d = √((x_{2} − x_{1})^{2} + (y_{2} − y_{1})^{2})",
+        "distance formula"
+      ]
+    ],
+    "example": {
+      "problem": "Find the radius of the circle centred at (1, −2) that passes through (4, 2).",
+      "steps": [
+        "r^{2} = (4 − 1)^{2} + (2 + 2)^{2} = 9 + 16",
+        "r = √25"
+      ],
+      "answer": "r = 5"
+    },
+    "try": "sqrt(3^2 + 4^2)"
+  },
+  "x^{2}/a^{2} + y^{2}/b^{2} = 1": {
+    "title": "Ellipse",
+    "about": "An ellipse centred at the origin with semi-axes a along x and b along y. Each focus sits at distance c = √(a^{2} − b^{2}) from the centre when a > b. Shifted to (h, k): replace x with x − h and y with y − k.",
+    "assumptions": [
+      "a, b > 0",
+      "a = b gives a circle"
+    ],
+    "vars": [
+      [
+        "a",
+        "semi-axis along x",
+        ""
+      ],
+      [
+        "b",
+        "semi-axis along y",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "c^{2} = a^{2} − b^{2}",
+        "focus distance (a > b)"
+      ],
+      [
+        "A = πab",
+        "area"
+      ]
+    ],
+    "example": {
+      "problem": "Find the foci of x^{2}/25 + y^{2}/9 = 1.",
+      "steps": [
+        "a = 5, b = 3",
+        "c = √(25 − 9) = 4"
+      ],
+      "answer": "foci at (±4, 0)"
+    },
+    "try": "sqrt(25 - 9)"
+  },
+  "x^{2}/a^{2} − y^{2}/b^{2} = 1": {
+    "title": "Hyperbola",
+    "about": "A hyperbola opening left and right, with vertices at (±a, 0) and asymptotes y = ±(b/a)x. Foci are at (±c, 0) with c^{2} = a^{2} + b^{2}.",
+    "assumptions": [
+      "a, b > 0",
+      "Swap the signs (y^{2} term positive) for one opening up and down"
+    ],
+    "vars": [
+      [
+        "a",
+        "distance from centre to each vertex",
+        ""
+      ],
+      [
+        "b",
+        "sets the asymptote slope b/a",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "c^{2} = a^{2} + b^{2}",
+        "focus distance"
+      ],
+      [
+        "y = ±(b/a)x",
+        "asymptotes"
+      ]
+    ],
+    "example": {
+      "problem": "Find the foci of x^{2}/9 − y^{2}/16 = 1.",
+      "steps": [
+        "a = 3, b = 4",
+        "c = √(9 + 16) = 5"
+      ],
+      "answer": "foci at (±5, 0)"
+    },
+    "try": "sqrt(9 + 16)"
+  },
+  "y^{2} = 4 p x": {
+    "title": "Parabola (focus form)",
+    "about": "A parabola opening along +x with its vertex at the origin, focus at (p, 0) and directrix x = −p. Every point is as far from the focus as from the directrix, which is why dishes and headlights use it.",
+    "assumptions": [
+      "p ≠ 0; p < 0 opens to the left",
+      "x^{2} = 4py is the same parabola opening up"
+    ],
+    "vars": [
+      [
+        "p",
+        "distance from vertex to focus",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "x^{2} = 4 p y",
+        "opening up"
+      ]
+    ],
+    "example": {
+      "problem": "A dish follows y^{2} = 12x. Where is the focus?",
+      "steps": [
+        "4p = 12",
+        "p = 3"
+      ],
+      "answer": "focus at (3, 0)"
+    },
+    "try": "12/4"
+  },
+  "a_{n} = a_{1} + (n − 1) d": {
+    "title": "Arithmetic sequence",
+    "about": "Each term adds the same common difference d to the last, so the n-th term is the first plus n − 1 steps of d. Linear growth: seat rows, straight-line depreciation, evenly spaced readings.",
+    "assumptions": [
+      "n is a positive integer (1, 2, 3, …)",
+      "d is constant; it may be negative or zero"
+    ],
+    "vars": [
+      [
+        "a_{n}",
+        "the n-th term",
+        ""
+      ],
+      [
+        "a_{1}",
+        "the first term",
+        ""
+      ],
+      [
+        "n",
+        "term number",
+        ""
+      ],
+      [
+        "d",
+        "common difference",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "S_{n} = n(a_{1} + a_{n})/2",
+        "sum of n terms"
+      ]
+    ],
+    "example": {
+      "problem": "A theatre's first row has 20 seats and each row has 3 more. How many seats are in row 15?",
+      "steps": [
+        "a_{15} = 20 + (15 − 1) × 3 = 20 + 42"
+      ],
+      "answer": "62 seats"
+    },
+    "try": "20 + (15 - 1)*3"
+  },
+  "S_{n} = n(a_{1} + a_{n})/2": {
+    "title": "Sum of an arithmetic sequence",
+    "about": "The number of terms times the average of the first and last. Gauss's trick: pair the first with the last, the second with the second-last, and every pair has the same sum.",
+    "assumptions": [
+      "The sequence is arithmetic (constant difference)",
+      "n is a positive integer"
+    ],
+    "vars": [
+      [
+        "S_{n}",
+        "sum of the first n terms",
+        ""
+      ],
+      [
+        "n",
+        "number of terms",
+        ""
+      ],
+      [
+        "a_{1}",
+        "first term",
+        ""
+      ],
+      [
+        "a_{n}",
+        "n-th term",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "a_{n} = a_{1} + (n − 1) d",
+        "to find a_{n}"
+      ],
+      [
+        "S_{n} = n/2 (2a_{1} + (n − 1)d)",
+        "without a_{n}"
+      ]
+    ],
+    "example": {
+      "problem": "Add the odd numbers 1 + 3 + 5 + … + 39.",
+      "steps": [
+        "39 = 1 + (n − 1)2 → n = 20",
+        "S_{20} = 20(1 + 39)/2"
+      ],
+      "answer": "400"
+    },
+    "try": "sum(2k - 1, k, 1, 20)"
+  },
+  "a_{n} = a_{1} r^{n−1}": {
+    "title": "Geometric sequence",
+    "about": "Each term multiplies the last by the same common ratio r. Exponential growth or decay: compound interest, bounces, half-lives.",
+    "assumptions": [
+      "n is a positive integer",
+      "r is constant and nonzero; r < 0 alternates the sign"
+    ],
+    "vars": [
+      [
+        "a_{n}",
+        "the n-th term",
+        ""
+      ],
+      [
+        "a_{1}",
+        "the first term",
+        ""
+      ],
+      [
+        "r",
+        "common ratio",
+        ""
+      ],
+      [
+        "n",
+        "term number",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "S_{n} = a_{1}(1 − r^{n})/(1 − r)",
+        "sum of n terms"
+      ]
+    ],
+    "example": {
+      "problem": "A ball dropped from 2 m rebounds to 70% of its height each bounce. How high is the 5th rebound?",
+      "steps": [
+        "a_{1} = 1.4 m, r = 0.7",
+        "a_{5} = 1.4 × 0.7^{4}"
+      ],
+      "answer": "≈ 0.3361 m"
+    },
+    "try": "1.4 * 0.7^4"
+  },
+  "S_{n} = a_{1}(1 − r^{n})/(1 − r)": {
+    "title": "Sum of a geometric sequence",
+    "about": "Multiply the sum by r and subtract: almost every term cancels, leaving a_{1}(1 − r^{n}). Used for savings plans, loan payments and finite echoes.",
+    "assumptions": [
+      "r ≠ 1 (for r = 1 the sum is n a_{1})",
+      "n is a positive integer"
+    ],
+    "vars": [
+      [
+        "S_{n}",
+        "sum of the first n terms",
+        ""
+      ],
+      [
+        "a_{1}",
+        "first term",
+        ""
+      ],
+      [
+        "r",
+        "common ratio",
+        ""
+      ],
+      [
+        "n",
+        "number of terms",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "S = a_{1}/(1 − r)",
+        "the infinite sum, |r| < 1"
+      ]
+    ],
+    "example": {
+      "problem": "Find 3 + 6 + 12 + … to 8 terms.",
+      "steps": [
+        "a_{1} = 3, r = 2, n = 8",
+        "S_{8} = 3(1 − 256)/(1 − 2) = 3 × 255"
+      ],
+      "answer": "765"
+    },
+    "try": "3*(1 - 2^8)/(1 - 2)"
+  },
+  "S = a_{1}/(1 − r)": {
+    "title": "Infinite geometric series",
+    "about": "Let n → ∞ in the finite sum: when |r| < 1, r^{n} → 0 and the sum settles to a_{1}/(1 − r). It is how 0.999… = 1 and how a repeating decimal becomes a fraction.",
+    "assumptions": [
+      "|r| < 1; otherwise the series diverges",
+      "r constant"
+    ],
+    "vars": [
+      [
+        "S",
+        "sum of all the terms",
+        ""
+      ],
+      [
+        "a_{1}",
+        "first term",
+        ""
+      ],
+      [
+        "r",
+        "common ratio, |r| < 1",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "S_{n} = a_{1}(1 − r^{n})/(1 − r)",
+        "finite sum"
+      ],
+      [
+        "1/(1 − x) = Σ x^{n}",
+        "as a power series"
+      ]
+    ],
+    "example": {
+      "problem": "A ball is dropped from 10 m and each bounce rises to 60% of the previous height. How far does it travel in all?",
+      "steps": [
+        "Down 10, then up and down 2 × (6 + 3.6 + …)",
+        "Bounces: 2 × 6/(1 − 0.6) = 30",
+        "Total 10 + 30"
+      ],
+      "answer": "40 m"
+    },
+    "try": "10 + 2*6/(1 - 0.6)"
+  },
+  "log_{b}(x) = ln(x)/ln(b)": {
+    "title": "Change of base",
+    "about": "Any log can be written with natural logs (or base 10). Use it when a calculator only has ln and log.",
+    "assumptions": [
+      "x > 0",
+      "b > 0, b ≠ 1"
+    ],
+    "vars": [
+      [
+        "x",
+        "positive argument",
+        ""
+      ],
+      [
+        "b",
+        "base, b > 0 and b ≠ 1",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "log_{b}(x) = log_{10}(x)/log_{10}(b)",
+        "in base 10"
+      ]
+    ],
+    "example": {
+      "problem": "Find log_{2}(50).",
+      "steps": [
+        "ln 50/ln 2 = 3.91202/0.693147"
+      ],
+      "answer": "≈ 5.644"
+    },
+    "try": "ln(50)/ln(2)"
+  },
+  "log_{b}(xy) = log_{b}(x) + log_{b}(y)": {
+    "title": "Log of a product",
+    "about": "Logs turn multiplication into addition, because exponents add when powers multiply. This is what decibels and slide rules exploit.",
+    "assumptions": [
+      "x > 0 and y > 0",
+      "b > 0, b ≠ 1"
+    ],
+    "vars": [
+      [
+        "x, y",
+        "positive numbers",
+        ""
+      ],
+      [
+        "b",
+        "base, b > 0 and b ≠ 1",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "log_{b}(x/y) = log_{b}(x) − log_{b}(y)",
+        "quotient"
+      ],
+      [
+        "log_{b}(x^{n}) = n log_{b}(x)",
+        "power"
+      ]
+    ],
+    "example": {
+      "problem": "Given log_{10} 2 ≈ 0.30103 and log_{10} 3 ≈ 0.47712, find log_{10} 6.",
+      "steps": [
+        "log 6 = log 2 + log 3 = 0.30103 + 0.47712"
+      ],
+      "answer": "≈ 0.77815"
+    },
+    "try": "log(6, 10)"
+  },
+  "log_{b}(x^{n}) = n log_{b}(x)": {
+    "title": "Log of a power",
+    "about": "An exponent inside a log comes out in front as a factor. It is the step that solves equations with the unknown in the exponent.",
+    "assumptions": [
+      "x > 0",
+      "b > 0, b ≠ 1",
+      "n any real number"
+    ],
+    "vars": [
+      [
+        "x",
+        "positive number",
+        ""
+      ],
+      [
+        "n",
+        "exponent",
+        ""
+      ],
+      [
+        "b",
+        "base, b > 0 and b ≠ 1",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "log_{b}(xy) = log_{b}(x) + log_{b}(y)",
+        "product"
+      ]
+    ],
+    "example": {
+      "problem": "Solve 3^{x} = 20.",
+      "steps": [
+        "Take ln of both sides: x ln 3 = ln 20",
+        "x = 2.99573/1.09861"
+      ],
+      "answer": "x ≈ 2.727"
+    },
+    "try": "ln(20)/ln(3)"
+  },
+  "0° ‖ 0 ‖ 0 ‖ 1 ‖ 0": {
+    "title": "Unit circle at 0°",
+    "about": "The point at 0° (0 rad) on the unit circle is (cos, sin) = (1, 0), on the positive x-axis. tan = sin/cos = 0.",
+    "assumptions": [
+      "Angles in degrees here equal the radians column (180° = π rad)",
+      "Adding 360° (2π) gives the same values"
+    ],
+    "vars": [
+      [
+        "θ",
+        "the angle, in degrees or radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}θ + cos^{2}θ = 1",
+        "holds at every angle"
+      ],
+      [
+        "tan θ = sin θ/cos θ",
+        "the tan column"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 m arm pivots at the origin and points at 0° from the +x axis. Where is its tip?",
+      "steps": [
+        "x = 2 cos 0° = 2 × 1 = 2",
+        "y = 2 sin 0° = 2 × 0 = 0"
+      ],
+      "answer": "tip at (2, 0) m, x ≈ 2 m"
+    },
+    "try": "2 cos(0)"
+  },
+  "30° ‖ π/6 ‖ 1/2 ‖ √3/2 ‖ √3/3": {
+    "title": "Unit circle at 30°",
+    "about": "The point at 30° (π/6 rad) on the unit circle is (cos, sin) = (√3/2, 1/2), in quadrant I. tan = sin/cos = √3/3.",
+    "assumptions": [
+      "Angles in degrees here equal the radians column (180° = π rad)",
+      "Adding 360° (2π) gives the same values"
+    ],
+    "vars": [
+      [
+        "θ",
+        "the angle, in degrees or radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}θ + cos^{2}θ = 1",
+        "holds at every angle"
+      ],
+      [
+        "tan θ = sin θ/cos θ",
+        "the tan column"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 m arm pivots at the origin and points at 30° from the +x axis. Where is its tip?",
+      "steps": [
+        "x = 2 cos 30° = 2 × √3/2 = √3",
+        "y = 2 sin 30° = 2 × 1/2 = 1"
+      ],
+      "answer": "tip at (√3, 1) m, x ≈ 1.7321 m"
+    },
+    "try": "2 cos(30)"
+  },
+  "45° ‖ π/4 ‖ √2/2 ‖ √2/2 ‖ 1": {
+    "title": "Unit circle at 45°",
+    "about": "The point at 45° (π/4 rad) on the unit circle is (cos, sin) = (√2/2, √2/2), in quadrant I. tan = sin/cos = 1.",
+    "assumptions": [
+      "Angles in degrees here equal the radians column (180° = π rad)",
+      "Adding 360° (2π) gives the same values"
+    ],
+    "vars": [
+      [
+        "θ",
+        "the angle, in degrees or radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}θ + cos^{2}θ = 1",
+        "holds at every angle"
+      ],
+      [
+        "tan θ = sin θ/cos θ",
+        "the tan column"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 m arm pivots at the origin and points at 45° from the +x axis. Where is its tip?",
+      "steps": [
+        "x = 2 cos 45° = 2 × √2/2 = √2",
+        "y = 2 sin 45° = 2 × √2/2 = √2"
+      ],
+      "answer": "tip at (√2, √2) m, x ≈ 1.4142 m"
+    },
+    "try": "2 cos(45)"
+  },
+  "60° ‖ π/3 ‖ √3/2 ‖ 1/2 ‖ √3": {
+    "title": "Unit circle at 60°",
+    "about": "The point at 60° (π/3 rad) on the unit circle is (cos, sin) = (1/2, √3/2), in quadrant I. tan = sin/cos = √3.",
+    "assumptions": [
+      "Angles in degrees here equal the radians column (180° = π rad)",
+      "Adding 360° (2π) gives the same values"
+    ],
+    "vars": [
+      [
+        "θ",
+        "the angle, in degrees or radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}θ + cos^{2}θ = 1",
+        "holds at every angle"
+      ],
+      [
+        "tan θ = sin θ/cos θ",
+        "the tan column"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 m arm pivots at the origin and points at 60° from the +x axis. Where is its tip?",
+      "steps": [
+        "x = 2 cos 60° = 2 × 1/2 = 1",
+        "y = 2 sin 60° = 2 × √3/2 = √3"
+      ],
+      "answer": "tip at (1, √3) m, x ≈ 1 m"
+    },
+    "try": "2 cos(60)"
+  },
+  "90° ‖ π/2 ‖ 1 ‖ 0 ‖ undefined": {
+    "title": "Unit circle at 90°",
+    "about": "The point at 90° (π/2 rad) on the unit circle is (cos, sin) = (0, 1), on the positive y-axis. tan = sin/cos is undefined here because cos = 0.",
+    "assumptions": [
+      "Angles in degrees here equal the radians column (180° = π rad)",
+      "Adding 360° (2π) gives the same values"
+    ],
+    "vars": [
+      [
+        "θ",
+        "the angle, in degrees or radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}θ + cos^{2}θ = 1",
+        "holds at every angle"
+      ],
+      [
+        "tan θ = sin θ/cos θ",
+        "the tan column"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 m arm pivots at the origin and points at 90° from the +x axis. Where is its tip?",
+      "steps": [
+        "x = 2 cos 90° = 2 × 0 = 0",
+        "y = 2 sin 90° = 2 × 1 = 2"
+      ],
+      "answer": "tip at (0, 2) m, x ≈ 0 m"
+    },
+    "try": "2 cos(90)"
+  },
+  "120° ‖ 2π/3 ‖ √3/2 ‖ −1/2 ‖ −√3": {
+    "title": "Unit circle at 120°",
+    "about": "The point at 120° (2π/3 rad) on the unit circle is (cos, sin) = (−1/2, √3/2), in quadrant II. Its reference angle is 60°, so the values match 60° with signs set by the quadrant. tan = sin/cos = −√3.",
+    "assumptions": [
+      "Angles in degrees here equal the radians column (180° = π rad)",
+      "Adding 360° (2π) gives the same values"
+    ],
+    "vars": [
+      [
+        "θ",
+        "the angle, in degrees or radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}θ + cos^{2}θ = 1",
+        "holds at every angle"
+      ],
+      [
+        "tan θ = sin θ/cos θ",
+        "the tan column"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 m arm pivots at the origin and points at 120° from the +x axis. Where is its tip?",
+      "steps": [
+        "x = 2 cos 120° = 2 × −1/2 = −1",
+        "y = 2 sin 120° = 2 × √3/2 = √3"
+      ],
+      "answer": "tip at (−1, √3) m, x ≈ −1 m"
+    },
+    "try": "2 cos(120)"
+  },
+  "135° ‖ 3π/4 ‖ √2/2 ‖ −√2/2 ‖ −1": {
+    "title": "Unit circle at 135°",
+    "about": "The point at 135° (3π/4 rad) on the unit circle is (cos, sin) = (−√2/2, √2/2), in quadrant II. Its reference angle is 45°, so the values match 45° with signs set by the quadrant. tan = sin/cos = −1.",
+    "assumptions": [
+      "Angles in degrees here equal the radians column (180° = π rad)",
+      "Adding 360° (2π) gives the same values"
+    ],
+    "vars": [
+      [
+        "θ",
+        "the angle, in degrees or radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}θ + cos^{2}θ = 1",
+        "holds at every angle"
+      ],
+      [
+        "tan θ = sin θ/cos θ",
+        "the tan column"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 m arm pivots at the origin and points at 135° from the +x axis. Where is its tip?",
+      "steps": [
+        "x = 2 cos 135° = 2 × −√2/2 = −√2",
+        "y = 2 sin 135° = 2 × √2/2 = √2"
+      ],
+      "answer": "tip at (−√2, √2) m, x ≈ −1.4142 m"
+    },
+    "try": "2 cos(135)"
+  },
+  "150° ‖ 5π/6 ‖ 1/2 ‖ −√3/2 ‖ −√3/3": {
+    "title": "Unit circle at 150°",
+    "about": "The point at 150° (5π/6 rad) on the unit circle is (cos, sin) = (−√3/2, 1/2), in quadrant II. Its reference angle is 30°, so the values match 30° with signs set by the quadrant. tan = sin/cos = −√3/3.",
+    "assumptions": [
+      "Angles in degrees here equal the radians column (180° = π rad)",
+      "Adding 360° (2π) gives the same values"
+    ],
+    "vars": [
+      [
+        "θ",
+        "the angle, in degrees or radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}θ + cos^{2}θ = 1",
+        "holds at every angle"
+      ],
+      [
+        "tan θ = sin θ/cos θ",
+        "the tan column"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 m arm pivots at the origin and points at 150° from the +x axis. Where is its tip?",
+      "steps": [
+        "x = 2 cos 150° = 2 × −√3/2 = −√3",
+        "y = 2 sin 150° = 2 × 1/2 = 1"
+      ],
+      "answer": "tip at (−√3, 1) m, x ≈ −1.7321 m"
+    },
+    "try": "2 cos(150)"
+  },
+  "180° ‖ π ‖ 0 ‖ −1 ‖ 0": {
+    "title": "Unit circle at 180°",
+    "about": "The point at 180° (π rad) on the unit circle is (cos, sin) = (−1, 0), on the negative x-axis. tan = sin/cos = 0.",
+    "assumptions": [
+      "Angles in degrees here equal the radians column (180° = π rad)",
+      "Adding 360° (2π) gives the same values"
+    ],
+    "vars": [
+      [
+        "θ",
+        "the angle, in degrees or radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}θ + cos^{2}θ = 1",
+        "holds at every angle"
+      ],
+      [
+        "tan θ = sin θ/cos θ",
+        "the tan column"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 m arm pivots at the origin and points at 180° from the +x axis. Where is its tip?",
+      "steps": [
+        "x = 2 cos 180° = 2 × −1 = −2",
+        "y = 2 sin 180° = 2 × 0 = 0"
+      ],
+      "answer": "tip at (−2, 0) m, x ≈ −2 m"
+    },
+    "try": "2 cos(180)"
+  },
+  "210° ‖ 7π/6 ‖ −1/2 ‖ −√3/2 ‖ √3/3": {
+    "title": "Unit circle at 210°",
+    "about": "The point at 210° (7π/6 rad) on the unit circle is (cos, sin) = (−√3/2, −1/2), in quadrant III. Its reference angle is 30°, so the values match 30° with signs set by the quadrant. tan = sin/cos = √3/3.",
+    "assumptions": [
+      "Angles in degrees here equal the radians column (180° = π rad)",
+      "Adding 360° (2π) gives the same values"
+    ],
+    "vars": [
+      [
+        "θ",
+        "the angle, in degrees or radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}θ + cos^{2}θ = 1",
+        "holds at every angle"
+      ],
+      [
+        "tan θ = sin θ/cos θ",
+        "the tan column"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 m arm pivots at the origin and points at 210° from the +x axis. Where is its tip?",
+      "steps": [
+        "x = 2 cos 210° = 2 × −√3/2 = −√3",
+        "y = 2 sin 210° = 2 × −1/2 = −1"
+      ],
+      "answer": "tip at (−√3, −1) m, x ≈ −1.7321 m"
+    },
+    "try": "2 cos(210)"
+  },
+  "225° ‖ 5π/4 ‖ −√2/2 ‖ −√2/2 ‖ 1": {
+    "title": "Unit circle at 225°",
+    "about": "The point at 225° (5π/4 rad) on the unit circle is (cos, sin) = (−√2/2, −√2/2), in quadrant III. Its reference angle is 45°, so the values match 45° with signs set by the quadrant. tan = sin/cos = 1.",
+    "assumptions": [
+      "Angles in degrees here equal the radians column (180° = π rad)",
+      "Adding 360° (2π) gives the same values"
+    ],
+    "vars": [
+      [
+        "θ",
+        "the angle, in degrees or radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}θ + cos^{2}θ = 1",
+        "holds at every angle"
+      ],
+      [
+        "tan θ = sin θ/cos θ",
+        "the tan column"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 m arm pivots at the origin and points at 225° from the +x axis. Where is its tip?",
+      "steps": [
+        "x = 2 cos 225° = 2 × −√2/2 = −√2",
+        "y = 2 sin 225° = 2 × −√2/2 = −√2"
+      ],
+      "answer": "tip at (−√2, −√2) m, x ≈ −1.4142 m"
+    },
+    "try": "2 cos(225)"
+  },
+  "240° ‖ 4π/3 ‖ −√3/2 ‖ −1/2 ‖ √3": {
+    "title": "Unit circle at 240°",
+    "about": "The point at 240° (4π/3 rad) on the unit circle is (cos, sin) = (−1/2, −√3/2), in quadrant III. Its reference angle is 60°, so the values match 60° with signs set by the quadrant. tan = sin/cos = √3.",
+    "assumptions": [
+      "Angles in degrees here equal the radians column (180° = π rad)",
+      "Adding 360° (2π) gives the same values"
+    ],
+    "vars": [
+      [
+        "θ",
+        "the angle, in degrees or radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}θ + cos^{2}θ = 1",
+        "holds at every angle"
+      ],
+      [
+        "tan θ = sin θ/cos θ",
+        "the tan column"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 m arm pivots at the origin and points at 240° from the +x axis. Where is its tip?",
+      "steps": [
+        "x = 2 cos 240° = 2 × −1/2 = −1",
+        "y = 2 sin 240° = 2 × −√3/2 = −√3"
+      ],
+      "answer": "tip at (−1, −√3) m, x ≈ −1 m"
+    },
+    "try": "2 cos(240)"
+  },
+  "270° ‖ 3π/2 ‖ −1 ‖ 0 ‖ undefined": {
+    "title": "Unit circle at 270°",
+    "about": "The point at 270° (3π/2 rad) on the unit circle is (cos, sin) = (0, −1), on the negative y-axis. tan = sin/cos is undefined here because cos = 0.",
+    "assumptions": [
+      "Angles in degrees here equal the radians column (180° = π rad)",
+      "Adding 360° (2π) gives the same values"
+    ],
+    "vars": [
+      [
+        "θ",
+        "the angle, in degrees or radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}θ + cos^{2}θ = 1",
+        "holds at every angle"
+      ],
+      [
+        "tan θ = sin θ/cos θ",
+        "the tan column"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 m arm pivots at the origin and points at 270° from the +x axis. Where is its tip?",
+      "steps": [
+        "x = 2 cos 270° = 2 × 0 = 0",
+        "y = 2 sin 270° = 2 × −1 = −2"
+      ],
+      "answer": "tip at (0, −2) m, x ≈ 0 m"
+    },
+    "try": "2 cos(270)"
+  },
+  "300° ‖ 5π/3 ‖ −√3/2 ‖ 1/2 ‖ −√3": {
+    "title": "Unit circle at 300°",
+    "about": "The point at 300° (5π/3 rad) on the unit circle is (cos, sin) = (1/2, −√3/2), in quadrant IV. Its reference angle is 60°, so the values match 60° with signs set by the quadrant. tan = sin/cos = −√3.",
+    "assumptions": [
+      "Angles in degrees here equal the radians column (180° = π rad)",
+      "Adding 360° (2π) gives the same values"
+    ],
+    "vars": [
+      [
+        "θ",
+        "the angle, in degrees or radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}θ + cos^{2}θ = 1",
+        "holds at every angle"
+      ],
+      [
+        "tan θ = sin θ/cos θ",
+        "the tan column"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 m arm pivots at the origin and points at 300° from the +x axis. Where is its tip?",
+      "steps": [
+        "x = 2 cos 300° = 2 × 1/2 = 1",
+        "y = 2 sin 300° = 2 × −√3/2 = −√3"
+      ],
+      "answer": "tip at (1, −√3) m, x ≈ 1 m"
+    },
+    "try": "2 cos(300)"
+  },
+  "315° ‖ 7π/4 ‖ −√2/2 ‖ √2/2 ‖ −1": {
+    "title": "Unit circle at 315°",
+    "about": "The point at 315° (7π/4 rad) on the unit circle is (cos, sin) = (√2/2, −√2/2), in quadrant IV. Its reference angle is 45°, so the values match 45° with signs set by the quadrant. tan = sin/cos = −1.",
+    "assumptions": [
+      "Angles in degrees here equal the radians column (180° = π rad)",
+      "Adding 360° (2π) gives the same values"
+    ],
+    "vars": [
+      [
+        "θ",
+        "the angle, in degrees or radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}θ + cos^{2}θ = 1",
+        "holds at every angle"
+      ],
+      [
+        "tan θ = sin θ/cos θ",
+        "the tan column"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 m arm pivots at the origin and points at 315° from the +x axis. Where is its tip?",
+      "steps": [
+        "x = 2 cos 315° = 2 × √2/2 = √2",
+        "y = 2 sin 315° = 2 × −√2/2 = −√2"
+      ],
+      "answer": "tip at (√2, −√2) m, x ≈ 1.4142 m"
+    },
+    "try": "2 cos(315)"
+  },
+  "330° ‖ 11π/6 ‖ −1/2 ‖ √3/2 ‖ −√3/3": {
+    "title": "Unit circle at 330°",
+    "about": "The point at 330° (11π/6 rad) on the unit circle is (cos, sin) = (√3/2, −1/2), in quadrant IV. Its reference angle is 30°, so the values match 30° with signs set by the quadrant. tan = sin/cos = −√3/3.",
+    "assumptions": [
+      "Angles in degrees here equal the radians column (180° = π rad)",
+      "Adding 360° (2π) gives the same values"
+    ],
+    "vars": [
+      [
+        "θ",
+        "the angle, in degrees or radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}θ + cos^{2}θ = 1",
+        "holds at every angle"
+      ],
+      [
+        "tan θ = sin θ/cos θ",
+        "the tan column"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 m arm pivots at the origin and points at 330° from the +x axis. Where is its tip?",
+      "steps": [
+        "x = 2 cos 330° = 2 × √3/2 = √3",
+        "y = 2 sin 330° = 2 × −1/2 = −1"
+      ],
+      "answer": "tip at (√3, −1) m, x ≈ 1.7321 m"
+    },
+    "try": "2 cos(330)"
+  },
+  "360° ‖ 2π ‖ 0 ‖ 1 ‖ 0": {
+    "title": "Unit circle at 360°",
+    "about": "The point at 360° (2π rad) on the unit circle is (cos, sin) = (1, 0), back on the positive x-axis. tan = sin/cos = 0.",
+    "assumptions": [
+      "Angles in degrees here equal the radians column (180° = π rad)",
+      "Adding 360° (2π) gives the same values"
+    ],
+    "vars": [
+      [
+        "θ",
+        "the angle, in degrees or radians",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}θ + cos^{2}θ = 1",
+        "holds at every angle"
+      ],
+      [
+        "tan θ = sin θ/cos θ",
+        "the tan column"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 m arm pivots at the origin and points at 360° from the +x axis. Where is its tip?",
+      "steps": [
+        "x = 2 cos 360° = 2 × 1 = 2",
+        "y = 2 sin 360° = 2 × 0 = 0"
+      ],
+      "answer": "tip at (2, 0) m, x ≈ 2 m"
+    },
+    "try": "2 cos(360)"
+  },
+  "f(x) = Σ_{n=0}^{∞} f^{(n)}(a) (x − a)^{n}/n!": {
+    "title": "Taylor series",
+    "about": "Rebuilds a smooth function near x = a from its value and all its derivatives there. Cutting it off after a few terms gives a polynomial approximation, which is how calculators and linearisations work.",
+    "assumptions": [
+      "f has derivatives of every order at a",
+      "The series converges only within its radius of convergence, and must also converge to f (true for e^{x}, sin, cos and most functions met in practice)",
+      "A truncated series is accurate near a; the error grows with |x − a|",
+      "a = 0 gives the Maclaurin series"
+    ],
+    "vars": [
+      [
+        "f^{(n)}(a)",
+        "n-th derivative of f at a",
+        ""
+      ],
+      [
+        "a",
+        "the centre of the expansion",
+        ""
+      ],
+      [
+        "x",
+        "the point where the series is evaluated",
+        ""
+      ],
+      [
+        "n",
+        "summation index, 0, 1, 2, …",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "f(x) ≈ f(a) + f′(a)(x − a)",
+        "linear approximation (first two terms)"
+      ],
+      [
+        "R_{n} = f^{(n+1)}(ξ)(x − a)^{n+1}/(n + 1)!",
+        "Lagrange remainder"
+      ]
+    ],
+    "example": {
+      "problem": "Estimate √4.1 with the first three terms of the Taylor series of √x about a = 4.",
+      "steps": [
+        "f(4) = 2, f′(4) = 1/(2√4) = 1/4, f″(4) = −1/(4 × 4^{3/2}) = −1/32",
+        "√4.1 ≈ 2 + (0.1)/4 − (1/32)(0.1)^{2}/2",
+        "= 2 + 0.025 − 0.00015625"
+      ],
+      "answer": "≈ 2.024844 (true √4.1 = 2.024846)"
+    },
+    "try": "2 + 0.1/4 - (1/32)*0.1^2/2"
+  },
+  "e^{x} = Σ x^{n}/n! = 1 + x + x^{2}/2! + x^{3}/3! + …": {
+    "title": "Series for e^{x}",
+    "about": "Every derivative of e^{x} is e^{x}, which is 1 at 0, so each coefficient is 1/n!. The factorials make it converge fast for any x.",
+    "assumptions": [
+      "Converges for every real (and complex) x",
+      "For large |x| you need more terms"
+    ],
+    "vars": [
+      [
+        "x",
+        "the point where the series is evaluated",
+        ""
+      ],
+      [
+        "n",
+        "summation index, 0, 1, 2, …",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "e^{ix} = cos x + i sin x",
+        "Euler's formula, from the three series"
+      ]
+    ],
+    "example": {
+      "problem": "Estimate e^{0.5} with five terms.",
+      "steps": [
+        "1 + 0.5 + 0.125 + 0.0208333 + 0.0026042"
+      ],
+      "answer": "≈ 1.6484 (true 1.64872)"
+    },
+    "try": "sum(0.5^n/n!, n, 0, 4)"
+  },
+  "sin x = Σ (−1)^{n} x^{2n+1}/(2n + 1)! = x − x^{3}/3! + x^{5}/5! − …": {
+    "title": "Series for sin x",
+    "about": "Odd powers only, with alternating signs, because sine is odd and its derivatives cycle sin, cos, −sin, −cos. The first term gives the small-angle approximation sin x ≈ x.",
+    "assumptions": [
+      "Converges for every x",
+      "x in radians",
+      "For an alternating series the error is smaller than the first term left out"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle in radians",
+        ""
+      ],
+      [
+        "n",
+        "summation index, 0, 1, 2, …",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sin x ≈ x",
+        "small-angle approximation"
+      ],
+      [
+        "cos x = Σ (−1)^{n} x^{2n}/(2n)!",
+        "the companion"
+      ]
+    ],
+    "example": {
+      "problem": "Estimate sin(0.5 rad) with three terms.",
+      "steps": [
+        "0.5 − 0.125/6 + 0.03125/120",
+        "= 0.5 − 0.0208333 + 0.0002604"
+      ],
+      "answer": "≈ 0.479427"
+    },
+    "try": "0.5 - 0.5^3/3! + 0.5^5/5!"
+  },
+  "cos x = Σ (−1)^{n} x^{2n}/(2n)! = 1 − x^{2}/2! + x^{4}/4! − …": {
+    "title": "Series for cos x",
+    "about": "Even powers only, with alternating signs, because cosine is even. Its first two terms give cos x ≈ 1 − x^{2}/2, used for pendulums and small deflections.",
+    "assumptions": [
+      "Converges for every x",
+      "x in radians"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle in radians",
+        ""
+      ],
+      [
+        "n",
+        "summation index, 0, 1, 2, …",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "cos x ≈ 1 − x^{2}/2",
+        "small-angle approximation"
+      ],
+      [
+        "sin x = Σ (−1)^{n} x^{2n+1}/(2n + 1)!",
+        "the companion"
+      ]
+    ],
+    "example": {
+      "problem": "Estimate cos(0.5 rad) with three terms.",
+      "steps": [
+        "1 − 0.25/2 + 0.0625/24",
+        "= 1 − 0.125 + 0.0026042"
+      ],
+      "answer": "≈ 0.877604"
+    },
+    "try": "1 - 0.5^2/2! + 0.5^4/4!"
+  },
+  "sinh x = x + x^{3}/3! + x^{5}/5! + …": {
+    "title": "Series for sinh x",
+    "about": "The odd half of the e^{x} series: sinh x = (e^{x} − e^{−x})/2. Like sin x but with every sign positive.",
+    "assumptions": [
+      "Converges for every x"
+    ],
+    "vars": [
+      [
+        "x",
+        "the point where the series is evaluated",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "sinh x = (e^{x} − e^{−x})/2",
+        "definition"
+      ],
+      [
+        "cosh x = 1 + x^{2}/2! + …",
+        "the even half"
+      ]
+    ],
+    "example": {
+      "problem": "Estimate sinh 1 with three terms.",
+      "steps": [
+        "1 + 1/6 + 1/120"
+      ],
+      "answer": "≈ 1.175 (true 1.1752)"
+    },
+    "try": "1 + 1/3! + 1/5!"
+  },
+  "cosh x = 1 + x^{2}/2! + x^{4}/4! + …": {
+    "title": "Series for cosh x",
+    "about": "The even half of the e^{x} series: cosh x = (e^{x} + e^{−x})/2. A hanging cable (catenary) follows cosh, and its first two terms show it is nearly a parabola near the bottom.",
+    "assumptions": [
+      "Converges for every x"
+    ],
+    "vars": [
+      [
+        "x",
+        "the point where the series is evaluated",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "cosh x = (e^{x} + e^{−x})/2",
+        "definition"
+      ],
+      [
+        "cosh^{2}x − sinh^{2}x = 1",
+        "identity"
+      ]
+    ],
+    "example": {
+      "problem": "Estimate cosh 1 with three terms.",
+      "steps": [
+        "1 + 1/2 + 1/24"
+      ],
+      "answer": "≈ 1.5417 (true 1.5431)"
+    },
+    "try": "1 + 1/2! + 1/4!"
+  },
+  "1/(1 − x) = Σ x^{n} = 1 + x + x^{2} + x^{3} + …": {
+    "title": "Geometric series",
+    "about": "The infinite geometric series with first term 1 and ratio x. Substituting, differentiating or integrating it produces many other series (ln(1 + x), arctan x).",
+    "assumptions": [
+      "|x| < 1; outside that it diverges"
+    ],
+    "vars": [
+      [
+        "x",
+        "the ratio, |x| < 1",
+        ""
+      ],
+      [
+        "n",
+        "summation index, 0, 1, 2, …",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "S = a_{1}/(1 − r)",
+        "the same sum with first term a_{1}"
+      ],
+      [
+        "ln(1 + x) = x − x^{2}/2 + …",
+        "integrate 1/(1 + x)"
+      ]
+    ],
+    "example": {
+      "problem": "Check the series at x = 0.2 by summing it.",
+      "steps": [
+        "1/(1 − 0.2) = 1.25",
+        "1 + 0.2 + 0.04 + 0.008 + … → 1.25"
+      ],
+      "answer": "1.25"
+    },
+    "try": "sum(0.2^n, n, 0, inf)"
+  },
+  "ln(1 + x) = x − x^{2}/2 + x^{3}/3 − …": {
+    "title": "Series for ln(1 + x)",
+    "about": "Integrate 1/(1 + t) = 1 − t + t^{2} − … from 0 to x. Near zero ln(1 + x) ≈ x, the rule behind small percentage changes and continuous compounding.",
+    "assumptions": [
+      "−1 < x ≤ 1 (at x = 1 it converges slowly, to ln 2)",
+      "Converges fastest for small |x|"
+    ],
+    "vars": [
+      [
+        "x",
+        "−1 < x ≤ 1",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "ln(1 + x) ≈ x",
+        "for small x"
+      ],
+      [
+        "1/(1 − x) = Σ x^{n}",
+        "where it comes from"
+      ]
+    ],
+    "example": {
+      "problem": "Estimate ln 1.1 with three terms.",
+      "steps": [
+        "0.1 − 0.01/2 + 0.001/3",
+        "= 0.1 − 0.005 + 0.000333"
+      ],
+      "answer": "≈ 0.095333 (true 0.09531)"
+    },
+    "try": "0.1 - 0.1^2/2 + 0.1^3/3"
+  },
+  "tan^{−1} x = x − x^{3}/3 + x^{5}/5 − …": {
+    "title": "Series for arctan x",
+    "about": "Integrate 1/(1 + t^{2}) = 1 − t^{2} + t^{4} − … from 0 to x. At x = 1 it gives the Leibniz series π/4 = 1 − 1/3 + 1/5 − …",
+    "assumptions": [
+      "|x| ≤ 1",
+      "The answer is an angle in radians",
+      "Slow near |x| = 1"
+    ],
+    "vars": [
+      [
+        "x",
+        "|x| ≤ 1",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "d/dx arctan x = 1/(1 + x^{2})",
+        "where it comes from"
+      ]
+    ],
+    "example": {
+      "problem": "Estimate arctan 0.2 with three terms.",
+      "steps": [
+        "0.2 − 0.008/3 + 0.00032/5",
+        "= 0.2 − 0.0026667 + 0.000064"
+      ],
+      "answer": "≈ 0.197397 rad"
+    },
+    "try": "0.2 - 0.2^3/3 + 0.2^5/5"
+  },
+  "(1 + x)^{a} = 1 + ax + a(a − 1)x^{2}/2! + …": {
+    "title": "Binomial series",
+    "about": "Newton's extension of the binomial theorem to any exponent a. Its first two terms, (1 + x)^{a} ≈ 1 + ax, are the workhorse approximation for roots and small corrections (relativity, error propagation).",
+    "assumptions": [
+      "|x| < 1 when a is not a non-negative integer",
+      "For a = 0, 1, 2, … it stops after a + 1 terms and holds for every x"
+    ],
+    "vars": [
+      [
+        "x",
+        "small quantity, |x| < 1",
+        ""
+      ],
+      [
+        "a",
+        "any real exponent",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "(1 + x)^{a} ≈ 1 + ax",
+        "first-order approximation"
+      ]
+    ],
+    "example": {
+      "problem": "Estimate √1.06 = (1 + 0.06)^{1/2} with three terms.",
+      "steps": [
+        "1 + (1/2)(0.06) + (1/2)(−1/2)(0.06)^{2}/2",
+        "= 1 + 0.03 − 0.00045"
+      ],
+      "answer": "≈ 1.02955 (true 1.029563)"
+    },
+    "try": "1 + 0.5*0.06 + 0.5*(-0.5)*0.06^2/2"
+  },
+  "∇f = (∂f/∂x, ∂f/∂y, ∂f/∂z)": {
+    "title": "Gradient",
+    "about": "A vector of the partial derivatives of a scalar field. It points in the direction of steepest increase, its length is that steepest rate, and it is perpendicular to level surfaces. Heat flows along −∇T.",
+    "assumptions": [
+      "f has partial derivatives at the point (continuous ones for the directional-derivative formula)",
+      "Cartesian coordinates; cylindrical and spherical forms differ"
+    ],
+    "vars": [
+      [
+        "f",
+        "scalar field f(x, y, z)",
+        ""
+      ],
+      [
+        "∇",
+        "del operator (∂/∂x, ∂/∂y, ∂/∂z)",
+        "1/m"
+      ]
+    ],
+    "related": [
+      [
+        "D_{u}f = ∇f · u",
+        "directional derivative along unit vector u"
+      ]
+    ],
+    "example": {
+      "problem": "f = x^{2}y + yz. Find ∇f and its magnitude at (1, 2, 3).",
+      "steps": [
+        "∇f = (2xy, x^{2} + z, y)",
+        "At (1, 2, 3): (4, 4, 2)",
+        "|∇f| = √(16 + 16 + 4)"
+      ],
+      "answer": "∇f = (4, 4, 2), |∇f| = 6"
+    },
+    "try": "sqrt(4^2 + 4^2 + 2^2)"
+  },
+  "∇ · F = ∂F_{x}/∂x + ∂F_{y}/∂y + ∂F_{z}/∂z": {
+    "title": "Divergence",
+    "about": "A scalar measuring how much a vector field spreads out from a point: positive at a source, negative at a sink, zero for an incompressible flow.",
+    "assumptions": [
+      "F has differentiable components",
+      "Cartesian coordinates"
+    ],
+    "vars": [
+      [
+        "F",
+        "vector field (F_{x}, F_{y}, F_{z})",
+        ""
+      ],
+      [
+        "∇ ·",
+        "divergence operator",
+        "1/m"
+      ]
+    ],
+    "related": [
+      [
+        "∯_{S} F · dS = ∭_{V} (∇ · F) dV",
+        "divergence theorem"
+      ]
+    ],
+    "example": {
+      "problem": "F = (x^{2}, xy, 3z). Find ∇ · F at (1, 2, 0).",
+      "steps": [
+        "∂(x^{2})/∂x + ∂(xy)/∂y + ∂(3z)/∂z = 2x + x + 3",
+        "At x = 1: 2 + 1 + 3"
+      ],
+      "answer": "∇ · F = 6"
+    },
+    "try": "2*1 + 1 + 3"
+  },
+  "∇ × F = (∂F_{z}/∂y − ∂F_{y}/∂z, ∂F_{x}/∂z − ∂F_{z}/∂x, ∂F_{y}/∂x − ∂F_{x}/∂y)": {
+    "title": "Curl",
+    "about": "A vector measuring how a field swirls around a point: its direction is the axis of rotation (right-hand rule) and its size is twice the local angular velocity of a fluid. Zero curl means the field is irrotational.",
+    "assumptions": [
+      "F has differentiable components",
+      "Cartesian coordinates; it is the determinant of (i, j, k; ∂/∂x, ∂/∂y, ∂/∂z; F_{x}, F_{y}, F_{z})"
+    ],
+    "vars": [
+      [
+        "F",
+        "vector field (F_{x}, F_{y}, F_{z})",
+        ""
+      ],
+      [
+        "∇ ×",
+        "curl operator",
+        "1/m"
+      ]
+    ],
+    "related": [
+      [
+        "∮_{C} F · dr = ∬_{S} (∇ × F) · dS",
+        "Stokes' theorem"
+      ],
+      [
+        "∇ × (∇f) = 0",
+        "gradients have no curl"
+      ]
+    ],
+    "example": {
+      "problem": "A fluid spins as a rigid body, v = (−ωy, ωx, 0) with ω = 3 rad/s. Find ∇ × v.",
+      "steps": [
+        "x: ∂0/∂y − ∂(ωx)/∂z = 0",
+        "y: ∂(−ωy)/∂z − ∂0/∂x = 0",
+        "z: ∂(ωx)/∂x − ∂(−ωy)/∂y = 2ω"
+      ],
+      "answer": "∇ × v = (0, 0, 6) rad/s"
+    },
+    "try": "2*3"
+  },
+  "∇^{2} f = ∂^{2}f/∂x^{2} + ∂^{2}f/∂y^{2} + ∂^{2}f/∂z^{2}": {
+    "title": "Laplacian",
+    "about": "The divergence of the gradient: it compares f at a point with its average nearby. It appears in the heat, wave, Laplace and Schrödinger equations; ∇^{2}f = 0 describes steady temperature and electrostatic potential in empty space.",
+    "assumptions": [
+      "f has second partial derivatives",
+      "Cartesian coordinates"
+    ],
+    "vars": [
+      [
+        "f",
+        "scalar field",
+        ""
+      ],
+      [
+        "∇^{2}",
+        "Laplace operator, ∇ · ∇",
+        "1/m^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "∇^{2}f = ∇ · (∇f)",
+        "definition"
+      ],
+      [
+        "∂u/∂t = α ∇^{2}u",
+        "heat equation"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∇^{2}f for f = x^{2} + 3y^{2} − 4z^{2}.",
+      "steps": [
+        "∂^{2}f/∂x^{2} = 2, ∂^{2}f/∂y^{2} = 6, ∂^{2}f/∂z^{2} = −8",
+        "2 + 6 − 8"
+      ],
+      "answer": "∇^{2}f = 0 (f is harmonic)"
+    },
+    "try": "2 + 6 - 8"
+  },
+  "∇ × (∇f) = 0": {
+    "title": "Curl of a gradient is zero",
+    "about": "A gradient field never swirls, because mixed partial derivatives are equal (∂^{2}f/∂x∂y = ∂^{2}f/∂y∂x). So a conservative force, F = −∇U, always has zero curl.",
+    "assumptions": [
+      "f has continuous second partial derivatives",
+      "The converse (zero curl means a gradient) needs a simply connected region"
+    ],
+    "vars": [
+      [
+        "f",
+        "scalar field",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∇ · (∇ × F) = 0",
+        "the companion"
+      ],
+      [
+        "∫_{C} ∇f · dr = f(b) − f(a)",
+        "path independence"
+      ]
+    ],
+    "example": {
+      "problem": "Check it for f = x^{2}y: find the z-component of ∇ × ∇f.",
+      "steps": [
+        "∇f = (2xy, x^{2}, 0)",
+        "z: ∂(x^{2})/∂x − ∂(2xy)/∂y = 2x − 2x"
+      ],
+      "answer": "0"
+    }
+  },
+  "∇ · (∇ × F) = 0": {
+    "title": "Divergence of a curl is zero",
+    "about": "A curl field has no sources or sinks, again because mixed partials cancel. It is why ∇ · B = 0 lets the magnetic field be written B = ∇ × A.",
+    "assumptions": [
+      "F has continuous second partial derivatives"
+    ],
+    "vars": [
+      [
+        "F",
+        "vector field",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∇ × (∇f) = 0",
+        "the companion"
+      ]
+    ],
+    "example": {
+      "problem": "Check it for F = (yz, x^{2}, 0).",
+      "steps": [
+        "∇ × F = (0 − 0, y − 0, 2x − z) = (0, y, 2x − z)",
+        "∇ · (0, y, 2x − z) = 0 + 1 − 1"
+      ],
+      "answer": "0"
+    }
+  },
+  "∫_{C} ∇f · dr = f(b) − f(a)": {
+    "title": "Gradient theorem",
+    "about": "The fundamental theorem of calculus for line integrals: integrating a gradient along any path depends only on the endpoints. Work done by a conservative force is minus the change in potential energy.",
+    "assumptions": [
+      "f is differentiable with a continuous gradient on a region containing C",
+      "C is a piecewise-smooth curve from a to b",
+      "A closed path gives zero"
+    ],
+    "vars": [
+      [
+        "f",
+        "potential function",
+        ""
+      ],
+      [
+        "C",
+        "a path from point a to point b",
+        ""
+      ],
+      [
+        "dr",
+        "small step along the path",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "W = −ΔU",
+        "work by a conservative force"
+      ],
+      [
+        "∇ × (∇f) = 0",
+        "test for a gradient field"
+      ]
+    ],
+    "example": {
+      "problem": "F = ∇f with f = xy + z^{2}. Find ∫ F · dr from (0, 0, 0) to (2, 3, 1) along any path.",
+      "steps": [
+        "f(2, 3, 1) = 6 + 1 = 7",
+        "f(0, 0, 0) = 0"
+      ],
+      "answer": "7"
+    },
+    "try": "2*3 + 1^2 - 0"
+  },
+  "∮_{C} (P dx + Q dy) = ∬_{D} (∂Q/∂x − ∂P/∂y) dA": {
+    "title": "Green's theorem",
+    "about": "Turns a line integral around a closed plane curve into a double integral of the 'circulation density' over the region inside. With P = −y/2, Q = x/2 it gives the area of a region from its boundary (the planimeter).",
+    "assumptions": [
+      "C is a simple closed, piecewise-smooth curve traversed counter-clockwise, enclosing D",
+      "P and Q have continuous partial derivatives on D (no holes or singularities inside)"
+    ],
+    "vars": [
+      [
+        "P, Q",
+        "components of a plane vector field (P, Q)",
+        ""
+      ],
+      [
+        "C",
+        "boundary of D, counter-clockwise",
+        ""
+      ],
+      [
+        "D",
+        "the plane region",
+        "m^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "A = ½ ∮ (x dy − y dx)",
+        "area from the boundary"
+      ],
+      [
+        "∮_{C} F · dr = ∬_{S} (∇ × F) · dS",
+        "Stokes, its 3-D form"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∮ (−y dx + x dy) around the circle of radius 2.",
+      "steps": [
+        "∂Q/∂x − ∂P/∂y = 1 − (−1) = 2",
+        "∬ 2 dA = 2 × area = 2 × π(2)^{2}"
+      ],
+      "answer": "8π ≈ 25.13"
+    },
+    "try": "2 pi 2^2"
+  },
+  "∮_{C} F · dr = ∬_{S} (∇ × F) · dS": {
+    "title": "Stokes' theorem",
+    "about": "The circulation of a field around a closed loop equals the flux of its curl through any surface bounded by the loop. It is the math behind Ampère's and Faraday's laws in integral form.",
+    "assumptions": [
+      "S is a piecewise-smooth oriented surface with boundary C",
+      "C is oriented by the right-hand rule with S's normal",
+      "F has continuous partial derivatives on S"
+    ],
+    "vars": [
+      [
+        "F",
+        "vector field",
+        ""
+      ],
+      [
+        "C",
+        "closed boundary curve of S",
+        ""
+      ],
+      [
+        "S",
+        "surface spanning C",
+        ""
+      ],
+      [
+        "dS",
+        "vector area element, n̂ dA",
+        "m^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "∮_{C} (P dx + Q dy) = ∬_{D} (∂Q/∂x − ∂P/∂y) dA",
+        "Green, the flat case"
+      ],
+      [
+        "∮ B · dl = μ_{0} I",
+        "Ampère's law"
+      ]
+    ],
+    "example": {
+      "problem": "A field F = (−y, x, 0) has curl (0, 0, 2). Find its circulation around a horizontal circle of radius 0.5 m.",
+      "steps": [
+        "Flux of the curl through the disc: 2 × π(0.5)^{2}"
+      ],
+      "answer": "π/2 ≈ 1.571"
+    },
+    "try": "2 pi 0.5^2"
+  },
+  "∯_{S} F · dS = ∭_{V} (∇ · F) dV": {
+    "title": "Divergence theorem",
+    "about": "The net flux out of a closed surface equals the total divergence (sources minus sinks) inside. It turns conservation laws and Gauss's law between integral and differential form.",
+    "assumptions": [
+      "S is a closed, piecewise-smooth surface bounding V, normal pointing outward",
+      "F has continuous partial derivatives throughout V"
+    ],
+    "vars": [
+      [
+        "F",
+        "vector field",
+        ""
+      ],
+      [
+        "S",
+        "closed surface",
+        ""
+      ],
+      [
+        "V",
+        "volume enclosed by S",
+        "m^{3}"
+      ],
+      [
+        "dS",
+        "outward vector area element",
+        "m^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "∇ · F = ∂F_{x}/∂x + ∂F_{y}/∂y + ∂F_{z}/∂z",
+        "divergence"
+      ],
+      [
+        "∯ E · dA = Q/ε_{0}",
+        "Gauss's law"
+      ]
+    ],
+    "example": {
+      "problem": "Find the outward flux of F = (x, y, z) through a sphere of radius 2.",
+      "steps": [
+        "∇ · F = 3",
+        "3 × (4/3)π(2)^{3} = 32π"
+      ],
+      "answer": "32π ≈ 100.5"
+    },
+    "try": "3 * 4/3 pi 2^3"
+  }
+}

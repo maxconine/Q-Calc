@@ -1,0 +1,5156 @@
+{
+  "σ = F/A": {
+    "title": "Normal stress: axial force over area",
+    "about": "The average normal stress on a cross-section is the force perpendicular to it divided by its area. Tension is positive, compression negative. It is the first check on any rod, bolt, cable or column.",
+    "assumptions": [
+      "The force acts along the member's centroidal axis, so the stress is uniform across the section (no bending)",
+      "The section is far from holes, notches, fillets and the point of load application (Saint-Venant); near them use a stress concentration factor K_{t}",
+      "A is the original area for engineering stress; true stress uses the current, necked area",
+      "Slender members in compression may buckle long before σ reaches the yield strength"
+    ],
+    "vars": [
+      [
+        "σ",
+        "normal stress (tension positive)",
+        "Pa"
+      ],
+      [
+        "F",
+        "internal axial force at the section",
+        "N"
+      ],
+      [
+        "A",
+        "cross-sectional area normal to F",
+        "m^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "τ = V/A",
+        "average shear stress on a section"
+      ],
+      [
+        "σ = E ε",
+        "Hooke's law, while elastic"
+      ],
+      [
+        "δ = PL/(AE)",
+        "how much the bar stretches"
+      ],
+      [
+        "σ_{max} = K_{t} σ_{nom}",
+        "peak stress at a hole or fillet"
+      ]
+    ],
+    "example": {
+      "problem": "A steel rod 12 mm in diameter carries a tensile load of 20 kN. Find the normal stress.",
+      "steps": [
+        "A = πd^{2}/4 = π(12 mm)^{2}/4 = 113.1 mm^{2}",
+        "σ = F/A = 20 000 N / 113.1 × 10^{−6} m^{2} = 176.8 MPa"
+      ],
+      "answer": "σ ≈ 176.8 MPa (tension)"
+    },
+    "try": "20 kN / (pi (12 mm)^2 / 4) to MPa"
+  },
+  "τ = V/A": {
+    "title": "Average shear stress: shear force over area",
+    "about": "When a force slides one part of a member past another, the shear force on the plane divided by its area gives the average shear stress. It is the standard check for bolts, pins, rivets, keys and glued joints.",
+    "assumptions": [
+      "The shear is spread evenly over the area; the real distribution is not uniform (in a beam it peaks at the neutral axis)",
+      "Count every shear plane: a pin in double shear carries V = F/2 on each of two areas",
+      "Bending of the pin or bolt is neglected, which is fine for short, snug connections"
+    ],
+    "vars": [
+      [
+        "τ",
+        "average shear stress on the plane",
+        "Pa"
+      ],
+      [
+        "V",
+        "shear force acting along the plane",
+        "N"
+      ],
+      [
+        "A",
+        "area of the shear plane",
+        "m^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "τ = F/(2A)",
+        "pin in double shear"
+      ],
+      [
+        "σ_{b} = F/(dt)",
+        "bearing stress of a pin of diameter d on a plate of thickness t"
+      ],
+      [
+        "τ_{max} = 3V/(2A)",
+        "peak shear in a rectangular beam"
+      ],
+      [
+        "τ = G γ",
+        "shear stress and strain, while elastic"
+      ]
+    ],
+    "example": {
+      "problem": "A 10 mm diameter pin in double shear joins a clevis carrying 15 kN. Find the average shear stress in the pin.",
+      "steps": [
+        "Two shear planes, so V = 15 kN/2 = 7.5 kN on each",
+        "A = π(10 mm)^{2}/4 = 78.54 mm^{2}",
+        "τ = V/A = 7500 N / 78.54 × 10^{−6} m^{2} = 95.5 MPa"
+      ],
+      "answer": "τ ≈ 95.5 MPa"
+    },
+    "try": "15 kN / 2 / (pi (10 mm)^2 / 4) to MPa"
+  },
+  "ε = ΔL/L": {
+    "title": "Normal strain: change in length over original length",
+    "about": "Normal strain measures how much a line element stretches per unit length. It is dimensionless and usually small, so it is often quoted in microstrain (με = 10^{−6}) or percent.",
+    "assumptions": [
+      "The deformation is uniform along L; otherwise this is the average strain and the local strain is dε = d(ΔL)/dL",
+      "Engineering strain uses the original length; for large stretches the true strain is ln(L/L_{0})",
+      "Small strain: ε ≪ 1 so that geometry changes do not matter"
+    ],
+    "vars": [
+      [
+        "ε",
+        "normal strain (extension positive)",
+        ""
+      ],
+      [
+        "ΔL",
+        "change in length",
+        "m"
+      ],
+      [
+        "L",
+        "original length",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "σ = E ε",
+        "links strain to stress"
+      ],
+      [
+        "ν = −ε_{lat}/ε_{axial}",
+        "the sideways strain that comes with it"
+      ],
+      [
+        "ε_{true} = ln(L/L_{0})",
+        "true (logarithmic) strain for large stretches"
+      ],
+      [
+        "δ = PL/(AE)",
+        "elongation of a loaded bar"
+      ]
+    ],
+    "example": {
+      "problem": "A 2.5 m steel tie stretches 1.8 mm under load. Find the strain.",
+      "steps": [
+        "ε = ΔL/L = 1.8 mm / 2500 mm",
+        "ε = 7.2 × 10^{−4} = 720 με"
+      ],
+      "answer": "ε = 7.2 × 10^{−4} (720 microstrain)"
+    },
+    "try": "1.8 mm / 2.5 m"
+  },
+  "γ = Δx/h": {
+    "title": "Shear strain: sideways slide over height",
+    "about": "Shear strain is the change, in radians, of an angle that was originally 90°. For a block whose top slides Δx over its bottom across a height h, the angle is tan γ = Δx/h ≈ γ when small.",
+    "assumptions": [
+      "Small angles: tan γ ≈ γ, good to better than 1% for γ below about 0.17 rad (10°)",
+      "The slide varies linearly through the height (uniform shear)",
+      "Engineering shear strain γ is twice the tensor shear strain ε_{xy}"
+    ],
+    "vars": [
+      [
+        "γ",
+        "shear strain, change in a right angle",
+        "rad"
+      ],
+      [
+        "Δx",
+        "relative sideways displacement of the top face",
+        "m"
+      ],
+      [
+        "h",
+        "height between the two faces",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "τ = G γ",
+        "shear stress from shear strain"
+      ],
+      [
+        "γ_{xy} = 2ε_{xy}",
+        "engineering vs tensor shear strain"
+      ],
+      [
+        "γ = ρφ/L",
+        "shear strain in a twisted shaft"
+      ]
+    ],
+    "example": {
+      "problem": "A rubber bearing pad 40 mm thick has its top displaced 3 mm sideways relative to its base. Find the shear strain.",
+      "steps": [
+        "γ = Δx/h = 3 mm / 40 mm",
+        "γ = 0.075 rad (about 4.3°), small enough for the linear form"
+      ],
+      "answer": "γ = 0.075 rad"
+    },
+    "try": "3 mm / 40 mm"
+  },
+  "t_{i} = σ_{ij} n_{j}": {
+    "title": "Cauchy's formula: traction on any plane",
+    "about": "The stress tensor gives the force per unit area (traction) on any plane through a point: multiply it by the plane's unit normal. The traction's component along n is the normal stress on the plane and the rest is shear.",
+    "assumptions": [
+      "n is a unit vector (|n| = 1), pointing out of the material on the side being considered",
+      "σ is the stress at the point, so the result is the traction at that point only",
+      "Index notation: the repeated j is summed over 1, 2, 3"
+    ],
+    "vars": [
+      [
+        "t_{i}",
+        "traction vector, force per area on the plane",
+        "Pa"
+      ],
+      [
+        "σ_{ij}",
+        "Cauchy stress tensor",
+        "Pa"
+      ],
+      [
+        "n_{j}",
+        "unit normal to the plane",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "σ_{n} = t_{i} n_{i} = σ_{ij} n_{i} n_{j}",
+        "normal stress on the plane"
+      ],
+      [
+        "τ_{n} = √(|t|^{2} − σ_{n}^{2})",
+        "shear stress on the plane"
+      ],
+      [
+        "σ_{ij} = σ_{ji}",
+        "the tensor is symmetric"
+      ]
+    ],
+    "example": {
+      "problem": "In plane stress σ_{x} = 80 MPa, σ_{y} = 20 MPa, τ_{xy} = 30 MPa. Find the traction and normal stress on the plane with n = (1, 1)/√2.",
+      "steps": [
+        "t_{x} = σ_{x}n_{x} + τ_{xy}n_{y} = (80 + 30)/√2 = 77.8 MPa",
+        "t_{y} = τ_{xy}n_{x} + σ_{y}n_{y} = (30 + 20)/√2 = 35.4 MPa",
+        "σ_{n} = t · n = (77.8 + 35.4)/√2 = 80 MPa"
+      ],
+      "answer": "t ≈ (77.8, 35.4) MPa; σ_{n} = 80 MPa"
+    },
+    "try": "(80 + 30)/sqrt(2)"
+  },
+  "σ_{ij} = σ_{ji}": {
+    "title": "Symmetry of the stress tensor",
+    "about": "Balancing moments on a tiny cube shows the shear stresses on perpendicular faces must be equal: τ_{xy} = τ_{yx}, and so on. So the 3 × 3 stress tensor has only six independent components, not nine.",
+    "assumptions": [
+      "No body couples or couple stresses (true for ordinary materials; polar or Cosserat media are the exception)",
+      "Follows from conservation of angular momentum on an infinitesimal element"
+    ],
+    "vars": [
+      [
+        "σ_{ij}",
+        "Cauchy stress component on the face normal to i, acting in direction j",
+        "Pa"
+      ]
+    ],
+    "related": [
+      [
+        "τ_{xy} = τ_{yx}",
+        "the same statement in engineering notation"
+      ],
+      [
+        "t_{i} = σ_{ij} n_{j}",
+        "traction from the stress tensor"
+      ],
+      [
+        "det(σ − λI) = 0",
+        "symmetry guarantees real principal stresses"
+      ]
+    ],
+    "example": {
+      "problem": "A shaft surface element has a shear stress of 45 MPa acting along the shaft on the face cut perpendicular to the axis. What shear acts on the longitudinal face?",
+      "steps": [
+        "Moment balance about the element's corner: τ_{xy}(dy dz)dx = τ_{yx}(dx dz)dy",
+        "So τ_{yx} = τ_{xy} = 45 MPa: the same shear acts along the longitudinal face, which is why wood shafts split lengthwise"
+      ],
+      "answer": "τ_{yx} = 45 MPa"
+    }
+  },
+  "ε_{ij} = (1/2)(∂u_{i}/∂x_{j} + ∂u_{j}/∂x_{i})": {
+    "title": "Small-strain tensor from displacements",
+    "about": "The strain tensor is the symmetric part of the displacement gradient. Its diagonal terms are the normal strains and its off-diagonal terms are half the engineering shear strains. The antisymmetric part is a rigid rotation and causes no strain.",
+    "assumptions": [
+      "Displacement gradients are small (|∂u_{i}/∂x_{j}| ≪ 1), so products of gradients are dropped",
+      "For large deformation use the Green–Lagrange strain E_{ij} = (1/2)(u_{i,j} + u_{j,i} + u_{k,i}u_{k,j})",
+      "The displacement field is continuous and differentiable"
+    ],
+    "vars": [
+      [
+        "ε_{ij}",
+        "small-strain tensor component",
+        ""
+      ],
+      [
+        "u_{i}",
+        "displacement in direction i",
+        "m"
+      ],
+      [
+        "x_{j}",
+        "position coordinate",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "ε_{x} = ∂u/∂x",
+        "normal strain"
+      ],
+      [
+        "γ_{xy} = 2ε_{xy} = ∂u/∂y + ∂v/∂x",
+        "engineering shear strain"
+      ],
+      [
+        "ΔV/V = ε_{kk}",
+        "volume change"
+      ]
+    ],
+    "example": {
+      "problem": "A displacement field is u = 0.002x + 0.001y, v = 0.003y (x, y in m). Find ε_{x}, ε_{y} and γ_{xy}.",
+      "steps": [
+        "ε_{x} = ∂u/∂x = 0.002",
+        "ε_{y} = ∂v/∂y = 0.003",
+        "ε_{xy} = (1/2)(∂u/∂y + ∂v/∂x) = (1/2)(0.001 + 0) = 0.0005, so γ_{xy} = 0.001"
+      ],
+      "answer": "ε_{x} = 0.002, ε_{y} = 0.003, ε_{xy} = 0.0005 (γ_{xy} = 0.001)"
+    }
+  },
+  "p = −σ_{kk}/3": {
+    "title": "Mean (hydrostatic) pressure from the stress tensor",
+    "about": "The pressure is minus the average of the three normal stresses. It is the part of the stress that changes volume but not shape, and it is the same in every coordinate system because σ_{kk} is an invariant.",
+    "assumptions": [
+      "Sign convention: tension positive in σ, so compression gives positive p",
+      "Repeated index k is summed: σ_{kk} = σ_{11} + σ_{22} + σ_{33}"
+    ],
+    "vars": [
+      [
+        "p",
+        "mean pressure (positive in compression)",
+        "Pa"
+      ],
+      [
+        "σ_{kk}",
+        "trace of the stress tensor, the first invariant I_{1}",
+        "Pa"
+      ]
+    ],
+    "related": [
+      [
+        "s_{ij} = σ_{ij} − (σ_{kk}/3) δ_{ij}",
+        "deviatoric stress, what is left"
+      ],
+      [
+        "I_{1} = σ_{kk}",
+        "first invariant"
+      ],
+      [
+        "p = −K ε_{kk}",
+        "pressure from volume change, bulk modulus K"
+      ]
+    ],
+    "example": {
+      "problem": "A point has σ_{x} = −50 MPa, σ_{y} = −30 MPa, σ_{z} = −10 MPa. Find the mean pressure.",
+      "steps": [
+        "σ_{kk} = −50 − 30 − 10 = −90 MPa",
+        "p = −(−90)/3 = 30 MPa"
+      ],
+      "answer": "p = 30 MPa (compressive)"
+    },
+    "try": "-(-50 - 30 - 10)/3"
+  },
+  "s_{ij} = σ_{ij} − (σ_{kk}/3) δ_{ij}": {
+    "title": "Deviatoric stress: stress minus its hydrostatic part",
+    "about": "Subtracting the mean normal stress from each diagonal term leaves the deviatoric stress, which changes shape but not volume. Metals yield on the deviatoric part alone, which is why von Mises is written in terms of it.",
+    "assumptions": [
+      "Only the diagonal terms change (δ_{ij} = 1 when i = j); shear terms are unchanged",
+      "The deviator's trace is always zero: s_{kk} = 0"
+    ],
+    "vars": [
+      [
+        "s_{ij}",
+        "deviatoric stress component",
+        "Pa"
+      ],
+      [
+        "σ_{ij}",
+        "Cauchy stress component",
+        "Pa"
+      ],
+      [
+        "σ_{kk}",
+        "trace of stress, σ_{11} + σ_{22} + σ_{33}",
+        "Pa"
+      ],
+      [
+        "δ_{ij}",
+        "Kronecker delta",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "p = −σ_{kk}/3",
+        "the hydrostatic part removed"
+      ],
+      [
+        "J_{2} = (1/2) s_{ij} s_{ij}",
+        "second deviatoric invariant"
+      ],
+      [
+        "σ_{v} = √(3J_{2})",
+        "von Mises stress"
+      ]
+    ],
+    "example": {
+      "problem": "Principal stresses are 120, 40 and −10 MPa. Find the deviatoric principal stresses.",
+      "steps": [
+        "Mean σ_{kk}/3 = (120 + 40 − 10)/3 = 50 MPa",
+        "s_{1} = 120 − 50 = 70 MPa, s_{2} = 40 − 50 = −10 MPa, s_{3} = −10 − 50 = −60 MPa",
+        "Check: 70 − 10 − 60 = 0"
+      ],
+      "answer": "s = (70, −10, −60) MPa"
+    },
+    "try": "120 - (120 + 40 - 10)/3"
+  },
+  "ΔV/V = ε_{kk}": {
+    "title": "Dilatation: volume change from strain",
+    "about": "For small strains, the fractional change in volume equals the sum of the three normal strains (the trace of the strain tensor). Shear strains change shape but not volume.",
+    "assumptions": [
+      "Small strains: products like ε_{x}ε_{y} are neglected; exactly, V/V_{0} = (1 + ε_{1})(1 + ε_{2})(1 + ε_{3})",
+      "Repeated index k summed: ε_{kk} = ε_{x} + ε_{y} + ε_{z}"
+    ],
+    "vars": [
+      [
+        "ΔV/V",
+        "volumetric strain (dilatation)",
+        ""
+      ],
+      [
+        "ε_{kk}",
+        "trace of the strain tensor",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "ε_{kk} = −p/K",
+        "volume change under pressure p, bulk modulus K"
+      ],
+      [
+        "ε_{kk} = (1 − 2ν)σ/E",
+        "volume change in uniaxial tension"
+      ],
+      [
+        "K = E/(3(1 − 2ν))",
+        "bulk modulus"
+      ]
+    ],
+    "example": {
+      "problem": "An aluminium bar (E = 70 GPa, ν = 0.33) carries a uniaxial stress of 140 MPa. Find its fractional volume change.",
+      "steps": [
+        "ε_{x} = σ/E = 140/70 000 = 0.002",
+        "ε_{y} = ε_{z} = −ν ε_{x} = −0.00066",
+        "ε_{kk} = 0.002 − 2(0.00066) = 6.8 × 10^{−4}"
+      ],
+      "answer": "ΔV/V ≈ 6.8 × 10^{−4}"
+    },
+    "try": "140 MPa / 70 GPa * (1 - 2*0.33)"
+  },
+  "σ_{x′} = (σ_{x} + σ_{y})/2 + ((σ_{x} − σ_{y})/2) cos(2θ) + τ_{xy} sin(2θ)": {
+    "title": "Stress transformation: normal stress on a rotated plane",
+    "about": "Gives the normal stress on a plane whose normal is rotated by θ from the x axis, in plane stress. Use it to find the stress across a weld, a grain or a glued seam at an angle.",
+    "assumptions": [
+      "Plane stress: σ_{z} = τ_{xz} = τ_{yz} = 0",
+      "θ is measured counter-clockwise from x to x′",
+      "Tension positive; τ_{xy} positive on the +x face in the +y direction",
+      "Holds for any material: it is just equilibrium, not a material law"
+    ],
+    "vars": [
+      [
+        "σ_{x′}",
+        "normal stress on the rotated face",
+        "Pa"
+      ],
+      [
+        "σ_{x}, σ_{y}",
+        "normal stresses in the original axes",
+        "Pa"
+      ],
+      [
+        "τ_{xy}",
+        "shear stress in the original axes",
+        "Pa"
+      ],
+      [
+        "θ",
+        "rotation angle, counter-clockwise",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "τ_{x′y′} = −((σ_{x} − σ_{y})/2) sin(2θ) + τ_{xy} cos(2θ)",
+        "the shear on the same plane"
+      ],
+      [
+        "σ_{y′} = σ_{x} + σ_{y} − σ_{x′}",
+        "the perpendicular face"
+      ],
+      [
+        "σ_{1,2} = (σ_{x} + σ_{y})/2 ± √(((σ_{x} − σ_{y})/2)^{2} + τ_{xy}^{2})",
+        "the extremes over all θ"
+      ]
+    ],
+    "example": {
+      "problem": "At a point σ_{x} = 80 MPa, σ_{y} = −40 MPa, τ_{xy} = 30 MPa. Find the normal stress on a weld at θ = 30°.",
+      "steps": [
+        "Average (80 − 40)/2 = 20 MPa; half-difference (80 + 40)/2 = 60 MPa",
+        "σ_{x′} = 20 + 60 cos 60° + 30 sin 60° = 20 + 30 + 25.98"
+      ],
+      "answer": "σ_{x′} ≈ 76.0 MPa"
+    },
+    "try": "20 + 60 cos(60 deg) + 30 sin(60 deg)"
+  },
+  "τ_{x′y′} = −((σ_{x} − σ_{y})/2) sin(2θ) + τ_{xy} cos(2θ)": {
+    "title": "Stress transformation: shear stress on a rotated plane",
+    "about": "Gives the shear stress on a plane rotated by θ in plane stress. It is zero on the principal planes and largest 45° away from them.",
+    "assumptions": [
+      "Plane stress: σ_{z} = τ_{xz} = τ_{yz} = 0",
+      "θ counter-clockwise from x; same sign conventions as the normal-stress transformation"
+    ],
+    "vars": [
+      [
+        "τ_{x′y′}",
+        "shear stress on the rotated face",
+        "Pa"
+      ],
+      [
+        "σ_{x}, σ_{y}",
+        "normal stresses in the original axes",
+        "Pa"
+      ],
+      [
+        "τ_{xy}",
+        "shear stress in the original axes",
+        "Pa"
+      ],
+      [
+        "θ",
+        "rotation angle, counter-clockwise",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "σ_{x′} = (σ_{x} + σ_{y})/2 + ((σ_{x} − σ_{y})/2) cos(2θ) + τ_{xy} sin(2θ)",
+        "normal stress on the same plane"
+      ],
+      [
+        "τ_{max} = √(((σ_{x} − σ_{y})/2)^{2} + τ_{xy}^{2})",
+        "the largest in-plane value"
+      ],
+      [
+        "tan(2θ_{p}) = 2τ_{xy}/(σ_{x} − σ_{y})",
+        "where it is zero"
+      ]
+    ],
+    "example": {
+      "problem": "With σ_{x} = 80 MPa, σ_{y} = −40 MPa, τ_{xy} = 30 MPa, find the shear along a weld at θ = 30°.",
+      "steps": [
+        "Half-difference (80 − (−40))/2 = 60 MPa",
+        "τ_{x′y′} = −60 sin 60° + 30 cos 60° = −51.96 + 15"
+      ],
+      "answer": "τ_{x′y′} ≈ −37.0 MPa"
+    },
+    "try": "-60 sin(60 deg) + 30 cos(60 deg)"
+  },
+  "σ_{1,2} = (σ_{x} + σ_{y})/2 ± √(((σ_{x} − σ_{y})/2)^{2} + τ_{xy}^{2})": {
+    "title": "Principal stresses in plane stress",
+    "about": "The largest and smallest normal stresses at a point, found on planes with no shear. This is the centre plus or minus the radius of Mohr's circle, and it is what failure theories need.",
+    "assumptions": [
+      "Plane stress, so the third principal stress is σ_{z} = 0; include it when ranking σ_{1} ≥ σ_{2} ≥ σ_{3} for Tresca",
+      "Linear elastic or not, it is pure equilibrium and holds for any material"
+    ],
+    "vars": [
+      [
+        "σ_{1}, σ_{2}",
+        "in-plane principal stresses (+ root gives σ_{1})",
+        "Pa"
+      ],
+      [
+        "σ_{x}, σ_{y}",
+        "normal stresses",
+        "Pa"
+      ],
+      [
+        "τ_{xy}",
+        "shear stress",
+        "Pa"
+      ]
+    ],
+    "related": [
+      [
+        "C = (σ_{x} + σ_{y})/2, R = √(((σ_{x} − σ_{y})/2)^{2} + τ_{xy}^{2})",
+        "Mohr's circle centre and radius"
+      ],
+      [
+        "tan(2θ_{p}) = 2τ_{xy}/(σ_{x} − σ_{y})",
+        "orientation of the principal planes"
+      ],
+      [
+        "σ_{1} + σ_{2} = σ_{x} + σ_{y}",
+        "a quick check"
+      ]
+    ],
+    "example": {
+      "problem": "Find the principal stresses for σ_{x} = 80 MPa, σ_{y} = −40 MPa, τ_{xy} = 30 MPa.",
+      "steps": [
+        "C = (80 − 40)/2 = 20 MPa",
+        "R = √(60^{2} + 30^{2}) = 67.08 MPa",
+        "σ_{1} = 20 + 67.08 = 87.1 MPa, σ_{2} = 20 − 67.08 = −47.1 MPa"
+      ],
+      "answer": "σ_{1} ≈ 87.1 MPa, σ_{2} ≈ −47.1 MPa"
+    },
+    "try": "20 + sqrt(60^2 + 30^2)"
+  },
+  "τ_{max} = √(((σ_{x} − σ_{y})/2)^{2} + τ_{xy}^{2})": {
+    "title": "Maximum in-plane shear stress",
+    "about": "The largest shear stress on any plane in the x–y plane, equal to the radius of Mohr's circle. It acts on planes 45° from the principal planes, where the normal stress is the average (σ_{x} + σ_{y})/2.",
+    "assumptions": [
+      "Plane stress",
+      "This is the in-plane maximum only; if σ_{1} and σ_{2} have the same sign, the absolute maximum shear is σ_{1}/2 (out of plane, using σ_{3} = 0)"
+    ],
+    "vars": [
+      [
+        "τ_{max}",
+        "maximum in-plane shear stress",
+        "Pa"
+      ],
+      [
+        "σ_{x}, σ_{y}",
+        "normal stresses",
+        "Pa"
+      ],
+      [
+        "τ_{xy}",
+        "shear stress",
+        "Pa"
+      ]
+    ],
+    "related": [
+      [
+        "τ_{max} = (σ_{1} − σ_{2})/2",
+        "from the principal stresses"
+      ],
+      [
+        "τ_{abs max} = (σ_{max} − σ_{min})/2",
+        "including σ_{3} = 0"
+      ],
+      [
+        "θ_{s} = θ_{p} ± 45°",
+        "where it acts"
+      ]
+    ],
+    "example": {
+      "problem": "A shaft surface has σ_{x} = 60 MPa (bending) and τ_{xy} = 40 MPa (torsion), σ_{y} = 0. Find the maximum in-plane shear.",
+      "steps": [
+        "(σ_{x} − σ_{y})/2 = 30 MPa",
+        "τ_{max} = √(30^{2} + 40^{2}) = 50 MPa"
+      ],
+      "answer": "τ_{max} = 50 MPa"
+    },
+    "try": "sqrt(30^2 + 40^2)"
+  },
+  "tan(2θ_{p}) = 2τ_{xy}/(σ_{x} − σ_{y})": {
+    "title": "Principal angle: orientation of the principal planes",
+    "about": "Gives the rotation that removes the shear stress. The equation has two solutions 90° apart, one for σ_{1} and one for σ_{2}; substitute back into the transformation formula to tell which is which.",
+    "assumptions": [
+      "Plane stress; θ_{p} counter-clockwise from x",
+      "Use atan2(2τ_{xy}, σ_{x} − σ_{y})/2 to get the angle to σ_{1} directly and avoid the quadrant ambiguity",
+      "If σ_{x} = σ_{y} and τ_{xy} ≠ 0, θ_{p} = ±45°"
+    ],
+    "vars": [
+      [
+        "θ_{p}",
+        "angle from x to a principal plane's normal",
+        "rad"
+      ],
+      [
+        "τ_{xy}",
+        "shear stress",
+        "Pa"
+      ],
+      [
+        "σ_{x}, σ_{y}",
+        "normal stresses",
+        "Pa"
+      ]
+    ],
+    "related": [
+      [
+        "tan(2θ_{s}) = −(σ_{x} − σ_{y})/(2τ_{xy})",
+        "planes of maximum shear, θ_{s} = θ_{p} ± 45°"
+      ],
+      [
+        "σ_{1,2} = (σ_{x} + σ_{y})/2 ± √(((σ_{x} − σ_{y})/2)^{2} + τ_{xy}^{2})",
+        "the principal values"
+      ]
+    ],
+    "example": {
+      "problem": "For σ_{x} = 80 MPa, σ_{y} = −40 MPa, τ_{xy} = 30 MPa, find the principal angle.",
+      "steps": [
+        "tan 2θ_{p} = 2(30)/(80 + 40) = 0.5",
+        "2θ_{p} = 26.57°, so θ_{p} = 13.3°",
+        "Check: σ_{x′}(13.3°) = 20 + 60 cos 26.57° + 30 sin 26.57° = 87.1 MPa, so this is σ_{1}"
+      ],
+      "answer": "θ_{p} ≈ 13.3° (to σ_{1}), and 103.3° to σ_{2}"
+    },
+    "try": "atan(2*30/(80 + 40))/2 to deg"
+  },
+  "σ_{v} = √(((σ_{1} − σ_{2})^{2} + (σ_{2} − σ_{3})^{2} + (σ_{3} − σ_{1})^{2})/2)": {
+    "title": "Von Mises equivalent stress",
+    "about": "Collapses a 3D stress state into one number to compare with the uniaxial yield strength: yield is predicted when σ_{v} ≥ S_{y}. It is based on distortion energy and is the standard criterion for ductile metals.",
+    "assumptions": [
+      "Ductile, isotropic material that yields on shear (distortion), not on hydrostatic pressure",
+      "Not for brittle materials (cast iron, concrete, ceramics); use maximum normal stress or Mohr–Coulomb",
+      "Static loading; fatigue needs alternating and mean components treated separately"
+    ],
+    "vars": [
+      [
+        "σ_{v}",
+        "von Mises equivalent stress",
+        "Pa"
+      ],
+      [
+        "σ_{1}, σ_{2}, σ_{3}",
+        "principal stresses",
+        "Pa"
+      ]
+    ],
+    "related": [
+      [
+        "σ_{v} = √(σ_{1}^{2} − σ_{1}σ_{2} + σ_{2}^{2})",
+        "plane stress, σ_{3} = 0"
+      ],
+      [
+        "σ_{v} = √(σ^{2} + 3τ^{2})",
+        "one normal and one shear stress"
+      ],
+      [
+        "n = S_{y}/σ_{v}",
+        "factor of safety against yield"
+      ],
+      [
+        "τ_{max} = (σ_{1} − σ_{3})/2",
+        "Tresca, the more conservative alternative"
+      ]
+    ],
+    "example": {
+      "problem": "Principal stresses are 120, 40 and −30 MPa in a steel with S_{y} = 250 MPa. Find σ_{v} and the safety factor.",
+      "steps": [
+        "(σ_{1} − σ_{2})^{2} = 80^{2} = 6400; (σ_{2} − σ_{3})^{2} = 70^{2} = 4900; (σ_{3} − σ_{1})^{2} = 150^{2} = 22 500",
+        "σ_{v} = √((6400 + 4900 + 22 500)/2) = √16 900 = 130 MPa",
+        "n = 250/130 = 1.92"
+      ],
+      "answer": "σ_{v} = 130 MPa, n ≈ 1.92"
+    },
+    "try": "sqrt(((120-40)^2 + (40+30)^2 + (-30-120)^2)/2)"
+  },
+  "σ_{v} = √(σ^{2} + 3τ^{2})": {
+    "title": "Von Mises stress for combined normal and shear stress",
+    "about": "The von Mises stress when a point carries one normal stress and one shear stress, as on the surface of a shaft in bending and torsion. Compare it with the yield strength.",
+    "assumptions": [
+      "Plane stress with σ_{y} = 0: only σ_{x} = σ and τ_{xy} = τ",
+      "Ductile, isotropic material",
+      "Pure shear (σ = 0) gives σ_{v} = √3 τ, so shear yield is S_{sy} = 0.577 S_{y}"
+    ],
+    "vars": [
+      [
+        "σ_{v}",
+        "von Mises equivalent stress",
+        "Pa"
+      ],
+      [
+        "σ",
+        "normal stress (bending or axial)",
+        "Pa"
+      ],
+      [
+        "τ",
+        "shear stress (torsion or transverse)",
+        "Pa"
+      ]
+    ],
+    "related": [
+      [
+        "σ = 32M/(πd^{3})",
+        "bending stress at a solid shaft's surface"
+      ],
+      [
+        "τ = 16T/(πd^{3})",
+        "torsional shear at a solid shaft's surface"
+      ],
+      [
+        "τ_{max} = √((σ/2)^{2} + τ^{2})",
+        "Tresca's equivalent for the same state"
+      ]
+    ],
+    "example": {
+      "problem": "A shaft surface carries σ = 90 MPa from bending and τ = 50 MPa from torsion. Find the von Mises stress.",
+      "steps": [
+        "σ_{v} = √(90^{2} + 3(50)^{2}) = √(8100 + 7500)",
+        "σ_{v} = √15 600 = 124.9 MPa"
+      ],
+      "answer": "σ_{v} ≈ 124.9 MPa"
+    },
+    "try": "sqrt(90^2 + 3*50^2)"
+  },
+  "τ_{max} = (σ_{1} − σ_{3})/2": {
+    "title": "Tresca: maximum shear stress criterion",
+    "about": "The largest shear stress at a point is half the difference of the largest and smallest principal stresses. Tresca predicts yield when it reaches S_{y}/2. It is simpler and slightly more conservative than von Mises.",
+    "assumptions": [
+      "Principal stresses ordered σ_{1} ≥ σ_{2} ≥ σ_{3}, including the zero out-of-plane stress in plane stress",
+      "Ductile, isotropic material",
+      "Gives up to about 15% lower allowable than von Mises (worst in pure shear)"
+    ],
+    "vars": [
+      [
+        "τ_{max}",
+        "absolute maximum shear stress",
+        "Pa"
+      ],
+      [
+        "σ_{1}",
+        "largest principal stress",
+        "Pa"
+      ],
+      [
+        "σ_{3}",
+        "smallest principal stress",
+        "Pa"
+      ]
+    ],
+    "related": [
+      [
+        "n = S_{y}/(σ_{1} − σ_{3})",
+        "Tresca factor of safety"
+      ],
+      [
+        "σ_{v} = √(((σ_{1} − σ_{2})^{2} + (σ_{2} − σ_{3})^{2} + (σ_{3} − σ_{1})^{2})/2)",
+        "von Mises"
+      ]
+    ],
+    "example": {
+      "problem": "Principal stresses are 120, 40 and −30 MPa in a steel with S_{y} = 250 MPa. Find τ_{max} and the Tresca safety factor.",
+      "steps": [
+        "τ_{max} = (120 − (−30))/2 = 75 MPa",
+        "n = (S_{y}/2)/τ_{max} = 125/75 = 1.67"
+      ],
+      "answer": "τ_{max} = 75 MPa, n ≈ 1.67"
+    },
+    "try": "(120 - (-30))/2"
+  },
+  "σ = E ε": {
+    "title": "Hooke's law in one dimension",
+    "about": "In the elastic range, stress is proportional to strain and the constant is Young's modulus E. It is the slope of the straight first part of a stress–strain curve.",
+    "assumptions": [
+      "Linear elastic: below the proportional limit (about the yield strength for most steels)",
+      "Uniaxial stress only; with stresses in other directions use the 3D form with ν",
+      "Isotropic, homogeneous material; temperature constant (or add αΔT)"
+    ],
+    "vars": [
+      [
+        "σ",
+        "normal stress",
+        "Pa"
+      ],
+      [
+        "E",
+        "Young's modulus (steel ≈ 200 GPa, aluminium ≈ 70 GPa)",
+        "Pa"
+      ],
+      [
+        "ε",
+        "normal strain",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "τ = G γ",
+        "the shear version"
+      ],
+      [
+        "δ = PL/(AE)",
+        "elongation of a bar"
+      ],
+      [
+        "ε_{x} = (σ_{x} − ν(σ_{y} + σ_{z}))/E + αΔT",
+        "3D with heat"
+      ]
+    ],
+    "example": {
+      "problem": "A strain gauge on a steel member (E = 200 GPa) reads 600 με. Find the stress.",
+      "steps": [
+        "ε = 600 × 10^{−6}",
+        "σ = Eε = 200 × 10^{9} Pa × 600 × 10^{−6} = 120 MPa"
+      ],
+      "answer": "σ = 120 MPa"
+    },
+    "try": "200 GPa * 600e-6 to MPa"
+  },
+  "τ = G γ": {
+    "title": "Hooke's law in shear",
+    "about": "In the elastic range, shear stress is proportional to shear strain, with the shear modulus G as the constant. Used for shafts in torsion, rubber mounts and adhesive layers.",
+    "assumptions": [
+      "Linear elastic, isotropic material",
+      "γ is the engineering shear strain in radians, small"
+    ],
+    "vars": [
+      [
+        "τ",
+        "shear stress",
+        "Pa"
+      ],
+      [
+        "G",
+        "shear modulus (steel ≈ 79 GPa, aluminium ≈ 26 GPa)",
+        "Pa"
+      ],
+      [
+        "γ",
+        "engineering shear strain",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "G = E/(2(1 + ν))",
+        "G from E and ν"
+      ],
+      [
+        "σ = E ε",
+        "the normal-stress version"
+      ],
+      [
+        "φ = TL/(GJ)",
+        "twist of a shaft"
+      ]
+    ],
+    "example": {
+      "problem": "A neoprene pad (G = 0.9 MPa) has a shear strain of 0.075. Find the shear stress.",
+      "steps": [
+        "τ = Gγ = 0.9 MPa × 0.075"
+      ],
+      "answer": "τ = 0.0675 MPa = 67.5 kPa"
+    },
+    "try": "0.9 MPa * 0.075 to kPa"
+  },
+  "ν = −ε_{lat}/ε_{axial}": {
+    "title": "Poisson's ratio",
+    "about": "A bar stretched along its axis gets thinner sideways. Poisson's ratio is the ratio of the sideways strain to the axial strain, with a minus sign so it comes out positive for ordinary materials.",
+    "assumptions": [
+      "Uniaxial stress, linear elastic, isotropic",
+      "0 ≤ ν ≤ 0.5 for isotropic materials; 0.5 means incompressible (rubber ≈ 0.49), metals ≈ 0.3, cork ≈ 0"
+    ],
+    "vars": [
+      [
+        "ν",
+        "Poisson's ratio",
+        ""
+      ],
+      [
+        "ε_{lat}",
+        "lateral (transverse) strain",
+        ""
+      ],
+      [
+        "ε_{axial}",
+        "axial strain, along the load",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Δd = −ν ε_{axial} d",
+        "change in diameter"
+      ],
+      [
+        "G = E/(2(1 + ν))",
+        "shear modulus"
+      ],
+      [
+        "K = E/(3(1 − 2ν))",
+        "bulk modulus"
+      ]
+    ],
+    "example": {
+      "problem": "In a tensile test, a 12.5 mm diameter aluminium specimen has an axial strain of 0.0024 and its diameter shrinks by 0.0099 mm. Find ν.",
+      "steps": [
+        "ε_{lat} = −0.0099/12.5 = −7.92 × 10^{−4}",
+        "ν = −(−7.92 × 10^{−4})/0.0024 = 0.33"
+      ],
+      "answer": "ν = 0.33"
+    },
+    "try": "(0.0099/12.5)/0.0024"
+  },
+  "ε_{x} = (σ_{x} − ν(σ_{y} + σ_{z}))/E + αΔT": {
+    "title": "Generalised Hooke's law with thermal strain",
+    "about": "The strain in x from all three normal stresses and a temperature change. A stress in y or z squeezes x through Poisson's effect; heating adds a free expansion αΔT. The y and z versions follow by cycling the letters.",
+    "assumptions": [
+      "Linear elastic, isotropic material",
+      "Small strains; E, ν and α constant over the temperature range",
+      "Normal strains do not depend on shear stresses (true for isotropic materials)"
+    ],
+    "vars": [
+      [
+        "ε_{x}",
+        "normal strain in x",
+        ""
+      ],
+      [
+        "σ_{x}, σ_{y}, σ_{z}",
+        "normal stresses",
+        "Pa"
+      ],
+      [
+        "ν",
+        "Poisson's ratio",
+        ""
+      ],
+      [
+        "E",
+        "Young's modulus",
+        "Pa"
+      ],
+      [
+        "α",
+        "coefficient of thermal expansion",
+        "1/K"
+      ],
+      [
+        "ΔT",
+        "temperature change",
+        "K"
+      ]
+    ],
+    "related": [
+      [
+        "ε_{y} = (σ_{y} − ν(σ_{z} + σ_{x}))/E + αΔT",
+        "and similarly ε_{z}"
+      ],
+      [
+        "γ_{xy} = τ_{xy}/G",
+        "shear strains"
+      ],
+      [
+        "σ = −EαΔT",
+        "a fully restrained bar"
+      ]
+    ],
+    "example": {
+      "problem": "A steel plate (E = 200 GPa, ν = 0.3, α = 12 × 10^{−6}/K) has σ_{x} = 100 MPa, σ_{y} = 50 MPa, σ_{z} = 0, and is heated 20 K. Find ε_{x}.",
+      "steps": [
+        "Mechanical: (100 − 0.3(50))/200 000 = 85/200 000 = 4.25 × 10^{−4}",
+        "Thermal: 12 × 10^{−6} × 20 = 2.4 × 10^{−4}",
+        "ε_{x} = 4.25 × 10^{−4} + 2.4 × 10^{−4}"
+      ],
+      "answer": "ε_{x} = 6.65 × 10^{−4}"
+    },
+    "try": "(100 MPa - 0.3*50 MPa)/200 GPa + 12e-6 * 20"
+  },
+  "γ_{xy} = τ_{xy}/G": {
+    "title": "Shear strain from shear stress (3D Hooke's law)",
+    "about": "In an isotropic material each shear strain depends only on its own shear stress. The same holds for γ_{yz} and γ_{zx}. Shear does not change the normal strains, and normal stresses do not cause shear strain.",
+    "assumptions": [
+      "Linear elastic, isotropic material (anisotropic materials such as composites couple shear and normal terms)",
+      "γ_{xy} is the engineering shear strain, twice the tensor component ε_{xy}"
+    ],
+    "vars": [
+      [
+        "γ_{xy}",
+        "engineering shear strain in the x–y plane",
+        "rad"
+      ],
+      [
+        "τ_{xy}",
+        "shear stress",
+        "Pa"
+      ],
+      [
+        "G",
+        "shear modulus",
+        "Pa"
+      ]
+    ],
+    "related": [
+      [
+        "G = E/(2(1 + ν))",
+        "shear modulus"
+      ],
+      [
+        "γ_{yz} = τ_{yz}/G, γ_{zx} = τ_{zx}/G",
+        "the other two"
+      ],
+      [
+        "ε_{x} = (σ_{x} − ν(σ_{y} + σ_{z}))/E + αΔT",
+        "the normal strains"
+      ]
+    ],
+    "example": {
+      "problem": "An aluminium element (G = 26 GPa) carries τ_{xy} = 52 MPa. Find the shear strain.",
+      "steps": [
+        "γ_{xy} = 52 MPa / 26 GPa = 0.002 rad"
+      ],
+      "answer": "γ_{xy} = 0.002 rad"
+    },
+    "try": "52 MPa / 26 GPa"
+  },
+  "σ_{ij} = λ ε_{kk} δ_{ij} + 2μ ε_{ij}": {
+    "title": "Hooke's law in Lamé form",
+    "about": "Gives every stress component from the strain tensor in one line. The λ term is a pressure from volume change (diagonal only); the 2μ term follows each strain component. Handy in index-notation derivations and finite elements.",
+    "assumptions": [
+      "Linear elastic, isotropic material; small strains",
+      "μ is the shear modulus G; λ has no simple physical meaning by itself",
+      "ε_{ij} is the tensor strain, so shear: τ_{xy} = 2μ ε_{xy} = G γ_{xy}"
+    ],
+    "vars": [
+      [
+        "σ_{ij}",
+        "stress tensor",
+        "Pa"
+      ],
+      [
+        "λ",
+        "Lamé's first constant",
+        "Pa"
+      ],
+      [
+        "μ",
+        "Lamé's second constant, the shear modulus G",
+        "Pa"
+      ],
+      [
+        "ε_{ij}",
+        "small-strain tensor",
+        ""
+      ],
+      [
+        "ε_{kk}",
+        "volumetric strain",
+        ""
+      ],
+      [
+        "δ_{ij}",
+        "Kronecker delta",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "λ = Eν/((1 + ν)(1 − 2ν))",
+        "λ from E and ν"
+      ],
+      [
+        "μ = G = E/(2(1 + ν))",
+        "μ from E and ν"
+      ],
+      [
+        "K = λ + 2μ/3",
+        "bulk modulus"
+      ]
+    ],
+    "example": {
+      "problem": "Steel (λ = 115 GPa, μ = 77 GPa) has ε_{x} = 0.001, ε_{y} = ε_{z} = 0 (uniaxial strain, as in a confined layer). Find σ_{x} and σ_{y}.",
+      "steps": [
+        "ε_{kk} = 0.001",
+        "σ_{x} = λ(0.001) + 2μ(0.001) = (115 + 154)(0.001) GPa = 269 MPa",
+        "σ_{y} = λ(0.001) = 115 MPa"
+      ],
+      "answer": "σ_{x} = 269 MPa, σ_{y} = σ_{z} = 115 MPa"
+    },
+    "try": "(115 GPa + 2*77 GPa) * 0.001 to MPa"
+  },
+  "G = E/(2(1 + ν))": {
+    "title": "Shear modulus from Young's modulus and Poisson's ratio",
+    "about": "For an isotropic material only two elastic constants are independent. Given E and ν, this gives the shear modulus G (also called μ) used in torsion and shear problems.",
+    "assumptions": [
+      "Isotropic, linear elastic material; not valid for wood, composites or single crystals"
+    ],
+    "vars": [
+      [
+        "G",
+        "shear modulus",
+        "Pa"
+      ],
+      [
+        "E",
+        "Young's modulus",
+        "Pa"
+      ],
+      [
+        "ν",
+        "Poisson's ratio",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "K = E/(3(1 − 2ν))",
+        "bulk modulus"
+      ],
+      [
+        "λ = Eν/((1 + ν)(1 − 2ν))",
+        "Lamé's first constant"
+      ],
+      [
+        "E = 9KG/(3K + G)",
+        "E from K and G"
+      ]
+    ],
+    "example": {
+      "problem": "Find G for steel with E = 200 GPa and ν = 0.3.",
+      "steps": [
+        "G = 200/(2(1.3)) GPa = 200/2.6 GPa"
+      ],
+      "answer": "G ≈ 76.9 GPa"
+    },
+    "try": "200 GPa / (2(1 + 0.3))"
+  },
+  "K = E/(3(1 − 2ν))": {
+    "title": "Bulk modulus from Young's modulus and Poisson's ratio",
+    "about": "The bulk modulus relates a uniform pressure to the volume change it causes: p = −K ΔV/V. It blows up as ν → 0.5, which is why rubber is nearly incompressible though easy to stretch.",
+    "assumptions": [
+      "Isotropic, linear elastic material",
+      "Valid for −1 < ν < 0.5; at ν = 0.5 the material is incompressible (K → ∞)"
+    ],
+    "vars": [
+      [
+        "K",
+        "bulk modulus",
+        "Pa"
+      ],
+      [
+        "E",
+        "Young's modulus",
+        "Pa"
+      ],
+      [
+        "ν",
+        "Poisson's ratio",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "ΔV/V = −p/K",
+        "volume change under pressure"
+      ],
+      [
+        "G = E/(2(1 + ν))",
+        "shear modulus"
+      ],
+      [
+        "K = λ + 2μ/3",
+        "from the Lamé constants"
+      ]
+    ],
+    "example": {
+      "problem": "Find the bulk modulus of aluminium (E = 70 GPa, ν = 0.33), and the volume change of a block at 100 MPa of pressure.",
+      "steps": [
+        "K = 70/(3(1 − 0.66)) GPa = 70/1.02 GPa = 68.6 GPa",
+        "ΔV/V = −100 MPa / 68.6 GPa = −1.46 × 10^{−3}"
+      ],
+      "answer": "K ≈ 68.6 GPa; ΔV/V ≈ −0.146%"
+    },
+    "try": "70 GPa / (3(1 - 2*0.33))"
+  },
+  "λ = Eν/((1 + ν)(1 − 2ν))": {
+    "title": "Lamé's first constant from E and ν",
+    "about": "Converts the engineering constants E and ν into λ, the constant multiplying volumetric strain in the Lamé form of Hooke's law. Together with μ = G it fully describes an isotropic elastic material.",
+    "assumptions": [
+      "Isotropic, linear elastic material",
+      "ν < 0.5 (λ → ∞ for an incompressible material)"
+    ],
+    "vars": [
+      [
+        "λ",
+        "Lamé's first constant",
+        "Pa"
+      ],
+      [
+        "E",
+        "Young's modulus",
+        "Pa"
+      ],
+      [
+        "ν",
+        "Poisson's ratio",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "μ = G = E/(2(1 + ν))",
+        "Lamé's second constant"
+      ],
+      [
+        "σ_{ij} = λ ε_{kk} δ_{ij} + 2μ ε_{ij}",
+        "where λ is used"
+      ],
+      [
+        "K = λ + 2μ/3",
+        "bulk modulus"
+      ]
+    ],
+    "example": {
+      "problem": "Find λ for steel with E = 200 GPa and ν = 0.3.",
+      "steps": [
+        "λ = 200(0.3)/((1.3)(0.4)) GPa = 60/0.52 GPa"
+      ],
+      "answer": "λ ≈ 115.4 GPa"
+    },
+    "try": "200 GPa * 0.3 / ((1 + 0.3)(1 - 2*0.3))"
+  },
+  "τ = μ du/dy": {
+    "title": "Newton's law of viscosity",
+    "about": "In a Newtonian fluid, the shear stress between layers is proportional to how fast the velocity changes across them. The constant is the dynamic viscosity μ. Use it for lubricating films, Couette flow and wall shear.",
+    "assumptions": [
+      "Newtonian fluid: μ does not depend on shear rate (water, air, oils; not paint, blood or ketchup)",
+      "Laminar, parallel (shear) flow with u along x varying only with y",
+      "μ depends strongly on temperature, so use the value at the operating temperature"
+    ],
+    "vars": [
+      [
+        "τ",
+        "shear stress in the fluid",
+        "Pa"
+      ],
+      [
+        "μ",
+        "dynamic viscosity (water ≈ 1.0 × 10^{−3}, air ≈ 1.8 × 10^{−5})",
+        "Pa·s"
+      ],
+      [
+        "du/dy",
+        "velocity gradient across the flow (shear rate)",
+        "1/s"
+      ]
+    ],
+    "related": [
+      [
+        "τ = μU/h",
+        "linear profile between a moving plate and a fixed one (Couette)"
+      ],
+      [
+        "ν = μ/ρ",
+        "kinematic viscosity"
+      ],
+      [
+        "σ_{ij} = −p δ_{ij} + 2μ e_{ij}",
+        "the full 3D form"
+      ]
+    ],
+    "example": {
+      "problem": "A plate slides at 2 m/s over a 0.5 mm film of SAE 30 oil (μ = 0.29 Pa·s). Find the shear stress and the drag on a 0.1 m^{2} plate.",
+      "steps": [
+        "Linear profile: du/dy = U/h = 2/0.0005 = 4000 1/s",
+        "τ = 0.29 × 4000 = 1160 Pa",
+        "F = τA = 1160 × 0.1 = 116 N"
+      ],
+      "answer": "τ = 1160 Pa; F = 116 N"
+    },
+    "try": "0.29 Pa s * 2 m/s / 0.5 mm"
+  },
+  "σ_{ij} = −p δ_{ij} + 2μ e_{ij}": {
+    "title": "Stress in an incompressible Newtonian fluid",
+    "about": "The fluid's stress is a pressure acting equally in every direction plus a viscous stress proportional to the strain rate. Putting this into Cauchy's equation of motion gives the Navier–Stokes equations.",
+    "assumptions": [
+      "Newtonian fluid with constant viscosity",
+      "Incompressible: e_{kk} = ∇ · v = 0 (otherwise a bulk-viscosity term λ e_{kk} δ_{ij} appears)",
+      "Isotropic fluid"
+    ],
+    "vars": [
+      [
+        "σ_{ij}",
+        "stress tensor in the fluid",
+        "Pa"
+      ],
+      [
+        "p",
+        "pressure",
+        "Pa"
+      ],
+      [
+        "μ",
+        "dynamic viscosity",
+        "Pa·s"
+      ],
+      [
+        "e_{ij}",
+        "strain-rate tensor, (1/2)(∂v_{i}/∂x_{j} + ∂v_{j}/∂x_{i})",
+        "1/s"
+      ],
+      [
+        "δ_{ij}",
+        "Kronecker delta",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "τ = μ du/dy",
+        "simple shear flow"
+      ],
+      [
+        "ρ Dv/Dt = −∇p + μ∇^{2}v + ρg",
+        "Navier–Stokes, the result"
+      ],
+      [
+        "e_{ij} = (1/2)(∂v_{i}/∂x_{j} + ∂v_{j}/∂x_{i})",
+        "strain rate"
+      ]
+    ],
+    "example": {
+      "problem": "Water (μ = 1.0 × 10^{−3} Pa·s) at p = 200 kPa flows with u = 500y (1/s), v = 0. Find σ_{xx} and σ_{xy}.",
+      "steps": [
+        "e_{xx} = ∂u/∂x = 0, so σ_{xx} = −p = −200 kPa",
+        "e_{xy} = (1/2)(∂u/∂y + ∂v/∂x) = 250 1/s",
+        "σ_{xy} = 2μ e_{xy} = 2(10^{−3})(250) = 0.5 Pa"
+      ],
+      "answer": "σ_{xx} = −200 kPa, σ_{xy} = 0.5 Pa"
+    },
+    "try": "2 * 1e-3 Pa s * 250 / s"
+  },
+  "a · b = a_{i} b_{i}": {
+    "title": "Summation convention: the dot product",
+    "about": "In index notation a repeated index is summed over 1, 2, 3, so a_{i}b_{i} = a_{1}b_{1} + a_{2}b_{2} + a_{3}b_{3}. This short-hand (Einstein's) makes tensor equations compact.",
+    "assumptions": [
+      "Cartesian coordinates with orthonormal basis vectors",
+      "An index may appear at most twice in a term; a repeated (dummy) index is summed, a single (free) index means one equation per value"
+    ],
+    "vars": [
+      [
+        "a_{i}, b_{i}",
+        "Cartesian components of vectors a and b",
+        ""
+      ],
+      [
+        "i",
+        "dummy index, summed from 1 to 3",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "|a|^{2} = a_{i} a_{i}",
+        "length squared"
+      ],
+      [
+        "(Ab)_{i} = A_{ij} b_{j}",
+        "matrix times vector"
+      ],
+      [
+        "tr(A) = A_{ii}",
+        "trace"
+      ]
+    ],
+    "example": {
+      "problem": "Find a · b for a = (2, −1, 3) and b = (4, 5, 1).",
+      "steps": [
+        "a_{i}b_{i} = 2(4) + (−1)(5) + 3(1) = 8 − 5 + 3"
+      ],
+      "answer": "a · b = 6"
+    },
+    "try": "2*4 + (-1)*5 + 3*1"
+  },
+  "δ_{ij} a_{j} = a_{i}": {
+    "title": "Kronecker delta: the substitution rule",
+    "about": "δ_{ij} is 1 when i = j and 0 otherwise; it is the identity matrix in index form. Multiplying by δ_{ij} and summing over j simply renames j to i.",
+    "assumptions": [
+      "Cartesian coordinates",
+      "δ_{ii} = 3 in three dimensions (the trace of the identity)"
+    ],
+    "vars": [
+      [
+        "δ_{ij}",
+        "Kronecker delta: 1 if i = j, 0 if i ≠ j",
+        ""
+      ],
+      [
+        "a_{j}",
+        "vector components",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "δ_{ij} A_{jk} = A_{ik}",
+        "the same rule on a tensor"
+      ],
+      [
+        "δ_{ii} = 3",
+        "trace"
+      ],
+      [
+        "e_{i} · e_{j} = δ_{ij}",
+        "orthonormal basis"
+      ]
+    ],
+    "example": {
+      "problem": "Evaluate δ_{ij} σ_{ij} for a stress tensor with σ_{11} = 50, σ_{22} = 20, σ_{33} = −10 MPa.",
+      "steps": [
+        "δ_{ij} σ_{ij} = σ_{ii} (only i = j survives)",
+        "σ_{ii} = 50 + 20 − 10 = 60 MPa"
+      ],
+      "answer": "δ_{ij} σ_{ij} = σ_{kk} = 60 MPa"
+    },
+    "try": "50 + 20 - 10"
+  },
+  "(a × b)_{i} = ε_{ijk} a_{j} b_{k}": {
+    "title": "Cross product with the permutation symbol",
+    "about": "The permutation (Levi-Civita) symbol ε_{ijk} is +1 for an even ordering of 1, 2, 3, −1 for an odd one and 0 if any index repeats. It writes the cross product, curl and determinant in index notation.",
+    "assumptions": [
+      "Right-handed Cartesian coordinates",
+      "ε_{123} = ε_{231} = ε_{312} = 1; ε_{132} = ε_{213} = ε_{321} = −1; others 0"
+    ],
+    "vars": [
+      [
+        "ε_{ijk}",
+        "permutation symbol",
+        ""
+      ],
+      [
+        "a_{j}, b_{k}",
+        "vector components",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "(∇ × v)_{i} = ε_{ijk} ∂v_{k}/∂x_{j}",
+        "curl"
+      ],
+      [
+        "det(A) = ε_{ijk} A_{1i} A_{2j} A_{3k}",
+        "determinant"
+      ],
+      [
+        "ε_{ijk} ε_{imn} = δ_{jm} δ_{kn} − δ_{jn} δ_{km}",
+        "the ε–δ identity"
+      ]
+    ],
+    "example": {
+      "problem": "Find the moment r × F for r = (2, 0, 0) m and F = (0, 3, 4) N.",
+      "steps": [
+        "(r × F)_{1} = r_{2}F_{3} − r_{3}F_{2} = 0",
+        "(r × F)_{2} = r_{3}F_{1} − r_{1}F_{3} = −8",
+        "(r × F)_{3} = r_{1}F_{2} − r_{2}F_{1} = 6"
+      ],
+      "answer": "r × F = (0, −8, 6) N·m"
+    },
+    "try": "cross([2, 0, 0], [0, 3, 4])"
+  },
+  "ε_{ijk} ε_{imn} = δ_{jm} δ_{kn} − δ_{jn} δ_{km}": {
+    "title": "The ε–δ identity",
+    "about": "Contracting two permutation symbols on one index gives a combination of Kronecker deltas. It is the workhorse for proving vector identities like the BAC–CAB rule and ∇ × (∇ × v) = ∇(∇ · v) − ∇^{2}v.",
+    "assumptions": [
+      "Three-dimensional Cartesian coordinates",
+      "The shared index must be in the same position in both symbols (cycle indices first if not)"
+    ],
+    "vars": [
+      [
+        "ε_{ijk}",
+        "permutation symbol",
+        ""
+      ],
+      [
+        "δ_{ij}",
+        "Kronecker delta",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "a × (b × c) = b(a · c) − c(a · b)",
+        "the BAC–CAB rule it proves"
+      ],
+      [
+        "ε_{ijk} ε_{ijn} = 2δ_{kn}",
+        "contracting twice"
+      ],
+      [
+        "ε_{ijk} ε_{ijk} = 6",
+        "contracting all three"
+      ]
+    ],
+    "example": {
+      "problem": "Use the identity to simplify [a × (b × c)]_{i}.",
+      "steps": [
+        "[a × (b × c)]_{i} = ε_{ijk} a_{j} ε_{kmn} b_{m} c_{n} = ε_{kij} ε_{kmn} a_{j} b_{m} c_{n}",
+        "= (δ_{im} δ_{jn} − δ_{in} δ_{jm}) a_{j} b_{m} c_{n}",
+        "= b_{i} a_{j} c_{j} − c_{i} a_{j} b_{j}"
+      ],
+      "answer": "a × (b × c) = b(a · c) − c(a · b)"
+    }
+  },
+  "σ′_{ij} = Q_{ik} Q_{jl} σ_{kl}": {
+    "title": "Rotating a second-order tensor",
+    "about": "Gives the components of stress (or strain) in a rotated coordinate system. Q is the rotation matrix whose rows are the new axes written in the old ones. In matrix form, σ′ = Q σ Q^{T}.",
+    "assumptions": [
+      "Q is orthogonal: Q Q^{T} = I, det Q = +1 for a proper rotation",
+      "Q_{ij} = e′_{i} · e_{j}, the cosine of the angle between new axis i and old axis j",
+      "Vectors rotate as v′_{i} = Q_{ij} v_{j}"
+    ],
+    "vars": [
+      [
+        "σ′_{ij}",
+        "components in the rotated axes",
+        "Pa"
+      ],
+      [
+        "Q_{ij}",
+        "direction cosines, new axis i on old axis j",
+        ""
+      ],
+      [
+        "σ_{kl}",
+        "components in the original axes",
+        "Pa"
+      ]
+    ],
+    "related": [
+      [
+        "σ′ = Q σ Q^{T}",
+        "matrix form"
+      ],
+      [
+        "Q = [[cos θ, sin θ], [−sin θ, cos θ]]",
+        "2D rotation by θ"
+      ],
+      [
+        "σ_{x′} = (σ_{x} + σ_{y})/2 + ((σ_{x} − σ_{y})/2) cos(2θ) + τ_{xy} sin(2θ)",
+        "the 2D result written out"
+      ]
+    ],
+    "example": {
+      "problem": "Rotate σ = [[80, 30], [30, −40]] MPa by θ = 30° and find σ′_{11}.",
+      "steps": [
+        "Q_{11} = cos 30° = 0.866, Q_{12} = sin 30° = 0.5",
+        "σ′_{11} = Q_{1k}Q_{1l}σ_{kl} = 0.866^{2}(80) + 2(0.866)(0.5)(30) + 0.5^{2}(−40)",
+        "= 60 + 25.98 − 10"
+      ],
+      "answer": "σ′_{11} ≈ 76.0 MPa"
+    },
+    "try": "cos(30 deg)^2 * 80 + 2 cos(30 deg) sin(30 deg) * 30 + sin(30 deg)^2 * (-40)"
+  },
+  "∫_{S} T_{ij} n_{j} dS = ∫_{V} ∂T_{ij}/∂x_{j} dV": {
+    "title": "Divergence theorem in index form",
+    "about": "The flux of a tensor field out of a closed surface equals the integral of its divergence over the enclosed volume. Applied to stress it turns the total surface force on a body into a volume integral, which leads to the equilibrium equations.",
+    "assumptions": [
+      "S is a closed, piecewise smooth surface bounding V, with n the outward unit normal",
+      "T_{ij} is continuously differentiable inside V",
+      "Works for a field of any order: for a vector, ∫_{S} v_{j} n_{j} dS = ∫_{V} ∂v_{j}/∂x_{j} dV"
+    ],
+    "vars": [
+      [
+        "T_{ij}",
+        "tensor field (for example stress σ_{ij})",
+        ""
+      ],
+      [
+        "n_{j}",
+        "outward unit normal to S",
+        ""
+      ],
+      [
+        "S",
+        "closed surface",
+        "m^{2}"
+      ],
+      [
+        "V",
+        "volume enclosed by S",
+        "m^{3}"
+      ]
+    ],
+    "related": [
+      [
+        "∂σ_{ij}/∂x_{j} + ρ b_{i} = ρ a_{i}",
+        "equilibrium, derived with it"
+      ],
+      [
+        "∮_{S} v · n dS = ∫_{V} ∇ · v dV",
+        "vector (Gauss) form"
+      ]
+    ],
+    "example": {
+      "problem": "Check the theorem for v = (x, y, z) on a sphere of radius R = 2 m.",
+      "steps": [
+        "Volume side: ∇ · v = 3, so ∫_{V} 3 dV = 3(4/3)πR^{3} = 4πR^{3}",
+        "Surface side: v · n = R on the sphere, so ∮ R dS = R(4πR^{2}) = 4πR^{3}",
+        "With R = 2: 4π(8) = 100.5 m^{3}"
+      ],
+      "answer": "Both sides = 4πR^{3} ≈ 100.5 m^{3}"
+    },
+    "try": "4 pi 2^3"
+  },
+  "det(σ − λI) = 0": {
+    "title": "Characteristic equation for principal stresses",
+    "about": "The principal stresses are the eigenvalues of the stress tensor, and the principal directions its eigenvectors. Expanding the determinant gives the cubic λ^{3} − I_{1}λ^{2} + I_{2}λ − I_{3} = 0.",
+    "assumptions": [
+      "σ is symmetric, so all three roots are real and the principal directions are mutually perpendicular",
+      "If a row and column have no shear (for example plane stress), that normal stress is already principal"
+    ],
+    "vars": [
+      [
+        "σ",
+        "stress tensor (3 × 3 matrix)",
+        "Pa"
+      ],
+      [
+        "λ",
+        "principal stress (eigenvalue)",
+        "Pa"
+      ],
+      [
+        "I",
+        "identity matrix",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "λ^{3} − I_{1}λ^{2} + I_{2}λ − I_{3} = 0",
+        "the expanded cubic"
+      ],
+      [
+        "I_{1} = σ_{kk}",
+        "first invariant"
+      ],
+      [
+        "σ_{1,2} = (σ_{x} + σ_{y})/2 ± √(((σ_{x} − σ_{y})/2)^{2} + τ_{xy}^{2})",
+        "the 2D solution"
+      ]
+    ],
+    "example": {
+      "problem": "Find the principal stresses of σ = [[80, 30, 0], [30, −40, 0], [0, 0, 20]] MPa.",
+      "steps": [
+        "σ_{z} = 20 MPa has no shear, so it is principal",
+        "The 2 × 2 block gives λ^{2} − 40λ − 4100 = 0, so λ = 20 ± √(400 + 4100) = 20 ± 67.08"
+      ],
+      "answer": "σ_{1} ≈ 87.1, σ_{2} = 20, σ_{3} ≈ −47.1 MPa"
+    },
+    "try": "eigenvalues([[80, 30, 0], [30, -40, 0], [0, 0, 20]])"
+  },
+  "I_{1} = σ_{kk}": {
+    "title": "First stress invariant",
+    "about": "The trace of the stress tensor, σ_{x} + σ_{y} + σ_{z}. It is the same in every coordinate system and equals σ_{1} + σ_{2} + σ_{3}; minus a third of it is the mean pressure.",
+    "assumptions": [
+      "Summation over k = 1, 2, 3"
+    ],
+    "vars": [
+      [
+        "I_{1}",
+        "first invariant",
+        "Pa"
+      ],
+      [
+        "σ_{kk}",
+        "trace of the stress tensor",
+        "Pa"
+      ]
+    ],
+    "related": [
+      [
+        "p = −I_{1}/3",
+        "mean pressure"
+      ],
+      [
+        "I_{2} = (σ_{ii} σ_{jj} − σ_{ij} σ_{ij})/2",
+        "second invariant"
+      ],
+      [
+        "I_{3} = det(σ)",
+        "third invariant"
+      ]
+    ],
+    "example": {
+      "problem": "Find I_{1} for σ_{x} = 80, σ_{y} = −40, σ_{z} = 20 MPa (shears do not matter).",
+      "steps": [
+        "I_{1} = 80 − 40 + 20"
+      ],
+      "answer": "I_{1} = 60 MPa"
+    },
+    "try": "80 - 40 + 20"
+  },
+  "I_{2} = (σ_{ii} σ_{jj} − σ_{ij} σ_{ij})/2": {
+    "title": "Second stress invariant",
+    "about": "The coefficient of λ in the characteristic cubic. Written out, I_{2} = σ_{x}σ_{y} + σ_{y}σ_{z} + σ_{z}σ_{x} − τ_{xy}^{2} − τ_{yz}^{2} − τ_{zx}^{2}, and in principal stresses σ_{1}σ_{2} + σ_{2}σ_{3} + σ_{3}σ_{1}.",
+    "assumptions": [
+      "σ symmetric; summation over repeated indices"
+    ],
+    "vars": [
+      [
+        "I_{2}",
+        "second invariant",
+        "Pa^{2}"
+      ],
+      [
+        "σ_{ij}",
+        "stress tensor",
+        "Pa"
+      ]
+    ],
+    "related": [
+      [
+        "I_{2} = σ_{x}σ_{y} + σ_{y}σ_{z} + σ_{z}σ_{x} − τ_{xy}^{2} − τ_{yz}^{2} − τ_{zx}^{2}",
+        "expanded"
+      ],
+      [
+        "J_{2} = I_{1}^{2}/3 − I_{2}",
+        "second deviatoric invariant; σ_{v} = √(3J_{2})"
+      ]
+    ],
+    "example": {
+      "problem": "Find I_{2} for σ_{x} = 80, σ_{y} = −40, σ_{z} = 20, τ_{xy} = 30 MPa, other shears zero.",
+      "steps": [
+        "σ_{x}σ_{y} + σ_{y}σ_{z} + σ_{z}σ_{x} = −3200 − 800 + 1600 = −2400",
+        "Minus τ_{xy}^{2} = 900: I_{2} = −3300 MPa^{2}",
+        "Check with principal values 87.08, 20, −47.08: 1741.6 − 941.6 − 4100 = −3300"
+      ],
+      "answer": "I_{2} = −3300 MPa^{2}"
+    },
+    "try": "80*(-40) + (-40)*20 + 20*80 - 30^2"
+  },
+  "I_{3} = det(σ)": {
+    "title": "Third stress invariant",
+    "about": "The determinant of the stress tensor, equal to σ_{1}σ_{2}σ_{3}. It is the constant term in the characteristic cubic for the principal stresses.",
+    "assumptions": [
+      "Same in every coordinate system, like I_{1} and I_{2}"
+    ],
+    "vars": [
+      [
+        "I_{3}",
+        "third invariant",
+        "Pa^{3}"
+      ],
+      [
+        "σ",
+        "stress tensor",
+        "Pa"
+      ]
+    ],
+    "related": [
+      [
+        "I_{3} = σ_{1}σ_{2}σ_{3}",
+        "from the principal stresses"
+      ],
+      [
+        "λ^{3} − I_{1}λ^{2} + I_{2}λ − I_{3} = 0",
+        "characteristic equation"
+      ]
+    ],
+    "example": {
+      "problem": "Find I_{3} for σ = [[80, 30, 0], [30, −40, 0], [0, 0, 20]] MPa.",
+      "steps": [
+        "Expand along the third row: I_{3} = 20 × (80(−40) − 30^{2})",
+        "= 20 × (−3200 − 900) = 20 × (−4100)"
+      ],
+      "answer": "I_{3} = −82 000 MPa^{3}"
+    },
+    "try": "det([[80, 30, 0], [30, -40, 0], [0, 0, 20]])"
+  },
+  "∂σ_{ij}/∂x_{j} + ρ b_{i} = ρ a_{i}": {
+    "title": "Cauchy's equation of motion (equilibrium)",
+    "about": "Newton's second law at a point in a continuum: the net force from stress gradients plus the body force equals mass times acceleration. With a = 0 it is the equilibrium equation used in every elasticity problem.",
+    "assumptions": [
+      "Continuum with differentiable stress field",
+      "b is body force per unit mass (gravity: b = g)",
+      "Holds for any material; combine with a constitutive law to solve"
+    ],
+    "vars": [
+      [
+        "σ_{ij}",
+        "Cauchy stress tensor",
+        "Pa"
+      ],
+      [
+        "x_{j}",
+        "position",
+        "m"
+      ],
+      [
+        "ρ",
+        "density",
+        "kg/m^{3}"
+      ],
+      [
+        "b_{i}",
+        "body force per unit mass",
+        "m/s^{2}"
+      ],
+      [
+        "a_{i}",
+        "acceleration",
+        "m/s^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "∂σ_{x}/∂x + ∂τ_{xy}/∂y + ∂τ_{xz}/∂z + ρb_{x} = 0",
+        "x equation, static"
+      ],
+      [
+        "ρ Dv/Dt = −∇p + μ∇^{2}v + ρg",
+        "for a Newtonian fluid"
+      ]
+    ],
+    "example": {
+      "problem": "A concrete column (ρ = 2400 kg/m^{3}) stands 10 m tall, free at the top. Find the vertical stress at its base from self-weight.",
+      "steps": [
+        "Only σ_{z}(z) with b_{z} = −g: dσ_{z}/dz − ρg = 0",
+        "With σ_{z} = 0 at the top, σ_{z} = −ρg h at depth h below it",
+        "σ_{z} = −2400 × 9.81 × 10 = −235 kPa"
+      ],
+      "answer": "σ_{z} ≈ −235 kPa (compression)"
+    },
+    "try": "-2400 kg/m^3 * 9.81 m/s^2 * 10 m to kPa"
+  },
+  "δ = PL/(AE)": {
+    "title": "Elongation of an axially loaded bar",
+    "about": "How much a straight bar stretches or shortens under an axial load. Combine σ = P/A with ε = σ/E and δ = εL. For several segments, add each segment's PL/(AE).",
+    "assumptions": [
+      "Linear elastic material, stress below the proportional limit",
+      "P, A and E constant along L; otherwise sum segments or integrate δ = ∫ P(x)/(A(x)E) dx",
+      "Load applied at the centroid (no bending); compression members must not buckle"
+    ],
+    "vars": [
+      [
+        "δ",
+        "elongation (positive in tension)",
+        "m"
+      ],
+      [
+        "P",
+        "internal axial force",
+        "N"
+      ],
+      [
+        "L",
+        "length",
+        "m"
+      ],
+      [
+        "A",
+        "cross-sectional area",
+        "m^{2}"
+      ],
+      [
+        "E",
+        "Young's modulus",
+        "Pa"
+      ]
+    ],
+    "related": [
+      [
+        "δ = Σ P_{i}L_{i}/(A_{i}E_{i})",
+        "stepped bar"
+      ],
+      [
+        "k = AE/L",
+        "axial stiffness"
+      ],
+      [
+        "δ_{T} = αΔT L",
+        "thermal growth"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 m steel rod (E = 200 GPa) 20 mm in diameter carries 50 kN tension. Find its elongation.",
+      "steps": [
+        "A = π(20 mm)^{2}/4 = 314.2 mm^{2}",
+        "δ = (50 000 N)(2 m)/(314.2 × 10^{−6} m^{2} × 200 × 10^{9} Pa) = 1.59 × 10^{−3} m"
+      ],
+      "answer": "δ ≈ 1.59 mm"
+    },
+    "try": "50 kN * 2 m / (pi (20 mm)^2 / 4 * 200 GPa) to mm"
+  },
+  "k = AE/L": {
+    "title": "Axial stiffness of a bar",
+    "about": "A bar loaded along its axis behaves like a spring with stiffness AE/L. This lets you treat bars as springs in series (flexibilities add) or in parallel (stiffnesses add) for indeterminate problems.",
+    "assumptions": [
+      "Linear elastic, uniform bar with constant A and E",
+      "Axial load only"
+    ],
+    "vars": [
+      [
+        "k",
+        "axial stiffness",
+        "N/m"
+      ],
+      [
+        "A",
+        "cross-sectional area",
+        "m^{2}"
+      ],
+      [
+        "E",
+        "Young's modulus",
+        "Pa"
+      ],
+      [
+        "L",
+        "length",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "P = kδ",
+        "spring law"
+      ],
+      [
+        "1/k = Σ 1/k_{i}",
+        "bars in series"
+      ],
+      [
+        "k = Σ k_{i}",
+        "bars in parallel"
+      ]
+    ],
+    "example": {
+      "problem": "Find the stiffness of a 1.5 m aluminium rod (E = 70 GPa) with a 200 mm^{2} cross-section.",
+      "steps": [
+        "k = (200 × 10^{−6} m^{2})(70 × 10^{9} Pa)/1.5 m = 9.33 × 10^{6} N/m"
+      ],
+      "answer": "k ≈ 9.33 MN/m"
+    },
+    "try": "200 mm^2 * 70 GPa / 1.5 m to MN/m"
+  },
+  "δ_{T} = αΔT L": {
+    "title": "Free thermal expansion of a bar",
+    "about": "A bar free to move grows by αΔT per unit length when heated. With no restraint there is no stress; restrain it and the blocked expansion becomes stress.",
+    "assumptions": [
+      "Bar is free to expand (no restraint)",
+      "α constant over the temperature range; uniform temperature along L"
+    ],
+    "vars": [
+      [
+        "δ_{T}",
+        "thermal elongation",
+        "m"
+      ],
+      [
+        "α",
+        "coefficient of thermal expansion (steel ≈ 12 × 10^{−6}, aluminium ≈ 23 × 10^{−6})",
+        "1/K"
+      ],
+      [
+        "ΔT",
+        "temperature change",
+        "K"
+      ],
+      [
+        "L",
+        "original length",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "σ = −EαΔT",
+        "if fully restrained"
+      ],
+      [
+        "δ = PL/(AE) + αΔT L",
+        "load and heat together"
+      ]
+    ],
+    "example": {
+      "problem": "A 30 m steel rail (α = 12 × 10^{−6}/K) warms from 10 °C to 45 °C. How much would it grow if free?",
+      "steps": [
+        "ΔT = 35 K",
+        "δ_{T} = 12 × 10^{−6} × 35 × 30 m = 0.0126 m"
+      ],
+      "answer": "δ_{T} = 12.6 mm"
+    },
+    "try": "12e-6 * 35 * 30 m to mm"
+  },
+  "σ = −EαΔT": {
+    "title": "Thermal stress in a fully restrained bar",
+    "about": "If a bar is held between rigid walls and heated, its free expansion is blocked entirely and it carries a compressive stress EαΔT. Cooling gives tension. Note the stress does not depend on length or area.",
+    "assumptions": [
+      "Perfectly rigid supports (any give reduces the stress)",
+      "Linear elastic; check the stress against yield and the bar against buckling",
+      "Uniform temperature change"
+    ],
+    "vars": [
+      [
+        "σ",
+        "axial stress (negative = compression)",
+        "Pa"
+      ],
+      [
+        "E",
+        "Young's modulus",
+        "Pa"
+      ],
+      [
+        "α",
+        "coefficient of thermal expansion",
+        "1/K"
+      ],
+      [
+        "ΔT",
+        "temperature rise",
+        "K"
+      ]
+    ],
+    "related": [
+      [
+        "δ_{T} = αΔT L",
+        "the expansion that is blocked"
+      ],
+      [
+        "Σ δ = 0",
+        "compatibility used to derive it"
+      ],
+      [
+        "P_{cr} = π^{2}EI/(KL)^{2}",
+        "check buckling in compression"
+      ]
+    ],
+    "example": {
+      "problem": "A steel rail (E = 200 GPa, α = 12 × 10^{−6}/K) is welded continuous and warms 35 K. Find the stress.",
+      "steps": [
+        "σ = −(200 × 10^{9})(12 × 10^{−6})(35) Pa"
+      ],
+      "answer": "σ = −84 MPa (compression)"
+    },
+    "try": "-200 GPa * 12e-6 * 35 to MPa"
+  },
+  "Σ δ = 0": {
+    "title": "Compatibility for statically indeterminate members",
+    "about": "When there are more unknown forces than equilibrium equations, add a geometric condition: the deformations must fit together. For a bar between rigid walls, the total change in length is zero.",
+    "assumptions": [
+      "Rigid supports that do not move (otherwise Σ δ equals the known gap or support movement)",
+      "Each deformation is written in terms of the forces with a force–deformation law (δ = PL/(AE) + αΔT L)",
+      "Small deformations"
+    ],
+    "vars": [
+      [
+        "δ",
+        "deformation of each segment, mechanical plus thermal",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "δ = PL/(AE)",
+        "mechanical deformation"
+      ],
+      [
+        "δ_{T} = αΔT L",
+        "thermal deformation"
+      ],
+      [
+        "Σ δ = gap",
+        "when a gap closes"
+      ]
+    ],
+    "example": {
+      "problem": "A 400 mm steel bar (E = 200 GPa, A = 500 mm^{2}) sits between rigid walls. A 60 kN load acts at 100 mm from the left wall. Find the left reaction.",
+      "steps": [
+        "Equilibrium: R_{L} + R_{R} = 60 kN",
+        "Compatibility: R_{L}(100)/(AE) − R_{R}(300)/(AE) = 0, so R_{L} = 3R_{R}",
+        "4R_{R} = 60 kN, R_{R} = 15 kN, R_{L} = 45 kN"
+      ],
+      "answer": "R_{L} = 45 kN, R_{R} = 15 kN (the nearer wall takes three quarters)"
+    },
+    "try": "60 kN * 300 mm / 400 mm"
+  },
+  "P_{1} = P k_{1}/(k_{1} + k_{2})": {
+    "title": "Load sharing between two parallel bars",
+    "about": "When two members side by side carry a load through a rigid plate, they stretch the same amount, so each takes load in proportion to its stiffness. The stiffer member takes more.",
+    "assumptions": [
+      "The plate is rigid and the load is placed so it does not tilt",
+      "Both members are linear elastic, with k = AE/L",
+      "Members start snug (no initial gap or misfit)"
+    ],
+    "vars": [
+      [
+        "P_{1}",
+        "force carried by member 1",
+        "N"
+      ],
+      [
+        "P",
+        "total applied load",
+        "N"
+      ],
+      [
+        "k_{1}, k_{2}",
+        "axial stiffnesses AE/L",
+        "N/m"
+      ]
+    ],
+    "related": [
+      [
+        "k = AE/L",
+        "each member's stiffness"
+      ],
+      [
+        "δ = P/(k_{1} + k_{2})",
+        "common deflection"
+      ],
+      [
+        "P_{2} = P k_{2}/(k_{1} + k_{2})",
+        "the other member"
+      ]
+    ],
+    "example": {
+      "problem": "A concrete pier has a steel rod cast inside. Concrete: A = 0.09 m^{2}, E = 25 GPa. Steel: A = 0.002 m^{2}, E = 200 GPa. Same length. Find the share of a 1 MN load taken by the steel.",
+      "steps": [
+        "Same L, so k ∝ AE: steel 0.002 × 200 = 0.4, concrete 0.09 × 25 = 2.25 (GPa·m^{2})",
+        "P_{steel} = 1 MN × 0.4/(0.4 + 2.25) = 0.151 MN"
+      ],
+      "answer": "P_{steel} ≈ 151 kN (concrete ≈ 849 kN)"
+    },
+    "try": "1000 kN * 0.4/(0.4 + 2.25)"
+  },
+  "σ_{h} = pr/t": {
+    "title": "Hoop stress in a thin-walled cylinder",
+    "about": "Internal pressure tries to split a cylinder lengthwise; the wall resists with a circumferential (hoop) stress. It is twice the axial stress, so pipes and tanks fail along their length.",
+    "assumptions": [
+      "Thin wall: r/t ≥ 10 (stress roughly uniform through the wall); thicker walls need Lamé's thick-wall solution",
+      "r is the inner (or mean) radius; p is gauge pressure",
+      "Away from end caps, nozzles and supports"
+    ],
+    "vars": [
+      [
+        "σ_{h}",
+        "hoop (circumferential) stress",
+        "Pa"
+      ],
+      [
+        "p",
+        "internal gauge pressure",
+        "Pa"
+      ],
+      [
+        "r",
+        "inner radius",
+        "m"
+      ],
+      [
+        "t",
+        "wall thickness",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "σ_{a} = pr/(2t)",
+        "axial (longitudinal) stress"
+      ],
+      [
+        "σ = pr/(2t)",
+        "thin sphere"
+      ],
+      [
+        "σ_{r} ≈ −p at the inner surface",
+        "radial stress, usually neglected"
+      ]
+    ],
+    "example": {
+      "problem": "A compressed-air tank of inner diameter 600 mm and wall 8 mm holds 1.5 MPa. Find the hoop stress.",
+      "steps": [
+        "r/t = 300/8 = 37.5, so thin wall applies",
+        "σ_{h} = (1.5 MPa)(300 mm)/(8 mm)"
+      ],
+      "answer": "σ_{h} = 56.25 MPa"
+    },
+    "try": "1.5 MPa * 300 mm / 8 mm"
+  },
+  "σ_{a} = pr/(2t)": {
+    "title": "Axial stress in a thin-walled cylinder",
+    "about": "Pressure on the end caps pulls a closed cylinder lengthwise. The force pπr^{2} is carried by the wall ring 2πrt, giving half the hoop stress.",
+    "assumptions": [
+      "Closed ends (open pipes with sliding seals carry no axial pressure stress)",
+      "Thin wall, r/t ≥ 10",
+      "Away from end caps and discontinuities"
+    ],
+    "vars": [
+      [
+        "σ_{a}",
+        "axial (longitudinal) stress",
+        "Pa"
+      ],
+      [
+        "p",
+        "internal gauge pressure",
+        "Pa"
+      ],
+      [
+        "r",
+        "inner radius",
+        "m"
+      ],
+      [
+        "t",
+        "wall thickness",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "σ_{h} = pr/t",
+        "hoop stress, twice as large"
+      ],
+      [
+        "τ_{max} = pr/(2t)",
+        "absolute max shear, using σ_{r} ≈ 0"
+      ]
+    ],
+    "example": {
+      "problem": "For the tank with inner diameter 600 mm, wall 8 mm and pressure 1.5 MPa, find the axial stress.",
+      "steps": [
+        "σ_{a} = (1.5 MPa)(300 mm)/(2 × 8 mm)"
+      ],
+      "answer": "σ_{a} ≈ 28.1 MPa"
+    },
+    "try": "1.5 MPa * 300 mm / (2 * 8 mm)"
+  },
+  "σ = pr/(2t)": {
+    "title": "Wall stress in a thin-walled sphere",
+    "about": "A sphere under internal pressure has the same tensile stress in every direction in its wall: half a cylinder's hoop stress. That is why spheres make the lightest pressure vessels.",
+    "assumptions": [
+      "Thin wall, r/t ≥ 10",
+      "Uniform internal gauge pressure",
+      "Away from openings and supports"
+    ],
+    "vars": [
+      [
+        "σ",
+        "membrane stress, equal in all in-plane directions",
+        "Pa"
+      ],
+      [
+        "p",
+        "internal gauge pressure",
+        "Pa"
+      ],
+      [
+        "r",
+        "inner radius",
+        "m"
+      ],
+      [
+        "t",
+        "wall thickness",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "σ_{h} = pr/t",
+        "cylinder, hoop"
+      ],
+      [
+        "t = pr/(2σ_{allow})",
+        "wall needed for an allowable stress"
+      ]
+    ],
+    "example": {
+      "problem": "A spherical propane tank 2 m in inner diameter holds 1.8 MPa. With an allowable stress of 140 MPa, what wall thickness is needed?",
+      "steps": [
+        "t = pr/(2σ) = (1.8 MPa)(1 m)/(2 × 140 MPa)",
+        "t = 6.43 mm (r/t = 156, thin wall is fine)"
+      ],
+      "answer": "t ≈ 6.43 mm"
+    },
+    "try": "1.8 MPa * 1 m / (2 * 140 MPa) to mm"
+  },
+  "τ = Tρ/J": {
+    "title": "Torsion formula: shear stress in a twisted shaft",
+    "about": "A torque twists a circular shaft and sets up shear stress on its cross-section. The stress is zero at the centre and grows linearly with distance from it, reaching τ_{max} = Tc/J at the outer surface.",
+    "assumptions": [
+      "The shaft is circular, solid or hollow, and straight, with a constant cross-section along the length considered",
+      "The material is homogeneous, isotropic and linear elastic (stress stays below the proportional limit)",
+      "Plane cross-sections stay plane and radial lines stay straight as the shaft twists",
+      "Small angles of twist",
+      "Far enough from where the torque is applied or the diameter changes (Saint-Venant's principle)"
+    ],
+    "vars": [
+      [
+        "τ",
+        "shear stress at radius ρ",
+        "Pa"
+      ],
+      [
+        "T",
+        "internal torque at the section (from a free-body diagram)",
+        "N·m"
+      ],
+      [
+        "ρ",
+        "radial distance from the shaft's centre, 0 ≤ ρ ≤ c",
+        "m"
+      ],
+      [
+        "J",
+        "polar moment of inertia of the cross-section",
+        "m^{4}"
+      ],
+      [
+        "c",
+        "outer radius of the shaft",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "J = πc^{4}/2",
+        "solid shaft of radius c"
+      ],
+      [
+        "J = (π/2)(c_{o}^{4} − c_{i}^{4})",
+        "hollow shaft, outer radius c_{o}, inner radius c_{i}"
+      ],
+      [
+        "τ_{max} = Tc/J",
+        "largest stress, at the outer surface"
+      ],
+      [
+        "φ = TL/(GJ)",
+        "angle of twist over a length L"
+      ]
+    ],
+    "example": {
+      "problem": "A solid steel shaft 50 mm in diameter carries a torque of 1.5 kN·m. Find the shear stress at its surface and 10 mm from its centre.",
+      "steps": [
+        "c = 50/2 = 25 mm = 0.025 m",
+        "J = πc^{4}/2 = π(0.025 m)^{4}/2 = 6.14 × 10^{−7} m^{4}",
+        "At the surface ρ = c: τ = (1500 N·m)(0.025 m)/(6.14 × 10^{−7} m^{4}) = 61.1 MPa",
+        "At ρ = 10 mm, the stress scales linearly: τ = 61.1 MPa × 10/25 = 24.4 MPa"
+      ],
+      "answer": "τ_{max} ≈ 61.1 MPa; 24.4 MPa at ρ = 10 mm"
+    },
+    "try": "1.5 kN m * 25 mm / (pi (25 mm)^4 / 2) to MPa"
+  },
+  "τ_{max} = Tc/J": {
+    "title": "Maximum torsional shear stress in a circular shaft",
+    "about": "The torsion formula evaluated at the outer surface, where shear stress is largest. This is the number to compare with the allowable shear stress when sizing a shaft.",
+    "assumptions": [
+      "Circular solid or hollow shaft, constant section",
+      "Linear elastic, homogeneous, isotropic material",
+      "Away from keyways, shoulders and load points (use K_{t} there)"
+    ],
+    "vars": [
+      [
+        "τ_{max}",
+        "shear stress at the outer surface",
+        "Pa"
+      ],
+      [
+        "T",
+        "internal torque",
+        "N·m"
+      ],
+      [
+        "c",
+        "outer radius",
+        "m"
+      ],
+      [
+        "J",
+        "polar moment of inertia",
+        "m^{4}"
+      ]
+    ],
+    "related": [
+      [
+        "τ_{max} = 16T/(πd^{3})",
+        "solid shaft of diameter d"
+      ],
+      [
+        "J = πd^{4}/32",
+        "solid"
+      ],
+      [
+        "J = π(d_{o}^{4} − d_{i}^{4})/32",
+        "hollow"
+      ],
+      [
+        "d = (16T/(πτ_{allow}))^{1/3}",
+        "sizing a solid shaft"
+      ]
+    ],
+    "example": {
+      "problem": "A hollow steel shaft, 60 mm outside and 40 mm inside diameter, carries 2 kN·m. Find the maximum shear stress.",
+      "steps": [
+        "J = π(60^{4} − 40^{4})/32 mm^{4} = 1.021 × 10^{6} mm^{4}",
+        "τ_{max} = (2 × 10^{6} N·mm)(30 mm)/(1.021 × 10^{6} mm^{4}) = 58.8 MPa"
+      ],
+      "answer": "τ_{max} ≈ 58.8 MPa"
+    },
+    "try": "2 kN m * 30 mm / (pi ((60 mm)^4 - (40 mm)^4) / 32) to MPa"
+  },
+  "φ = TL/(GJ)": {
+    "title": "Angle of twist of a circular shaft",
+    "about": "How far one end of a shaft rotates relative to the other under torque. Shafts are often sized for stiffness (a limit like 1° per metre) rather than strength.",
+    "assumptions": [
+      "Circular shaft, linear elastic material",
+      "T, G and J constant along L; otherwise sum segments: φ = Σ T_{i}L_{i}/(G_{i}J_{i})",
+      "Result is in radians"
+    ],
+    "vars": [
+      [
+        "φ",
+        "angle of twist",
+        "rad"
+      ],
+      [
+        "T",
+        "internal torque",
+        "N·m"
+      ],
+      [
+        "L",
+        "length",
+        "m"
+      ],
+      [
+        "G",
+        "shear modulus",
+        "Pa"
+      ],
+      [
+        "J",
+        "polar moment of inertia",
+        "m^{4}"
+      ]
+    ],
+    "related": [
+      [
+        "k_{t} = GJ/L",
+        "torsional stiffness"
+      ],
+      [
+        "τ_{max} = Tc/J",
+        "the stress at the same time"
+      ],
+      [
+        "φ = Σ T_{i}L_{i}/(G_{i}J_{i})",
+        "stepped shaft"
+      ]
+    ],
+    "example": {
+      "problem": "A solid steel shaft (G = 79 GPa) 40 mm in diameter and 1.2 m long carries 800 N·m. Find the twist.",
+      "steps": [
+        "J = π(0.04)^{4}/32 = 2.513 × 10^{−7} m^{4}",
+        "φ = (800)(1.2)/((79 × 10^{9})(2.513 × 10^{−7})) = 0.0484 rad",
+        "In degrees: 2.77°"
+      ],
+      "answer": "φ ≈ 0.0484 rad (2.77°)"
+    },
+    "try": "800 N m * 1.2 m / (79 GPa * pi * (40 mm)^4 / 32)"
+  },
+  "k_{t} = GJ/L": {
+    "title": "Torsional stiffness of a shaft",
+    "about": "Torque needed per radian of twist. A shaft acts as a torsional spring; use k_{t} for torsional vibration (ω_{n} = √(k_{t}/I_{rot})) and for indeterminate shafts.",
+    "assumptions": [
+      "Circular, uniform shaft of linear elastic material",
+      "Shafts in series: 1/k = Σ 1/k_{i}; side by side (same twist): k = Σ k_{i}"
+    ],
+    "vars": [
+      [
+        "k_{t}",
+        "torsional stiffness",
+        "N·m/rad"
+      ],
+      [
+        "G",
+        "shear modulus",
+        "Pa"
+      ],
+      [
+        "J",
+        "polar moment of inertia",
+        "m^{4}"
+      ],
+      [
+        "L",
+        "length",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "T = k_{t} φ",
+        "spring law"
+      ],
+      [
+        "φ = TL/(GJ)",
+        "angle of twist"
+      ],
+      [
+        "ω_{n} = √(k_{t}/I)",
+        "torsional natural frequency with a disc of inertia I"
+      ]
+    ],
+    "example": {
+      "problem": "Find the torsional stiffness of the 40 mm, 1.2 m steel shaft (G = 79 GPa).",
+      "steps": [
+        "J = 2.513 × 10^{−7} m^{4}",
+        "k_{t} = (79 × 10^{9})(2.513 × 10^{−7})/1.2 = 16 500 N·m/rad"
+      ],
+      "answer": "k_{t} ≈ 16.5 kN·m/rad"
+    },
+    "try": "79 GPa * pi * (40 mm)^4 / 32 / 1.2 m to kN m"
+  },
+  "P = Tω": {
+    "title": "Power transmitted by a rotating shaft",
+    "about": "Power is torque times angular speed. Use it to get the torque on a motor or gearbox shaft from its rated power and speed, then size the shaft.",
+    "assumptions": [
+      "ω in rad/s: ω = 2πn/60 for n in rpm",
+      "Steady rotation; T is the torque carried at that section"
+    ],
+    "vars": [
+      [
+        "P",
+        "power",
+        "W"
+      ],
+      [
+        "T",
+        "torque",
+        "N·m"
+      ],
+      [
+        "ω",
+        "angular speed",
+        "rad/s"
+      ]
+    ],
+    "related": [
+      [
+        "ω = 2πn/60",
+        "from rpm"
+      ],
+      [
+        "T = P/(2πf)",
+        "with f in rev/s"
+      ],
+      [
+        "τ_{max} = 16T/(πd^{3})",
+        "then size the shaft"
+      ]
+    ],
+    "example": {
+      "problem": "A motor delivers 15 kW at 1450 rpm. Find the shaft torque.",
+      "steps": [
+        "ω = 2π(1450)/60 = 151.8 rad/s",
+        "T = P/ω = 15 000/151.8 = 98.8 N·m"
+      ],
+      "answer": "T ≈ 98.8 N·m"
+    },
+    "try": "15000 / (2 pi 1450 / 60)"
+  },
+  "J = πd^{4}/32": {
+    "title": "Polar moment of inertia of a solid circular shaft",
+    "about": "The geometric property that measures a circular section's resistance to twisting. It goes as d^{4}, so a small increase in diameter stiffens a shaft a lot. Equal to πc^{4}/2 with c = d/2.",
+    "assumptions": [
+      "Solid circular section; for non-circular sections J does not give the torsion constant",
+      "J = I_{x} + I_{y} = 2I for a circle"
+    ],
+    "vars": [
+      [
+        "J",
+        "polar moment of inertia",
+        "m^{4}"
+      ],
+      [
+        "d",
+        "diameter",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "J = πc^{4}/2",
+        "in terms of radius"
+      ],
+      [
+        "J = π(d_{o}^{4} − d_{i}^{4})/32",
+        "hollow"
+      ],
+      [
+        "I = πd^{4}/64",
+        "area moment for bending, J/2"
+      ]
+    ],
+    "example": {
+      "problem": "Find J for a 50 mm diameter shaft.",
+      "steps": [
+        "J = π(50 mm)^{4}/32 = π(6.25 × 10^{6})/32 mm^{4}"
+      ],
+      "answer": "J ≈ 6.14 × 10^{5} mm^{4} = 6.14 × 10^{−7} m^{4}"
+    },
+    "try": "pi (50 mm)^4 / 32 to mm^4"
+  },
+  "J = π(d_{o}^{4} − d_{i}^{4})/32": {
+    "title": "Polar moment of inertia of a hollow circular shaft",
+    "about": "Subtract the bore's J from the outer circle's. Because the material near the centre carries little stress, a hollow shaft saves a lot of weight for a small loss of strength.",
+    "assumptions": [
+      "Concentric circular bore",
+      "For a thin tube of mean radius r and wall t, J ≈ 2πr^{3}t"
+    ],
+    "vars": [
+      [
+        "J",
+        "polar moment of inertia",
+        "m^{4}"
+      ],
+      [
+        "d_{o}",
+        "outer diameter",
+        "m"
+      ],
+      [
+        "d_{i}",
+        "inner diameter",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "J = (π/2)(c_{o}^{4} − c_{i}^{4})",
+        "in radii"
+      ],
+      [
+        "J ≈ 2πr^{3}t",
+        "thin tube"
+      ],
+      [
+        "τ_{max} = T(d_{o}/2)/J",
+        "use the outer radius"
+      ]
+    ],
+    "example": {
+      "problem": "Compare a solid 50 mm shaft with a hollow one 60 mm OD × 40 mm ID: J and area.",
+      "steps": [
+        "Solid: J = 6.14 × 10^{5} mm^{4}, A = 1963 mm^{2}",
+        "Hollow: J = π(60^{4} − 40^{4})/32 = 1.021 × 10^{6} mm^{4}, A = π(60^{2} − 40^{2})/4 = 1571 mm^{2}",
+        "Hollow is 66% stiffer with 20% less material"
+      ],
+      "answer": "J_{hollow} ≈ 1.021 × 10^{6} mm^{4}"
+    },
+    "try": "pi ((60 mm)^4 - (40 mm)^4) / 32 to mm^4"
+  },
+  "τ = T/(2t A_{m})": {
+    "title": "Shear stress in a thin-walled closed tube (Bredt)",
+    "about": "In a closed thin-walled section of any shape, torque sets up a constant shear flow q = T/(2A_{m}) around the wall. The stress is largest where the wall is thinnest.",
+    "assumptions": [
+      "Closed section (an open section such as a slit tube is far weaker and needs a different formula)",
+      "Thin wall: t small compared with the section size; stress uniform through t",
+      "A_{m} is the area enclosed by the wall's mid-line, not the material area"
+    ],
+    "vars": [
+      [
+        "τ",
+        "shear stress at a point in the wall",
+        "Pa"
+      ],
+      [
+        "T",
+        "torque",
+        "N·m"
+      ],
+      [
+        "t",
+        "wall thickness at that point",
+        "m"
+      ],
+      [
+        "A_{m}",
+        "area enclosed by the median line",
+        "m^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "q = τt = T/(2A_{m})",
+        "shear flow, constant around the wall"
+      ],
+      [
+        "φ = (TL/(4A_{m}^{2} G)) ∮ ds/t",
+        "angle of twist"
+      ]
+    ],
+    "example": {
+      "problem": "A rectangular aluminium tube 100 × 50 mm (to wall mid-lines) with a 3 mm wall carries 1.2 kN·m. Find the shear stress.",
+      "steps": [
+        "A_{m} = 100 × 50 = 5000 mm^{2}",
+        "τ = 1.2 × 10^{6} N·mm/(2 × 3 mm × 5000 mm^{2}) = 40 MPa"
+      ],
+      "answer": "τ = 40 MPa"
+    },
+    "try": "1.2 kN m / (2 * 3 mm * 100 mm * 50 mm) to MPa"
+  },
+  "φ = (TL/(4A_{m}^{2} G)) ∮ ds/t": {
+    "title": "Angle of twist of a thin-walled closed tube",
+    "about": "The twist of a closed thin-walled section of any shape. The integral runs around the wall's mid-line; for constant thickness it is just the perimeter over t.",
+    "assumptions": [
+      "Closed, thin-walled section; linear elastic material",
+      "Uniform section along L",
+      "For piecewise constant walls, ∮ ds/t = Σ s_{i}/t_{i}"
+    ],
+    "vars": [
+      [
+        "φ",
+        "angle of twist",
+        "rad"
+      ],
+      [
+        "T",
+        "torque",
+        "N·m"
+      ],
+      [
+        "L",
+        "length",
+        "m"
+      ],
+      [
+        "A_{m}",
+        "area enclosed by the median line",
+        "m^{2}"
+      ],
+      [
+        "G",
+        "shear modulus",
+        "Pa"
+      ],
+      [
+        "s",
+        "distance along the median line",
+        "m"
+      ],
+      [
+        "t",
+        "wall thickness",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "τ = T/(2t A_{m})",
+        "shear stress"
+      ],
+      [
+        "J_{eff} = 4A_{m}^{2}/∮(ds/t)",
+        "equivalent torsion constant, φ = TL/(GJ_{eff})"
+      ]
+    ],
+    "example": {
+      "problem": "The 100 × 50 mm aluminium tube (t = 3 mm, G = 26 GPa) is 2 m long and carries 1.2 kN·m. Find the twist.",
+      "steps": [
+        "∮ ds/t = 2(100 + 50)/3 = 100",
+        "φ = (1200 × 2)/(4 × (0.005)^{2} × 26 × 10^{9}) × 100",
+        "φ = 0.0923 rad (5.3°)"
+      ],
+      "answer": "φ ≈ 0.0923 rad"
+    },
+    "try": "1.2 kN m * 2 m / (4 (5000 mm^2)^2 * 26 GPa) * 100"
+  },
+  "σ = −My/I": {
+    "title": "Flexure formula: bending stress in a beam",
+    "about": "A bending moment puts one side of a beam in tension and the other in compression, with stress varying linearly from zero at the neutral axis. With y up and positive (sagging) M, the top is in compression, hence the minus sign.",
+    "assumptions": [
+      "Straight beam of linear elastic, homogeneous material; plane sections stay plane",
+      "Bending about a principal axis of the section, which is symmetric about the load plane",
+      "y measured from the neutral axis, which passes through the centroid",
+      "Away from load points and supports; small deflections"
+    ],
+    "vars": [
+      [
+        "σ",
+        "normal stress at distance y",
+        "Pa"
+      ],
+      [
+        "M",
+        "internal bending moment (positive sags)",
+        "N·m"
+      ],
+      [
+        "y",
+        "distance above the neutral axis",
+        "m"
+      ],
+      [
+        "I",
+        "second moment of area about the neutral axis",
+        "m^{4}"
+      ]
+    ],
+    "related": [
+      [
+        "σ_{max} = Mc/I = M/S",
+        "largest magnitude, at the outer fibre"
+      ],
+      [
+        "I = bh^{3}/12",
+        "rectangle"
+      ],
+      [
+        "σ = P/A − My/I",
+        "combined axial and bending"
+      ]
+    ],
+    "example": {
+      "problem": "A 50 × 150 mm timber joist (h = 150 mm vertical) carries M = 4 kN·m. Find the stress 50 mm above the neutral axis.",
+      "steps": [
+        "I = 50(150)^{3}/12 = 1.406 × 10^{7} mm^{4}",
+        "σ = −(4 × 10^{6} N·mm)(50 mm)/(1.406 × 10^{7} mm^{4}) = −14.2 MPa"
+      ],
+      "answer": "σ ≈ −14.2 MPa (compression)"
+    },
+    "try": "-4 kN m * 50 mm / (50 mm * (150 mm)^3 / 12) to MPa"
+  },
+  "σ_{max} = Mc/I = M/S": {
+    "title": "Maximum bending stress and section modulus",
+    "about": "The largest bending stress, at the fibre farthest from the neutral axis. The section modulus S = I/c bundles the geometry into one number; steel tables list it, and sizing is just S ≥ M/σ_{allow}.",
+    "assumptions": [
+      "Same as the flexure formula: linear elastic, plane sections, symmetric section",
+      "For unsymmetric sections (T-beams), c differs top and bottom, so check both"
+    ],
+    "vars": [
+      [
+        "σ_{max}",
+        "largest bending stress",
+        "Pa"
+      ],
+      [
+        "M",
+        "bending moment",
+        "N·m"
+      ],
+      [
+        "c",
+        "distance from the neutral axis to the outer fibre",
+        "m"
+      ],
+      [
+        "I",
+        "second moment of area",
+        "m^{4}"
+      ],
+      [
+        "S",
+        "elastic section modulus I/c",
+        "m^{3}"
+      ]
+    ],
+    "related": [
+      [
+        "S = bh^{2}/6",
+        "rectangle"
+      ],
+      [
+        "S = πd^{3}/32",
+        "solid circle"
+      ],
+      [
+        "S_{req} = M/σ_{allow}",
+        "sizing"
+      ]
+    ],
+    "example": {
+      "problem": "The 50 × 150 mm joist carries M = 4 kN·m. Find the maximum bending stress.",
+      "steps": [
+        "S = bh^{2}/6 = 50(150)^{2}/6 = 1.875 × 10^{5} mm^{3}",
+        "σ_{max} = 4 × 10^{6}/1.875 × 10^{5} = 21.3 MPa"
+      ],
+      "answer": "σ_{max} ≈ 21.3 MPa"
+    },
+    "try": "4 kN m / (50 mm * (150 mm)^2 / 6) to MPa"
+  },
+  "τ = VQ/(It)": {
+    "title": "Transverse shear stress in a beam",
+    "about": "Shear force in a beam causes shear stress on horizontal and vertical planes, zero at the top and bottom faces and largest near the neutral axis. Q is the first moment of the area beyond the level where τ is wanted.",
+    "assumptions": [
+      "Linear elastic, prismatic beam; flexure formula valid",
+      "τ is averaged across the width t at that level, accurate when t is small compared with depth (less so for wide flat sections)",
+      "Not valid at a free edge where shear must vanish (flange tips need shear flow)"
+    ],
+    "vars": [
+      [
+        "τ",
+        "shear stress at the level considered",
+        "Pa"
+      ],
+      [
+        "V",
+        "internal shear force",
+        "N"
+      ],
+      [
+        "Q",
+        "first moment of the area above (or below) that level about the neutral axis, A′ȳ′",
+        "m^{3}"
+      ],
+      [
+        "I",
+        "second moment of the whole section",
+        "m^{4}"
+      ],
+      [
+        "t",
+        "width of the section at that level",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "q = VQ/I",
+        "shear flow, for fasteners and welds"
+      ],
+      [
+        "τ_{max} = 3V/(2A)",
+        "rectangle, at the neutral axis"
+      ],
+      [
+        "τ_{max} = 4V/(3A)",
+        "solid circle"
+      ]
+    ],
+    "example": {
+      "problem": "A 50 × 150 mm rectangular beam carries V = 6 kN. Find τ at 25 mm above the neutral axis.",
+      "steps": [
+        "Area above: 50 × 50 = 2500 mm^{2}, centroid at 50 mm above NA, Q = 125 000 mm^{3}",
+        "I = 1.406 × 10^{7} mm^{4}",
+        "τ = 6000 × 125 000/(1.406 × 10^{7} × 50) = 1.07 MPa"
+      ],
+      "answer": "τ ≈ 1.07 MPa"
+    },
+    "try": "6 kN * 125000 mm^3 / (50 mm * (150 mm)^3 / 12 * 50 mm) to MPa"
+  },
+  "τ_{max} = 3V/(2A)": {
+    "title": "Maximum shear stress in a rectangular beam",
+    "about": "For a rectangular section the shear stress follows a parabola across the depth and peaks at the neutral axis at 1.5 times the average V/A. Important for short, deep or timber beams.",
+    "assumptions": [
+      "Rectangular cross-section, linear elastic",
+      "From τ = VQ/(It) with Q = bh^{2}/8 at the neutral axis"
+    ],
+    "vars": [
+      [
+        "τ_{max}",
+        "shear stress at the neutral axis",
+        "Pa"
+      ],
+      [
+        "V",
+        "shear force",
+        "N"
+      ],
+      [
+        "A",
+        "cross-sectional area bh",
+        "m^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "τ = VQ/(It)",
+        "general form"
+      ],
+      [
+        "τ_{max} = 4V/(3A)",
+        "solid circle"
+      ],
+      [
+        "τ_{max} ≈ V/A_{web}",
+        "I-beam, shear taken by the web"
+      ]
+    ],
+    "example": {
+      "problem": "A 50 × 150 mm timber beam carries a shear of 6 kN. Find the maximum shear stress.",
+      "steps": [
+        "A = 50 × 150 = 7500 mm^{2}",
+        "τ_{max} = 3(6000)/(2 × 7500) = 1.2 MPa"
+      ],
+      "answer": "τ_{max} = 1.2 MPa"
+    },
+    "try": "3 * 6 kN / (2 * 50 mm * 150 mm) to MPa"
+  },
+  "τ_{max} = 4V/(3A)": {
+    "title": "Maximum shear stress in a solid circular beam",
+    "about": "For a solid round section in bending, transverse shear peaks at the neutral axis at 4/3 of the average. Used for pins, axles and round bars carrying shear.",
+    "assumptions": [
+      "Solid circular cross-section, linear elastic",
+      "From τ = VQ/(It) with Q = d^{3}/12 and t = d at the neutral axis",
+      "For a thin-walled tube, τ_{max} = 2V/A instead"
+    ],
+    "vars": [
+      [
+        "τ_{max}",
+        "shear stress at the neutral axis",
+        "Pa"
+      ],
+      [
+        "V",
+        "shear force",
+        "N"
+      ],
+      [
+        "A",
+        "cross-sectional area πd^{2}/4",
+        "m^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "τ_{max} = 3V/(2A)",
+        "rectangle"
+      ],
+      [
+        "τ_{max} = 2V/A",
+        "thin-walled tube"
+      ],
+      [
+        "τ = V/A",
+        "average only"
+      ]
+    ],
+    "example": {
+      "problem": "A 20 mm round axle carries a shear of 8 kN. Find the maximum transverse shear stress.",
+      "steps": [
+        "A = π(20)^{2}/4 = 314.2 mm^{2}",
+        "τ_{max} = 4(8000)/(3 × 314.2) = 33.9 MPa"
+      ],
+      "answer": "τ_{max} ≈ 33.9 MPa"
+    },
+    "try": "4 * 8 kN / (3 * pi (20 mm)^2 / 4) to MPa"
+  },
+  "dV/dx = −w": {
+    "title": "Load–shear relation",
+    "about": "The slope of the shear diagram equals minus the distributed load (load acting downward). Integrating, the change in shear between two points is minus the load area between them. Point loads cause jumps.",
+    "assumptions": [
+      "w is distributed load per length, positive downward",
+      "Sign convention: positive shear rotates an element clockwise",
+      "At a point load P the shear jumps by −P (downward load)"
+    ],
+    "vars": [
+      [
+        "V",
+        "internal shear force",
+        "N"
+      ],
+      [
+        "x",
+        "position along the beam",
+        "m"
+      ],
+      [
+        "w",
+        "distributed load intensity, downward",
+        "N/m"
+      ]
+    ],
+    "related": [
+      [
+        "dM/dx = V",
+        "shear–moment relation"
+      ],
+      [
+        "V_{2} − V_{1} = −∫ w dx",
+        "integral form"
+      ],
+      [
+        "EI d^{4}v/dx^{4} = −w",
+        "deflection"
+      ]
+    ],
+    "example": {
+      "problem": "A simply supported 6 m beam carries 5 kN/m. Left reaction 15 kN. Find the shear at x = 4 m.",
+      "steps": [
+        "V(0^{+}) = 15 kN",
+        "V(4) = 15 − 5 × 4 = −5 kN"
+      ],
+      "answer": "V(4 m) = −5 kN"
+    },
+    "try": "15 kN - 5 kN/m * 4 m"
+  },
+  "dM/dx = V": {
+    "title": "Shear–moment relation",
+    "about": "The slope of the bending-moment diagram equals the shear force. So the moment is largest (or smallest) where the shear crosses zero, and the change in moment between two points is the area under the shear diagram.",
+    "assumptions": [
+      "Same sign convention as dV/dx = −w (positive moment sags)",
+      "An applied couple causes a jump in M"
+    ],
+    "vars": [
+      [
+        "M",
+        "internal bending moment",
+        "N·m"
+      ],
+      [
+        "x",
+        "position along the beam",
+        "m"
+      ],
+      [
+        "V",
+        "internal shear force",
+        "N"
+      ]
+    ],
+    "related": [
+      [
+        "dV/dx = −w",
+        "load–shear relation"
+      ],
+      [
+        "M_{2} − M_{1} = ∫ V dx",
+        "integral form"
+      ],
+      [
+        "EI d^{2}v/dx^{2} = M",
+        "deflection"
+      ]
+    ],
+    "example": {
+      "problem": "In the 6 m simply supported beam with 5 kN/m (reaction 15 kN), find the maximum moment.",
+      "steps": [
+        "V = 15 − 5x = 0 at x = 3 m",
+        "M_{max} = area under V from 0 to 3 = (1/2)(15)(3) = 22.5 kN·m",
+        "Check: wL^{2}/8 = 5(36)/8 = 22.5 kN·m"
+      ],
+      "answer": "M_{max} = 22.5 kN·m at midspan"
+    },
+    "try": "0.5 * 15 kN * 3 m to kN m"
+  },
+  "EI d^{2}v/dx^{2} = M": {
+    "title": "Moment–curvature equation for beam deflection",
+    "about": "Curvature of the deflected beam is M/(EI). Integrate twice, apply the support conditions, and you get the slope and deflection everywhere.",
+    "assumptions": [
+      "Euler–Bernoulli beam: linear elastic, plane sections, shear deformation neglected (L/h ≳ 10)",
+      "Small slopes (curvature ≈ v″)",
+      "v measured upward, positive M sags"
+    ],
+    "vars": [
+      [
+        "E",
+        "Young's modulus",
+        "Pa"
+      ],
+      [
+        "I",
+        "second moment of area",
+        "m^{4}"
+      ],
+      [
+        "v",
+        "deflection, upward",
+        "m"
+      ],
+      [
+        "x",
+        "position along the beam",
+        "m"
+      ],
+      [
+        "M",
+        "bending moment",
+        "N·m"
+      ]
+    ],
+    "related": [
+      [
+        "θ = dv/dx",
+        "slope"
+      ],
+      [
+        "EI d^{4}v/dx^{4} = −w",
+        "fourth-order form"
+      ],
+      [
+        "1/ρ = M/(EI)",
+        "radius of curvature"
+      ]
+    ],
+    "example": {
+      "problem": "A cantilever of length L has a tip load P (downward). Find the tip deflection by integration. Use L = 2 m, P = 1 kN, EI = 500 kN·m^{2}.",
+      "steps": [
+        "With x from the wall, M = −P(L − x)",
+        "EIv′ = −P(Lx − x^{2}/2), using v′(0) = 0",
+        "EIv = −P(Lx^{2}/2 − x^{3}/6), using v(0) = 0; at x = L: v = −PL^{3}/(3EI)",
+        "v = −(1000)(8)/(3 × 500 000) = −5.33 mm"
+      ],
+      "answer": "v_{tip} = −PL^{3}/(3EI) ≈ −5.33 mm"
+    },
+    "try": "-1 kN * (2 m)^3 / (3 * 500 kN m^2) to mm"
+  },
+  "EI d^{4}v/dx^{4} = −w": {
+    "title": "Fourth-order beam equation",
+    "about": "Combines dV/dx = −w, dM/dx = V and EIv″ = M into one equation. Integrate four times and use four boundary conditions; handy for distributed loads and indeterminate beams.",
+    "assumptions": [
+      "Euler–Bernoulli beam with constant EI",
+      "w positive downward, v positive upward",
+      "Boundary conditions: fixed v = v′ = 0; pinned v = M = 0; free M = V = 0"
+    ],
+    "vars": [
+      [
+        "E",
+        "Young's modulus",
+        "Pa"
+      ],
+      [
+        "I",
+        "second moment of area",
+        "m^{4}"
+      ],
+      [
+        "v",
+        "deflection, upward",
+        "m"
+      ],
+      [
+        "w",
+        "distributed load, downward",
+        "N/m"
+      ]
+    ],
+    "related": [
+      [
+        "EI v‴ = V",
+        "shear"
+      ],
+      [
+        "EI v″ = M",
+        "moment"
+      ],
+      [
+        "v_{max} = 5wL^{4}/(384EI)",
+        "simply supported, uniform load"
+      ]
+    ],
+    "example": {
+      "problem": "A simply supported beam (L = 6 m, EI = 20 MN·m^{2}) carries w = 5 kN/m. Find the midspan deflection.",
+      "steps": [
+        "Integrating with v = v″ = 0 at both ends gives v = −(w/(24EI))(x^{4} − 2Lx^{3} + L^{3}x)",
+        "At x = L/2: v = −5wL^{4}/(384EI)",
+        "= −5(5000)(1296)/(384 × 2 × 10^{7}) = −4.22 mm"
+      ],
+      "answer": "v_{mid} ≈ −4.22 mm"
+    },
+    "try": "-5 * 5 kN/m * (6 m)^4 / (384 * 20 MN m^2) to mm"
+  },
+  "P_{cr} = π^{2}EI/(KL)^{2}": {
+    "title": "Euler buckling load of a column",
+    "about": "A slender column in compression suddenly bows sideways at this load, well below the crushing strength. K is the effective-length factor set by the end conditions; use the smaller I of the section.",
+    "assumptions": [
+      "Perfectly straight, slender, linear elastic column with a centred load",
+      "Valid only while σ_{cr} = P_{cr}/A stays below the proportional limit (slenderness KL/r large, roughly > 100 for structural steel); otherwise use Johnson's parabola",
+      "K: pinned–pinned 1, fixed–free 2, fixed–pinned 0.7, fixed–fixed 0.5 (design values slightly higher)"
+    ],
+    "vars": [
+      [
+        "P_{cr}",
+        "critical buckling load",
+        "N"
+      ],
+      [
+        "E",
+        "Young's modulus",
+        "Pa"
+      ],
+      [
+        "I",
+        "least second moment of area",
+        "m^{4}"
+      ],
+      [
+        "K",
+        "effective-length factor",
+        ""
+      ],
+      [
+        "L",
+        "unbraced length",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "σ_{cr} = π^{2}E/(KL/r)^{2}",
+        "critical stress, r = √(I/A)"
+      ],
+      [
+        "KL/r",
+        "slenderness ratio"
+      ],
+      [
+        "I = πd^{4}/64",
+        "round column"
+      ]
+    ],
+    "example": {
+      "problem": "A pinned–pinned aluminium strut (E = 70 GPa) 1.5 m long is a solid rod 25 mm in diameter. Find the buckling load.",
+      "steps": [
+        "I = π(25)^{4}/64 = 19 175 mm^{4}",
+        "P_{cr} = π^{2}(70 000 N/mm^{2})(19 175 mm^{4})/(1500 mm)^{2} = 5.89 kN",
+        "Check: σ = 5888/491 = 12 MPa, well below yield, so Euler applies"
+      ],
+      "answer": "P_{cr} ≈ 5.89 kN"
+    },
+    "try": "pi^2 * 70 GPa * pi * (25 mm)^4 / 64 / (1.5 m)^2 to kN"
+  },
+  "I = bh^{3}/12": {
+    "title": "Second moment of area of a rectangle",
+    "about": "Bending stiffness of a rectangular section about its centroidal axis parallel to b. It grows with the cube of depth, which is why joists stand on edge.",
+    "assumptions": [
+      "Axis through the centroid, parallel to the side b",
+      "h is measured perpendicular to the bending axis (in the direction of the load)"
+    ],
+    "vars": [
+      [
+        "I",
+        "second moment of area about the centroidal axis",
+        "m^{4}"
+      ],
+      [
+        "b",
+        "width, parallel to the axis",
+        "m"
+      ],
+      [
+        "h",
+        "depth, perpendicular to the axis",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "S = bh^{2}/6",
+        "section modulus"
+      ],
+      [
+        "I = bh^{3}/3",
+        "about the base"
+      ],
+      [
+        "I = Ī + Ad^{2}",
+        "parallel axis theorem"
+      ]
+    ],
+    "example": {
+      "problem": "Compare a 50 × 150 mm joist on edge and laid flat.",
+      "steps": [
+        "On edge: I = 50(150)^{3}/12 = 1.406 × 10^{7} mm^{4}",
+        "Flat: I = 150(50)^{3}/12 = 1.56 × 10^{6} mm^{4}",
+        "On edge is 9 times stiffer"
+      ],
+      "answer": "I ≈ 1.406 × 10^{7} mm^{4} on edge"
+    },
+    "try": "50 mm * (150 mm)^3 / 12 to mm^4"
+  },
+  "I = πd^{4}/64": {
+    "title": "Second moment of area of a solid circle",
+    "about": "Bending stiffness of a round bar about any diameter. It is half the polar moment J, since I_{x} + I_{y} = J.",
+    "assumptions": [
+      "Axis through the centre (any diameter)"
+    ],
+    "vars": [
+      [
+        "I",
+        "second moment of area about a diameter",
+        "m^{4}"
+      ],
+      [
+        "d",
+        "diameter",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "I = πr^{4}/4",
+        "in terms of radius"
+      ],
+      [
+        "S = πd^{3}/32",
+        "section modulus"
+      ],
+      [
+        "J = πd^{4}/32",
+        "polar moment, 2I"
+      ]
+    ],
+    "example": {
+      "problem": "Find I for a 25 mm round bar.",
+      "steps": [
+        "I = π(25 mm)^{4}/64 = π(390 625)/64 mm^{4}"
+      ],
+      "answer": "I ≈ 19 175 mm^{4}"
+    },
+    "try": "pi (25 mm)^4 / 64 to mm^4"
+  },
+  "I = π(d_{o}^{4} − d_{i}^{4})/64": {
+    "title": "Second moment of area of a hollow circle (tube)",
+    "about": "Bending stiffness of a round tube: the outer circle minus the bore. Tubes give high stiffness per weight because material sits far from the axis.",
+    "assumptions": [
+      "Concentric bore; axis through the centre",
+      "Thin tube of mean radius r and wall t: I ≈ πr^{3}t"
+    ],
+    "vars": [
+      [
+        "I",
+        "second moment of area",
+        "m^{4}"
+      ],
+      [
+        "d_{o}",
+        "outer diameter",
+        "m"
+      ],
+      [
+        "d_{i}",
+        "inner diameter",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "S = π(d_{o}^{4} − d_{i}^{4})/(32d_{o})",
+        "section modulus"
+      ],
+      [
+        "I ≈ πr^{3}t",
+        "thin tube"
+      ],
+      [
+        "J = 2I",
+        "polar moment"
+      ]
+    ],
+    "example": {
+      "problem": "Find I for a steel tube 48.3 mm OD with a 3.2 mm wall (scaffold tube).",
+      "steps": [
+        "d_{i} = 48.3 − 6.4 = 41.9 mm",
+        "I = π(48.3^{4} − 41.9^{4})/64 mm^{4}"
+      ],
+      "answer": "I ≈ 1.16 × 10^{5} mm^{4}"
+    },
+    "try": "pi ((48.3 mm)^4 - (41.9 mm)^4) / 64 to mm^4"
+  },
+  "I = Ī + Ad^{2}": {
+    "title": "Parallel axis theorem",
+    "about": "Moves a second moment of area from a part's own centroid to any parallel axis. Used to build I for I-beams, T-sections and built-up shapes from rectangles.",
+    "assumptions": [
+      "Ī must be about the part's own centroidal axis",
+      "d is the perpendicular distance between the two parallel axes",
+      "Only works from the centroid outward; to move between two non-centroidal axes, go through the centroid"
+    ],
+    "vars": [
+      [
+        "I",
+        "second moment about the new axis",
+        "m^{4}"
+      ],
+      [
+        "Ī",
+        "second moment about the part's centroidal axis",
+        "m^{4}"
+      ],
+      [
+        "A",
+        "area of the part",
+        "m^{2}"
+      ],
+      [
+        "d",
+        "distance between the axes",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "I = Σ(Ī_{i} + A_{i}d_{i}^{2})",
+        "composite section"
+      ],
+      [
+        "ȳ = ΣA_{i}y_{i}/ΣA_{i}",
+        "find the centroid first"
+      ],
+      [
+        "J = J̄ + Ad^{2}",
+        "same rule for polar moments and mass moments"
+      ]
+    ],
+    "example": {
+      "problem": "An I-section has two 100 × 10 mm flanges and a 10 × 180 mm web (overall depth 200 mm). Find I about the centroid.",
+      "steps": [
+        "Each flange: Ī = 100(10)^{3}/12 = 8333 mm^{4}, A = 1000 mm^{2}, d = 95 mm, so 8333 + 1000(95)^{2} = 9.033 × 10^{6} mm^{4}",
+        "Web: 10(180)^{3}/12 = 4.86 × 10^{6} mm^{4}",
+        "I = 2(9.033 × 10^{6}) + 4.86 × 10^{6} = 2.29 × 10^{7} mm^{4}"
+      ],
+      "answer": "I ≈ 2.29 × 10^{7} mm^{4}"
+    },
+    "try": "2 (100*10^3/12 + 1000*95^2) + 10*180^3/12"
+  },
+  "Cantilever, end load P ‖ PL ‖ PL^{3}/(3EI)": {
+    "title": "Cantilever with an end load: moment and deflection",
+    "about": "A beam fixed at one end with a point load P at the free end. The moment is largest at the wall, PL, and the tip deflects PL^{3}/(3EI). A diving board, a shelf bracket or a robot arm.",
+    "assumptions": [
+      "Euler–Bernoulli beam, linear elastic, constant EI",
+      "Perfectly fixed support (real connections are less stiff, so deflection is larger)",
+      "Small deflections; self-weight neglected unless added separately"
+    ],
+    "vars": [
+      [
+        "P",
+        "end load",
+        "N"
+      ],
+      [
+        "L",
+        "length",
+        "m"
+      ],
+      [
+        "E",
+        "Young's modulus",
+        "Pa"
+      ],
+      [
+        "I",
+        "second moment of area",
+        "m^{4}"
+      ]
+    ],
+    "related": [
+      [
+        "θ_{tip} = PL^{2}/(2EI)",
+        "end slope"
+      ],
+      [
+        "v(x) = Px^{2}(3L − x)/(6EI)",
+        "deflection along the beam, x from the wall"
+      ],
+      [
+        "σ_{max} = PLc/I",
+        "bending stress at the wall"
+      ]
+    ],
+    "example": {
+      "problem": "A steel cantilever (E = 200 GPa), 1.5 m long, is a 50 × 100 mm solid bar (100 mm deep) with a 2 kN end load. Find M_{max} and the tip deflection.",
+      "steps": [
+        "M_{max} = PL = 2 × 1.5 = 3 kN·m",
+        "I = 50(100)^{3}/12 = 4.167 × 10^{6} mm^{4}",
+        "δ = (2000)(1500)^{3}/(3 × 200 000 × 4.167 × 10^{6}) = 2.70 mm"
+      ],
+      "answer": "M_{max} = 3 kN·m; δ_{tip} = 2.70 mm"
+    },
+    "try": "2 kN * (1.5 m)^3 / (3 * 200 GPa * 50 mm * (100 mm)^3 / 12) to mm"
+  },
+  "Cantilever, uniform w ‖ wL^{2}/2 ‖ wL^{4}/(8EI)": {
+    "title": "Cantilever with a uniform load: moment and deflection",
+    "about": "A cantilever carrying a uniform load w over its whole length, such as a balcony slab or the beam's own weight. The wall moment is wL^{2}/2 and the tip deflects wL^{4}/(8EI).",
+    "assumptions": [
+      "Euler–Bernoulli beam, linear elastic, constant EI",
+      "Load uniform over the full length; perfectly fixed support",
+      "Small deflections"
+    ],
+    "vars": [
+      [
+        "w",
+        "load per unit length",
+        "N/m"
+      ],
+      [
+        "L",
+        "length",
+        "m"
+      ],
+      [
+        "E",
+        "Young's modulus",
+        "Pa"
+      ],
+      [
+        "I",
+        "second moment of area",
+        "m^{4}"
+      ]
+    ],
+    "related": [
+      [
+        "θ_{tip} = wL^{3}/(6EI)",
+        "end slope"
+      ],
+      [
+        "V_{max} = wL",
+        "shear at the wall"
+      ],
+      [
+        "w = ρgA",
+        "self-weight per length"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 m aluminium cantilever (E = 70 GPa, I = 8 × 10^{6} mm^{4}) carries 1.2 kN/m. Find the wall moment and tip deflection.",
+      "steps": [
+        "M_{max} = wL^{2}/2 = 1.2 × 4/2 = 2.4 kN·m",
+        "δ = (1200)(2)^{4}/(8 × 70 × 10^{9} × 8 × 10^{−6}) = 4.29 mm"
+      ],
+      "answer": "M_{max} = 2.4 kN·m; δ_{tip} ≈ 4.29 mm"
+    },
+    "try": "1.2 kN/m * (2 m)^4 / (8 * 70 GPa * 8e6 mm^4) to mm"
+  },
+  "Cantilever, end moment M ‖ M_{0} ‖ M_{0}L^{2}/(2EI)": {
+    "title": "Cantilever with an end couple: moment and deflection",
+    "about": "A pure couple M_{0} at the free end bends a cantilever into a circular arc. The moment is M_{0} everywhere and the tip deflects M_{0}L^{2}/(2EI).",
+    "assumptions": [
+      "Euler–Bernoulli beam, linear elastic, constant EI",
+      "Small deflections (the exact shape is a circular arc of radius EI/M_{0})"
+    ],
+    "vars": [
+      [
+        "M_{0}",
+        "applied end moment",
+        "N·m"
+      ],
+      [
+        "L",
+        "length",
+        "m"
+      ],
+      [
+        "E",
+        "Young's modulus",
+        "Pa"
+      ],
+      [
+        "I",
+        "second moment of area",
+        "m^{4}"
+      ]
+    ],
+    "related": [
+      [
+        "θ_{tip} = M_{0}L/(EI)",
+        "end slope"
+      ],
+      [
+        "ρ = EI/M_{0}",
+        "radius of curvature"
+      ]
+    ],
+    "example": {
+      "problem": "A 1 m steel strip (E = 200 GPa, I = 2 × 10^{4} mm^{4}) has a 50 N·m couple at its end. Find the tip deflection.",
+      "steps": [
+        "EI = 200 × 10^{9} × 2 × 10^{−8} = 4000 N·m^{2}",
+        "δ = (50)(1)^{2}/(2 × 4000) = 6.25 mm"
+      ],
+      "answer": "δ_{tip} = 6.25 mm"
+    },
+    "try": "50 N m * (1 m)^2 / (2 * 200 GPa * 2e4 mm^4) to mm"
+  },
+  "Simply supported, centre load P ‖ PL/4 ‖ PL^{3}/(48EI)": {
+    "title": "Simply supported beam with a centre load",
+    "about": "A beam on two supports with a point load at midspan. Each support takes P/2; the moment peaks at the load at PL/4 and so does the deflection, PL^{3}/(48EI). The classic three-point bend test.",
+    "assumptions": [
+      "Pin and roller supports (free to rotate); Euler–Bernoulli beam, constant EI",
+      "Load exactly at midspan; small deflections"
+    ],
+    "vars": [
+      [
+        "P",
+        "centre load",
+        "N"
+      ],
+      [
+        "L",
+        "span",
+        "m"
+      ],
+      [
+        "E",
+        "Young's modulus",
+        "Pa"
+      ],
+      [
+        "I",
+        "second moment of area",
+        "m^{4}"
+      ]
+    ],
+    "related": [
+      [
+        "θ_{end} = PL^{2}/(16EI)",
+        "slope at each support"
+      ],
+      [
+        "R = P/2",
+        "reactions"
+      ],
+      [
+        "E = PL^{3}/(48Iδ)",
+        "E from a three-point bend test"
+      ]
+    ],
+    "example": {
+      "problem": "A 4 m steel beam (E = 200 GPa, I = 8.36 × 10^{6} mm^{4}) carries 10 kN at midspan. Find M_{max} and the deflection.",
+      "steps": [
+        "M_{max} = PL/4 = 10 × 4/4 = 10 kN·m",
+        "δ = (10 000)(4)^{3}/(48 × 200 × 10^{9} × 8.36 × 10^{−6}) = 7.97 mm"
+      ],
+      "answer": "M_{max} = 10 kN·m; δ ≈ 7.97 mm"
+    },
+    "try": "10 kN * (4 m)^3 / (48 * 200 GPa * 8.36e6 mm^4) to mm"
+  },
+  "Simply supported, uniform w ‖ wL^{2}/8 ‖ 5wL^{4}/(384EI)": {
+    "title": "Simply supported beam with a uniform load",
+    "about": "The most common beam case: floor joists, bridges and shelves. The moment peaks at midspan at wL^{2}/8 and the midspan deflection is 5wL^{4}/(384EI). Deflection limits like L/360 often govern.",
+    "assumptions": [
+      "Pin and roller supports; Euler–Bernoulli beam, constant EI",
+      "Load uniform over the whole span; small deflections"
+    ],
+    "vars": [
+      [
+        "w",
+        "load per unit length",
+        "N/m"
+      ],
+      [
+        "L",
+        "span",
+        "m"
+      ],
+      [
+        "E",
+        "Young's modulus",
+        "Pa"
+      ],
+      [
+        "I",
+        "second moment of area",
+        "m^{4}"
+      ]
+    ],
+    "related": [
+      [
+        "θ_{end} = wL^{3}/(24EI)",
+        "slope at each support"
+      ],
+      [
+        "R = wL/2",
+        "reactions"
+      ],
+      [
+        "δ_{allow} = L/360",
+        "typical floor serviceability limit"
+      ]
+    ],
+    "example": {
+      "problem": "A timber joist (E = 11 GPa, 50 × 200 mm deep) spans 4 m and carries 2 kN/m. Find M_{max} and the midspan deflection.",
+      "steps": [
+        "M_{max} = 2 × 16/8 = 4 kN·m",
+        "I = 50(200)^{3}/12 = 3.333 × 10^{7} mm^{4}",
+        "δ = 5(2000)(4)^{4}/(384 × 11 × 10^{9} × 3.333 × 10^{−5}) = 18.2 mm (limit L/360 = 11.1 mm, so too flexible)"
+      ],
+      "answer": "M_{max} = 4 kN·m; δ ≈ 18.2 mm"
+    },
+    "try": "5 * 2 kN/m * (4 m)^4 / (384 * 11 GPa * 50 mm * (200 mm)^3 / 12) to mm"
+  },
+  "Cantilever, end load P ‖ PL^{2}/(2EI)": {
+    "title": "End slope of a cantilever with an end load",
+    "about": "The rotation of the free end of a cantilever with a point load P at the tip. Needed when something mounted at the tip must stay level, or in superposition.",
+    "assumptions": [
+      "Euler–Bernoulli beam, linear elastic, constant EI, fixed support",
+      "Small slopes; result in radians"
+    ],
+    "vars": [
+      [
+        "θ",
+        "end slope",
+        "rad"
+      ],
+      [
+        "P",
+        "end load",
+        "N"
+      ],
+      [
+        "L",
+        "length",
+        "m"
+      ],
+      [
+        "E",
+        "Young's modulus",
+        "Pa"
+      ],
+      [
+        "I",
+        "second moment of area",
+        "m^{4}"
+      ]
+    ],
+    "related": [
+      [
+        "δ_{tip} = PL^{3}/(3EI)",
+        "tip deflection"
+      ],
+      [
+        "δ(L + a) ≈ δ_{tip} + θa",
+        "deflection of a rigid extension of length a"
+      ]
+    ],
+    "example": {
+      "problem": "For the 1.5 m steel cantilever (E = 200 GPa, I = 4.167 × 10^{6} mm^{4}) with a 2 kN end load, find the end slope.",
+      "steps": [
+        "θ = (2000)(1.5)^{2}/(2 × 200 × 10^{9} × 4.167 × 10^{−6})",
+        "θ = 4500/1.667 × 10^{6} = 0.0027 rad (0.155°)"
+      ],
+      "answer": "θ = 0.0027 rad"
+    },
+    "try": "2 kN * (1.5 m)^2 / (2 * 200 GPa * 4.1667e6 mm^4)"
+  },
+  "Cantilever, uniform w ‖ wL^{3}/(6EI)": {
+    "title": "End slope of a cantilever with a uniform load",
+    "about": "The rotation at the free end of a cantilever carrying a uniform load along its length.",
+    "assumptions": [
+      "Euler–Bernoulli beam, linear elastic, constant EI, fixed support",
+      "Uniform load over the full length; small slopes"
+    ],
+    "vars": [
+      [
+        "θ",
+        "end slope",
+        "rad"
+      ],
+      [
+        "w",
+        "load per unit length",
+        "N/m"
+      ],
+      [
+        "L",
+        "length",
+        "m"
+      ],
+      [
+        "E",
+        "Young's modulus",
+        "Pa"
+      ],
+      [
+        "I",
+        "second moment of area",
+        "m^{4}"
+      ]
+    ],
+    "related": [
+      [
+        "δ_{tip} = wL^{4}/(8EI)",
+        "tip deflection"
+      ],
+      [
+        "M_{max} = wL^{2}/2",
+        "moment at the wall"
+      ]
+    ],
+    "example": {
+      "problem": "The 2 m aluminium cantilever (E = 70 GPa, I = 8 × 10^{6} mm^{4}) carries 1.2 kN/m. Find the end slope.",
+      "steps": [
+        "θ = (1200)(2)^{3}/(6 × 70 × 10^{9} × 8 × 10^{−6}) = 9600/3.36 × 10^{6}"
+      ],
+      "answer": "θ ≈ 0.00286 rad (0.164°)"
+    },
+    "try": "1.2 kN/m * (2 m)^3 / (6 * 70 GPa * 8e6 mm^4)"
+  },
+  "Simply supported, centre load P ‖ PL^{2}/(16EI)": {
+    "title": "End slope of a simply supported beam with a centre load",
+    "about": "How far each end of a simply supported beam rotates under a midspan point load. Check it where the beam sits on bearings or fits into other parts.",
+    "assumptions": [
+      "Pin and roller supports, Euler–Bernoulli beam, constant EI",
+      "Load at midspan; both ends rotate by the same amount in opposite senses"
+    ],
+    "vars": [
+      [
+        "θ",
+        "slope at each support",
+        "rad"
+      ],
+      [
+        "P",
+        "centre load",
+        "N"
+      ],
+      [
+        "L",
+        "span",
+        "m"
+      ],
+      [
+        "E",
+        "Young's modulus",
+        "Pa"
+      ],
+      [
+        "I",
+        "second moment of area",
+        "m^{4}"
+      ]
+    ],
+    "related": [
+      [
+        "δ_{max} = PL^{3}/(48EI)",
+        "midspan deflection"
+      ],
+      [
+        "M_{max} = PL/4",
+        "midspan moment"
+      ]
+    ],
+    "example": {
+      "problem": "For the 4 m steel beam (E = 200 GPa, I = 8.36 × 10^{6} mm^{4}) with 10 kN at midspan, find the end slope.",
+      "steps": [
+        "θ = (10 000)(4)^{2}/(16 × 200 × 10^{9} × 8.36 × 10^{−6}) = 160 000/2.675 × 10^{7}"
+      ],
+      "answer": "θ ≈ 0.00598 rad (0.343°)"
+    },
+    "try": "10 kN * (4 m)^2 / (16 * 200 GPa * 8.36e6 mm^4)"
+  },
+  "Simply supported, uniform w ‖ wL^{3}/(24EI)": {
+    "title": "End slope of a simply supported beam with a uniform load",
+    "about": "The rotation at each support of a simply supported beam under a uniform load.",
+    "assumptions": [
+      "Pin and roller supports, Euler–Bernoulli beam, constant EI",
+      "Uniform load over the full span; small slopes"
+    ],
+    "vars": [
+      [
+        "θ",
+        "slope at each support",
+        "rad"
+      ],
+      [
+        "w",
+        "load per unit length",
+        "N/m"
+      ],
+      [
+        "L",
+        "span",
+        "m"
+      ],
+      [
+        "E",
+        "Young's modulus",
+        "Pa"
+      ],
+      [
+        "I",
+        "second moment of area",
+        "m^{4}"
+      ]
+    ],
+    "related": [
+      [
+        "δ_{max} = 5wL^{4}/(384EI)",
+        "midspan deflection"
+      ],
+      [
+        "M_{max} = wL^{2}/8",
+        "midspan moment"
+      ]
+    ],
+    "example": {
+      "problem": "The timber joist (E = 11 GPa, I = 3.333 × 10^{7} mm^{4}) spans 4 m under 2 kN/m. Find the end slope.",
+      "steps": [
+        "θ = (2000)(4)^{3}/(24 × 11 × 10^{9} × 3.333 × 10^{−5}) = 128 000/8.8 × 10^{6}"
+      ],
+      "answer": "θ ≈ 0.0145 rad (0.83°)"
+    },
+    "try": "2 kN/m * (4 m)^3 / (24 * 11 GPa * 3.3333e7 mm^4)"
+  },
+  "dp/dz = −ρg": {
+    "title": "Hydrostatic pressure gradient",
+    "about": "In a fluid at rest, pressure increases going down because each layer supports the weight of the fluid above it. Integrate it to get pressure with depth in liquids or with altitude in the atmosphere.",
+    "assumptions": [
+      "Fluid at rest (or moving as a rigid body), so no shear stresses",
+      "z points up; g constant",
+      "For a liquid ρ is constant; for a gas use ρ = p/(RT) before integrating"
+    ],
+    "vars": [
+      [
+        "p",
+        "pressure",
+        "Pa"
+      ],
+      [
+        "z",
+        "height, upward",
+        "m"
+      ],
+      [
+        "ρ",
+        "fluid density",
+        "kg/m^{3}"
+      ],
+      [
+        "g",
+        "gravitational acceleration, 9.81",
+        "m/s^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "p = p_{0} + ρgh",
+        "constant density"
+      ],
+      [
+        "p = p_{0} e^{−gz/(RT)}",
+        "isothermal atmosphere"
+      ],
+      [
+        "∂σ_{ij}/∂x_{j} + ρ b_{i} = ρ a_{i}",
+        "the general equilibrium equation it comes from"
+      ]
+    ],
+    "example": {
+      "problem": "Find the pressure drop per metre of height in air at sea level (ρ = 1.225 kg/m^{3}).",
+      "steps": [
+        "dp/dz = −1.225 × 9.81 = −12.0 Pa/m",
+        "About 1 hPa for every 8.3 m of climb"
+      ],
+      "answer": "dp/dz ≈ −12.0 Pa/m"
+    },
+    "try": "-1.225 kg/m^3 * 9.81 m/s^2 to Pa/m"
+  },
+  "p = p_{0} + ρgh": {
+    "title": "Pressure at a depth in a liquid",
+    "about": "Pressure below a free surface grows linearly with depth. It depends only on depth, not the shape of the container. Use p_{0} = atmospheric for absolute pressure or 0 for gauge pressure.",
+    "assumptions": [
+      "Liquid at rest with constant density",
+      "h measured down from the surface where p = p_{0}"
+    ],
+    "vars": [
+      [
+        "p",
+        "pressure at depth h",
+        "Pa"
+      ],
+      [
+        "p_{0}",
+        "pressure at the surface (101.3 kPa for atmosphere)",
+        "Pa"
+      ],
+      [
+        "ρ",
+        "liquid density (water 1000, seawater 1025)",
+        "kg/m^{3}"
+      ],
+      [
+        "g",
+        "gravitational acceleration",
+        "m/s^{2}"
+      ],
+      [
+        "h",
+        "depth below the surface",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "dp/dz = −ρg",
+        "differential form"
+      ],
+      [
+        "p_{1} + ρ_{1}gh_{1} = p_{2} + ρ_{2}gh_{2}",
+        "manometers"
+      ],
+      [
+        "F = p_{c} A",
+        "force on a submerged plate"
+      ]
+    ],
+    "example": {
+      "problem": "Find the absolute pressure on a diver 30 m down in seawater (ρ = 1025 kg/m^{3}).",
+      "steps": [
+        "ρgh = 1025 × 9.81 × 30 = 301.7 kPa",
+        "p = 101.3 + 301.7 = 403 kPa (about 4 atm)"
+      ],
+      "answer": "p ≈ 403 kPa absolute"
+    },
+    "try": "101.325 kPa + 1025 kg/m^3 * 9.81 m/s^2 * 30 m to kPa"
+  },
+  "F_{b} = ρgV": {
+    "title": "Archimedes' principle: buoyant force",
+    "about": "A body immersed in a fluid is pushed up by a force equal to the weight of the fluid it displaces. It floats if that can match its weight before it is fully submerged.",
+    "assumptions": [
+      "Fluid at rest with constant density",
+      "ρ is the fluid's density and V the displaced (submerged) volume, not the body's",
+      "The force acts through the centroid of the displaced volume (centre of buoyancy)"
+    ],
+    "vars": [
+      [
+        "F_{b}",
+        "buoyant force, upward",
+        "N"
+      ],
+      [
+        "ρ",
+        "fluid density",
+        "kg/m^{3}"
+      ],
+      [
+        "g",
+        "gravitational acceleration",
+        "m/s^{2}"
+      ],
+      [
+        "V",
+        "displaced volume",
+        "m^{3}"
+      ]
+    ],
+    "related": [
+      [
+        "V_{sub}/V = ρ_{body}/ρ_{fluid}",
+        "fraction submerged when floating"
+      ],
+      [
+        "W_{apparent} = W − F_{b}",
+        "weight measured underwater"
+      ]
+    ],
+    "example": {
+      "problem": "A 0.2 m^{3} steel buoy weighs 1200 N. What is the buoyant force when fully submerged in seawater (1025 kg/m^{3}), and does it float?",
+      "steps": [
+        "F_{b} = 1025 × 9.81 × 0.2 = 2011 N",
+        "2011 N > 1200 N, so it floats with 1200/2011 = 60% submerged"
+      ],
+      "answer": "F_{b} ≈ 2.01 kN; it floats"
+    },
+    "try": "1025 kg/m^3 * 9.81 m/s^2 * 0.2 m^3 to kN"
+  },
+  "F = p_{c} A": {
+    "title": "Hydrostatic force on a submerged flat plate",
+    "about": "The total pressure force on a plane surface equals the pressure at its centroid times its area. The force acts lower, at the centre of pressure, because pressure grows with depth.",
+    "assumptions": [
+      "Liquid at rest with constant density",
+      "p_{c} = ρgh_{c}, h_{c} the vertical depth of the plate's centroid (gauge, if air is on the other side)",
+      "Centre of pressure along the slope: y_{cp} = y_{c} + Ī/(y_{c}A)"
+    ],
+    "vars": [
+      [
+        "F",
+        "resultant pressure force, normal to the plate",
+        "N"
+      ],
+      [
+        "p_{c}",
+        "pressure at the plate's centroid",
+        "Pa"
+      ],
+      [
+        "A",
+        "plate area",
+        "m^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "p_{c} = ρgh_{c}",
+        "gauge pressure at the centroid"
+      ],
+      [
+        "y_{cp} = y_{c} + Ī/(y_{c}A)",
+        "where F acts"
+      ],
+      [
+        "p = p_{0} + ρgh",
+        "pressure at depth"
+      ]
+    ],
+    "example": {
+      "problem": "A vertical sluice gate 2 m wide and 3 m tall has water up to its top edge. Find the force on it and where it acts.",
+      "steps": [
+        "h_{c} = 1.5 m, p_{c} = 1000 × 9.81 × 1.5 = 14.7 kPa",
+        "F = 14.7 kPa × 6 m^{2} = 88.3 kN",
+        "y_{cp} = 1.5 + (2 × 3^{3}/12)/(1.5 × 6) = 2.0 m below the surface"
+      ],
+      "answer": "F ≈ 88.3 kN, acting 2 m below the surface"
+    },
+    "try": "1000 kg/m^3 * 9.81 m/s^2 * 1.5 m * 6 m^2 to kN"
+  },
+  "p + ρv^{2}/2 + ρgz = constant": {
+    "title": "Bernoulli's equation",
+    "about": "Along a streamline, pressure, kinetic energy and potential energy per unit volume trade off but their sum stays constant. Use it for flow through nozzles, Venturi meters, tank draining and pitot tubes.",
+    "assumptions": [
+      "Steady flow",
+      "Incompressible (gases: Mach < 0.3)",
+      "Frictionless (inviscid): no losses; add a head-loss term for real pipes",
+      "Along a single streamline (or anywhere in irrotational flow)",
+      "No pump or turbine between the two points"
+    ],
+    "vars": [
+      [
+        "p",
+        "static pressure",
+        "Pa"
+      ],
+      [
+        "ρ",
+        "density",
+        "kg/m^{3}"
+      ],
+      [
+        "v",
+        "flow speed",
+        "m/s"
+      ],
+      [
+        "g",
+        "gravitational acceleration",
+        "m/s^{2}"
+      ],
+      [
+        "z",
+        "height",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "v = √(2gh)",
+        "Torricelli: outflow from a tank"
+      ],
+      [
+        "p/(ρg) + v^{2}/(2g) + z + h_{pump} = … + h_{f}",
+        "energy equation with losses"
+      ],
+      [
+        "v = √(2(p_{0} − p)/ρ)",
+        "pitot tube"
+      ],
+      [
+        "ṁ = ρ_{1} A_{1} v_{1} = ρ_{2} A_{2} v_{2}",
+        "continuity, used alongside"
+      ]
+    ],
+    "example": {
+      "problem": "Water flows at 2 m/s and 200 kPa in a 100 mm pipe that narrows to 50 mm at the same height. Find the pressure in the throat.",
+      "steps": [
+        "Continuity: v_{2} = 2 × (100/50)^{2} = 8 m/s",
+        "p_{2} = p_{1} + ρ(v_{1}^{2} − v_{2}^{2})/2 = 200 000 + 1000(4 − 64)/2",
+        "p_{2} = 200 000 − 30 000 = 170 kPa"
+      ],
+      "answer": "p_{2} = 170 kPa"
+    },
+    "try": "200 kPa + 1000 kg/m^3 * ((2 m/s)^2 - (8 m/s)^2) / 2 to kPa"
+  },
+  "Re = ρvD/μ": {
+    "title": "Reynolds number",
+    "about": "The ratio of inertial to viscous forces. In a pipe, flow is laminar below about 2300 and turbulent above about 4000. It decides which friction and heat-transfer correlations apply.",
+    "assumptions": [
+      "D is the characteristic length: pipe diameter, or hydraulic diameter 4A/P for non-circular ducts; plate length for external flow",
+      "v is the mean velocity",
+      "Transition values depend on geometry: pipe ≈ 2300, flat plate ≈ 5 × 10^{5}"
+    ],
+    "vars": [
+      [
+        "Re",
+        "Reynolds number",
+        ""
+      ],
+      [
+        "ρ",
+        "density",
+        "kg/m^{3}"
+      ],
+      [
+        "v",
+        "mean flow velocity",
+        "m/s"
+      ],
+      [
+        "D",
+        "characteristic length (pipe diameter)",
+        "m"
+      ],
+      [
+        "μ",
+        "dynamic viscosity",
+        "Pa·s"
+      ]
+    ],
+    "related": [
+      [
+        "Re = vD/ν",
+        "with kinematic viscosity ν = μ/ρ"
+      ],
+      [
+        "f = 64/Re",
+        "laminar pipe friction factor"
+      ],
+      [
+        "D_{h} = 4A/P",
+        "hydraulic diameter"
+      ]
+    ],
+    "example": {
+      "problem": "Water (ρ = 998 kg/m^{3}, μ = 1.0 × 10^{−3} Pa·s) flows at 1.5 m/s in a 25 mm pipe. Is it laminar?",
+      "steps": [
+        "Re = 998 × 1.5 × 0.025/0.001 = 37 400",
+        "Well above 4000, so turbulent"
+      ],
+      "answer": "Re ≈ 37 400, turbulent"
+    },
+    "try": "998 kg/m^3 * 1.5 m/s * 25 mm / (1e-3 Pa s)"
+  },
+  "Q = πR^{4}Δp/(8μL)": {
+    "title": "Hagen–Poiseuille flow in a pipe",
+    "about": "Volume flow rate for fully developed laminar flow in a round pipe. Flow goes as R^{4}, so halving the radius cuts the flow 16-fold at the same pressure drop; vital for blood vessels, capillaries and hydraulics.",
+    "assumptions": [
+      "Laminar flow, Re < 2300 (check after solving)",
+      "Steady, incompressible, Newtonian fluid",
+      "Fully developed (far from the entrance) in a straight, rigid, circular pipe",
+      "No slip at the wall"
+    ],
+    "vars": [
+      [
+        "Q",
+        "volume flow rate",
+        "m^{3}/s"
+      ],
+      [
+        "R",
+        "pipe radius",
+        "m"
+      ],
+      [
+        "Δp",
+        "pressure drop over length L",
+        "Pa"
+      ],
+      [
+        "μ",
+        "dynamic viscosity",
+        "Pa·s"
+      ],
+      [
+        "L",
+        "pipe length",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "u(r) = (Δp/(4μL))(R^{2} − r^{2})",
+        "parabolic velocity profile"
+      ],
+      [
+        "v_{avg} = v_{max}/2",
+        "mean speed is half the centreline speed"
+      ],
+      [
+        "f = 64/Re",
+        "same result as a Darcy friction factor"
+      ]
+    ],
+    "example": {
+      "problem": "Oil (μ = 0.1 Pa·s) flows through a 10 mm diameter tube 2 m long under a 50 kPa pressure drop. Find Q.",
+      "steps": [
+        "R = 5 mm = 0.005 m",
+        "Q = π(0.005)^{4}(50 000)/(8 × 0.1 × 2) = 6.14 × 10^{−5} m^{3}/s",
+        "That is 0.0614 L/s; check v = Q/A = 0.78 m/s, Re = 900·0.78·0.01/0.1 ≈ 70, laminar"
+      ],
+      "answer": "Q ≈ 6.14 × 10^{−5} m^{3}/s (0.0614 L/s)"
+    },
+    "try": "pi * (5 mm)^4 * 50 kPa / (8 * 0.1 Pa s * 2 m) to L/s"
+  },
+  "h_{f} = f (L/D) v^{2}/(2g)": {
+    "title": "Darcy–Weisbach head loss in a pipe",
+    "about": "The friction loss in a pipe, expressed as a height of fluid. Multiply by ρg to get a pressure drop. The friction factor f comes from 64/Re for laminar flow or the Moody chart (Colebrook) for turbulent flow.",
+    "assumptions": [
+      "Fully developed flow in a straight pipe of constant diameter",
+      "f depends on Re and relative roughness ε/D",
+      "Fittings and valves add minor losses K v^{2}/(2g)"
+    ],
+    "vars": [
+      [
+        "h_{f}",
+        "head loss",
+        "m"
+      ],
+      [
+        "f",
+        "Darcy friction factor",
+        ""
+      ],
+      [
+        "L",
+        "pipe length",
+        "m"
+      ],
+      [
+        "D",
+        "pipe diameter",
+        "m"
+      ],
+      [
+        "v",
+        "mean velocity",
+        "m/s"
+      ],
+      [
+        "g",
+        "gravitational acceleration",
+        "m/s^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "Δp = ρg h_{f}",
+        "pressure drop"
+      ],
+      [
+        "f = 64/Re",
+        "laminar"
+      ],
+      [
+        "1/√f = −2 log_{10}((ε/D)/3.7 + 2.51/(Re√f))",
+        "Colebrook, turbulent"
+      ],
+      [
+        "h_{m} = K v^{2}/(2g)",
+        "minor losses"
+      ]
+    ],
+    "example": {
+      "problem": "Water flows at 2 m/s through 50 m of 50 mm pipe with f = 0.02. Find the head loss and pressure drop.",
+      "steps": [
+        "h_{f} = 0.02 × (50/0.05) × 2^{2}/(2 × 9.81) = 0.02 × 1000 × 0.2039",
+        "h_{f} = 4.08 m",
+        "Δp = 1000 × 9.81 × 4.08 = 40 kPa"
+      ],
+      "answer": "h_{f} ≈ 4.08 m (Δp ≈ 40 kPa)"
+    },
+    "try": "0.02 * (50 m / 50 mm) * (2 m/s)^2 / (2 * 9.81 m/s^2)"
+  },
+  "dB/dt = d/dt ∫_{CV} ρb dV + ∫_{CS} ρb (v · n) dA": {
+    "title": "Reynolds transport theorem",
+    "about": "Converts a conservation law written for a fixed mass of material (a system) into one for a fixed region of space (a control volume). The rate of change of a property B of the system equals its rate of change inside the CV plus its net outflow through the surface.",
+    "assumptions": [
+      "Fixed, non-deforming control volume (for a moving CV use the relative velocity in the flux term)",
+      "B is extensive (mass, momentum, energy); b = dB/dm is the same quantity per unit mass",
+      "n is the outward unit normal, so v · n > 0 for outflow"
+    ],
+    "vars": [
+      [
+        "B",
+        "extensive property of the system",
+        ""
+      ],
+      [
+        "b",
+        "B per unit mass",
+        ""
+      ],
+      [
+        "ρ",
+        "density",
+        "kg/m^{3}"
+      ],
+      [
+        "v",
+        "fluid velocity",
+        "m/s"
+      ],
+      [
+        "n",
+        "outward unit normal on the control surface",
+        ""
+      ],
+      [
+        "CV, CS",
+        "control volume and its surface",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "b = 1",
+        "gives conservation of mass"
+      ],
+      [
+        "b = v",
+        "gives linear momentum"
+      ],
+      [
+        "b = e",
+        "gives the energy equation"
+      ]
+    ],
+    "example": {
+      "problem": "A tank holds water, with 3 kg/s flowing in and 2 kg/s flowing out. Use the theorem with B = mass (b = 1) to find how fast the stored mass changes.",
+      "steps": [
+        "System mass is conserved: dB/dt = 0",
+        "0 = dm_{CV}/dt + (2 − 3) kg/s",
+        "dm_{CV}/dt = 1 kg/s"
+      ],
+      "answer": "dm_{CV}/dt = +1 kg/s (the tank fills)"
+    },
+    "try": "3 kg/s - 2 kg/s"
+  },
+  "0 = d/dt ∫_{CV} ρ dV + ∫_{CS} ρ (v · n) dA": {
+    "title": "Conservation of mass for a control volume",
+    "about": "Mass is neither created nor destroyed: the mass inside a control volume changes only by the net flow in through its surface. In steady flow, mass in equals mass out.",
+    "assumptions": [
+      "Fixed control volume; v · n positive for outflow",
+      "No nuclear reactions (mass conserved)"
+    ],
+    "vars": [
+      [
+        "ρ",
+        "density",
+        "kg/m^{3}"
+      ],
+      [
+        "v",
+        "velocity",
+        "m/s"
+      ],
+      [
+        "n",
+        "outward unit normal",
+        ""
+      ],
+      [
+        "dV, dA",
+        "volume and area elements",
+        "m^{3}, m^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "dm_{CV}/dt = Σ ṁ_{in} − Σ ṁ_{out}",
+        "with uniform inlets and outlets"
+      ],
+      [
+        "ṁ = ρ_{1} A_{1} v_{1} = ρ_{2} A_{2} v_{2}",
+        "steady, one in and one out"
+      ],
+      [
+        "∂ρ/∂t + ∇ · (ρv) = 0",
+        "at a point"
+      ]
+    ],
+    "example": {
+      "problem": "A 1.2 m diameter tank is filled by a 50 mm pipe at 3 m/s while it drains at 2 L/s. How fast does the level rise?",
+      "steps": [
+        "Q_{in} = π(0.05)^{2}/4 × 3 = 5.89 L/s",
+        "dV/dt = 5.89 − 2 = 3.89 L/s",
+        "dh/dt = 3.89 × 10^{−3}/(π(1.2)^{2}/4) = 3.44 mm/s"
+      ],
+      "answer": "dh/dt ≈ 3.44 mm/s"
+    },
+    "try": "(pi (50 mm)^2 / 4 * 3 m/s - 2 L/s) / (pi * (1.2 m)^2 / 4) to mm/s"
+  },
+  "Σ F = d/dt ∫_{CV} ρv dV + ∫_{CS} ρv (v · n) dA": {
+    "title": "Linear momentum equation for a control volume",
+    "about": "Newton's second law for a control volume: the net external force equals the rate of change of momentum stored inside plus the net momentum flowing out. Use it for forces on pipe bends, nozzles, jets and vanes.",
+    "assumptions": [
+      "Inertial (non-accelerating) control volume",
+      "ΣF includes pressure forces on the control surface, body forces such as gravity, and support forces",
+      "It is a vector equation: write each component separately"
+    ],
+    "vars": [
+      [
+        "ΣF",
+        "net external force on the CV contents",
+        "N"
+      ],
+      [
+        "ρ",
+        "density",
+        "kg/m^{3}"
+      ],
+      [
+        "v",
+        "velocity",
+        "m/s"
+      ],
+      [
+        "n",
+        "outward unit normal",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Σ F = ṁ (v_{2} − v_{1})",
+        "steady, one in and one out"
+      ],
+      [
+        "F = ρQv",
+        "force of a jet stopped by a flat plate"
+      ]
+    ],
+    "example": {
+      "problem": "A water jet 30 mm in diameter at 20 m/s hits a flat plate head-on and spreads sideways. Find the force on the plate.",
+      "steps": [
+        "ṁ = ρAv = 1000 × π(0.03)^{2}/4 × 20 = 14.14 kg/s",
+        "Steady; x momentum in is ṁv, out is 0: F_{x} = ṁ(0 − 20) = −283 N on the water",
+        "The plate feels 283 N in the jet direction"
+      ],
+      "answer": "F ≈ 283 N"
+    },
+    "try": "1000 kg/m^3 * pi * (30 mm)^2 / 4 * (20 m/s)^2 to N"
+  },
+  "Σ τ = d/dt ∫_{CV} ρ(r × v) dV + ∫_{CS} ρ(r × v)(v · n) dA": {
+    "title": "Angular momentum equation for a control volume",
+    "about": "The net torque on a control volume equals the rate of change of angular momentum inside plus its net outflow. It gives the torque on pumps, turbines, sprinklers and lawn sprinklers (Euler's turbomachine equation).",
+    "assumptions": [
+      "Inertial control volume; r measured from a fixed point",
+      "Torques from surface forces, body forces and shafts all count in Σ τ"
+    ],
+    "vars": [
+      [
+        "Σ τ",
+        "net external torque",
+        "N·m"
+      ],
+      [
+        "r",
+        "position vector from the reference point",
+        "m"
+      ],
+      [
+        "ρ",
+        "density",
+        "kg/m^{3}"
+      ],
+      [
+        "v",
+        "velocity",
+        "m/s"
+      ],
+      [
+        "n",
+        "outward unit normal",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "T = ṁ(r_{2}v_{θ2} − r_{1}v_{θ1})",
+        "Euler turbomachine equation, steady"
+      ],
+      [
+        "P = Tω",
+        "shaft power"
+      ]
+    ],
+    "example": {
+      "problem": "A centrifugal pump impeller handles 0.05 m^{3}/s of water. Flow enters with no swirl and leaves at r_{2} = 0.15 m with tangential velocity 20 m/s. Find the shaft torque.",
+      "steps": [
+        "ṁ = 1000 × 0.05 = 50 kg/s",
+        "T = ṁ r_{2} v_{θ2} = 50 × 0.15 × 20 = 150 N·m"
+      ],
+      "answer": "T = 150 N·m"
+    },
+    "try": "50 kg/s * 0.15 m * 20 m/s to N m"
+  },
+  "Q̇ − Ẇ = d/dt ∫_{CV} ρe dV + ∫_{CS} ρ(e + p/ρ)(v · n) dA": {
+    "title": "Energy equation for a control volume (first law)",
+    "about": "Heat added minus work done by the CV equals the rate of change of stored energy plus the net energy carried out by the flow. The p/ρ term is flow work, which combines with internal energy to make enthalpy.",
+    "assumptions": [
+      "Ẇ is shaft and other work, not flow work (that is in p/ρ)",
+      "e = u + v^{2}/2 + gz per unit mass",
+      "Fixed control volume; signs: Q̇ into the CV positive, Ẇ by the CV positive"
+    ],
+    "vars": [
+      [
+        "Q̇",
+        "heat transfer rate into the CV",
+        "W"
+      ],
+      [
+        "Ẇ",
+        "work rate done by the CV (shaft, shear)",
+        "W"
+      ],
+      [
+        "ρ",
+        "density",
+        "kg/m^{3}"
+      ],
+      [
+        "e",
+        "energy per unit mass, u + v^{2}/2 + gz",
+        "J/kg"
+      ],
+      [
+        "p",
+        "pressure",
+        "Pa"
+      ],
+      [
+        "v",
+        "velocity",
+        "m/s"
+      ]
+    ],
+    "related": [
+      [
+        "h = u + p/ρ",
+        "enthalpy"
+      ],
+      [
+        "Q̇ − Ẇ = ṁ (h_{2} − h_{1} + (v_{2}^{2} − v_{1}^{2})/2 + g(z_{2} − z_{1}))",
+        "steady, one in and one out"
+      ],
+      [
+        "dE/dt = Q̇ − Ẇ",
+        "closed system"
+      ]
+    ],
+    "example": {
+      "problem": "A 200 L insulated tank of water (no flow) is stirred by a 500 W mixer. How fast does its temperature rise? (c = 4186 J/(kg·K))",
+      "steps": [
+        "No flow: dE_{CV}/dt = Q̇ − Ẇ = 0 − (−500) = 500 W",
+        "m c dT/dt = 500, with m = 200 kg",
+        "dT/dt = 500/(200 × 4186) = 5.97 × 10^{−4} K/s (about 2.1 K per hour)"
+      ],
+      "answer": "dT/dt ≈ 5.97 × 10^{−4} K/s"
+    },
+    "try": "500 W / (200 kg * 4186 J/(kg K)) to K/s"
+  },
+  "ṁ = ρ_{1} A_{1} v_{1} = ρ_{2} A_{2} v_{2}": {
+    "title": "Continuity: steady mass flow through a duct",
+    "about": "In steady flow with one inlet and one outlet, the mass flow rate is the same at both. For a liquid (constant ρ), A_{1}v_{1} = A_{2}v_{2}, so the fluid speeds up where the duct narrows.",
+    "assumptions": [
+      "Steady flow, one inlet and one outlet",
+      "Uniform velocity and density across each section (use mean values)",
+      "v normal to A"
+    ],
+    "vars": [
+      [
+        "ṁ",
+        "mass flow rate",
+        "kg/s"
+      ],
+      [
+        "ρ",
+        "density at each section",
+        "kg/m^{3}"
+      ],
+      [
+        "A",
+        "flow area",
+        "m^{2}"
+      ],
+      [
+        "v",
+        "mean velocity normal to A",
+        "m/s"
+      ]
+    ],
+    "related": [
+      [
+        "Q = Av",
+        "volume flow rate"
+      ],
+      [
+        "A_{1}v_{1} = A_{2}v_{2}",
+        "incompressible"
+      ],
+      [
+        "p + ρv^{2}/2 + ρgz = constant",
+        "Bernoulli, used with it"
+      ]
+    ],
+    "example": {
+      "problem": "Air at 1.2 kg/m^{3} enters a 0.5 m^{2} duct at 8 m/s and leaves through 0.2 m^{2} at 1.0 kg/m^{3}. Find ṁ and the exit velocity.",
+      "steps": [
+        "ṁ = 1.2 × 0.5 × 8 = 4.8 kg/s",
+        "v_{2} = ṁ/(ρ_{2}A_{2}) = 4.8/(1.0 × 0.2) = 24 m/s"
+      ],
+      "answer": "ṁ = 4.8 kg/s; v_{2} = 24 m/s"
+    },
+    "try": "1.2 * 0.5 * 8 / (1.0 * 0.2) m/s"
+  },
+  "Σ F = ṁ (v_{2} − v_{1})": {
+    "title": "Steady-flow momentum equation, one inlet and one outlet",
+    "about": "In steady flow the net force on the fluid in a control volume equals the mass flow rate times its change in velocity. Use vectors: a pipe bend with no change in speed still needs a force to turn the flow.",
+    "assumptions": [
+      "Steady, one inlet and one outlet, uniform velocity at each",
+      "ΣF includes pressure forces p_{1}A_{1} and p_{2}A_{2} at the cuts, weight, and the support force",
+      "Vector equation: apply in x and y separately"
+    ],
+    "vars": [
+      [
+        "ΣF",
+        "net external force on the fluid in the CV",
+        "N"
+      ],
+      [
+        "ṁ",
+        "mass flow rate",
+        "kg/s"
+      ],
+      [
+        "v_{1}, v_{2}",
+        "inlet and outlet velocity vectors",
+        "m/s"
+      ]
+    ],
+    "related": [
+      [
+        "F = ṁ v_{e}",
+        "rocket or jet thrust (plus (p_{e} − p_{a})A_{e})"
+      ],
+      [
+        "ṁ = ρAv",
+        "mass flow rate"
+      ]
+    ],
+    "example": {
+      "problem": "A 90° bend carries 20 kg/s of water at 4 m/s, pressure effects neglected. Find the force the bend exerts on the water.",
+      "steps": [
+        "v_{1} = (4, 0), v_{2} = (0, 4) m/s",
+        "F = ṁ(v_{2} − v_{1}) = 20(−4, 4) = (−80, 80) N",
+        "Magnitude 80√2 = 113 N"
+      ],
+      "answer": "F = (−80, 80) N, |F| ≈ 113 N"
+    },
+    "try": "20 kg/s * 4 m/s * sqrt(2) to N"
+  },
+  "Q̇ − Ẇ = ṁ (h_{2} − h_{1} + (v_{2}^{2} − v_{1}^{2})/2 + g(z_{2} − z_{1}))": {
+    "title": "Steady-flow energy equation",
+    "about": "The first law for steady devices with one inlet and one outlet: turbines, compressors, pumps, nozzles, heat exchangers and throttles. Heat in minus work out equals the mass flow times the change in enthalpy, kinetic and potential energy.",
+    "assumptions": [
+      "Steady flow, one inlet and one outlet",
+      "Uniform properties across each section",
+      "Ẇ is shaft work done by the fluid (positive for a turbine, negative for a pump)",
+      "Kinetic and potential terms are often negligible except in nozzles and diffusers"
+    ],
+    "vars": [
+      [
+        "Q̇",
+        "heat transfer rate into the fluid",
+        "W"
+      ],
+      [
+        "Ẇ",
+        "shaft power out",
+        "W"
+      ],
+      [
+        "ṁ",
+        "mass flow rate",
+        "kg/s"
+      ],
+      [
+        "h",
+        "specific enthalpy",
+        "J/kg"
+      ],
+      [
+        "v",
+        "velocity",
+        "m/s"
+      ],
+      [
+        "g",
+        "gravitational acceleration",
+        "m/s^{2}"
+      ],
+      [
+        "z",
+        "height",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "h_{2} − h_{1} = c_{p}(T_{2} − T_{1})",
+        "ideal gas"
+      ],
+      [
+        "Ẇ_{pump} = ṁ Δp/ρ",
+        "liquid pump, ideal"
+      ],
+      [
+        "h_{1} = h_{2}",
+        "throttling valve"
+      ]
+    ],
+    "example": {
+      "problem": "Steam enters an adiabatic turbine at 3 kg/s with h_{1} = 3230 kJ/kg and leaves with h_{2} = 2400 kJ/kg; velocity and height changes are small. Find the power.",
+      "steps": [
+        "Q̇ = 0, so Ẇ = ṁ(h_{1} − h_{2})",
+        "Ẇ = 3 × (3230 − 2400) kJ/s = 2490 kW"
+      ],
+      "answer": "Ẇ ≈ 2.49 MW"
+    },
+    "try": "3 kg/s * (3230 - 2400) kJ/kg to MW"
+  },
+  "∂ρ/∂t + ∇ · (ρv) = 0": {
+    "title": "Continuity equation at a point",
+    "about": "Conservation of mass for an infinitesimal volume: density at a point rises only if more mass flows in than out. For incompressible flow it reduces to ∇ · v = 0, a constraint every velocity field must satisfy.",
+    "assumptions": [
+      "Continuum; ρ and v differentiable",
+      "No sources or sinks of mass"
+    ],
+    "vars": [
+      [
+        "ρ",
+        "density",
+        "kg/m^{3}"
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "v",
+        "velocity field",
+        "m/s"
+      ]
+    ],
+    "related": [
+      [
+        "∇ · v = ∂u/∂x + ∂v/∂y + ∂w/∂z = 0",
+        "incompressible"
+      ],
+      [
+        "Dρ/Dt + ρ∇ · v = 0",
+        "material-derivative form"
+      ],
+      [
+        "0 = d/dt ∫_{CV} ρ dV + ∫_{CS} ρ (v · n) dA",
+        "integral form"
+      ]
+    ],
+    "example": {
+      "problem": "An incompressible 2D flow has u = 3x (1/s). Find the y velocity v if v = 0 on y = 0, and evaluate it at y = 2 m.",
+      "steps": [
+        "∂u/∂x + ∂v/∂y = 0, so ∂v/∂y = −3",
+        "v = −3y, so at y = 2 m: v = −6 m/s"
+      ],
+      "answer": "v = −3y; −6 m/s at y = 2 m"
+    },
+    "try": "-3 / s * 2 m"
+  },
+  "ρ Dv/Dt = −∇p + μ∇^{2}v + ρg": {
+    "title": "Navier–Stokes equations (incompressible)",
+    "about": "Newton's second law for a Newtonian fluid: mass times acceleration equals pressure force plus viscous force plus gravity, per unit volume. With continuity (∇ · v = 0) it governs almost all fluid flow; only simple cases have exact solutions.",
+    "assumptions": [
+      "Newtonian fluid with constant viscosity μ",
+      "Incompressible, constant density",
+      "Dv/Dt = ∂v/∂t + (v · ∇)v is the material (following-the-particle) acceleration, which makes the equation nonlinear"
+    ],
+    "vars": [
+      [
+        "ρ",
+        "density",
+        "kg/m^{3}"
+      ],
+      [
+        "v",
+        "velocity field",
+        "m/s"
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "p",
+        "pressure",
+        "Pa"
+      ],
+      [
+        "μ",
+        "dynamic viscosity",
+        "Pa·s"
+      ],
+      [
+        "g",
+        "gravitational acceleration vector",
+        "m/s^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "∇ · v = 0",
+        "continuity, solved together"
+      ],
+      [
+        "−∇p + ρg = 0",
+        "fluid at rest: hydrostatics"
+      ],
+      [
+        "μ = 0: ρ Dv/Dt = −∇p + ρg",
+        "Euler equation, which integrates to Bernoulli"
+      ],
+      [
+        "Q = πR^{4}Δp/(8μL)",
+        "pipe flow, an exact solution"
+      ]
+    ],
+    "example": {
+      "problem": "Steady laminar flow between fixed parallel plates 2 mm apart: oil with μ = 0.05 Pa·s, pressure gradient dp/dx = −2 kPa/m. Find the centreline velocity.",
+      "steps": [
+        "Steady and fully developed, so Dv/Dt = 0 and 0 = −dp/dx + μ d^{2}u/dy^{2}",
+        "With u = 0 at y = ±h, h = 1 mm: u = (−dp/dx)(h^{2} − y^{2})/(2μ)",
+        "u_{max} = 2000 × (0.001)^{2}/(2 × 0.05) = 0.02 m/s"
+      ],
+      "answer": "u_{max} = 0.02 m/s (20 mm/s)"
+    },
+    "try": "2 kPa/m * (1 mm)^2 / (2 * 0.05 Pa s) to mm/s"
+  }
+}
