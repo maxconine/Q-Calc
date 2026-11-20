@@ -1659,6 +1659,7 @@ pub fn build_native_graph(input: &str, options: &GraphOptions) -> Option<GraphRe
     r.critical_points.extend(intercepts);
     let ends = endpoints(&r);
     r.critical_points.extend(ends);
+    crate::graph_native::drop_tail_roots(&mut r);
     crate::graph_native::fill_holes(&mut r);
     // the points a line was drawn through, first
     if r.error.is_none() && !native.points.is_empty() {

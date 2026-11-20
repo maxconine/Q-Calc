@@ -565,6 +565,16 @@ pub fn implicit_features(
                 if !(norm > 0.0) || g.abs() / norm > span * 1e-6 {
                     continue;
                 }
+                // ∇g small here but not a little way off: a node where branches cross (the folium's origin),
+                // where newton's differences leave a gradient of rounding size
+                let k = 1e-3 * span;
+                let around = [(k, 0.0), (-k, 0.0), (0.0, k), (0.0, -k)]
+                    .iter()
+                    .filter_map(|&(dx, dy)| grad(f, x + dx, y + dy, h).map(|(a, b)| len2(a, b)))
+                    .fold(0.0, f64::max);
+                if norm < around * 0.1 {
+                    continue;
+                }
                 let kind = if which == 0 {
                     if fy.abs() < norm * 1e-3 {
                         continue;
@@ -693,6 +703,7 @@ fn scan_home(
     const NX: usize = 64;
     let ny = ((NX as f64 * aspect).round() as usize).max(8);
     let mut best: Option<Zoom> = None;
+    let mut standard: Option<Zoom> = None;
     let near = |k: i32| (k - 4).abs();
     let mut grid = vec![0.0; (NX + 1) * (ny + 1)];
     for k in -8..=28 {
@@ -736,9 +747,21 @@ fn scan_home(
                 score > b + 0.02 || ((score - b).abs() <= 0.02 && near(k) < near(bk))
             }
         };
+        if k == 4 {
+            standard = Some((score, k, (bx0, bx1, by0, by1), held));
+        }
         if better {
             best = Some((score, k, (bx0, bx1, by0, by1), held));
         }
+    }
+    // a curve that runs off every window (x² − y² = 1, the folium x³ + y³ = 6xy) spreads widest in a tiny window
+    // through its narrowest part, where little of it shows: open such a curve at ±10 when it reaches across a
+    // twentieth of that window both ways, as Desmos does (y² = x³, whose cusp opened 0.1 wide)
+    if let (Some((_, bk, _, false)), Some(st)) = (best, standard)
+        && bk < 4
+        && st.0 >= 0.05
+    {
+        best = Some(st);
     }
     let (_, k, (bx0, bx1, by0, by1), held) = best?;
     let s = jsmath::pow(10.0, k as f64 / 4.0);
@@ -1332,3 +1355,34 @@ fn tidy_x(x: f64, step: f64) -> f64 {
     }
     x
 }
+            // and the sides settle on it: 1/x² and ln(x²) match either side of 0 too, but run off as they near it
+                && ((a + b) / 2.0 - y).abs() <= tol
+/// Native only: a curve that only fades toward 0 (`exp(-x^2)`, `e^x` to the left) has no root where its samples
+/// drop under the root finder's 1e-12: a run of such samples reaching the window's edge, none of them 0 and all
+/// one sign, is a tail, not a root (the web lists `exp(-x^2)`'s at ±5.3).
+pub fn drop_tail_roots(r: &mut GraphResult) {
+    if r.roots.is_empty()
+        || r.contours.is_some()
+        || r.intent.contour.is_some()
+        || r.points.len() < 2
+    {
+        return;
+    }
+    let pts = &r.points;
+    let last = pts.len() - 1;
+    let tiny = |y: Option<f64>| y.is_some_and(|y| y != 0.0 && y.abs() <= 1e-12);
+    let tail = |k: usize, edge: usize| {
+        let (a, b) = if k <= edge { (k, edge) } else { (edge, k) };
+        let s = pts[k].y.map(f64::signum);
+        (a..=b).all(|i| tiny(pts[i].y) && pts[i].y.map(f64::signum) == s)
+    };
+    r.roots.retain(|&x| {
+        let k = pts
+            .iter()
+            .enumerate()
+            .min_by(|a, b| (a.1.x - x).abs().total_cmp(&(b.1.x - x).abs()))
+            .map_or(0, |(i, _)| i);
+        !(tiny(pts[k].y) && (tail(k, 0) || tail(k, last)))
+    });
+}
+
