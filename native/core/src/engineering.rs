@@ -12,7 +12,11 @@
 //!   area only (`2 T * 3 m^2` is 6 Wb), or with a magnetic unit or target (`… in Wb`). Elsewhere `T` stays the
 //!   ton the web's goldens pin (`2 T * 3 A * 1 m` is `6000 kg m A`).
 
+use crate::jsre::{self, Lazy};
 use crate::units::table::Dim;
+
+/// A whole word of letters (µ too), not a call: the magnetic and tesla words are looked for in these.
+static WORD: Lazy = Lazy::new(|| jsre::js(r"(?<![A-Za-z0-9_])[A-Za-zµμ]+(?![A-Za-z0-9_(])", ""));
 
 /// The line rewritten with the shorthands spelled out, or None when it has none.
 pub fn rewrite(text: &str) -> Option<String> {
@@ -146,7 +150,6 @@ fn circuit(dim: Dim) -> bool {
 
 /// `60 Hz 100 µF` → `60 Hz * 100 µF`: a number and unit right after another, both circuit quantities.
 fn circuit_products(text: &str) -> String {
-    use crate::jsre::{self, Lazy};
     // the next amount is only looked at, so a chain (`60 Hz 100 µF 10 Ω`) joins in one pass
     static PAIR: Lazy = Lazy::new(|| {
         jsre::js(
@@ -174,7 +177,6 @@ pub fn with_moles(
     carried: bool,
     eval: impl Fn(&str) -> Option<crate::types::Value>,
 ) -> Option<crate::types::Value> {
-    use crate::jsre::{self, Lazy};
     static MOL: Lazy = Lazy::new(|| {
         jsre::js(
             r"(?<![A-Za-z0-9_])(k|m|µ|μ|u|n)?(?:mol|mols|mole|moles)(?![A-Za-z0-9_(])",
@@ -206,9 +208,9 @@ pub fn with_moles(
     // steps close to 1, so the answer keeps its prefix (`kJ`) while mol scales
     let (one, two, three) = (at(1.0)?, at(1.001)?, at(1.002)?);
     // `2 mol` alone stays blank (web parity): another unit must be typed
-    static WORD: Lazy = Lazy::new(|| jsre::js(r"[A-Za-zµμΩ°]+", ""));
+    static LETTERS: Lazy = Lazy::new(|| jsre::js(r"[A-Za-zµμΩ°]+", ""));
     let without = jsre::replace_all(&MOL, text, |_| " ".into()).into_owned();
-    let other_unit = WORD
+    let other_unit = LETTERS
         .find_iter(without.as_str())
         .filter_map(Result::ok)
         .any(|w| crate::units::unit_dim(w.as_str()).is_some());
@@ -308,19 +310,21 @@ fn mol_label(unit: &str, p: i32) -> String {
 
 /// `siemens` → `(1/ohm)` (with a prefix, `msiemens` → `(1/kohm)`).
 fn siemens_words(text: &str) -> String {
-    use crate::jsre::{self, Lazy};
-    static WORD: Lazy =
+    static SIEMENS: Lazy =
         Lazy::new(|| jsre::js(r"(?<![A-Za-z0-9_])(k|m|µ|μ|u)?siemens(?![A-Za-z0-9_(])", ""));
-    jsre::replace_all(&WORD, text, |c| {
-        let ohm = match jsre::group(c, 1) {
-            "k" => "mohm",
-            "m" => "kohm",
-            "" => "ohm",
-            _ => "Mohm",
-        };
-        format!("(1/{ohm})")
-    })
-    .into_owned()
+    jsre::replace_all(&SIEMENS, text, |c| reciprocal_ohm(jsre::group(c, 1))).into_owned()
+}
+
+/// A siemens prefix as the reciprocal ohm the table has: `` → `(1/ohm)`, `m` → `(1/kohm)`, `k` → `(1/mohm)`,
+/// `µ` → `(1/Mohm)`.
+fn reciprocal_ohm(prefix: &str) -> String {
+    let ohm = match prefix {
+        "k" => "mohm",
+        "m" => "kohm",
+        "" => "ohm",
+        _ => "Mohm",
+    };
+    format!("(1/{ohm})")
 }
 
 /// The size of a magnetic word in teslas (or webers for `Wb`), and whether it's a flux.
@@ -355,9 +359,6 @@ fn tesla_text(size: f64, flux: bool) -> String {
 /// `tesla`, `mT`… in words the table doesn't have: `tesla`, `Wb`, `weber`, `gauss` and their prefixes (a bare
 /// `T` or `mT` waits for [`magnetic`]).
 fn magnetic_words(text: &str) -> String {
-    use crate::jsre::{self, Lazy};
-    static WORD: Lazy =
-        Lazy::new(|| jsre::js(r"(?<![A-Za-z0-9_])[A-Za-zµμ]+(?![A-Za-z0-9_(])", ""));
     jsre::replace_all(&WORD, text, |c| {
         let w = jsre::group(c, 0);
         match magnetic_size(w) {
@@ -370,20 +371,25 @@ fn magnetic_words(text: &str) -> String {
 
 /// A trailing `in Wb` / `to mT` / `in gauss`: the line before it, the label and its size in T or Wb.
 pub fn magnetic_target(text: &str) -> Option<(String, &str, f64)> {
-    let t = text.trim_end();
-    let (head, word) = t.rsplit_once(' ')?;
-    let head = head.trim_end();
-    let head = head
-        .strip_suffix(" in")
-        .or_else(|| head.strip_suffix(" to"))?
-        .trim_end();
+    let (head, word) = trailing_target(text)?;
     let (size, _) = magnetic_size(word)?;
     let label = match word {
         "tesla" | "teslas" => "T",
         "weber" | "webers" => "Wb",
         _ => word,
     };
-    (!head.is_empty()).then(|| (head.to_string(), label, size))
+    Some((head.to_string(), label, size))
+}
+
+/// A trailing `in <word>` / `to <word>`: the line before it (not empty) and the word.
+fn trailing_target(text: &str) -> Option<(&str, &str)> {
+    let (head, word) = text.trim_end().rsplit_once(' ')?;
+    let head = head.trim_end();
+    let head = head
+        .strip_suffix(" in")
+        .or_else(|| head.strip_suffix(" to"))?
+        .trim_end();
+    (!head.is_empty()).then_some((head, word))
 }
 
 /// A line where a capital `T` is the tesla, with it (and any other magnetic word) spelled in base units: `T`
@@ -391,9 +397,6 @@ pub fn magnetic_target(text: &str) -> Option<(String, &str, f64)> {
 /// taken off) a magnetic target. None
 /// otherwise, so `2 T * 3 A * 1 m` stays tons (a web golden).
 pub fn magnetic(text: &str, target: bool) -> Option<String> {
-    use crate::jsre::{self, Lazy};
-    static WORD: Lazy =
-        Lazy::new(|| jsre::js(r"(?<![A-Za-z0-9_])[A-Za-zµμ]+(?![A-Za-z0-9_(])", ""));
     let words: Vec<(usize, usize, String)> = WORD
         .find_iter(text)
         .filter_map(Result::ok)
@@ -437,8 +440,8 @@ pub fn magnetic(text: &str, target: bool) -> Option<String> {
     let mut at = 0;
     for (start, end, w) in &words {
         out.push_str(&text[at..*start]);
-        let in_target = text[..*start].trim_end().ends_with(" in")
-            || text[..*start].trim_end().ends_with(" to");
+        let before = text[..*start].trim_end();
+        let in_target = before.ends_with(" in") || before.ends_with(" to");
         match magnetic_size(w) {
             Some((size, flux)) if !in_target && w != "G" => out.push_str(&tesla_text(size, flux)),
             _ => out.push_str(w),
@@ -473,9 +476,6 @@ pub fn tesla_label(word: &str) -> Option<(&'static str, f64)> {
 /// The one prefixed tesla a line is typed in (`5 mT + 1 mT` → mT), the label its field answer reads in; None
 /// when there is none or more than one.
 pub fn tesla_in(text: &str) -> Option<(&'static str, f64)> {
-    use crate::jsre::{self, Lazy};
-    static WORD: Lazy =
-        Lazy::new(|| jsre::js(r"(?<![A-Za-z0-9_])[A-Za-zµμ]+(?![A-Za-z0-9_(])", ""));
     let mut labels = WORD
         .find_iter(text)
         .filter_map(Result::ok)
@@ -498,44 +498,25 @@ pub fn siemens_size(label: &str) -> Option<f64> {
 /// `2 mS`, `5 µS`, `3 kS`: a prefixed siemens symbol spelled as the reciprocal ohm the table has (`(1/kohm)`);
 /// None when the line has none. A bare `S` stays the second (web goldens), and so does `ms`.
 pub fn siemens_symbols(text: &str) -> Option<String> {
-    use crate::jsre::{self, Lazy};
     static SYMBOL: Lazy =
         Lazy::new(|| jsre::js(r"(?<![A-Za-z0-9_])(m|µ|μ|u|k)S(?![A-Za-z0-9_(])", ""));
     if !jsre::test(&SYMBOL, text) {
         return None;
     }
-    Some(
-        jsre::replace_all(&SYMBOL, text, |c| {
-            let ohm = match jsre::group(c, 1) {
-                "k" => "mohm",
-                "m" => "kohm",
-                _ => "Mohm",
-            };
-            format!("(1/{ohm})")
-        })
-        .into_owned(),
-    )
+    Some(jsre::replace_all(&SYMBOL, text, |c| reciprocal_ohm(jsre::group(c, 1))).into_owned())
 }
 
 /// A trailing `in S` / `to mS` / `in siemens`: the line before it, the label and its size in S.
 pub fn siemens_target(text: &str) -> Option<(String, &'static str, f64)> {
-    let t = text.trim_end();
-    let (head, word) = t.rsplit_once(' ')?;
-    let head = head
-        .trim_end()
-        .strip_suffix(" in")
-        .or_else(|| head.trim_end().strip_suffix(" to"))?
-        .trim_end();
+    let (head, word) = trailing_target(text)?;
     let size = siemens_size(word)?;
     let label = match word {
-        "siemens" => "S",
-        "μS" | "uS" => "µS",
         "mS" => "mS",
         "kS" => "kS",
-        "µS" => "µS",
+        "µS" | "μS" | "uS" => "µS",
         _ => "S",
     };
-    (!head.is_empty()).then(|| (head.to_string(), label, size))
+    Some((head.to_string(), label, size))
 }
 
 /// A conductance label as siemens: `1/Ω` → S, `1/kΩ` → mS, `1/MΩ` → µS, `1/mΩ` → kS.

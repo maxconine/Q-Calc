@@ -896,7 +896,7 @@ impl<'o> Sheet<'o> {
         let siemens_target = target
             .as_ref()
             .and_then(|(label, _)| crate::engineering::siemens_size(label));
-        if let Some(s) = crate::engineering::siemens_unit(&unit)
+        let quantity = if let Some(s) = crate::engineering::siemens_unit(&unit)
             && (target.is_none() || siemens_target.is_some())
         {
             match &target {
@@ -907,14 +907,8 @@ impl<'o> Sheet<'o> {
                 }
                 None => value.unit = Some(s.into()),
             }
-            value.unit_id = None;
             // read back as the reciprocal it was (`S` alone reads as seconds)
-            let quantity = format!("{} ({unit})", jsnum::to_string(si));
-            result.quantity = Some(quantity.clone());
-            self.quantities.insert("ans".into(), quantity.clone());
-            if let Some(v) = &result.variable {
-                self.quantities.insert(v.clone(), quantity);
-            }
+            format!("{} ({unit})", jsnum::to_string(si))
         } else if let Some(m) = crate::engineering::magnetic_unit(&unit) {
             let flux = m == "Wb";
             match &target {
@@ -927,17 +921,17 @@ impl<'o> Sheet<'o> {
                 }
                 None => value.unit = Some(m.into()),
             }
-            value.unit_id = None;
             // read back in base units (the table has no tesla)
             let base = if flux { "kg m^2/(A s^2)" } else { "kg/(A s^2)" };
-            let quantity = format!("{} {base}", jsnum::to_string(si));
-            result.quantity = Some(quantity.clone());
-            self.quantities.insert("ans".into(), quantity.clone());
-            if let Some(v) = &result.variable {
-                self.quantities.insert(v.clone(), quantity);
-            }
+            format!("{} {base}", jsnum::to_string(si))
         } else {
             return false;
+        };
+        value.unit_id = None;
+        result.quantity = Some(quantity.clone());
+        self.quantities.insert("ans".into(), quantity.clone());
+        if let Some(v) = &result.variable {
+            self.quantities.insert(v.clone(), quantity);
         }
         result.display = show(value, false, self.sig_figs);
         true

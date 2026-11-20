@@ -415,21 +415,19 @@ fn said_clock(t: &str) -> Option<(f64, Option<TimeZone>)> {
 /// tokyo` (from the user's own zone), `3pm tokyo time` (into it). Today's date in the zone it was said in; when
 /// the other zone is on another day, the answer says which (`8:00 am next day`).
 pub fn zone_convert(s: &str, now: f64, here: &TimeZone) -> Option<PhraseAnswer> {
-    let place = |t: &str| any_zone(t);
-    let said = said_clock;
     if now.is_nan() {
         return None;
     }
     let (clock, from, to) = if let Some(m) = caps(&ZONE_PAIR, s) {
-        let (clock, from) = said(g(&m, 1))?;
+        let (clock, from) = said_clock(g(&m, 1))?;
         (
             clock,
             from.unwrap_or_else(|| here.clone()),
-            place(g(&m, 2))?,
+            any_zone(g(&m, 2))?,
         )
     } else {
         // `3pm tokyo time`: into the user's zone; a bare clock is the TS's own answer
-        let (clock, from) = said(s)?;
+        let (clock, from) = said_clock(s)?;
         (clock, from?, here.clone())
     };
     let start = jiff::Timestamp::from_millisecond(now as i64)
@@ -442,13 +440,23 @@ pub fn zone_convert(s: &str, now: f64, here: &TimeZone) -> Option<PhraseAnswer> 
         .to_zoned(from)
         .ok()?;
     let there = at.with_time_zone(to);
-    let shown = format_clock((there.hour() as f64) * 60.0 + there.minute() as f64);
+    let shown = zoned_clock(&there);
     let shown = match there.date().cmp(&at.date()) {
         std::cmp::Ordering::Greater => format!("{shown} next day"),
         std::cmp::Ordering::Less => format!("{shown} previous day"),
         std::cmp::Ordering::Equal => shown,
     };
     Some(PhraseAnswer::shown(shown))
+}
+
+/// A zoned moment's clock as the phrases show one (`3:00 pm`).
+fn zoned_clock(at: &jiff::Zoned) -> String {
+    format_clock(at.hour() as f64 * 60.0 + at.minute() as f64)
+}
+
+/// Whether a parsed day is a real date (no NaN year, month or day).
+fn finite_day(day: &Day) -> bool {
+    day.y.is_finite() && day.m.is_finite() && day.d.is_finite()
 }
 
 /// Native only: `utc+5:30`, `gmt-8`, `utc+5` as a fixed offset from UTC.
@@ -574,7 +582,7 @@ pub fn native_time(s: &str, now: f64, tz: &TimeZone) -> Option<PhraseAnswer> {
             Some(d) => parse_day(tz, d.as_str(), today, Roll::Year).ok()??,
             None => today,
         };
-        if !(day.y.is_finite() && day.m.is_finite() && day.d.is_finite()) {
+        if !finite_day(&day) {
             return None;
         }
         let date = jiff::civil::Date::new(day.y as i16, day.m as i8 + 1, day.d as i8).ok()?;
@@ -593,9 +601,7 @@ pub fn native_time(s: &str, now: f64, tz: &TimeZone) -> Option<PhraseAnswer> {
         let at = jiff::Timestamp::from_millisecond(now as i64)
             .ok()?
             .to_zoned(there);
-        return Some(PhraseAnswer::shown(format_clock(
-            at.hour() as f64 * 60.0 + at.minute() as f64,
-        )));
+        return Some(PhraseAnswer::shown(zoned_clock(&at)));
     }
     if let Some(a) = now_shift(s, now, tz)
         .or_else(|| now_in(s, now))
@@ -700,7 +706,7 @@ fn day_at_clock(s: &str, now: f64, here: &TimeZone) -> Option<PhraseAnswer> {
             )
         }
     };
-    if !(day.y.is_finite() && day.m.is_finite() && day.d.is_finite()) {
+    if !finite_day(&day) {
         return None;
     }
     let at = local_date(&from, day.y, day.m, day.d, 0.0, clock);
