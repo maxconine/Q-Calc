@@ -305,7 +305,19 @@ final class BarModel: ObservableObject {
         prefixValue = nil
         forms = []
         copied = false
-        completion = nil
+        // native (QA item 57): the ghost and the grey parens follow the text at once, not when the engine answers:
+        // typing through the ghost eats it letter by letter (it blinked off on every key, and the old rest stood
+        // after the new letter, `sqr` + `rt`, which Tab then typed in), and a typed `)` takes its grey one's place
+        // (`(2)` showed `(2))` for a moment)
+        completion = GhostRules.rest(completion, from: old, to: text)
+        // `message max …` is words, not math: no faint parens (QuickInput's `plain`)
+        var isMessage = false
+        if case .message = barCommand(text) { isMessage = true }
+        let counts = isMessage ? (leading: 0, trailing: 0) : GhostRules.parenCounts(text)
+        if decorations.leadingParens != counts.leading || decorations.trailingParens != counts.trailing {
+            decorations.leadingParens = counts.leading
+            decorations.trailingParens = counts.trailing
+        }
         dropUpgrade()
         if selected != nil, !text.isEmpty { selected = nil }
         gamesShown = BarCommand.of(text, sheets: sheets) == .games
@@ -566,9 +578,10 @@ final class BarModel: ObservableObject {
         if upgradedExact != nil { upgradedExact = nil }
     }
 
-    /// Accept the completion ghost (Tab, or → at the end of the line).
+    /// Accept the completion ghost (Tab, or → at the end of the line). It's drawn only with the caret at the end,
+    /// so only there does Tab take it (with the caret mid-line it typed the rest there).
     func acceptCompletion() -> Bool {
-        guard let completion, !completion.isEmpty else { return false }
+        guard let completion, !completion.isEmpty, caretAtEnd?() ?? true else { return false }
         insert(completion)
         return true
     }
@@ -593,7 +606,8 @@ final class BarModel: ObservableObject {
         // the grey `ans` a chained line continues from (`*2`) is typed in the same way, in front (native only)
         let ans = chained ? "ans" : ""
         guard lead + trail > 0 || !ans.isEmpty else { return false }
-        let filled = ans + String(repeating: "(", count: lead) + text + String(repeating: ")", count: trail)
+        // a Typst line between `$` signs takes its `)` inside the closing `$` (GhostRules.filled)
+        let filled = ans + GhostRules.filled(text, leading: lead, trailing: trail)
         // the grey ones become typed ones where they stand, and the caret stays by the same character (at the end
         // of the line it stays at the end, past the new `)`)
         let length = (text as NSString).length, at = fieldCaret?() ?? length

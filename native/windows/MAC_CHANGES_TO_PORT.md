@@ -28,6 +28,8 @@ On Windows (branch `win-port-302`) all three pass, with the golden floors as set
 
 - **Chemistry: electrons in half-reactions, `chem R` completes kJ/kcal/kPa** (core `chem.rs` `electron` in `species`, `GAS_CONSTANT_UNITS` now 9 words and re-exported by `app/needs.rs`; QA item 60): `Fe^3+ + e^- -> Fe^2+` balances (was blank), `Cu^2+ + e- -> Cu` is `Cu²⁺ + 2 e⁻ → Cu`, `MnO4^- + H^+ + e^- -> Mn^2+ + H2O` is `MnO₄⁻ + 8 H⁺ + 5 e⁻ → Mn²⁺ + 4 H₂O`; `e^-`, `e^{-}`, `e⁻` or a bare `e-` that ends the species (never `e-x`; `e - 1` stays Euler's number); copies as `e^-`. `chem R kc` ghosts `al`, `chem R kp` ghosts `a`. Core only; test `core/tests/chemistry_electrons.rs`, then type `Zn -> Zn^2+ + e^-` in the bar.
 
+- **A line reads as its grey parens show it** (core `parens.rs` `fill_typed`, `app/live.rs` `filled_when_blank`, `app/touches.rs` `live_line_copy`; QA item 57): a line the grey `)` closes but that was blank until it was typed (`det([1 2; 3 4]`, `inv([1 2; 3 4]`, `solve(x^2 = 9`, `d/dx (x^3`, `∫(x^2, 0, 1`, bare Typst `frac(1, 2`) now answers as the filled line would, live and on ↵ (the line saved as typed); tried only after the line as typed was blank. A Typst line between `$` signs (`$sqrt(2$`) copies with its `)` inside the closing `$` (`$sqrt(2)$ = …`; after it, the line was blank). Core only; test `core/tests/grey_parens.rs`, then type `det([1 2; 3 4]` in the bar (−2).
+
 - **History file: notes and complex solves kept, an unreadable file kept aside** (ffi `history.rs` `kind_of` + `is_empty_history`, ffi `engine.rs` `load_history`, core `app/history.rs` `sanitize_solve`): a note row lost its `note` kind on the next ↵ and on every relaunch (it came back as a plain row with an empty answer, cut to 240 characters); an `x^2 = -1` row (outcome `complex`) lost its solve when saved; a history.json that reads as no rows (damaged, a `null` row, a newer shape) is copied to `history.unread.json` before the next save overwrites it. Windows loads through the same `Engine::load_history`, so: save a note, ↵ another line, restart, the note is still a note; `x^2 = -1` then restart draws `x = ±i` full size. Test: `ffi/tests/history_migration.rs`. The Mac also reads its `graphPrefs` key by key now (a missing key keeps its default instead of resetting all of them); Windows has no graph settings store yet.
 
 - **Graphs: `sinc`, polar curves, region bounds, a ring of tops** (core `scientific/functions.rs` + `NAMES` `sinc`; `graph_native.rs` `polar_input`, `region_intent`, `drop_rings`): `sinc(pi)` is 0, `sinc(0)` 1; `graph r = 1 + cos(θ)`, `r = 2`, `r = cos(2θ)` draw (contours; labelled as typed), `r = θ` says only polar curves that repeat each turn draw; `graph z = x + y {x^2 + y^2 < 4}` is a disc of surface (it said "Write bounds like {0 < x < 3}"); `graph z = x^2+y^2 - (x^2+y^2)^2` lists one Max, not twelve. Test: `tests/graph_gaps.rs`; on Windows, check the graph panel draws the cardioid and the disc in 3D.
@@ -240,6 +242,17 @@ QA item 29, Mac only (`mac/Sources/Effects/EggRules.swift`, new; `Effects/EggOve
 - **Barrel roll with the CRT look on:** the spinning picture (a cacheDisplay copy, which leaves content filters out) turned back to the usual colours; it now gets the bar's CRT filters.
 
 To test on Windows: type `2+2`, press ↑↑↓↓←→←→BA (line is `2+2` again, CRT on); `do a barrel roll` and press the hotkey mid-turn (the bar hides); `konami` ↵ then `do a barrel roll` (the spin stays green).
+
+### Input line: the completion ghost and grey parens follow each key (20 Nov 2026)
+
+QA item 57, Mac only (`mac/Sources/Bar/GhostRules.swift`, new; `Bar/BarModel.swift` `textChanged`, `acceptCompletion`, `acceptParens`; test `mac/scripts/test-input.sh`). Check the Windows bar for the same:
+
+- **Ghost flicker:** the completion ghost was cleared on every key and came back with the engine's answer, so it blinked; and between the two the old rest stood after the new letter. Now typing a letter of the ghost eats it at once (`sq` + `rt` → `sqr` + `t`), any other edit drops it until the answer brings the next.
+- **Grey parens one key behind:** they came with the engine's answer too, so a typed `)` showed `(2))` for a moment. They are now counted on the main thread on every edit (QuickInput.tsx does it on every render); none on a `message …` line.
+- **Tab mid-line:** with the caret inside the line Tab typed the end word's completion at the caret (the ghost is only drawn at the end); now Tab takes it only with the caret at the end (Tab mid-line still types the grey parens).
+- **Typst between `$`:** Tab/→ on `$sqrt(2$` typed `$sqrt(2$)` (blank); the `)` now goes inside the closing `$`.
+
+To test on Windows: type `sq` then `r` fast (the ghost reads `t`, never `rt`); `(2` then `)` (no extra grey `)`); `2 + sq` then move the caret to the start and press Tab (nothing typed there); `$sqrt(2$` then Tab (`$sqrt(2)$`, answer 1.41421).
 
 ### Already ported
 

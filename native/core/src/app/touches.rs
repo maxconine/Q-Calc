@@ -85,13 +85,8 @@ pub fn live_line_copy(
     if crate::chem::is_reaction_input(&expr) {
         return copy_value(display);
     }
-    let p = crate::parens::infer_parens(&expr);
-    let whole = format!(
-        "{}{}{}",
-        "(".repeat(p.leading),
-        jstr::trim(&expr),
-        ")".repeat(p.trailing)
-    );
+    // the grey parens where Tab puts them (inside a Typst line's closing `$`)
+    let whole = crate::parens::fill_typed(jstr::trim(&expr));
     copy_value(&line_copy_text(&whole, display, exact, solve, form))
 }
 

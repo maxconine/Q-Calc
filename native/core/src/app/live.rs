@@ -249,6 +249,28 @@ fn phrase_answer(
     .map(|p| (p.display, p.n))
 }
 
+/// native only (QA item 57): a line the grey parens close reads as they show it, in the bar (live and ↵). The
+/// plain path fills them itself; `det([1 2; 3 4]`, `solve(x^2 = 9`, `d/dx (x^3`, `∫(x^2, 0, 1`, `frac(1, 2` were
+/// blank until typed in, though Tab/→ (which types the grey ones) made them answer. Tried only after the line as
+/// typed was blank; the line keeps its typed text. (Here and not in `evaluate_sheet`, whose web goldens keep
+/// `Σ(n^2, n = 1..10` blank.)
+fn filled_when_blank(result: LineResult, expr: &str, options: &EvaluateOptions) -> LineResult {
+    if !result.display.is_empty() || result.value.is_some() {
+        return result;
+    }
+    let filled = crate::parens::fill_typed(expr);
+    if filled == expr {
+        return result;
+    }
+    match crate::evaluate_sheet(&[filled], options).pop() {
+        Some(mut retry) if !retry.display.is_empty() || retry.value.is_some() => {
+            retry.raw = result.raw;
+            retry
+        }
+        _ => result,
+    }
+}
+
 /// The squiggle's and ↵'s evaluator: whether a piece of text answers (through `ans` when the line chains).
 pub fn evaluates(options: &EvaluateOptions, chained: bool) -> impl Fn(&str) -> bool + '_ {
     move |text: &str| {
@@ -333,9 +355,10 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
         }
     });
     let line = (!a_command).then(|| {
-        crate::evaluate_sheet(std::slice::from_ref(&expr), &options)
+        let result = crate::evaluate_sheet(std::slice::from_ref(&expr), &options)
             .pop()
-            .unwrap_or_else(|| LineResult::blank(&expr))
+            .unwrap_or_else(|| LineResult::blank(&expr));
+        filled_when_blank(result, &expr, &options)
     });
 
     // the `sys` fields

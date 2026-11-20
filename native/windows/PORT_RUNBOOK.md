@@ -62,6 +62,7 @@ Do one subsection per branch, in this order, with the simplest and most used fir
 18. Slots, then the two games subsections (slots/connect 4, then crack/ember/equal/24/trails).
 19. Effects: the Konami code's leftovers, the hotkey during a barrel roll.
 20. QA round, 20 Nov 2026: one line per branch, Mac lines only (the core lines are tested as in step 2).
+21. Input line: the completion ghost and grey parens follow each key.
 
 If several agents run in parallel, give each one a subsection from this list. The subsections touch different files.
 
