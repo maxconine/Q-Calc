@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 import QCalcCore
 
 /// The tape: the engine loads, commits and saves it (`<dataDir>/history.json`, the TS HistoryRow JSON); this keeps
@@ -14,6 +14,10 @@ final class HistoryStore {
     init(engine: Engine) {
         self.engine = engine
         rows = engine.loadHistory()
+        // a save still queued when the app quits (↵ then ⌘Q, a logout) is written before it goes, not dropped
+        NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: nil) { [queue] _ in
+            queue.sync {}
+        }
     }
 
     /// The history after a commit, or any edit; saved off the main thread.

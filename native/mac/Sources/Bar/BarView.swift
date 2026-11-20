@@ -742,7 +742,12 @@ private struct HistoryTape: View {
                 if let i { proxy.scrollTo(i) }
             }
             .onAppear { proxy.scrollTo(model.rows.count - 1, anchor: .bottom) }
-            .onChange(of: model.rows.count) { _ in proxy.scrollTo(model.rows.count - 1, anchor: .bottom) }
+            // a new row scrolls to the newest; a delete or ⌘Z with a row picked stays on it (it had jumped to the end)
+            .onChange(of: model.rows.count) { n in
+                if let t = TapeRules.scrollTarget(selected: model.selected, count: n) {
+                    proxy.scrollTo(t, anchor: model.selected == nil ? .bottom : nil)
+                }
+            }
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Calculation history")
@@ -820,10 +825,7 @@ private struct HistoryRowView: View, Equatable {
                 Button("Copy Answer") { model.copyRow(row, answer: true) }
             }
             Divider()
-            Button("Delete") {
-                model.select(index)
-                _ = model.deleteSelected()
-            }
+            Button("Delete") { model.deleteRow(index) }
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(row.kind == .note ? "Note \(row.expr)" : "\(row.expr) equals \(row.display)")
@@ -879,12 +881,16 @@ private struct RowCopyButton: View {
     let action: () -> Void
     @State private var hover = false
     @State private var done = false
+    /// a second click restarts the 1.2 s (the first click's timer had cleared the check early)
+    @State private var clicks = 0
 
     var body: some View {
         Button {
             action()
             done = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { done = false }
+            clicks += 1
+            let mine = clicks
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { if clicks == mine { done = false } }
         } label: {
             Image(systemName: done ? "checkmark" : "doc.on.doc")
                 .font(.system(size: 11, weight: .medium))

@@ -146,6 +146,19 @@ Core only (shared with Windows): `core/src/complex_line.rs` (`imaginary_words`, 
 
 To test on Windows: the lines above; nothing UI-side changes.
 
+### Tape: deleting rows, scrolling, saving on quit (20 Nov 2026)
+
+QA item 16, Mac only (`mac/Sources/Bar/TapeRules.swift`, new; `BarModel.swift` `deleteRow`, `undoDelete`, `announceSelected`; `BarView.swift` `HistoryTape`, `RowCopyButton`; `History.swift`). Check the Windows tape for the same:
+
+- A row's context-menu Delete picked the next row though the tape wasn't being walked, so a plain ⌫ typed on the line then deleted another row instead of a character. Now a menu Delete leaves nothing picked (a picked row stays picked, its index shifted), and ⌘Z picks the restored row only while the tape is open.
+- After a delete or ⌘Z the pick's side (← →) is landed again for the row it moves to; it kept the old row's (a dual's ≈ half on a single-answer row).
+- A delete or ⌘Z mid-tape jumped the tape to its newest row; it now stays on the picked row (a new row still scrolls to the end).
+- VoiceOver on ↑ ↓ read a note as `call Sam equals `; now `Note call Sam`.
+- The copy button's check stays 1.2 s after the last click (a second click had its time cut short by the first).
+- A history save still queued at quit is written before the app exits.
+
+To test on Windows: ↑ to a mid-tape row of a long tape, ⌫: the tape stays there and the next row is picked; type `12`, right-click another row › Delete, then ⌫: the line reads `1`, the tape keeps its rows. Mac check: `mac/scripts/test-tape.sh`.
+
 ### Already ported
 
 The stacked fractions round (TeX sizes, Desmos keys, grown brackets, stacked history rows, answers shrinking as one) and the newer graph round were ported for 3.0.2 (branch `win-port-302`, 8 Nov 2026). What stays different on Windows:

@@ -1118,7 +1118,7 @@ final class BarModel: ObservableObject {
     /// only; the page's rows are only aria-selected), as the row reads (`HistoryRowView`)
     private func announceSelected() {
         guard let i = selected, rows.indices.contains(i) else { return }
-        Self.announce("\(rows[i].expr) equals \(rows[i].display)")
+        Self.announce(TapeRules.spoken(expr: rows[i].expr, display: rows[i].display, note: rows[i].kind == .note))
     }
 
     /// ← → on a highlighted row (onSide)
@@ -1207,10 +1207,18 @@ final class BarModel: ObservableObject {
     private var freshNextOpen = false
 
     func deleteSelected() -> Bool {
-        guard let i = selected, let row = history.remove(at: i) else { return false }
+        guard let i = selected else { return false }
+        return deleteRow(i)
+    }
+
+    /// A row's Delete (⌘⌫, ⌫ on a picked row, its context menu); ⌘Z brings it back. The pick moves as `TapeRules`
+    /// says, with ← → re-landed for the row it moves to (it had kept the deleted row's, past a shorter row's answers).
+    @discardableResult
+    func deleteRow(_ i: Int) -> Bool {
+        guard let row = history.remove(at: i) else { return false }
         deleted = (row, i)
         rows = history.rows
-        selected = rows.isEmpty ? nil : min(i, rows.count - 1)
+        if let next = TapeRules.selectionAfterDelete(deleted: i, selected: selected, count: rows.count) { land(on: next) } else { selected = nil }
         refreshRecent()
         return true
     }
@@ -1218,10 +1226,11 @@ final class BarModel: ObservableObject {
     func undoDelete() -> Bool {
         guard let d = deleted else { return false }
         track("history.undo")
+        let pickIt = TapeRules.selectsRestored(tapeOpen: tapeOpen, selected: selected)
         history.insert(d.row, at: d.index)
         rows = history.rows
         deleted = nil
-        selected = d.index
+        if pickIt { land(on: min(d.index, rows.count - 1)) }
         refreshRecent()
         return true
     }

@@ -85,10 +85,10 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 | ⌘⌫ deletes the row, ⌘Z restores it | ✅ | |
 | Clear history (⌃C, edge tool) | ✅ | |
 | Matrix / complex / solve rows; a system row reopens its panel | ✅ | engine displays; a `sys` row reopens its equations |
-| Scrolling | ✅ | native |
-| Persistence `history.json` | ✅ | `Engine.loadHistory/saveHistory` in `~/Library/Application Support/Q Calc Dev/` |
+| Scrolling | ✅ | native. A delete or ⌘Z with a row picked keeps the tape on that row (it jumped to the newest) |
+| Persistence `history.json` | ✅ | `Engine.loadHistory/saveHistory` in `~/Library/Application Support/Q Calc Dev/`, written atomically off the main thread; a save queued at quit is finished first |
 | **Native-only addition:** copy button on each row | ✅ | not in the web app. A copy icon at the row's right end, seen on hover or while the row is selected; a click copies the answer (a note's text) as Copy Answer does, shows `✓ copied` and a check for 1.2 s, and inserts nothing (`RowCopyButton`). Driven with `drive.sh` (↑, click): clipboard `1024` from `2^10`, line left empty. Pointer hover not driven (drive.sh can't move SwiftUI's hover) |
-| **Native-only addition:** keys on a selected row | 🟡 | ⌘C copies the row's pick (expression or answer, a note's text); ⌘↓ goes back to the line; ⌫ or ⌦ deletes the row (⌘Z restores). Built, not driven: drive.sh's posted keys didn't reach the bar while another app was in front |
+| **Native-only addition:** keys on a selected row | 🟡 | ⌘C copies the row's pick (expression or answer, a note's text); ⌘↓ goes back to the line; ⌫ or ⌦ deletes the row (⌘Z restores). A row's Delete menu leaves nothing picked when nothing was (it had picked the next row, so ⌫ on the line deleted it), and the pick's ← → side lands again after a delete; rules in `TapeRules.swift`, checked by `scripts/test-tape.sh`. Built, not driven: drive.sh's posted keys didn't reach the bar while another app was in front |
 | **Native-only addition:** hover shows the pick box | 🟡 | the pointer on a tape answer or expression draws the ring ← → draw (`PickedMark`). Built; pointer hover can't be driven |
 | **Native-only addition:** notes | ✅ | not in the web app. ↵ on a line with no answer (pasted text) saves it as a `note` row, hint `saved as a note`, instead of saying why nothing was saved; not while a unit is offered, not a `graph…` line. The text fills the row, no answer column; it is never `ans`, a variable or a function (core `note` kind, up to 1000 characters). Driven: `call Sam about the bracket at 3pm` ↵ |
 
