@@ -1573,11 +1573,123 @@ fn qty_value(q: &Qty, target: Option<&Qty>, target_label: Option<&str>) -> Optio
     {
         return Some(rec);
     }
+    if let Some(typed) = typed_compound(q) {
+        return Some(typed);
+    }
     let unit = format_compound(&q.dim);
     Some(if unit.is_empty() {
         Value::number(q.si)
     } else {
         valued(q.si, unit, None)
+    })
+}
+
+/// Native only (QA 59): a power of one typed unit no name fits reads in that unit, not in base units:
+/// `(12 V)^2` is 144 V² (was `kg^2 m^4 / s^6 A^2`), `(4 Ω)^2` 16 Ω², `(3 m/s)^2` 9 m²/s².
+fn typed_compound(q: &Qty) -> Option<Value> {
+    let via = q.via.as_ref()?;
+    // only one typed unit raised to a whole power: products like `kg m / s`, `N m / K`, `deg/s` and powers of
+    // time, temperature and angle keep the web's base-unit answer (its goldens pin them)
+    let [(only, power)] = via.u.as_slice() else {
+        return None;
+    };
+    if *power < 2.0
+        || !jsnum::is_integer(*power)
+        || matches!(only.dim, Dim::Time | Dim::Temperature | Dim::Angle)
+    {
+        return None;
+    }
+    let sys = if via.us > via.si {
+        System::Us
+    } else {
+        System::Si
+    };
+    let parts: Vec<(UnitRef, f64)> = via
+        .u
+        .iter()
+        .flat_map(|(u, p)| {
+            split_ratio(u).map_or_else(|| vec![(u.clone(), *p)], |s| pow_units(&s, *p))
+        })
+        .collect();
+    let typed = fold_units(&parts, sys);
+    let dim = typed
+        .iter()
+        .fold(ZERO, |d, (u, p)| add_vec(&d, &scale_vec(&u.dim.vec(), *p)));
+    if typed.is_empty() || dim != q.dim {
+        return None;
+    }
+    let label = typed_label(&typed)?;
+    let n = q.si / units_size(&typed);
+    n.is_finite().then(|| valued(n, label, None))
+}
+
+/// A ratio unit as its two units: `m/s` → m·s⁻¹, `km/h` → km·h⁻¹, `m/s²` → m·s⁻² (sizes must agree).
+fn split_ratio(unit: &UnitRef) -> Option<Vec<(UnitRef, f64)>> {
+    let (top, bottom) = unit.symbol.split_once('/')?;
+    let find = |sym: &str| -> Option<(UnitRef, f64)> {
+        let (head, power) = match sym.strip_suffix('²') {
+            Some(h) => (h, 2.0),
+            None => sym.strip_suffix('³').map_or((sym, 1.0), |h| (h, 3.0)),
+        };
+        tbl()
+            .list
+            .iter()
+            .find(|u| {
+                u.symbol == head
+                    && !u.id.contains('_')
+                    && !CONSTANT_UNIT_IDS.contains(&u.id.as_str())
+            })
+            .map(|u| (u.clone(), power))
+    };
+    let top = find(top)?;
+    let (b, e) = find(bottom)?;
+    let parts = vec![top, (b, -e)];
+    let dim = parts
+        .iter()
+        .fold(ZERO, |d, (u, p)| add_vec(&d, &scale_vec(&u.dim.vec(), *p)));
+    (dim == unit.dim.vec() && same_scale(units_size(&parts), si_of(unit))).then_some(parts)
+}
+
+/// `compound_label`, also taking Ω and ° symbols and any whole power: `V²`, `Ω²`, `m²/s²`, `N·m·rad`, `s^4`.
+fn typed_label(u: &[(UnitRef, f64)]) -> Option<String> {
+    let part = |(unit, p): &(UnitRef, f64)| -> Option<String> {
+        let e = p.abs();
+        let sym = if unit.id == "lb" {
+            "lb"
+        } else {
+            unit.symbol.as_str()
+        };
+        let plain = !sym.is_empty()
+            && sym
+                .chars()
+                .all(|c| c.is_alphabetic() || matches!(c, 'μ' | 'µ' | 'Ω' | '°'));
+        if !plain || !jsnum::is_integer(e) {
+            return None;
+        }
+        Some(match e {
+            1.0 => sym.to_string(),
+            2.0 => format!("{sym}²"),
+            3.0 => format!("{sym}³"),
+            _ => format!("{sym}^{}", jsnum::to_string(e)),
+        })
+    };
+    let mut top: Vec<&(UnitRef, f64)> = u.iter().filter(|(_, p)| *p > 0.0).collect();
+    top.sort_by_key(|(x, _)| i32::from(x.dim != Dim::Force));
+    let top = top.into_iter().map(part).collect::<Option<Vec<String>>>()?;
+    let bottom = u
+        .iter()
+        .filter(|(_, p)| *p < 0.0)
+        .map(part)
+        .collect::<Option<Vec<String>>>()?;
+    let num = if top.is_empty() {
+        "1".to_string()
+    } else {
+        top.join("·")
+    };
+    Some(match bottom.len() {
+        0 => num,
+        1 => format!("{num}/{}", bottom[0]),
+        _ => format!("{num}/({})", bottom.join("·")),
     })
 }
 
