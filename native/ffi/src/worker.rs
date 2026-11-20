@@ -148,6 +148,16 @@ impl Workers {
         }
     }
 
+    /// Runs `f` on the evaluation thread and then on the app-logic thread (each a job of its own, between their
+    /// other jobs), and gives both answers: for what each thread must do to itself (`own_compiled`,
+    /// `release_compiled`). With `run_engine_calls_here`, both run on the caller's thread.
+    pub fn run_on_both<R: Send + 'static>(
+        &self,
+        f: fn() -> R,
+    ) -> (Result<R, CoreError>, Result<R, CoreError>) {
+        (self.run(f), self.run_logic(f))
+    }
+
     /// Runs `f` on the long-work pool with `cancel` as its cancel flag. The future resolves to `f`'s answer, or
     /// `Cancelled` when the flag was set first. Dropping the future cancels the job too.
     pub fn spawn<R: Send + 'static>(

@@ -1673,11 +1673,25 @@ public protocol EngineProtocol: AnyObject, Sendable {
     func normalizeHistory(rowsJson: String)  -> String
     
     /**
+     * Makes the evaluation and app-logic threads keep compiled regexes of their own, which `release_compiled`
+     * frees (qcalc-lazy). Other threads (the long-work pool, a caller's own) keep the shared ones for good, with
+     * seek as before. Call once, before typing. True when both threads own theirs.
+     */
+    func ownCompiled()  -> Bool
+    
+    /**
      * `persistableHistory`: sticky definitions, slimmed rows, under the size cap.
      */
     func persistableHistory(rows: [HistoryRow])  -> [HistoryRow]
     
     func ratesStatus(nowMs: Int64)  -> RatesStatus
+    
+    /**
+     * Frees the evaluation and app-logic threads' compiled regexes and run-time pattern caches (~6-9 MB after some
+     * typing); each is compiled again on its next use. A job of its own on each thread, so no regex is in use
+     * there. For a hide. Returns how many statics were freed.
+     */
+    func releaseCompiled()  -> UInt32
     
     /**
      * Reads `<data_dir>/rates.json`; false when there is no file or no usable rate in it.
@@ -2242,6 +2256,20 @@ open func normalizeHistory(rowsJson: String) -> String  {
 }
     
     /**
+     * Makes the evaluation and app-logic threads keep compiled regexes of their own, which `release_compiled`
+     * frees (qcalc-lazy). Other threads (the long-work pool, a caller's own) keep the shared ones for good, with
+     * seek as before. Call once, before typing. True when both threads own theirs.
+     */
+open func ownCompiled() -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_engine_own_compiled(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * `persistableHistory`: sticky definitions, slimmed rows, under the size cap.
      */
 open func persistableHistory(rows: [HistoryRow]) -> [HistoryRow]  {
@@ -2260,6 +2288,20 @@ open func ratesStatus(nowMs: Int64) -> RatesStatus  {
     uniffi_qcalc_ffi_fn_method_engine_rates_status(
             self.uniffiCloneHandle(),
         FfiConverterInt64.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Frees the evaluation and app-logic threads' compiled regexes and run-time pattern caches (~6-9 MB after some
+     * typing); each is compiled again on its next use. A job of its own on each thread, so no regex is in use
+     * there. For a hide. Returns how many statics were freed.
+     */
+open func releaseCompiled() -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_engine_release_compiled(
+            self.uniffiCloneHandle(),uniffiCallStatus
     )
 })
 }
@@ -18004,10 +18046,16 @@ private let initializationResult: InitializationResult = {
     if (uniffi_qcalc_ffi_checksum_method_engine_normalize_history() != 40090) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_qcalc_ffi_checksum_method_engine_own_compiled() != 5748) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_qcalc_ffi_checksum_method_engine_persistable_history() != 59586) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_method_engine_rates_status() != 54830) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_engine_release_compiled() != 52012) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_method_engine_reload_rates() != 53517) {

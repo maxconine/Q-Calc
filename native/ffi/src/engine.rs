@@ -1396,3 +1396,32 @@ mod tests {
         let _ = e.elements();
     }
 }
+
+/// Freeing the compiled regexes while the bar is hidden (QA 69, as the Windows app does: PERFORMANCE.md).
+#[uniffi::export]
+impl Engine {
+    /// Makes the evaluation and app-logic threads keep compiled regexes of their own, which `release_compiled`
+    /// frees (qcalc-lazy). Other threads (the long-work pool, a caller's own) keep the shared ones for good, with
+    /// seek as before. Call once, before typing. True when both threads own theirs.
+    pub fn own_compiled(&self) -> bool {
+        qcalc_core::jsre::seek_on_every_thread();
+        let (a, b) = self
+            .workers
+            .run_on_both(qcalc_core::jsre::own_compiled_here);
+        a.unwrap_or(false) && b.unwrap_or(false)
+    }
+
+    /// Frees the evaluation and app-logic threads' compiled regexes and run-time pattern caches (~6-9 MB after some
+    /// typing); each is compiled again on its next use. A job of its own on each thread, so no regex is in use
+    /// there. For a hide. Returns how many statics were freed.
+    pub fn release_compiled(&self) -> u32 {
+        fn here() -> usize {
+            qcalc_core::jsre::clear_cache();
+            // SAFETY: run as a job of its own on the thread (`Workers::run_on_both`), whose earlier jobs have
+            // returned: no reference from a regex static is alive there, and other threads never see its copies
+            unsafe { qcalc_core::jsre::release_compiled() }
+        }
+        let (a, b) = self.workers.run_on_both(here);
+        (a.unwrap_or(0) + b.unwrap_or(0)) as u32
+    }
+}

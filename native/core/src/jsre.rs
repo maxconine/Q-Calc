@@ -25,6 +25,14 @@ pub fn own_compiled_here() -> bool {
     qcalc_lazy::own_here()
 }
 
+static SEEK_EVERYWHERE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// From now on, `compile` uses fancy-regex's seek on every thread, owners or not: for a host whose other threads do
+/// work worth the memory (the Mac app's long-work pool: graphs, closed forms), as they did before any thread owned.
+pub fn seek_on_every_thread() {
+    SEEK_EVERYWHERE.store(true, std::sync::atomic::Ordering::Relaxed);
+}
+
 /// Frees this thread's compiled regexes and tables if it called `own_compiled_here`; each is compiled again when
 /// it's next used. Returns how many statics were freed (qcalc-lazy's `release`).
 ///
@@ -67,7 +75,9 @@ thread_local! {
 /// one whenever `regex-automata/dfa-build` is on, which typst's syntect turns on in the app) costs memory and
 /// compile time for the hundreds of engine regexes.
 pub fn compile(pattern: &str) -> Regex {
-    let seek = qcalc_lazy::owns() || !qcalc_lazy::any_owner();
+    let seek = qcalc_lazy::owns()
+        || !qcalc_lazy::any_owner()
+        || SEEK_EVERYWHERE.load(std::sync::atomic::Ordering::Relaxed);
     match fancy_regex::RegexBuilder::new(pattern)
         .seek(seek)
         .delegate_dfa_size_limit(0)

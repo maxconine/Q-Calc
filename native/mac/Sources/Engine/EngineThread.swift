@@ -10,7 +10,7 @@ import QCalcCore
 // overwrite a newer one. Long work (closed forms, graphs) goes through QCalcCore's async calls with a CancelToken
 // instead, cancelled when the line changes.
 final class EngineThread {
-    enum Lane: Hashable { case live, forms, graph, commit, misc, selection, service }
+    enum Lane: Hashable { case live, forms, graph, commit, misc, selection, service, warm }
 
     private struct Job {
         let generation: Int
@@ -41,6 +41,68 @@ final class EngineThread {
         thread.qualityOfService = .userInteractive
         self.thread = thread
         thread.start()
+        // the evaluation and app-logic threads keep regexes of their own, freed while the bar is hidden (`hidden`)
+        _ = engine.ownCompiled()
+    }
+
+    // MARK: - compiled regexes while hidden (QA 69, as the Windows app does)
+
+    /// How long the bar stays hidden before the engine's compiled regexes go (a quick hide and show keeps them).
+    static let releaseAfter: TimeInterval = 30
+    /// Main thread only.
+    private var releaseTimer: DispatchWorkItem?
+    private var released = false
+
+    /// The bar hid: after `releaseAfter` with no showing, the evaluation and app-logic threads' compiled regexes and
+    /// their caches (~6-9 MB after some typing) are freed, between jobs. Main thread.
+    func hidden() {
+        releaseTimer?.cancel()
+        let item = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.released = true
+            let t = ProcessInfo.processInfo.systemUptime
+            self.submit(.warm, { engine -> (UInt32, Int) in
+                let n = engine.releaseCompiled()
+                // the freed blocks' pages go back to the system now, not at the next memory pressure
+                return (n, malloc_zone_pressure_relief(nil, 0))
+            }) { n, bytes in
+                OverlayLog.note(String(format: "engine released %d compiled statics, %d KB of pages, in %.1f ms", Int(n),
+                                       bytes / 1024, (ProcessInfo.processInfo.systemUptime - t) * 1000))
+            }
+        }
+        releaseTimer = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.releaseAfter, execute: item)
+    }
+
+    /// The bar shows: a pending release is called off; after one, the keystroke path compiles again in small
+    /// steps, each queued behind whatever the bar asked for meanwhile, so a key typed at once goes first. Main thread.
+    func shown() {
+        releaseTimer?.cancel()
+        releaseTimer = nil
+        guard released else { return }
+        released = false
+        cancel(.warm)
+        warm(0)
+    }
+
+    /// The first uses after a release (as at launch), one step a job.
+    private static let warmSteps: [(Engine) -> Void] = {
+        let options = defaultEvalOptions()
+        var steps: [(Engine) -> Void] = [{ _ = $0.evaluate(lines: ["2+2", "sin(90)", "72 f to c"], options: options) }]
+        for text in ["2", "2+", "2+2", "si", "sin(9", "3x+2=1", "5 km in miles", "x^2 = 9"] {
+            steps.append { engine in
+                _ = engine.live(request: LiveRequest(text: text, options: options, context: EvalContext(), chained: false,
+                                                     nowMs: Int64(Date().timeIntervalSince1970 * 1000)))
+            }
+        }
+        steps.append { _ = $0.typstSource(expr: "sqrt(2) x^2", answer: "4", solvedFor: "") }
+        return steps
+    }()
+
+    private func warm(_ i: Int) {
+        guard i < Self.warmSteps.count, !released else { return }
+        let step = Self.warmSteps[i]
+        submit(.warm, { step($0) }) { [weak self] _ in self?.warm(i + 1) }
     }
 
     /// Runs `work` on the engine thread and hands its result to `done` on the main thread, unless a newer job was
