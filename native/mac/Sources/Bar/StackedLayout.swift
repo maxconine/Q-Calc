@@ -399,6 +399,14 @@ extension BarTextView {
         let sel = selectedRange()
         guard sel.length == 0 else { return nil }
         if let limit = limitCaretRect(sel.location) { return limit }
+        // before a gap opened after the caret's place (a mid-line completion, a `$…$` line's grey `)`; QA item 64)
+        if stacked.stacks.isEmpty, limits.isEmpty, let width = caretGaps[sel.location], sel.location > 0,
+           let lm = layoutManager, let tc = textContainer {
+            let glyph = lm.glyphIndexForCharacter(at: sel.location - 1)
+            let rect = lm.boundingRect(forGlyphRange: NSRange(location: glyph, length: 1), in: tc)
+            let x = textContainerInset.width + rect.maxX - width, base = stackBaseline(), size = Self.fontSize
+            return NSRect(x: x - 0.75, y: base - size * 0.92, width: 1.5, height: size * 1.15)
+        }
         guard !stacked.stacks.isEmpty, var x = stackCaretX(sel.location) else { return nil }
         x -= caretShift[sel.location] ?? 0
         let look = stackLook(at: sel.location) ?? SlotLook(content: NSRange(location: 0, length: 0), size: Self.fontSize, offset: 0)

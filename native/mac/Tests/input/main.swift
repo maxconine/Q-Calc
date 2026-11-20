@@ -91,5 +91,18 @@ check("filled", GhostRules.filled("2+3)*4", leading: 1, trailing: 0), "(2+3)*4")
 check("a Typst line fills inside its $", GhostRules.filled("$sqrt(2$", leading: 0, trailing: 1), "$sqrt(2)$")
 check("money isn't Typst", GhostRules.filled("$10 + (2", leading: 0, trailing: 1), "$10 + (2)")
 
+// mid-line completion and a `$…$` line's grey `)` (QA item 64)
+check("a word the caret ends mid-line", "\(GhostRules.midWordEnd("2 sq(9)", caret: 4) ?? -1)", "4")
+check("not inside a word", "\(GhostRules.midWordEnd("2 sqrt(9)", caret: 4) ?? -1)", "-1")
+check("not at the end", "\(GhostRules.midWordEnd("2 sq", caret: 4) ?? -1)", "-1")
+check("not with a selection", "\(GhostRules.midWordEnd("2 sq(9)", caret: 4, length: 2) ?? -1)", "-1")
+check("before a space", "\(GhostRules.midWordEnd("sq + 2", caret: 2) ?? -1)", "2")
+check("sq|(9) has its paren", GhostRules.midCompletion("rt(", in: "2 sq(9)", at: 4) ?? "nil", "rt")
+check("sq| + 2 takes the paren", GhostRules.midCompletion("rt(", in: "sq + 2", at: 2) ?? "nil", "rt(")
+check("only the paren left", GhostRules.midCompletion("(", in: "2 sqrt(9)", at: 6) ?? "nil", "nil")
+check("a Typst line", "\(GhostRules.typstLine("$sqrt(2$"))", "true")
+check("money isn't a Typst line", "\(GhostRules.typstLine("$10 + (2"))", "false")
+check("one $ sign", "\(GhostRules.typstLine("$"))", "false")
+
 if failures > 0 { print("\(failures) failed"); exit(1) }
 print("all passed")

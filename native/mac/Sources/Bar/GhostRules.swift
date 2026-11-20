@@ -26,10 +26,44 @@ enum GhostRules {
     /// the line with its grey parens typed in (Tab/→): a Typst line between `$` signs takes its `)` inside the
     /// closing `$`, where it reads (core `fill_typed`; `$sqrt(2$)` was blank)
     static func filled(_ text: String, leading: Int, trailing: Int) -> String {
-        if trailing > 0, leading == 0, text.hasSuffix("$"), text.filter({ $0 == "$" }).count == 2,
-           text.trimmingCharacters(in: .whitespaces).hasPrefix("$"), text.trimmingCharacters(in: .whitespaces).count > 2 {
+        if trailing > 0, leading == 0, typstLine(text) {
             return String(text.dropLast()) + String(repeating: ")", count: trailing) + "$"
         }
         return String(repeating: "(", count: leading) + text + String(repeating: ")", count: trailing)
     }
+
+    /// a Typst line between two `$` signs (`$sqrt(2$`, not `$10 + (2`): its grey `)` is drawn and typed inside the
+    /// closing `$` (QA item 64; they were drawn after it, where Tab didn't put them)
+    static func typstLine(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        return text.hasSuffix("$") && text.filter({ $0 == "$" }).count == 2 && trimmed.hasPrefix("$") && trimmed.count > 2
+    }
+
+    /// where a word typed mid-line can complete (QuickInput's `completionAt`): a collapsed caret inside the line
+    /// (UTF-16 offset) with no letter, digit or `_` after it, so `2 sq|(9)` completes as `2 sq|` does. Nil at the
+    /// end (the ghost after the text takes that) or inside a word.
+    static func midWordEnd(_ text: String, caret: Int, length selection: Int = 0) -> Int? {
+        let ns = text as NSString
+        guard selection == 0, caret > 0, caret < ns.length else { return nil }
+        guard let next = Unicode.Scalar(ns.character(at: caret)) else { return caret }
+        let word = (next.isASCII && (CharacterSet.alphanumerics.contains(next) || next == "_"))
+        return word ? nil : caret
+    }
+
+    /// the completion at a mid-line word end: `sq|(9)` already has its paren, so `rt(` ghosts `rt`; nil when
+    /// nothing is left
+    static func midCompletion(_ completed: String?, in text: String, at: Int) -> String? {
+        guard var rest = completed, !rest.isEmpty else { return nil }
+        let ns = text as NSString
+        if at < ns.length, ns.character(at: at) == 0x28, rest.hasSuffix("(") { rest.removeLast() }
+        return rest.isEmpty ? nil : rest
+    }
+}
+
+/// the completion ghost drawn inside the line, at a word the caret ends there (QA item 64), for the line it was
+/// worked out for
+struct MidGhost: Equatable {
+    var at: Int
+    var text: String
+    var line: String
 }

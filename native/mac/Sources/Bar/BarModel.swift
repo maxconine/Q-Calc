@@ -66,6 +66,11 @@ final class BarModel: ObservableObject {
     @Published private(set) var upgradedExact: String? { didSet { if upgradedExact != oldValue { refreshTypeset() } } }
     /// the rest of the word being typed, drawn after the caret; Tab or → takes it
     @Published var completion: String?
+    /// the completion of a word the caret ends inside the line (`2 sq|(9)`), drawn there in a gap the rest of the
+    /// line moves aside for; Tab or → takes it (QuickInput's `midCompletion`, QA item 64)
+    @Published private(set) var midCompletion: MidGhost?
+    /// the names the last live answer knew (completionFor's `names`), for a completion worked out on a caret move
+    private var completionNames: [String: Any] = [:]
     @Published var decorations = Decorations()
     // `sys N` (Systems.swift)
     @Published var sysLines: [String]?
@@ -310,6 +315,7 @@ final class BarModel: ObservableObject {
         // after the new letter, `sqr` + `rt`, which Tab then typed in), and a typed `)` takes its grey one's place
         // (`(2)` showed `(2))` for a moment)
         completion = GhostRules.rest(completion, from: old, to: text)
+        if midCompletion != nil, midCompletion?.line != text { midCompletion = nil }
         // `message max …` is words, not math: no faint parens (QuickInput's `plain`)
         var isMessage = false
         if case .message = barCommand(text) { isMessage = true }
@@ -463,6 +469,8 @@ final class BarModel: ObservableObject {
             self.ansHover = deco.ans.map { "last answer = \($0)" } ?? "last answer"
             if !answer.isBlank { self.hint = nil }
             self.completion = completion.flatMap { $0.isEmpty ? nil : $0 }
+            self.completionNames = ["variables": Array(context.variables.keys), "functions": Array(context.functions.keys),
+                                    "ans": context.ans != nil]
             self.decorations = deco
             self.setLive(answer, for: typed)
             self.squiggleLater(typed)
@@ -581,9 +589,30 @@ final class BarModel: ObservableObject {
     /// Accept the completion ghost (Tab, or → at the end of the line). It's drawn only with the caret at the end,
     /// so only there does Tab take it (with the caret mid-line it typed the rest there).
     func acceptCompletion() -> Bool {
+        // a word the caret ends inside the line takes its own (`2 sq|(9)` → `2 sqrt|(9)`)
+        if let mid = midCompletion, mid.line == text, fieldCaret?() == mid.at {
+            midCompletion = nil
+            insert(mid.text)
+            return true
+        }
         guard let completion, !completion.isEmpty, caretAtEnd?() ?? true else { return false }
         insert(completion)
         return true
+    }
+
+    /// the caret moved (or the line changed under it): a word it ends inside the line shows its completion, as
+    /// the page works one out on every render (QA item 64). The line is the field's own, which can be ahead of
+    /// `text` for a moment.
+    func caretMoved(line: String, selection: NSRange) {
+        var mid: MidGhost?
+        if let at = GhostRules.midWordEnd(line, caret: selection.location, length: selection.length) {
+            var names = completionNames
+            names["contacts"] = [String]()
+            let prefix = (line as NSString).substring(to: at)
+            let completed = logic.string("lib/completion", "completionFor", [prefix, names])
+            if let rest = GhostRules.midCompletion(completed, in: line, at: at) { mid = MidGhost(at: at, text: rest, line: line) }
+        }
+        if mid != midCompletion { midCompletion = mid }
     }
 
     private var angleMarksMemo: (String, [AngleSpan])?
@@ -1575,6 +1604,8 @@ final class BarModel: ObservableObject {
             }
             // → at the end of the line takes the completion
             if code == kVK_RightArrow, caretAtEnd?() ?? false { return acceptCompletion() || acceptParens() }
+            // → at a word the caret ends inside the line takes its completion there, as Tab does (QA item 64)
+            if code == kVK_RightArrow, midCompletion != nil { return acceptCompletion() }
             return false
         case kVK_Tab:
             guard flags.isSubset(of: [.shift]) else { return false }

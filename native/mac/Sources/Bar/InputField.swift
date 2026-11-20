@@ -22,7 +22,26 @@ final class BarTextView: NSTextView {
     var ghostTail = "" { didSet { if ghostTail != oldValue { needsDisplay = true } } }
     /// the InputEvent.inputType of the edit in progress (undo.ts editKind)
     var editKind: String?
-    var trailingParens = 0 { didSet { if trailingParens != oldValue { needsDisplay = true } } }
+    var trailingParens = 0 {
+        didSet {
+            guard trailingParens != oldValue else { return }
+            // a `$…$` line's grey `)` stands in a gap inside its closing `$` (QA item 64)
+            if GhostRules.typstLine(string) || typstGap > 0 { applyGaps() } else { needsDisplay = true }
+        }
+    }
+    /// the completion of a word the caret ends inside the line (QA item 64), drawn in a gap opened after the word
+    /// with the caret kept before it
+    var midGhost: MidGhost? {
+        didSet {
+            guard midGhost != oldValue else { return }
+            applyGaps()
+        }
+    }
+    /// how many grey `)` stand inside a `$…$` line's closing `$` (applyGaps), not after the line
+    private(set) var typstGap = 0
+    /// caret places that stand before the gap opened after them (a mid-line completion, a `$…$` line's grey `)`),
+    /// and the gap's width: the caret is drawn before it, where what's typed goes
+    private(set) var caretGaps: [Int: CGFloat] = [:]
     var squiggle: NSRange? { didSet { if squiggle != oldValue { needsDisplay = true } } }
     /// .quick-offered: a unit offered after a number (missingUnit), drawn muted in a gap opened after it
     var offer: (at: Int, text: String)? {
@@ -66,11 +85,28 @@ final class BarTextView: NSTextView {
         guard let storage = textStorage else { return needsDisplay = true }
         let length = (string as NSString).length
         var gaps: [(Int, String)] = angleMarks.filter { $0 > 0 && $0 < length }.map { ($0, angleMarkText) }
-        if let offer, offer.at > 0, offer.at <= length { gaps.append((offer.at, offer.text)) }
+        var before: [Int: CGFloat] = [:]
+        if let offer, offer.at > 0, offer.at <= length {
+            gaps.append((offer.at, offer.text))
+        } else if let m = midGhost, m.line == string, m.at > 0, m.at < length, !angleMarks.contains(m.at) {
+            gaps.append((m.at, m.text))
+            before[m.at] = (m.text as NSString).size(withAttributes: Self.attributes).width
+        }
+        typstGap = trailingParens > 0 && !ghostLead.contains("(") && GhostRules.typstLine(string) && length > 2 ? trailingParens : 0
+        if typstGap > 0, !gaps.contains(where: { $0.0 == length - 1 }) {
+            let parens = String(repeating: ")", count: typstGap)
+            gaps.append((length - 1, parens))
+            before[length - 1] = (parens as NSString).size(withAttributes: Self.attributes).width
+        } else {
+            typstGap = 0
+        }
         for (at, text) in gaps {
             let width = (text as NSString).size(withAttributes: Self.attributes).width
             storage.addAttribute(.kern, value: Theme.displayTracking(Self.fontSize) + width, range: NSRange(location: at - 1, length: 1))
         }
+        let caretMoves = before != caretGaps
+        caretGaps = before
+        if caretMoves || stackCaret != nil { refreshStackCaret() }
         needsDisplay = true
     }
     private var coloured: (units: [NSRange], words: [NSRange], style: String) = ([], [], "")
@@ -101,7 +137,7 @@ final class BarTextView: NSTextView {
 
     override func setSelectedRanges(_ ranges: [NSValue], affinity: NSSelectionAffinity, stillSelecting: Bool) {
         super.setSelectedRanges(ranges, affinity: affinity, stillSelecting: stillSelecting)
-        if stackCaret != nil || !stacked.stacks.isEmpty || !limits.isEmpty { refreshStackCaret() }
+        if stackCaret != nil || !stacked.stacks.isEmpty || !limits.isEmpty || !caretGaps.isEmpty { refreshStackCaret() }
         // an empty limit's box darkens while the caret is in it
         if !holes.isEmpty { needsDisplay = true }
     }
@@ -984,6 +1020,19 @@ final class BarTextView: NSTextView {
             let muted: [NSAttributedString.Key: Any] = [.font: Self.lineFont, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)]
             (offer.text as NSString).draw(at: NSPoint(x: textContainerInset.width + rect.maxX - width, y: fullTextTop()), withAttributes: muted)
         }
+        // a mid-line completion (as the ghost after the text) and a `$…$` line's grey `)`, in their gaps (QA item 64)
+        if let lm = layoutManager, let tc = textContainer {
+            let length = (string as NSString).length
+            var pieces: [(Int, String, [NSAttributedString.Key: Any])] = []
+            if offer == nil, let m = midGhost, caretGaps[m.at] != nil { pieces.append((m.at, m.text, attrs)) }
+            if typstGap > 0, length > 1 { pieces.append((length - 1, String(repeating: ")", count: typstGap), inferred)) }
+            for (at, piece, style) in pieces {
+                let glyph = lm.glyphIndexForCharacter(at: at - 1)
+                let rect = lm.boundingRect(forGlyphRange: NSRange(location: glyph, length: 1), in: tc)
+                let width = (piece as NSString).size(withAttributes: Self.attributes).width
+                (piece as NSString).draw(at: NSPoint(x: textContainerInset.width + rect.maxX - width, y: fullTextTop()), withAttributes: style)
+            }
+        }
         if let lm = layoutManager, let tc = textContainer {
             let used = lm.usedRect(for: tc)
             // a stacked fraction's pull leaves the used rect wider than the line
@@ -997,8 +1046,8 @@ final class BarTextView: NSTextView {
                 (angleMarkText as NSString).draw(at: NSPoint(x: x, y: fullTextTop()), withAttributes: inferred)
                 x += (angleMarkText as NSString).size(withAttributes: inferred).width
             }
-            if trailingParens > 0 {
-                (String(repeating: ")", count: trailingParens) as NSString).draw(at: NSPoint(x: x, y: fullTextTop()), withAttributes: inferred)
+            if trailingParens > typstGap {
+                (String(repeating: ")", count: trailingParens - typstGap) as NSString).draw(at: NSPoint(x: x, y: fullTextTop()), withAttributes: inferred)
             }
         }
         if string.isEmpty, !placeholder.isEmpty {
@@ -1107,8 +1156,11 @@ struct InputField: NSViewRepresentable {
         let deco = model.decorations
         text.ghostLead = String(repeating: "(", count: deco.leadingParens)
         text.trailingParens = deco.trailingParens
-        text.squiggle = deco.squiggle
+        // a mid-line completion hides the squiggle that ends where it stands (QuickInput's `mark`)
+        let mid = model.midCompletion?.line == text.string ? model.midCompletion : nil
+        text.squiggle = mid.map { m in deco.squiggle.flatMap { NSMaxRange($0) == m.at ? nil : $0 } } ?? deco.squiggle
         text.offer = deco.offer
+        text.midGhost = mid
         text.setAngleMarks(model.angleMarks(for: text.string), text: model.angleRad ? " rad" : "°")
         text.colour(units: deco.units, words: deco.words, style: AppSettings.shared.wordColor)
         text.wordNames = deco.names
@@ -1164,6 +1216,8 @@ struct InputField: NSViewRepresentable {
             // what's typed next takes the line's own style, never a gap opened after the character before it
             text.typingAttributes = BarTextView.attributes
             text.refreshAngleMarks()
+            // a word the caret ends inside the line shows its completion there (QA item 64)
+            model.caretMoved(line: text.string, selection: text.hasMarkedText() ? NSRange(location: 0, length: 1) : text.selectedRange())
             // a part of the line selected is answered on its own in the answer slot (selDisplay)
             model.inputSelected(text.string, text.selectedRange())
             guard text.editKind == nil else { return }

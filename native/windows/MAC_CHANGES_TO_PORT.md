@@ -247,6 +247,15 @@ QA item 29, Mac only (`mac/Sources/Effects/EggRules.swift`, new; `Effects/EggOve
 
 To test on Windows: type `2+2`, press ↑↑↓↓←→←→BA (line is `2+2` again, CRT on); `do a barrel roll` and press the hotkey mid-turn (the bar hides); `konami` ↵ then `do a barrel roll` (the spin stays green).
 
+### Input line: a word completes mid-line, a `$…$` line's grey `)` drawn inside the `$` (20 Nov 2026)
+
+QA item 64, Mac only (`mac/Sources/Bar/GhostRules.swift` `midWordEnd`, `midCompletion`, `typstLine`, `MidGhost`; `Bar/BarModel.swift` `caretMoved`, `acceptCompletion`, → key; `Bar/InputField.swift` `midGhost`, `applyGaps`, `caretGaps`, draw; `Bar/StackedLayout.swift` `stackCaretRect`; test `mac/scripts/test-input.sh`). Check the Windows bar for the same:
+
+- **Mid-line completion (web parity):** QuickInput.tsx completes a word wherever the caret ends it, not only at the end of the line: with the caret after `sq` in `2 sq(9)` the ghost `rt` is drawn there and the rest of the line moves aside for it (the caret stays before the ghost); Tab or → takes it (`2 sqrt(9)` → `2 √(9)` = 6). The completion is `completionFor(text before the caret)`, worked out on every caret move or edit; none when a letter, digit or `_` follows the caret; a trailing `(` is dropped when a `(` already follows. A squiggle that ends at that place is hidden while the ghost shows.
+- **Typst between `$`:** `$sqrt(2$` drew its grey `)` after the closing `$` (where Tab no longer puts it since item 57); it is now drawn inside, `$sqrt(2)$`, in a gap before the `$`, with the caret before the gap when it stands there.
+
+To test on Windows: type `2 sq(9)`, press ← three times (ghost `rt` between `sq` and `(`), then Tab (`2 √(9)`, 6); `$sqrt(2$` (grey `)` before the last `$`).
+
 ### Input line: the completion ghost and grey parens follow each key (20 Nov 2026)
 
 QA item 57, Mac only (`mac/Sources/Bar/GhostRules.swift`, new; `Bar/BarModel.swift` `textChanged`, `acceptCompletion`, `acceptParens`; test `mac/scripts/test-input.sh`). Check the Windows bar for the same:
