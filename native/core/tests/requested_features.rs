@@ -548,3 +548,41 @@ fn named_constants_answer_in_words() {
     assert_eq!(show("gravity"), "1 g");
     assert_eq!(show("5 kg"), "11.0231 lbs");
 }
+
+// 2026-11-10: more named constants: physics, the solar system, engineering materials, fun facts
+#[test]
+fn more_named_constants_answer_in_words() {
+    // physics (CODATA 2022)
+    assert_eq!(show("planck constant"), "6.62607e-34 J s");
+    assert_eq!(show("planck's constant * 5e14 Hz to eV"), "2.06783 eV");
+    assert_eq!(show("boltzmann constant * 300 K"), "4.14195e-21 J");
+    assert_eq!(show("avogadro's number"), "6.02214e+23");
+    assert_eq!(show("charge of an electron"), "1.60218e-19 C");
+    assert_eq!(show("1 / fine structure constant"), "137.036");
+    // solar system
+    assert_eq!(show("sun's mass / earth's mass"), "332848");
+    assert_eq!(show("year on jupiter"), "4332.59 d");
+    assert_eq!(show("length of a day on venus"), "2802 hr");
+    assert_eq!(show("escape velocity of the moon"), "2.38 km/s");
+    assert_eq!(show("synodic month"), "29.5306 d");
+    assert_eq!(show("distance to proxima centauri"), "4.2465 ly");
+    assert_eq!(show("age of the universe / age of the earth"), "3.03678");
+    // engineering
+    assert_eq!(
+        show("density of water * acceleration due to gravity * 10 m"),
+        "98.0665 kPa"
+    );
+    assert_eq!(show("young's modulus of steel"), "200 GPa");
+    assert_eq!(show("specific heat of water * 2 kg * 10 K"), "83.68 kJ");
+    assert_eq!(show("absolute zero to K"), "0 K");
+    assert_eq!(show("speed of sound in water"), "1481 m/s");
+    // fun facts
+    assert_eq!(show("mount everest to ft"), "29032.2 ft");
+    assert_eq!(show("body temperature to degF"), "98.6 °F");
+    assert_eq!(show("speed of a cheetah"), "112 km/h");
+    assert_eq!(show("marathon / smoot"), "24794.3");
+    // ordinary lines are untouched
+    assert_eq!(show("5 a"), "5 A");
+    assert_eq!(sheet(&["a = 5", "a * 2"]), ["5", "10"]);
+}
+

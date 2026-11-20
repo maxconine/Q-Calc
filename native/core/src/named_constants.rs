@@ -10,6 +10,7 @@
 //! Native only.
 
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::sync::LazyLock;
 
 struct Constant {
@@ -21,9 +22,12 @@ struct Constant {
     unit: &'static str,
 }
 
+/// Words a name may have or leave out: `mass of the earth`, `speed of a cheetah`.
+const FILLERS: [&str; 3] = ["the", "a", "an"];
+
 fn words(name: &str) -> Vec<String> {
     name.split([' ', '-'])
-        .filter(|w| !w.is_empty() && *w != "the")
+        .filter(|w| !w.is_empty() && !FILLERS.contains(w))
         .map(norm)
         .collect()
 }
@@ -288,21 +292,255 @@ static CONSTANTS: LazyLock<Vec<Constant>> = LazyLock::new(|| {
             "Hz",
         ),
     ];
-    // "values of little g": each body's surface gravity and radius
-    const BODIES: [(&str, &str, &str); 11] = [
-        ("sun", "274.0 m/s^2", "695500 km"),
-        ("jupiter", "20.9 m/s^2", "71492 km"),
-        ("neptune", "10.7 m/s^2", "24764 km"),
-        ("saturn", "10.4 m/s^2", "60268 km"),
-        ("earth", "9.8 m/s^2", "6378 km"),
-        ("venus", "8.9 m/s^2", "6051 km"),
-        ("uranus", "8.4 m/s^2", "25559 km"),
-        ("mars", "3.7 m/s^2", "3397 km"),
-        ("mercury", "3.7 m/s^2", "2439 km"),
-        ("moon", "1.6 m/s^2", "1737 km"),
-        ("pluto", "0.8 m/s^2", "1151 km"),
+    out.extend(physics());
+    out.extend(solar_system());
+    out.extend(engineering());
+    out.extend(fun_facts());
+    out
+});
+
+/// A constant whose expression is `number unit`, answering in that unit (or a bare number).
+fn plain(names: Vec<String>, expr: &'static str) -> Constant {
+    let unit = expr.split_once(' ').map_or("", |(_, u)| u);
+    constant(names, expr, unit)
+}
+
+/// Physical constants by name (CODATA 2022). Q Calc has no mole, so Avogadro's number and the gas constant
+/// are bare numbers (per mol, and J/(mol·K)).
+fn physics() -> Vec<Constant> {
+    vec![
+        plain(
+            list(&["planck constant", "planck's constant"]),
+            "6.62607015e-34 J s",
+        ),
+        plain(
+            list(&[
+                "reduced planck constant",
+                "reduced planck's constant",
+                "h bar",
+                "dirac constant",
+            ]),
+            "1.054571817e-34 J s",
+        ),
+        plain(
+            list(&["boltzmann constant", "boltzmann's constant"]),
+            "1.380649e-23 J/K",
+        ),
+        plain(
+            list(&[
+                "avogadro's number",
+                "avogadro number",
+                "avogadro constant",
+                "avogadro's constant",
+            ]),
+            "6.02214076e23",
+        ),
+        plain(
+            list(&[
+                "gas constant",
+                "ideal gas constant",
+                "universal gas constant",
+                "molar gas constant",
+            ]),
+            "8.314462618",
+        ),
+        constant(
+            list(&[
+                "elementary charge",
+                "charge of an electron",
+                "electron charge",
+                "proton charge",
+                "charge of a proton",
+            ]),
+            "1.602176634e-19 coulomb",
+            "coulomb",
+        ),
+        plain(
+            list(&[
+                "electron mass",
+                "mass of an electron",
+                "electron's mass",
+                "electron rest mass",
+            ]),
+            "9.1093837139e-31 kg",
+        ),
+        plain(
+            list(&[
+                "proton mass",
+                "mass of a proton",
+                "proton's mass",
+                "proton rest mass",
+            ]),
+            "1.67262192595e-27 kg",
+        ),
+        plain(
+            list(&[
+                "neutron mass",
+                "mass of a neutron",
+                "neutron's mass",
+                "neutron rest mass",
+            ]),
+            "1.67492750056e-27 kg",
+        ),
+        plain(
+            list(&[
+                "vacuum permittivity",
+                "permittivity of free space",
+                "permittivity of vacuum",
+                "electric constant",
+                "vacuum electric permittivity",
+            ]),
+            "8.8541878188e-12 F/m",
+        ),
+        plain(
+            list(&[
+                "vacuum permeability",
+                "permeability of free space",
+                "permeability of vacuum",
+                "magnetic constant",
+                "vacuum magnetic permeability",
+            ]),
+            "1.25663706127e-6 N/A^2",
+        ),
+        plain(
+            list(&[
+                "coulomb constant",
+                "coulomb's constant",
+                "electrostatic constant",
+            ]),
+            "8.9875517862e9 N m^2/C^2",
+        ),
+        plain(
+            list(&["stefan boltzmann constant", "stefan-boltzmann constant"]),
+            "5.670374419e-8 W/(m^2 K^4)",
+        ),
+        plain(list(&["rydberg constant"]), "10973731.568157 m^-1"),
+        plain(list(&["bohr radius"]), "5.29177210544e-11 m"),
+        plain(
+            list(&["fine structure constant", "fine-structure constant"]),
+            "0.0072973525643",
+        ),
+    ]
+}
+
+/// The planets, the Moon and the Sun (NASA's planetary fact sheets) and a few distances and ages.
+fn solar_system() -> Vec<Constant> {
+    // body, gravity and radius (the appendix's "values of little g"), then mass, orbital period, length of a
+    // solar day, sidereal rotation period and escape velocity; empty where another constant has it
+    const BODIES: [[&str; 8]; 11] = [
+        [
+            "sun",
+            "274.0 m/s^2",
+            "695500 km",
+            "1.9885e30 kg",
+            "",
+            "",
+            "609.12 hr",
+            "617.7 km/s",
+        ],
+        [
+            "jupiter",
+            "20.9 m/s^2",
+            "71492 km",
+            "1.8982e27 kg",
+            "4332.59 days",
+            "9.9259 hr",
+            "9.925 hr",
+            "59.5 km/s",
+        ],
+        [
+            "neptune",
+            "10.7 m/s^2",
+            "24764 km",
+            "1.02413e26 kg",
+            "60189 days",
+            "16.11 hr",
+            "16.11 hr",
+            "23.5 km/s",
+        ],
+        [
+            "saturn",
+            "10.4 m/s^2",
+            "60268 km",
+            "5.6834e26 kg",
+            "10759.22 days",
+            "10.656 hr",
+            "10.656 hr",
+            "35.5 km/s",
+        ],
+        [
+            "earth",
+            "9.8 m/s^2",
+            "6378 km",
+            "",
+            "365.256 days",
+            "24 hr",
+            "23.9345 hr",
+            "",
+        ],
+        [
+            "venus",
+            "8.9 m/s^2",
+            "6051 km",
+            "4.8675e24 kg",
+            "224.701 days",
+            "2802 hr",
+            "5832.5 hr",
+            "10.36 km/s",
+        ],
+        [
+            "uranus",
+            "8.4 m/s^2",
+            "25559 km",
+            "8.681e25 kg",
+            "30685.4 days",
+            "17.24 hr",
+            "17.24 hr",
+            "21.3 km/s",
+        ],
+        [
+            "mars",
+            "3.7 m/s^2",
+            "3397 km",
+            "6.4171e23 kg",
+            "686.98 days",
+            "24.6597 hr",
+            "24.6229 hr",
+            "5.03 km/s",
+        ],
+        [
+            "mercury",
+            "3.7 m/s^2",
+            "2439 km",
+            "3.3011e23 kg",
+            "87.969 days",
+            "4222.6 hr",
+            "1407.6 hr",
+            "4.25 km/s",
+        ],
+        [
+            "moon",
+            "1.6 m/s^2",
+            "1737 km",
+            "",
+            "27.3217 days",
+            "708.7 hr",
+            "655.72 hr",
+            "2.38 km/s",
+        ],
+        [
+            "pluto",
+            "0.8 m/s^2",
+            "1151 km",
+            "1.303e22 kg",
+            "90560 days",
+            "153.2928 hr",
+            "153.2928 hr",
+            "1.21 km/s",
+        ],
     ];
-    for (body, gravity, radius) in BODIES {
+    let mut out = Vec::new();
+    for [body, gravity, radius, mass, orbit, day, rotation, escape] in BODIES {
         let mut names = of(
             &[body],
             &[
@@ -317,15 +555,351 @@ static CONSTANTS: LazyLock<Vec<Constant>> = LazyLock::new(|| {
             format!("acceleration of gravity on {body}"),
             format!("g on {body}"),
         ]);
-        out.push(constant(names, gravity, "m/s^2"));
-        out.push(constant(
-            of(&[body], &["radius", "mean radius"]),
-            radius,
-            "km",
+        let props: [(&str, &[&str]); 7] = [
+            (gravity, &[]),
+            (radius, &["radius", "mean radius"]),
+            (mass, &["mass"]),
+            (
+                orbit,
+                &[
+                    "orbital period",
+                    "orbit period",
+                    "year",
+                    "length of year",
+                    "year length",
+                ],
+            ),
+            (
+                day,
+                &[
+                    "day",
+                    "solar day",
+                    "length of day",
+                    "day length",
+                    "length of a day",
+                ],
+            ),
+            (
+                rotation,
+                if body == "earth" {
+                    &[
+                        "rotation period",
+                        "rotational period",
+                        "sidereal rotation period",
+                    ]
+                } else {
+                    &[
+                        "rotation period",
+                        "rotational period",
+                        "sidereal rotation period",
+                        "sidereal day",
+                    ]
+                },
+            ),
+            (escape, &["escape velocity", "escape speed"]),
+        ];
+        for (expr, prop) in props {
+            if expr.is_empty() {
+                continue;
+            }
+            let names = if prop.is_empty() {
+                std::mem::take(&mut names)
+            } else {
+                of(&[body], prop)
+            };
+            out.push(plain(names, expr));
+        }
+    }
+    let sun = |props: &[&str]| of(&["sun"], props);
+    out.extend([
+        plain(sun(&["luminosity"]), "3.828e26 W"),
+        plain(sun(&["surface temperature", "temperature"]), "5772 K"),
+        plain(sun(&["age"]), "4.6e9 yr"),
+        plain(
+            list(&[
+                "sidereal month",
+                "moon's orbital period",
+                "lunar orbital period",
+            ]),
+            "27.3217 days",
+        ),
+        plain(
+            list(&[
+                "synodic month",
+                "lunar month",
+                "lunar cycle",
+                "moon phase cycle",
+                "lunation",
+            ]),
+            "29.5306 days",
+        ),
+        plain(
+            list(&[
+                "distance to proxima centauri",
+                "proxima centauri distance",
+                "distance from earth to proxima centauri",
+                "nearest star distance",
+                "distance to nearest star",
+            ]),
+            "4.2465 ly",
+        ),
+        plain(
+            list(&["distance to alpha centauri", "alpha centauri distance"]),
+            "4.37 ly",
+        ),
+        plain(
+            list(&[
+                "distance to galactic center",
+                "distance to center of milky way",
+                "distance to center of galaxy",
+                "galactic center distance",
+            ]),
+            "26000 ly",
+        ),
+        plain(
+            list(&[
+                "distance to andromeda",
+                "andromeda distance",
+                "distance to andromeda galaxy",
+            ]),
+            "2.537e6 ly",
+        ),
+        plain(
+            with(of(&["universe"], &["age"]), list(&["age of the universe"])),
+            "13.787e9 yr",
+        ),
+        plain(of(&["earth"], &["age"]), "4.54e9 yr"),
+    ]);
+    out
+}
+
+/// Materials and water: densities, speeds of sound, stiffness and strength, and water's heats.
+fn engineering() -> Vec<Constant> {
+    let mut out = Vec::new();
+    const DENSITY: [(&str, &str); 10] = [
+        ("water", "1000 kg/m^3"),
+        ("air", "1.225 kg/m^3"),
+        ("steel", "7850 kg/m^3"),
+        ("aluminum", "2700 kg/m^3"),
+        ("aluminium", "2700 kg/m^3"),
+        ("concrete", "2400 kg/m^3"),
+        ("ice", "917 kg/m^3"),
+        ("copper", "8960 kg/m^3"),
+        ("titanium", "4500 kg/m^3"),
+        ("gold", "19300 kg/m^3"),
+    ];
+    for (m, v) in DENSITY {
+        out.push(plain(of(&[m], &["density"]), v));
+    }
+    let sound = |m: &str| {
+        list(&[
+            &format!("speed of sound in {m}"),
+            &format!("sound speed in {m}"),
+            &format!("{m} speed of sound"),
+        ])
+    };
+    out.push(plain(
+        with(sound("air"), list(&["speed of sound", "sound speed"])),
+        "343 m/s",
+    ));
+    out.push(plain(sound("water"), "1481 m/s"));
+    out.push(plain(sound("steel"), "5960 m/s"));
+    const MODULUS: [(&str, &str); 6] = [
+        ("steel", "200 GPa"),
+        ("aluminum", "69 GPa"),
+        ("aluminium", "69 GPa"),
+        ("concrete", "30 GPa"),
+        ("titanium", "116 GPa"),
+        ("copper", "117 GPa"),
+    ];
+    for (m, v) in MODULUS {
+        out.push(plain(
+            of(
+                &[m],
+                &[
+                    "young's modulus",
+                    "youngs modulus",
+                    "modulus of elasticity",
+                    "elastic modulus",
+                ],
+            ),
+            v,
         ));
     }
+    // A36 steel, 6061-T6 aluminum, Ti-6Al-4V, annealed copper
+    const YIELD: [(&str, &str); 5] = [
+        ("steel", "250 MPa"),
+        ("aluminum", "276 MPa"),
+        ("aluminium", "276 MPa"),
+        ("titanium", "880 MPa"),
+        ("copper", "70 MPa"),
+    ];
+    for (m, v) in YIELD {
+        out.push(plain(of(&[m], &["yield strength", "yield stress"]), v));
+    }
+    const SPECIFIC_HEAT: [(&str, &str); 6] = [
+        ("water", "4184 J/(kg K)"),
+        ("air", "1005 J/(kg K)"),
+        ("ice", "2108 J/(kg K)"),
+        ("steel", "490 J/(kg K)"),
+        ("aluminum", "897 J/(kg K)"),
+        ("aluminium", "897 J/(kg K)"),
+    ];
+    for (m, v) in SPECIFIC_HEAT {
+        out.push(plain(
+            of(&[m], &["specific heat", "specific heat capacity"]),
+            v,
+        ));
+    }
+    out.extend([
+        plain(
+            list(&[
+                "atmospheric pressure",
+                "standard atmospheric pressure",
+                "standard pressure",
+                "sea level pressure",
+                "air pressure at sea level",
+            ]),
+            "101325 Pa",
+        ),
+        plain(list(&["absolute zero"]), "-273.15 degC"),
+        plain(
+            with(of(&["water"], &["boiling point"]), list(&["boiling point"])),
+            "100 degC",
+        ),
+        plain(
+            with(
+                of(&["water"], &["freezing point", "melting point"]),
+                list(&["freezing point", "melting point of ice"]),
+            ),
+            "0 degC",
+        ),
+        plain(
+            with(
+                of(&["water"], &["latent heat of fusion", "heat of fusion"]),
+                list(&["latent heat of fusion", "heat of fusion"]),
+            ),
+            "334 kJ/kg",
+        ),
+        plain(
+            with(
+                of(
+                    &["water"],
+                    &["latent heat of vaporization", "heat of vaporization"],
+                ),
+                list(&["latent heat of vaporization", "heat of vaporization"]),
+            ),
+            "2257 kJ/kg",
+        ),
+    ]);
     out
-});
+}
+
+/// Heights, depths, speeds and lengths people like to compare against.
+fn fun_facts() -> Vec<Constant> {
+    vec![
+        plain(
+            list(&[
+                "height of mount everest",
+                "mount everest height",
+                "height of everest",
+                "everest height",
+                "mount everest",
+                "everest",
+                "tallest mountain",
+                "highest mountain",
+            ]),
+            "8849 m",
+        ),
+        plain(
+            list(&[
+                "depth of mariana trench",
+                "mariana trench depth",
+                "mariana trench",
+                "challenger deep",
+                "deepest point in ocean",
+            ]),
+            "10935 m",
+        ),
+        plain(
+            with(
+                of(&["earth"], &["circumference", "equatorial circumference"]),
+                list(&["length of equator", "equator length"]),
+            ),
+            "40075 km",
+        ),
+        plain(
+            list(&[
+                "human body temperature",
+                "body temperature",
+                "normal body temperature",
+            ]),
+            "37 degC",
+        ),
+        plain(
+            list(&["average human height", "average height", "human height"]),
+            "170 cm",
+        ),
+        plain(
+            list(&[
+                "resting heart rate",
+                "average resting heart rate",
+                "average heart rate",
+            ]),
+            "70 min^-1",
+        ),
+        plain(
+            list(&[
+                "speed of a cheetah",
+                "cheetah speed",
+                "cheetah top speed",
+                "top speed of a cheetah",
+            ]),
+            "112 km/h",
+        ),
+        plain(
+            list(&[
+                "fastest car",
+                "top speed of fastest car",
+                "fastest car speed",
+                "fastest production car",
+            ]),
+            "490 km/h",
+        ),
+        plain(
+            list(&[
+                "cruising speed of a commercial jet",
+                "commercial jet cruising speed",
+                "jet cruising speed",
+                "airliner cruising speed",
+                "cruising speed of a jet",
+                "commercial jet speed",
+            ]),
+            "900 km/h",
+        ),
+        plain(
+            list(&["marathon", "marathon distance", "length of a marathon"]),
+            "42.195 km",
+        ),
+        plain(
+            list(&[
+                "football field",
+                "length of a football field",
+                "football field length",
+            ]),
+            "100 yd",
+        ),
+        plain(
+            list(&[
+                "eiffel tower",
+                "height of eiffel tower",
+                "eiffel tower height",
+            ]),
+            "330 m",
+        ),
+        plain(list(&["smoot", "smoots"]), "1.7018 m"),
+    ]
+}
 
 /// A word in the line: its byte span and its normalized spelling.
 struct Word {
@@ -361,26 +935,48 @@ fn joined(text: &str, a: &Word, b: &Word) -> bool {
     gap == "-" || (!gap.is_empty() && gap.chars().all(char::is_whitespace))
 }
 
-/// The longest constant whose name starts at word `i`: the constant and the index just past its last word.
-fn match_at(text: &str, words: &[Word], i: usize) -> Option<(&'static Constant, usize)> {
-    let mut best: Option<(&'static Constant, usize)> = None;
+/// Every name by its first word, so a line only tries the names that could start where it is.
+/// One name of a constant, as its words.
+type Name = (&'static Constant, &'static [String]);
+
+static BY_FIRST: LazyLock<HashMap<&'static str, Vec<Name>>> = LazyLock::new(|| {
+    let mut map: HashMap<&str, Vec<_>> = HashMap::new();
     for c in CONSTANTS.iter() {
         for name in &c.names {
-            let (mut j, mut k) = (i, 0);
-            while k < name.len() && j < words.len() {
-                if j > i && !joined(text, &words[j - 1], &words[j]) {
-                    break;
-                }
-                if words[j].norm == name[k] {
-                    k += 1;
-                } else if words[j].norm != "the" {
-                    break;
-                }
-                j += 1;
+            map.entry(name[0].as_str())
+                .or_default()
+                .push((c, name.as_slice()));
+        }
+    }
+    map
+});
+
+/// The longest constant whose name starts at word `i` (a leading `the` included): the constant and the index
+/// just past its last word.
+fn match_at(text: &str, words: &[Word], i: usize) -> Option<(&'static Constant, usize)> {
+    let mut first = i;
+    while first < words.len() && words[first].norm == "the" {
+        first += 1;
+    }
+    if first >= words.len() || (first > i && !joined(text, &words[first - 1], &words[first])) {
+        return None;
+    }
+    let mut best: Option<(&'static Constant, usize)> = None;
+    for &(c, name) in BY_FIRST.get(words[first].norm.as_str())? {
+        let (mut j, mut k) = (first, 0);
+        while k < name.len() && j < words.len() {
+            if j > first && !joined(text, &words[j - 1], &words[j]) {
+                break;
             }
-            if k == name.len() && best.is_none_or(|(_, end)| j > end) {
-                best = Some((c, j));
+            if words[j].norm == name[k] {
+                k += 1;
+            } else if j == first || !FILLERS.contains(&words[j].norm.as_str()) {
+                break;
             }
+            j += 1;
+        }
+        if k == name.len() && best.is_none_or(|(_, end)| j > end) {
+            best = Some((c, j));
         }
     }
     best
@@ -410,14 +1006,27 @@ pub fn rewrite<'a>(text: &'a str, is_user_name: &dyn Fn(&str) -> bool) -> Cow<'a
     let tail = &text[words[words.len() - 1].end..];
     if first < words.len()
         && lead_ok
-        && tail
-            .chars()
-            .all(|c| c.is_whitespace() || c == '?' || c == '=')
         && let Some((c, end)) = match_at(text, &words, first)
-        && end == words.len()
         && !(end - first == 1 && is_user_name(&text[words[first].start..words[first].end]))
     {
-        return Cow::Owned(format!("{} to {}", c.expr, c.unit));
+        if end == words.len()
+            && tail
+                .chars()
+                .all(|c| c.is_whitespace() || c == '?' || c == '=')
+        {
+            return Cow::Owned(if c.unit.is_empty() {
+                c.expr.to_string()
+            } else {
+                format!("{} to {}", c.expr, c.unit)
+            });
+        }
+        // `absolute zero to K`: a temperature in parentheses doesn't convert, so the conversion follows bare
+        if end < words.len()
+            && matches!(words[end].norm.as_str(), "to" | "in")
+            && joined(text, &words[end - 1], &words[end])
+        {
+            return Cow::Owned(format!("{} {}", c.expr, &text[words[end].start..]));
+        }
     }
     let mut out = String::new();
     let (mut done, mut i) = (0, 0);
