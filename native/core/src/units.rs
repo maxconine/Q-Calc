@@ -2506,8 +2506,40 @@ pub fn try_convert_opt(
     angle_mode: Option<AngleMode>,
 ) -> Option<Value> {
     with_angle(angle_mode, || {
-        convert_text(&preprocess(text), defaults, variables, keep_units, 0)
+        let t = preprocess(text);
+        convert_text(&bare_powers(&t, variables), defaults, variables, keep_units, 0)
     })
+}
+
+/// `ft/s2` is `ft/s^2` (QA item 106): a bare 2 or 3 on the unit after a slash, when the word with the digit is
+/// no unit of its own (`m/s2`, `ft2` already are) nor a variable, and the word before the slash is a unit.
+/// The web left `9.8 m/s^2 to ft/s2` blank; `6/s2` (no unit before the slash) is untouched.
+fn bare_powers(t: &str, variables: &BTreeMap<String, f64>) -> String {
+    static RE: Lazy = Lazy::new(|| {
+        js(
+            r"([A-Za-z][A-Za-z0-9]*)(\^[0-9]+)?/([A-Za-z]+)([23])(?![A-Za-z0-9_^.])",
+            "",
+        )
+    });
+    if !t.contains('/') {
+        return t.to_string();
+    }
+    let unit = |w: &str| !variables.contains_key(w) && unit_info(w).is_some();
+    jsre::replace_all(&RE, t, |c| {
+        let (num, pow, word, digit) = (
+            jsre::group(c, 1),
+            jsre::group(c, 2),
+            jsre::group(c, 3),
+            jsre::group(c, 4),
+        );
+        let joined = format!("{word}{digit}");
+        if unit(num) && unit(word) && unit_info(&joined).is_none() && !variables.contains_key(&joined) {
+            format!("{num}{pow}/{word}^{digit}")
+        } else {
+            format!("{num}{pow}/{joined}")
+        }
+    })
+    .into_owned()
 }
 
 /// `5 kg in` is a conversion still being typed (`5 sq in` is square inches).
