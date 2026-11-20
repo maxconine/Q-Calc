@@ -615,6 +615,22 @@ fn merge_match(a: &Match, b: &Match) -> Option<Match> {
     Some(out)
 }
 
+/// `merge_match(&a, &b)`, taking both.
+fn merge_match_owned(a: Match, mut b: Match) -> Option<Match> {
+    for (k, v) in &a {
+        if let Some(w) = get(&b, k)
+            && !exact_match(v, w)
+        {
+            return None;
+        }
+    }
+    let mut out = a;
+    for (k, v) in b.drain(..) {
+        set(&mut out, &k, v);
+    }
+    Some(out)
+}
+
 /// A key equal for two matches exactly when their JSON is (mathjs dedupes with `JSON.stringify`).
 fn match_key(m: &Match) -> String {
     let mut s = String::new();
@@ -625,6 +641,31 @@ fn match_key(m: &Match) -> String {
         s.push(';');
     }
     s
+}
+
+/// `match_key(m).len()`, without building the key.
+fn match_key_len(m: &Match) -> usize {
+    m.iter().map(|(k, v)| k.len() + 2 + node_key_len(v)).sum()
+}
+
+/// `node_key`'s length.
+fn node_key_len(n: &Node) -> usize {
+    match n {
+        Node::Symbol(x) => 1 + x.len(),
+        Node::Operator { op, args, .. } => {
+            // `O`, the name, two flag digits, `(`, each argument and its `,`, `)`
+            5 + op.name().len() + args.iter().map(|a| node_key_len(a) + 1).sum::<usize>()
+        }
+        Node::Function { callee, args } => {
+            3 + node_key_len(callee) + args.iter().map(|a| node_key_len(a) + 1).sum::<usize>()
+        }
+        Node::Parenthesis(c) => 1 + node_key_len(c),
+        _ => {
+            let mut s = String::new();
+            node_key(n, &mut s);
+            s.len()
+        }
+    }
 }
 
 fn node_key(n: &Node, s: &mut String) {
@@ -690,7 +731,23 @@ fn merge_child_matches(lists: Vec<Vec<Match>>) -> Result<Vec<Match>, SymError> {
     let Some(first) = it.next() else {
         return Ok(Vec::new());
     };
-    let sets = it.fold(first, |acc, l| combine(&acc, &l));
+    // QA item 107: one match a child is the usual case; merged by moving, not copying
+    let sets = it.fold(first, |acc, l| {
+        if acc.len() == 1 && l.len() == 1 {
+            let (Some(a), Some(b)) = (acc.into_iter().next(), l.into_iter().next()) else {
+                unreachable!("one each")
+            };
+            merge_match_owned(a, b).into_iter().collect()
+        } else {
+            combine(&acc, &l)
+        }
+    });
+    // one match: nothing to deduplicate, charged its key's length without printing it
+    if sets.len() == 1 {
+        debug_assert_eq!(match_key_len(&sets[0]), match_key(&sets[0]).len());
+        spend(match_key_len(&sets[0]) as u64)?;
+        return Ok(sets);
+    }
     let mut seen = HashSet::new();
     let mut out = Vec::new();
     for m in sets {
@@ -703,38 +760,118 @@ fn merge_child_matches(lists: Vec<Vec<Match>>) -> Result<Vec<Match>, SymError> {
     Ok(out)
 }
 
-/// `getSplits`: the binary ways to read an n-ary node.
-fn get_splits(n: &Node, ctx: &Ctx) -> Vec<Node> {
-    let a = node_args(n).expect("operator");
+/// One side of a binary reading of an n-ary node (`getSplits`): an argument, or the node remade from the
+/// arguments in a range (or all but one), built only when the rule looks inside it (QA item 107: building every
+/// split copied the node n times over, a third of a long derivative's simplify).
+#[derive(Clone, Copy)]
+enum Side<'a> {
+    One(&'a Node),
+    Many(&'a [Node], Option<usize>),
+}
+
+/// `getSplits(node)` as pairs of sides, in its order.
+fn splits<'a>(n: &Node, a: &'a [Node], ctx: &Ctx) -> Vec<(Side<'a>, Side<'a>)> {
     let mut out = Vec::new();
     if is_commutative(n, ctx) {
         for i in 0..a.len() {
-            let mut rest = a.clone();
-            rest.remove(i);
-            let right = if rest.len() == 1 {
-                rest.pop().expect("one")
+            let right = if a.len() == 2 {
+                Side::One(&a[1 - i])
             } else {
-                make_node(n, rest)
+                Side::Many(a, Some(i))
             };
-            out.push(make_node(n, vec![a[i].clone(), right]));
+            out.push((Side::One(&a[i]), right));
         }
     } else {
         for i in 1..a.len() {
             let left = if i > 1 {
-                make_node(n, a[..i].to_vec())
+                Side::Many(&a[..i], None)
             } else {
-                a[0].clone()
+                Side::One(&a[0])
             };
-            let rest = a[i..].to_vec();
-            let right = if rest.len() == 1 {
-                rest[0].clone()
+            let right = if a.len() - i == 1 {
+                Side::One(&a[i])
             } else {
-                make_node(n, rest)
+                Side::Many(&a[i..], None)
             };
-            out.push(make_node(n, vec![left, right]));
+            out.push((left, right));
         }
     }
     out
+}
+
+/// `_ruleMatch(rule child, side)`. A remade side is an operator (or call) like `node`: a rule child that can't
+/// match one at its root is charged its one step and fails there, as `rule_match` would, without building it.
+fn side_match(rule: &Node, side: Side, node: &Node, ctx: &Ctx) -> Result<Vec<Match>, SymError> {
+    match side {
+        Side::One(n) => rule_match(rule, n, ctx, false),
+        Side::Many(items, skip) => {
+            let opens = match (rule, node) {
+                (Node::Operator { op: a, .. }, Node::Operator { op: b, .. }) => a == b,
+                (Node::Function { .. }, Node::Function { .. }) => {
+                    function_name(rule) == function_name(node)
+                }
+                (Node::Symbol(_), _) => true,
+                _ => false,
+            };
+            if !opens {
+                spend(1)?;
+                return Ok(Vec::new());
+            }
+            let args: Vec<Node> = match skip {
+                Some(i) => items
+                    .iter()
+                    .enumerate()
+                    .filter(|(j, _)| *j != i)
+                    .map(|(_, x)| x.clone())
+                    .collect(),
+                None => items.to_vec(),
+            };
+            let built = make_node(node, args);
+            // a placeholder takes the remade side itself, not a copy of it
+            if let Node::Symbol(name) = rule {
+                spend(1)?;
+                return Ok(match symbol_match(name, &built)? {
+                    SymbolMatch::Fail => Vec::new(),
+                    SymbolMatch::Plain => vec![Vec::new()],
+                    SymbolMatch::Bind => vec![vec![(name.clone(), built)]],
+                });
+            }
+            rule_match(rule, &built, ctx, false)
+        }
+    }
+}
+
+/// `_ruleMatch(rule, split, context, true)` for a split of `node` (same operator) read as two sides.
+fn split_match(
+    ra: &[Node],
+    node: &Node,
+    sides: [Side; 2],
+    ctx: &Ctx,
+) -> Result<Vec<Match>, SymError> {
+    spend(1)?;
+    let mut child_matches = Vec::new();
+    for (rchild, side) in ra.iter().zip(sides) {
+        let m = side_match(rchild, side, node, ctx)?;
+        if m.is_empty() {
+            break;
+        }
+        child_matches.push(m);
+    }
+    if child_matches.len() != ra.len() {
+        if !is_commutative(node, ctx) {
+            return Ok(Vec::new());
+        }
+        let left = side_match(&ra[0], sides[1], node, ctx)?;
+        if left.is_empty() {
+            return Ok(Vec::new());
+        }
+        let right = side_match(&ra[1], sides[0], node, ctx)?;
+        if right.is_empty() {
+            return Ok(Vec::new());
+        }
+        child_matches = vec![left, right];
+    }
+    merge_child_matches(child_matches)
 }
 
 const SUPPORTED_CONSTANTS: &[&str] = &[
@@ -775,7 +912,6 @@ fn js_name(n: &Node) -> Option<&str> {
 /// `_ruleMatch(rule, node, context, isSplit)`.
 fn rule_match(rule: &Node, node: &Node, ctx: &Ctx, is_split: bool) -> Result<Vec<Match>, SymError> {
     spend(1)?;
-    let mut res: Vec<Match> = vec![Vec::new()];
     let pair = match (rule, node) {
         (
             Node::Operator {
@@ -798,6 +934,8 @@ fn rule_match(rule: &Node, node: &Node, ctx: &Ctx, is_split: bool) -> Result<Vec
         }
         _ => None,
     };
+    // after the operator check: most calls fail there (QA item 107)
+    let mut res: Vec<Match> = vec![Vec::new()];
     match (rule, node) {
         _ if pair.is_some() => {
             let (ra, na) = pair.expect("checked");
@@ -837,8 +975,8 @@ fn rule_match(rule: &Node, node: &Node, ctx: &Ctx, is_split: bool) -> Result<Vec
                 // n ways to split n arguments, each copying the other n − 1
                 spend((na.len() * na.len()) as u64)?;
                 let mut out = Vec::new();
-                for split in get_splits(node, ctx) {
-                    out.extend(rule_match(rule, &split, ctx, true)?);
+                for (left, right) in splits(node, na, ctx) {
+                    out.extend(split_match(ra, node, [left, right], ctx)?);
                 }
                 return Ok(out);
             } else if ra.len() > 2 {
@@ -847,38 +985,11 @@ fn rule_match(rule: &Node, node: &Node, ctx: &Ctx, is_split: bool) -> Result<Vec
                 return Ok(Vec::new());
             }
         }
-        (Node::Symbol(name), _) => {
-            if name.is_empty() {
-                return err("Symbol in rule has 0 length...!?");
-            }
-            if SUPPORTED_CONSTANTS.contains(&name.as_str()) {
-                if js_name(node) != Some(name.as_str()) {
-                    return Ok(Vec::new());
-                }
-            } else {
-                let b = name.as_bytes();
-                let kind = if b.len() > 1 && b[1].is_ascii_lowercase() {
-                    &name[..2]
-                } else {
-                    &name[..1]
-                };
-                let ok = match kind {
-                    "n" | "_p" => true,
-                    "c" | "cl" => matches!(node, Node::Constant(_)),
-                    "v" => !matches!(node, Node::Constant(_)),
-                    "vl" => matches!(node, Node::Symbol(_)),
-                    "cd" => is_numeric_node(node),
-                    "vd" => !is_numeric_node(node),
-                    "ce" => is_constant_expression(node),
-                    "ve" => !is_constant_expression(node),
-                    _ => return err(format!("Invalid symbol in rule: {name}")),
-                };
-                if !ok {
-                    return Ok(Vec::new());
-                }
-                res[0].push((name.clone(), node.clone()));
-            }
-        }
+        (Node::Symbol(name), _) => match symbol_match(name, node)? {
+            SymbolMatch::Fail => return Ok(Vec::new()),
+            SymbolMatch::Plain => {}
+            SymbolMatch::Bind => res[0].push((name.clone(), node.clone())),
+        },
         (Node::Constant(rc), _) => match node {
             Node::Constant(nc) if values_equal(rc, nc) => {}
             _ => return Ok(Vec::new()),
@@ -886,6 +997,49 @@ fn rule_match(rule: &Node, node: &Node, ctx: &Ctx, is_split: bool) -> Result<Vec
         _ => return Ok(Vec::new()),
     }
     Ok(res)
+}
+
+enum SymbolMatch {
+    Fail,
+    /// a built-in constant by name: matches, binds nothing
+    Plain,
+    Bind,
+}
+
+/// `_ruleMatch`'s placeholder (or constant) symbol in a rule against `node`.
+fn symbol_match(name: &str, node: &Node) -> Result<SymbolMatch, SymError> {
+    if name.is_empty() {
+        return err("Symbol in rule has 0 length...!?");
+    }
+    if SUPPORTED_CONSTANTS.contains(&name) {
+        return Ok(if js_name(node) == Some(name) {
+            SymbolMatch::Plain
+        } else {
+            SymbolMatch::Fail
+        });
+    }
+    let b = name.as_bytes();
+    let kind = if b.len() > 1 && b[1].is_ascii_lowercase() {
+        &name[..2]
+    } else {
+        &name[..1]
+    };
+    let ok = match kind {
+        "n" | "_p" => true,
+        "c" | "cl" => matches!(node, Node::Constant(_)),
+        "v" => !matches!(node, Node::Constant(_)),
+        "vl" => matches!(node, Node::Symbol(_)),
+        "cd" => is_numeric_node(node),
+        "vd" => !is_numeric_node(node),
+        "ce" => is_constant_expression(node),
+        "ve" => !is_constant_expression(node),
+        _ => return err(format!("Invalid symbol in rule: {name}")),
+    };
+    Ok(if ok {
+        SymbolMatch::Bind
+    } else {
+        SymbolMatch::Fail
+    })
 }
 
 /// The right-hand side with placeholders filled (`repl.clone()` + `transform`).
@@ -901,10 +1055,15 @@ fn substitute(repl: &Node, m: &Match, implicit: bool) -> Node {
 }
 
 /// Applies `rule` to each item; `None` when no item changed.
-fn apply_all(items: &[Node], rule: &PatternRule, ctx: &Ctx) -> Result<Option<Vec<Node>>, SymError> {
+fn apply_all(
+    items: &[Node],
+    rule: &PatternRule,
+    ctx: &Ctx,
+    merged: &Ctx,
+) -> Result<Option<Vec<Node>>, SymError> {
     let mut out: Option<Vec<Node>> = None;
     for (i, a) in items.iter().enumerate() {
-        if let Some(n) = apply_rule(a, rule, ctx)? {
+        if let Some(n) = apply_rule_in(a, rule, ctx, merged)? {
             out.get_or_insert_with(|| items[..i].to_vec()).push(n);
         } else if let Some(v) = out.as_mut() {
             v.push(a.clone());
@@ -918,32 +1077,43 @@ fn apply_rule(node: &Node, rule: &PatternRule, ctx: &Ctx) -> Result<Option<Node>
     if !rule.enabled {
         return Ok(None);
     }
-    let merged = rule.impose.merged(ctx);
+    // the same for every node under this one (QA item 107: it was merged again at each)
+    apply_rule_in(node, rule, ctx, &rule.impose.merged(ctx))
+}
+
+fn apply_rule_in(
+    node: &Node,
+    rule: &PatternRule,
+    ctx: &Ctx,
+    merged: &Ctx,
+) -> Result<Option<Node>, SymError> {
     let rebuilt: Option<Node> = match node {
         Node::Operator { args, .. } | Node::Function { args, .. } => {
-            apply_all(args, rule, ctx)?.map(|a| with_args(node, a))
+            apply_all(args, rule, ctx, merged)?.map(|a| with_args(node, a))
         }
-        Node::Parenthesis(c) => apply_rule(c, rule, ctx)?.map(|n| Node::Parenthesis(Box::new(n))),
-        Node::Array(items) => apply_all(items, rule, ctx)?.map(Node::Array),
+        Node::Parenthesis(c) => {
+            apply_rule_in(c, rule, ctx, merged)?.map(|n| Node::Parenthesis(Box::new(n)))
+        }
+        Node::Array(items) => apply_all(items, rule, ctx, merged)?.map(Node::Array),
         _ => None,
     };
     let res: &Node = rebuilt.as_ref().unwrap_or(node);
     let mut repl = &rule.r;
-    let mut matches = rule_match(&rule.l, res, &merged, false)?.into_iter().next();
+    let mut matches = rule_match(&rule.l, res, merged, false)?.into_iter().next();
     if matches.is_none()
         && let Some((el, er)) = &rule.expanded
     {
         repl = er;
-        matches = rule_match(el, res, &merged, false)?.into_iter().next();
+        matches = rule_match(el, res, merged, false)?.into_iter().next();
     }
     if matches.is_none()
         && let Some(((l1, r1), (l2, r2))) = &rule.expanded_nc
     {
         repl = r1;
-        matches = rule_match(l1, res, &merged, false)?.into_iter().next();
+        matches = rule_match(l1, res, merged, false)?.into_iter().next();
         if matches.is_none() {
             repl = r2;
-            matches = rule_match(l2, res, &merged, false)?.into_iter().next();
+            matches = rule_match(l2, res, merged, false)?.into_iter().next();
         }
     }
     let out = match matches {
@@ -954,7 +1124,7 @@ fn apply_rule(node: &Node, rule: &PatternRule, ctx: &Ctx) -> Result<Option<Node>
         None => rebuilt,
     };
     match out {
-        Some(n) if rule.repeat => Ok(Some(apply_rule(&n, rule, ctx)?.unwrap_or(n))),
+        Some(n) if rule.repeat => Ok(Some(apply_rule_in(&n, rule, ctx, merged)?.unwrap_or(n))),
         other => Ok(other),
     }
 }

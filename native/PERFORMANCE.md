@@ -366,6 +366,14 @@ from items 45-106 (`late`).
   again with its parens closed. Half-typed derivatives cost the most: `d/dt (theta^2 dot(the` fills to
   `d/dt (theta^2 dot(the))`, 4-6 ms a keystroke (was 0.07). Typing `d/dt (theta^2 dot(theta))` once went from
   3.7 to 25 ms in all. Most of the remaining +38% on the live path comes from the six `d/dt` golden lines.
+- **Cheaper since (item 107):** the fill's cost is the answer itself (a fill that answers is 97 of its 120 ms over
+  the golden prefixes), almost all of it simplify's rule matching. The matcher now reads each split of an n-ary sum
+  or product as two sides without remaking the node per split, merges a lone child match by moving it, charges a
+  match's dedupe key by its length without printing it, and merges the rule's context once per rule: same answers
+  (22,000 live prefixes compared, golden tests) and the same budget charged. Interleaved release runs of the live
+  bench, `8639bc0` against the change: all keystrokes once 473-475 → 437-445 ms, p99 0.93 → 0.73 ms;
+  `d/dt (theta^2 dot(the` 5.9 → 3.5 ms; typing `d/dt (theta^2 dot(theta))` 25.8 → 16.9 ms, `d²/dt² (L sin(theta))`
+  17.1 → 11.2 ms (`core/tests/live_fill_speed.rs`).
 - The late lines' 605 ms max at `5ccf1d6` was `y = 1e17 x^1e9 - 1 for x` (item 99 fixed it).
 
 ### QA night, the app (2026-11-20, arm64, native only)
