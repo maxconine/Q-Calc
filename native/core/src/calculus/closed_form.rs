@@ -232,6 +232,8 @@ impl Job {
 /// Digits the relation search uses, and the stricter digits a found relation must still hold to.
 const SEARCH_DIGITS: usize = 24;
 const VERIFY_DIGITS: usize = 40;
+/// The fewest digits a found relation is checked to, when the value itself carries fewer than VERIFY_DIGITS.
+const MIN_VERIFY_DIGITS: usize = 32;
 
 /// Ticks the default search may take, in place of the TS's 8000 ms. On the fixtures every search, found or not,
 /// ends within 1,800 ticks (`tick_census`), well under half a second here; this leaves ten times that.
@@ -521,6 +523,97 @@ impl Expr {
     }
 }
 
+impl Expr {
+    /// The same expression in doubles, for the scan that only has to find where an oscillating integrand's zeros
+    /// lie (the 20-digit [`Expr::eval`] took a second over the scan's thousands of points).
+    fn eval_f64(&self, x: f64) -> f64 {
+        match self {
+            Expr::Val(v) => v.to_f64(),
+            Expr::Var => x,
+            Expr::Op(op, a, b) => {
+                let l = a.eval_f64(x);
+                let r = || b.as_deref().map_or(f64::NAN, |b| b.eval_f64(x));
+                match op {
+                    Op::Add => l + r(),
+                    Op::Sub => l - r(),
+                    Op::Mul => {
+                        if l == 0.0 {
+                            0.0
+                        } else {
+                            l * r()
+                        }
+                    }
+                    Op::Div => {
+                        let d = r();
+                        if d == 0.0 { f64::NAN } else { l / d }
+                    }
+                    Op::Pow => {
+                        let e = r();
+                        if l == 0.0 && e <= 0.0 {
+                            f64::NAN
+                        } else {
+                            l.powf(e)
+                        }
+                    }
+                    Op::Neg => -l,
+                }
+            }
+            Expr::Fn(f, a, b) => {
+                let v = a.eval_f64(x);
+                match f {
+                    Fun::Sin => v.sin(),
+                    Fun::Cos => v.cos(),
+                    Fun::Tan => v.tan(),
+                    Fun::Sec => 1.0 / v.cos(),
+                    Fun::Csc => 1.0 / v.sin(),
+                    Fun::Cot => 1.0 / v.tan(),
+                    Fun::Asin => v.asin(),
+                    Fun::Acos => v.acos(),
+                    Fun::Atan => v.atan(),
+                    Fun::Asec => (1.0 / v).acos(),
+                    Fun::Acsc => (1.0 / v).asin(),
+                    Fun::Acot => {
+                        if v == 0.0 {
+                            std::f64::consts::FRAC_PI_2
+                        } else {
+                            (1.0 / v).atan()
+                        }
+                    }
+                    Fun::Sinh => v.sinh(),
+                    Fun::Cosh => v.cosh(),
+                    Fun::Tanh => v.tanh(),
+                    Fun::Sech => 1.0 / v.cosh(),
+                    Fun::Csch => 1.0 / v.sinh(),
+                    Fun::Coth => 1.0 / v.tanh(),
+                    Fun::Asinh => v.asinh(),
+                    Fun::Acosh => v.acosh(),
+                    Fun::Atanh => v.atanh(),
+                    Fun::Sqrt => v.sqrt(),
+                    Fun::Cbrt => v.cbrt(),
+                    Fun::NthRoot => {
+                        let n = b.as_deref().map_or(2.0, |b| b.eval_f64(x));
+                        if n.fract() != 0.0 || n == 0.0 {
+                            f64::NAN
+                        } else if v < 0.0 {
+                            if n % 2.0 == 0.0 {
+                                f64::NAN
+                            } else {
+                                -(-v).powf(1.0 / n)
+                            }
+                        } else {
+                            v.powf(1.0 / n)
+                        }
+                    }
+                    Fun::Exp => v.exp(),
+                    Fun::Log => v.ln(),
+                    Fun::Log10 => v.log10(),
+                    Fun::Abs => v.abs(),
+                }
+            }
+        }
+    }
+}
+
 // ---- quadrature
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -716,7 +809,7 @@ fn sinh_sinh(c: &Ctx) -> Rule {
 
 /// Refines until two levels agree; the error roughly squares each level.
 fn quadrature(
-    f: &Expr,
+    f: &dyn Fn(&Real) -> Real,
     rule: &Rule,
     c: &Ctx,
     digits: usize,
@@ -724,7 +817,7 @@ fn quadrature(
     clock: &mut Clock,
 ) -> R<Option<Real>> {
     let tiny = pow10(c, -(w as i64));
-    let cv = f.eval(c, &rule.center.x);
+    let cv = f(&rule.center.x);
     if !cv.is_finite() {
         return Ok(None);
     }
@@ -749,7 +842,7 @@ fn quadrature(
                     done[s] = true;
                     continue;
                 };
-                let fx = f.eval(c, &n.x);
+                let fx = f(&n.x);
                 if !fx.is_finite() {
                     return Ok(false);
                 }
@@ -822,7 +915,14 @@ fn rank(b: &B) -> i32 {
     }
 }
 
-fn integral_at(f: &Ast, a: &Bound, b: &Bound, digits: usize, clock: &mut Clock) -> R<Option<Real>> {
+/// The integral and the digits it is good to: `digits`, or fewer for an oscillating tail summed by Levin.
+fn integral_at(
+    f: &Ast,
+    a: &Bound,
+    b: &Bound,
+    digits: usize,
+    clock: &mut Clock,
+) -> R<Option<(Real, usize)>> {
     // a 1/√ singularity at a nonzero end loses half the working digits to the sliver past the last node
     let w = 2 * digits + 8;
     let c = ctx(w);
@@ -834,21 +934,325 @@ fn integral_at(f: &Ast, a: &Bound, b: &Bound, digits: usize, clock: &mut Clock) 
     };
     let swapped = rank(&lo) > rank(&hi) || matches!((&lo, &hi), (B::V(x), B::V(y)) if x.gt(y));
     if swapped {
-        return Ok(integral_at(f, b, a, digits, clock)?.map(|v| v.neg()));
+        return Ok(integral_at(f, b, a, digits, clock)?.map(|(v, d)| (v.neg(), d)));
     }
+    // an infinite end the double exponential rule can't settle may be a decaying wave (∫₀^∞ sin x/x)
+    let tail = match (&lo, &hi) {
+        (B::V(x), B::Inf) => Some((x.clone(), false)),
+        (B::NegInf, B::V(y)) => Some((y.neg(), true)),
+        _ => None,
+    };
     let rule = match (lo, hi) {
         (B::NegInf, B::Inf) => sinh_sinh(&c),
         (B::V(x), B::Inf) => exp_sinh(x, false, &c, w),
         (B::NegInf, B::V(y)) => exp_sinh(y, true, &c, w),
         (B::V(x), B::V(y)) => {
             if x.eq_value(&y) {
-                return Ok(Some(Real::zero()));
+                return Ok(Some((Real::zero(), digits)));
             }
             tanh_sinh(x, y, &c, w)
         }
         _ => return Ok(None),
     };
-    quadrature(&fx, &rule, &c, digits, w, clock)
+    if let Some(v) = quadrature(&|x: &Real| fx.eval(&c, x), &rule, &c, digits, w, clock)? {
+        return Ok(Some((v, digits)));
+    }
+    if let Some((a, flip)) = tail {
+        // no end singularity to lose half the digits to past the head, only Levin's cancellation
+        let w = digits + 24;
+        let c = ctx(w);
+        let Some(fx) = compile(f, &c) else {
+            return Ok(None);
+        };
+        return oscillating_at(&fx, &a, flip, &c, digits, w, clock);
+    }
+    if rule.kind == RuleKind::Sinh {
+        // the whole line: each half on its own, either of which may be a wave
+        let zero = Bound::Ast(Ast::Num("0".into()));
+        let Some((l, dl)) = integral_at(f, &Bound::NegInf, &zero, digits, clock)? else {
+            return Ok(None);
+        };
+        let Some((r, dr)) = integral_at(f, &zero, &Bound::Inf, digits, clock)? else {
+            return Ok(None);
+        };
+        return Ok(Some((c.add(&l, &r), dl.min(dr))));
+    }
+    Ok(None)
+}
+
+/// Panels between zeros for [`oscillating_at`], as the double answer's scan sums them.
+const WAVE_PANELS: usize = 40;
+/// Gauss–Legendre points per panel: a panel between two zeros is smooth, so this is far past the working digits.
+const WAVE_POINTS: usize = 32;
+
+thread_local! {
+    static LEGENDRE: RefCell<HashMap<(usize, usize), std::rc::Rc<Vec<(Real, Real)>>>> =
+        RefCell::new(HashMap::new());
+}
+
+/// Gauss–Legendre nodes and weights on [-1, 1] at precision w, by Newton on Pₙ.
+fn legendre(n: usize, c: &Ctx, w: usize) -> std::rc::Rc<Vec<(Real, Real)>> {
+    if let Some(v) = LEGENDRE.with(|m| m.borrow().get(&(n, w)).cloned()) {
+        return v;
+    }
+    let tiny = pow10(c, -(w as i64) + 4);
+    let mut out = Vec::with_capacity(n);
+    for i in 1..=n / 2 {
+        let mut x =
+            Real::from_f64((std::f64::consts::PI * (i as f64 - 0.25) / (n as f64 + 0.5)).cos());
+        let mut dp = Real::one();
+        for _ in 0..100 {
+            // P_n(x) and P_n'(x) by the three-term recurrence
+            let (mut p0, mut p1) = (Real::one(), x.clone());
+            for k in 2..=n {
+                let p2 = c.div(
+                    &c.sub(
+                        &c.mul(&c.mul(&int(2 * k as i64 - 1), &x), &p1),
+                        &c.mul(&int(k as i64 - 1), &p0),
+                    ),
+                    &int(k as i64),
+                );
+                p0 = p1;
+                p1 = p2;
+            }
+            // P_n' = n (x P_n - P_{n-1}) / (x² - 1)
+            dp = c.div(
+                &c.mul(&int(n as i64), &c.sub(&c.mul(&x, &p1), &p0)),
+                &c.sub(&c.mul(&x, &x), &Real::one()),
+            );
+            let dx = c.div(&p1, &dp);
+            x = c.sub(&x, &dx);
+            if dx.abs().lt(&tiny) {
+                break;
+            }
+        }
+        let wt = c.div(
+            &int(2),
+            &c.mul(&c.sub(&Real::one(), &c.mul(&x, &x)), &c.mul(&dp, &dp)),
+        );
+        out.push((x.clone(), wt.clone()));
+        out.push((x.neg(), wt));
+    }
+    let v = std::rc::Rc::new(out);
+    LEGENDRE.with(|m| m.borrow_mut().insert((n, w), v.clone()));
+    v
+}
+
+/// ∫ g over [lo, hi] with `n` Gauss–Legendre points; None if g isn't finite there.
+fn gauss_panel(
+    g: &dyn Fn(&Real) -> Real,
+    lo: &Real,
+    hi: &Real,
+    n: usize,
+    c: &Ctx,
+    w: usize,
+    clock: &mut Clock,
+) -> R<Option<Real>> {
+    let nodes = legendre(n, c, w);
+    let half = c.div(&c.sub(hi, lo), &int(2));
+    let mid = c.div(&c.add(hi, lo), &int(2));
+    let mut sum = Real::zero();
+    for (i, (x, wt)) in nodes.iter().enumerate() {
+        if i % 2 == 0 {
+            clock.tick()?;
+        }
+        let y = g(&c.add(&mid, &c.mul(&half, x)));
+        if !y.is_finite() {
+            return Ok(None);
+        }
+        sum = c.add(&sum, &c.mul(wt, &y));
+    }
+    Ok(Some(c.mul(&sum, &half)))
+}
+
+/// A zero of g near z, polished to the working precision: secant on g where it crosses, on its slope where it
+/// only touches zero.
+fn polish_zero(
+    g: &dyn Fn(&Real) -> Real,
+    z: f64,
+    crosses: bool,
+    c: &Ctx,
+    w: usize,
+    clock: &mut Clock,
+) -> R<Option<Real>> {
+    let h = pow10(c, -(w as i64) / 3);
+    let two_h = c.mul(&h, &int(2));
+    let slope = |x: &Real| c.div(&c.sub(&g(&c.add(x, &h)), &g(&c.sub(x, &h))), &two_h);
+    let at = |x: &Real| if crosses { g(x) } else { slope(x) };
+    let scale = z.abs().max(1.0);
+    let tol = c.mul(&pow10(c, -(w as i64) + 6), &Real::from_f64(scale));
+    let mut x0 = Real::from_f64(z);
+    let mut x1 = Real::from_f64(z + 1e-9 * scale);
+    let (mut y0, mut y1) = (at(&x0), at(&x1));
+    for _ in 0..40 {
+        clock.tick()?;
+        if y1.is_zero() {
+            return Ok(Some(x1));
+        }
+        let dy = c.sub(&y1, &y0);
+        if dy.is_zero() || !dy.is_finite() {
+            break;
+        }
+        let step = c.div(&c.mul(&y1, &c.sub(&x1, &x0)), &dy);
+        x0 = x1;
+        y0 = y1;
+        x1 = c.sub(&x0, &step);
+        y1 = at(&x1);
+        if step.abs().lte(&tol) {
+            return Ok(Some(x1));
+        }
+    }
+    // stalled at the working precision's floor: still far closer than the double scan put it
+    let near = c.sub(&x1, &Real::from_f64(z)).abs().to_f64() < 1e-6 * scale;
+    Ok(near.then_some(x1))
+}
+
+/// ∫ₐ^∞ f (flip: ∫_{-∞}^{-a} f) for a decaying wave, as `numeric::oscillating_tail` sums the double answer: a
+/// head up to the first zero, one Gauss–Legendre panel per stretch between zeros, and Levin's u transform over
+/// the partial sums, here at the working precision. Levin's order is raised while successive values close in;
+/// the digits returned are those two of them agree to, often fewer than asked.
+fn oscillating_at(
+    fx: &Expr,
+    a: &Real,
+    flip: bool,
+    c: &Ctx,
+    digits: usize,
+    w: usize,
+    clock: &mut Clock,
+) -> R<Option<(Real, usize)>> {
+    let g = |y: &Real| fx.eval(c, &if flip { y.neg() } else { y.clone() });
+    // the zeros, found by the double answer's own scan on a double copy of f
+    let evals = std::cell::Cell::new(0u64);
+    let f64_of = |y: f64| {
+        evals.set(evals.get() + 1);
+        fx.eval_f64(if flip { -y } else { y })
+    };
+    let scan = super::numeric::tail_zeros(&f64_of, a.to_f64(), WAVE_PANELS);
+    for _ in 0..evals.get() / 64 {
+        clock.tick()?;
+    }
+    let Some(found) = scan else {
+        return Ok(None);
+    };
+    let mut zeros = Vec::with_capacity(found.len());
+    for (z, crosses) in found {
+        let Some(z) = polish_zero(&g, z, crosses, c, w, clock)? else {
+            return Ok(None);
+        };
+        if zeros.last().is_some_and(|p: &Real| z.lte(p)) || z.lte(a) {
+            return Ok(None);
+        }
+        zeros.push(z);
+    }
+    let Some(head) = quadrature(
+        &g,
+        &tanh_sinh(a.clone(), zeros[0].clone(), c, w),
+        c,
+        w - 8,
+        w,
+        clock,
+    )?
+    else {
+        return Ok(None);
+    };
+    let mut terms = Vec::with_capacity(zeros.len());
+    for p in zeros.windows(2) {
+        let Some(t) = gauss_panel(&g, &p[0], &p[1], WAVE_POINTS, c, w, clock)? else {
+            return Ok(None);
+        };
+        if t.is_zero() {
+            return Ok(None);
+        }
+        terms.push(t);
+    }
+    // one panel again with more points: how many digits the panels themselves carry
+    let Some(check) = gauss_panel(&g, &zeros[0], &zeros[1], WAVE_POINTS + 16, c, w, clock)? else {
+        return Ok(None);
+    };
+    let panel_digits = digits_between(c, &check, &terms[0]);
+    let mut partial = Vec::with_capacity(terms.len());
+    let mut s = head;
+    for t in &terms {
+        s = c.add(&s, t);
+        partial.push(s.clone());
+    }
+    let n = terms.len();
+    let mut prev: Option<Real> = None;
+    let mut prev_gap: Option<Real> = None;
+    let mut best: Option<(Real, Real)> = None;
+    for k in 4..n {
+        clock.tick()?;
+        let Some(t) = levin_u_at(&partial, &terms, k, c) else {
+            continue;
+        };
+        if let Some(p) = &prev {
+            let diff = c.sub(&t, p).abs();
+            // two gaps in a row, so one lucky near-miss can't vouch for digits
+            let gap = match &prev_gap {
+                Some(g) if g.gt(&diff) => g.clone(),
+                _ => diff.clone(),
+            };
+            if prev_gap.is_some() && best.as_ref().is_none_or(|b| gap.lt(&b.1)) {
+                best = Some((t.clone(), gap));
+            }
+            prev_gap = Some(diff);
+        }
+        prev = Some(t);
+    }
+    let Some((value, gap)) = best else {
+        return Ok(None);
+    };
+    let levin_digits = if gap.is_zero() {
+        digits
+    } else {
+        let rel = c.div(&gap, &value.abs()).to_f64();
+        if !(rel > 0.0) {
+            return Ok(None);
+        }
+        // a digit short of the agreement, as the double answer keeps four times its gap
+        (-rel.log10() - 1.0).floor().max(0.0) as usize
+    };
+    Ok(Some((value, digits.min(levin_digits).min(panel_digits))))
+}
+
+/// The digits two values agree to, relative to the first.
+fn digits_between(c: &Ctx, x: &Real, y: &Real) -> usize {
+    let diff = c.sub(x, y).abs();
+    if diff.is_zero() {
+        return usize::MAX;
+    }
+    let rel = c.div(&diff, &x.abs()).to_f64();
+    if !(rel > 0.0) {
+        return 0;
+    }
+    (-rel.log10()).floor().max(0.0) as usize
+}
+
+/// Levin's u transform of the partial sums s[0..=k], whose last terms are a (`numeric::levin_u` at precision).
+fn levin_u_at(s: &[Real], a: &[Real], k: usize, c: &Ctx) -> Option<Real> {
+    if k >= s.len() {
+        return None;
+    }
+    let (mut num, mut den) = (Real::zero(), Real::zero());
+    let mut binom = Real::one();
+    let last = int(1 + k as i64);
+    for j in 0..=k {
+        let bj = int(1 + j as i64);
+        let cj = c.pow(&c.div(&bj, &last), &int(k as i64 - 1));
+        let wj = c.mul(&bj, &a[j]);
+        let term = c.div(&c.mul(&binom, &cj), &wj);
+        let (tn, td) = (c.mul(&term, &s[j]), term);
+        if j % 2 == 0 {
+            num = c.add(&num, &tn);
+            den = c.add(&den, &td);
+        } else {
+            num = c.sub(&num, &tn);
+            den = c.sub(&den, &td);
+        }
+        binom = c.div(&c.mul(&binom, &int((k - j) as i64)), &int(j as i64 + 1));
+    }
+    let t = c.div(&num, &den);
+    t.is_finite().then_some(t)
 }
 
 fn limit_at(f: &Ast, to: &Bound, side: i32, digits: usize) -> Option<Real> {
@@ -918,11 +1322,12 @@ fn value_at(f: &Ast, at: &Ast, digits: usize) -> Option<Real> {
     v.is_finite().then_some(v)
 }
 
-fn value_of(job: &Job, digits: usize, clock: &mut Clock) -> R<Option<Real>> {
+/// The job's value and the digits it is good to (fewer than asked only for an oscillating ∫ to ∞).
+fn value_of(job: &Job, digits: usize, clock: &mut Clock) -> R<Option<(Real, usize)>> {
     Ok(match &job.kind {
         JobKind::Integral { a, b } => integral_at(&job.f, a, b, digits, clock)?,
-        JobKind::Limit { to, side } => limit_at(&job.f, to, *side, digits),
-        JobKind::Value { at } => value_at(&job.f, at, digits),
+        JobKind::Limit { to, side } => limit_at(&job.f, to, *side, digits).map(|v| (v, digits)),
+        JobKind::Value { at } => value_at(&job.f, at, digits).map(|v| (v, digits)),
     })
 }
 
@@ -1443,9 +1848,15 @@ pub fn identify_job(job: &Job, ticks: u64) -> Option<String> {
 }
 
 fn identify(job: &Job, clock: &mut Clock) -> R<Option<String>> {
-    let Some(x) = value_of(job, VERIFY_DIGITS, clock)? else {
+    let Some((x, good)) = value_of(job, VERIFY_DIGITS, clock)? else {
         return Ok(None);
     };
+    // a relation found at SEARCH_DIGITS must still hold well past them; a Levin-summed wave may carry fewer
+    // than VERIFY_DIGITS, so it is checked to the digits it has, never fewer than MIN_VERIFY_DIGITS
+    let verify = good.min(VERIFY_DIGITS);
+    if verify < MIN_VERIFY_DIGITS {
+        return Ok(None);
+    }
     if x.is_zero() {
         return Ok(None);
     }
@@ -1477,7 +1888,7 @@ fn identify(job: &Job, clock: &mut Clock) -> R<Option<String>> {
         }
         let mut values = vec![x2.clone(), Real::one()];
         values.extend(atoms.iter().map(|a| value(a, &d2, w2)));
-        if !holds(&rel, &values, &d2, VERIFY_DIGITS) {
+        if !holds(&rel, &values, &d2, verify) {
             continue;
         }
         return Ok(format_relation(&rel, &atoms));

@@ -597,32 +597,34 @@ pub fn integrate(f: RealFn, a: f64, b: f64) -> Option<Estimate> {
     })
 }
 
-/// ∫ₐ^∞ f for a decaying integrand that keeps returning to zero: a head up to its first zero, then one panel per
-/// stretch between zeros, summed with Levin's u transform. Only series that provably converge are summed: terms
-/// that alternate and shrink, or keep one sign and shrink faster than 1/k^1.3.
-fn oscillating_tail(f: RealFn, a: f64) -> Option<Estimate> {
-    const PANELS: usize = 40;
-    const STEP: f64 = 0.05;
-    const MAX_SCAN: usize = 40_000;
+/// The zeros (or touch points) of f past a, for summing ∫ₐ^∞ f panel by panel: just over `panels` of them, each
+/// with whether f crosses there (false: it only touches zero, as sin²x/x² does). None when fewer than half show.
+pub fn tail_zeros(f: RealFn, a: f64, panels: usize) -> Option<Vec<(f64, bool)>> {
     let mut budget = Budget {
         evals: 4 * MAX_EVALS,
         work: WorkBudget::new(2 * MAX_WORK),
     };
+    scan_zeros(f, a, panels, &mut budget)
+}
+
+fn scan_zeros(f: RealFn, a: f64, panels: usize, budget: &mut Budget) -> Option<Vec<(f64, bool)>> {
+    const STEP: f64 = 0.05;
+    const MAX_SCAN: usize = 40_000;
     let absf = |x: f64| f(x).abs();
     // the zeros (or touch points) of f, found on an even scan and polished
-    let mut zeros: Vec<f64> = Vec::new();
+    let mut zeros: Vec<(f64, bool)> = Vec::new();
     let (mut y0, mut y1) = (f64::NAN, f(a + STEP));
     let mut top: f64 = y1.abs();
     // the scan step widens to a 64th of the gap between zeros, so a slow wave (sin x/x in degrees, zeros 180
     // apart) still shows its panels within the scan; a tight one keeps the 0.05 step
     let (mut step, mut x1) = (STEP, a + STEP);
     for _ in 2..MAX_SCAN {
-        if zeros.len() > PANELS {
+        if zeros.len() > panels {
             break;
         }
         let x = x1 + step;
         let y2 = f(x);
-        if !y2.is_finite() || spent(&mut budget) {
+        if !y2.is_finite() || spent(budget) {
             return None;
         }
         let crosses = y1 * y2 < 0.0;
@@ -632,11 +634,11 @@ fn oscillating_tail(f: RealFn, a: f64) -> Option<Estimate> {
             let lo = if crosses { x1 } else { x1 - step };
             let z = extremum(&absf, lo, x, 1.0);
             // a dip that isn't a zero (a wobble on a positive tail) is no panel edge
-            if absf(z) <= 1e-6 * top && zeros.last().is_none_or(|&p| z > p + step / 2.0) {
+            if absf(z) <= 1e-6 * top && zeros.last().is_none_or(|&p| z > p.0 + step / 2.0) {
                 if let Some(&p) = zeros.last() {
-                    step = STEP.max((z - p) / 64.0);
+                    step = STEP.max((z - p.0) / 64.0);
                 }
-                zeros.push(z);
+                zeros.push((z, crosses));
                 top = 0.0;
             }
         }
@@ -645,9 +647,22 @@ fn oscillating_tail(f: RealFn, a: f64) -> Option<Estimate> {
         y1 = y2;
         x1 = x;
     }
-    if zeros.len() <= PANELS / 2 {
-        return None;
-    }
+    (zeros.len() > panels / 2).then_some(zeros)
+}
+
+/// ∫ₐ^∞ f for a decaying integrand that keeps returning to zero: a head up to its first zero, then one panel per
+/// stretch between zeros, summed with Levin's u transform. Only series that provably converge are summed: terms
+/// that alternate and shrink, or keep one sign and shrink faster than 1/k^1.3.
+fn oscillating_tail(f: RealFn, a: f64) -> Option<Estimate> {
+    const PANELS: usize = 40;
+    let mut budget = Budget {
+        evals: 4 * MAX_EVALS,
+        work: WorkBudget::new(2 * MAX_WORK),
+    };
+    let zeros: Vec<f64> = scan_zeros(f, a, PANELS, &mut budget)?
+        .into_iter()
+        .map(|z| z.0)
+        .collect();
     let head = finite(f, a, zeros[0], &mut budget)?;
     let work = budget.work;
     let mut terms = Vec::with_capacity(zeros.len());
