@@ -57,6 +57,8 @@ private final class CrackModel: ObservableObject {
         if s.phase != lastPhase {
             lastPhase = s.phase
             phaseAt = CACurrentMediaTime()
+            // a tick moved the phase (to ready, mostly) while drawing: the view looks again at whether to keep drawing
+            DispatchQueue.main.async { [weak self] in self?.objectWillChange.send() }
         }
     }
 
@@ -65,9 +67,14 @@ private final class CrackModel: ObservableObject {
         apply(crackTick(state: s, now: GameTime.now()))
     }
 
-    func hit() { apply(crackPress(state: s, now: GameTime.now())) }
+    // the dial only redraws while something moves; a press or a restart wakes it from the still ready dial
+    func hit() {
+        objectWillChange.send()
+        apply(crackPress(state: s, now: GameTime.now()))
+    }
 
     func restart() {
+        objectWillChange.send()
         pop = nil
         apply(CrackStep(state: crackStart(level: 1, now: GameTime.now(), angle: 0, dir: 1), event: nil))
     }
@@ -88,7 +95,9 @@ private struct CrackGame: View {
                     Spacer(minLength: 0)
                     EscButton { shell.escape() }.padding(.trailing, -GameMetrics.sp2)
                 }
-                TimelineView(.animation) { _ in
+                // the ready dial is still (the needle waits, the shake, click and pop are over), and paused the
+                // clock stops: no frames then, it drew the same dial 60 times a second
+                TimelineView(.animation(minimumInterval: nil, paused: model.s.phase == .ready || shell.paused)) { _ in
                     let _ = model.frame()
                     VStack(spacing: 0) {
                         CrackDial(s: model.s, pop: model.pop, phaseAt: model.phaseAt, colors: colors)
@@ -96,6 +105,9 @@ private struct CrackGame: View {
                             // CrackPanel.tsx's dial aria-label
                             .accessibilityElement()
                             .accessibilityLabel("level \(model.s.level), \(model.s.left) to go")
+                            // role="button" on the page: VoiceOver's press is a tap on the dial
+                            .accessibilityAddTraits(.isButton)
+                            .accessibilityAction { model.hit() }
                             .contentShape(Rectangle())
                             .gesture(DragGesture(minimumDistance: 0)
                                 .onChanged { _ in

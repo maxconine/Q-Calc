@@ -189,6 +189,19 @@ QA item 27, Mac only (`mac/Sources/Games/Shell/GameSpeech.swift`, new; `Slots/Sl
 
 To test on Windows: with Narrator, `slots` ↵ and spin twice (both results read); go full screen mid-spin (the reels keep rolling). `connect 4` ↵ › easy, drop two discs, read the board; ← and → read the column.
 
+### Games: crack's idle dial, ember's stuck keys, VoiceOver for equal, 24/countdown, trails (20 Nov 2026)
+
+QA item 28, Mac only (`mac/Sources/Games/PuzzleSpeech.swift`, new; `Crack/CrackPanel.swift`, `Ember/EmberPanel.swift`, `Equal/EqualPanel.swift`, `Numbers/NumbersPanel.swift`, `Trails/TrailsPanel.swift`; test `mac/scripts/test-puzzles.sh`). Check the Windows games for the same:
+
+- **Ember, stuck keys:** holding a move key while the game window lost the keys with the app still in front (the bar called up, another window clicked) never sent the key-up: ember kept running, and online the held key kept going to the friend. Held keys are now let go when the game window stops being key, as they were when the app went to the back.
+- **Crack, idle frames:** the ready dial (needle waiting for the first press) and the paused game redrew the same dial every frame. Drawing now stops there and starts again on the press or on resume.
+- **Crack, VoiceOver:** the dial is a button (the page's `role="button"`) whose press is a tap.
+- **Equal, VoiceOver:** a row read only its characters, never their colours. Each row is now one line: `guess 1: 1 right spot, 2 elsewhere, plus not in it, …`, the row being typed `guess 3, typing: 4 times 5`. Keypad keys say their mark as a value, operators read as words, and the daily/practice switch says which is selected.
+- **24/countdown:** a used tile reads `8, used`; a tile click clears the last check's note, as typing does.
+- **Trails, VoiceOver:** the arena read `arena` only; its value is now the score and the banner (`you 1, computer 2. 3`).
+
+To test on Windows: with Narrator, `equal` ↵ › practice, enter a guess and read the row. `trails` ↵ › easy, read the arena. `ember` ↵ › same keyboard, hold D and click another Q Calc window (ember stops).
+
 ### Already ported
 
 The stacked fractions round (TeX sizes, Desmos keys, grown brackets, stacked history rows, answers shrinking as one) and the newer graph round were ported for 3.0.2 (branch `win-port-302`, 8 Nov 2026). What stays different on Windows:

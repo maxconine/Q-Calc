@@ -182,6 +182,8 @@ struct TrailsArenaView: View {
                     .aspectRatio(640 / 260, contentMode: .fit)
                     .accessibilityElement()
                     .accessibilityLabel("arena")
+                    // the score and the banner (count-down, who took the round), which VoiceOver never had
+                    .accessibilityValue(PuzzleSpeech.trailsArena(names: names, score: score, banner: f?.banner ?? ""))
                 if let f, !f.banner.isEmpty {
                     Text(f.banner)
                         .font(f.big ? .gameDigits(GameMetrics.fsDisplay, .semibold) : .game(GameMetrics.fsBody))

@@ -245,6 +245,8 @@ private struct NumbersGame: View {
                 ForEach(Array(r.deal.nums.enumerated()), id: \.offset) { i, n in
                     Button {
                         m.text = m.text.last?.isNumber == true ? "\(m.text) + \(num(n))" : "\(m.text)\(num(n))"
+                        // as typing does: the last check's complaint no longer applies
+                        m.note = ""
                         focused = true
                     } label: {
                         Text(num(n))
@@ -257,6 +259,7 @@ private struct NumbersGame: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(over != nil)
+                    .accessibilityLabel(PuzzleSpeech.numbersTile(num(n), used: i < taken.count && taken[i]))
                 }
             }
             GeometryReader { g in

@@ -140,6 +140,7 @@ private struct EqualGame: View {
     private var near: RGBA { colors.dark ? RGBA(0xc7a33a) : RGBA(0xc9a227) }
     private var miss: RGBA { colors.dark ? RGBA(0x545458) : RGBA(0x8e8e93) }
     private func fill(_ mk: EqualMark) -> RGBA { mk == .hit ? hit : mk == .near ? near : miss }
+    private func speech(_ mk: EqualMark) -> PuzzleSpeech.Mark { mk == .hit ? .hit : mk == .near ? .near : .miss }
 
     var body: some View {
         let guesses = m.guesses
@@ -199,6 +200,8 @@ private struct EqualGame: View {
                             .boxShadow(on ? colors.controlShadow : [], radius: 4)
                     }
                     .buttonStyle(.plain)
+                    // role="tab" aria-selected on the page
+                    .accessibilityAddTraits(on ? .isSelected : [])
                 }
             }
             .padding(2)
@@ -225,6 +228,9 @@ private struct EqualGame: View {
                         }
                     }
                     .offset(x: current ? shake(now - m.shakeAt) : 0)
+                    // a row reads as one line: each character with its colour's meaning (the tiles alone gave no mark)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(PuzzleSpeech.equalRow(r, text: String(text), marks: marks?.map(speech), current: current))
                 }
             }
             .frame(maxWidth: .infinity)
@@ -275,6 +281,8 @@ private struct EqualGame: View {
                     HStack(spacing: 5) {
                         ForEach(Array(keyRows[r]), id: \.self) { k in
                             EqualKey(label: glyph(k), mark: keys[String(k)], fill: keys[String(k)].map(fill)) { m.press(String(k)) }
+                                .accessibilityLabel(PuzzleSpeech.char(k))
+                                .accessibilityValue(keys[String(k)].map { speech($0).rawValue } ?? "")
                         }
                         if r == 1 {
                             EqualKey(label: "⌫", wide: true) { m.press("Backspace") }.accessibilityLabel("delete")
