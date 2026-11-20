@@ -278,6 +278,9 @@ fn filled_when_blank(result: LineResult, expr: &str, options: &EvaluateOptions) 
     if !result.display.is_empty() || result.value.is_some() {
         return result;
     }
+    if half_typed_index_call(expr) {
+        return result;
+    }
     let filled = crate::parens::fill_typed(expr);
     if filled == expr {
         return result;
@@ -289,6 +292,50 @@ fn filled_when_blank(result: LineResult, expr: &str, options: &EvaluateOptions) 
         }
         _ => result,
     }
+}
+
+/// QA item 72: an open `sum(`/`prod(`/`product(` whose index and bounds aren't typed yet, with a letter in it, is
+/// the start of `prod(k, k, 1, 5)`: filled, `prod(k` read as one kelvin (`1 K`), `prod(n, n` as `1 N^2`.
+fn half_typed_index_call(expr: &str) -> bool {
+    let chars: Vec<char> = crate::sums::normalize_sums(expr).chars().collect();
+    let mut open: Vec<usize> = Vec::new();
+    for (i, &c) in chars.iter().enumerate() {
+        match c {
+            '(' | '[' | '{' => open.push(i),
+            ')' | ']' | '}' => {
+                open.pop();
+            }
+            _ => {}
+        }
+    }
+    open.iter().any(|&at| {
+        let name: String = chars[..at]
+            .iter()
+            .rev()
+            .skip_while(|c| c.is_whitespace())
+            .take_while(|c| c.is_ascii_alphabetic())
+            .collect::<String>()
+            .chars()
+            .rev()
+            .collect::<String>()
+            .to_lowercase();
+        if !matches!(name.as_str(), "sum" | "prod" | "product") {
+            return false;
+        }
+        let mut depth = 0i32;
+        let mut commas = 0;
+        let mut letter = false;
+        for &c in &chars[at + 1..] {
+            match c {
+                '(' | '[' | '{' => depth += 1,
+                ')' | ']' | '}' => depth -= 1,
+                ',' if depth == 0 => commas += 1,
+                c if c.is_alphabetic() => letter = true,
+                _ => {}
+            }
+        }
+        letter && commas < 3
+    })
 }
 
 /// The squiggle's and ↵'s evaluator: whether a piece of text answers (through `ans` when the line chains).
