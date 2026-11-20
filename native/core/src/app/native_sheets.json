@@ -151,7 +151,7 @@
        {
         "show": "S_{n} = a_{1}(1 − r^{n})/(1 − r)",
         "copy": "S_n = a_1(1 - r^n)/(1 - r)",
-        "note": "geometric sum",
+        "note": "geometric sum, r ≠ 1",
         "typst": [
          "S_(n) = (a_(1)(1 - r^(n)))/(1 - r)"
         ]
@@ -8160,7 +8160,7 @@
        {
         "show": "f(∞) = lim_{s→0} s F(s)",
         "copy": "f(∞) = lim_s→0 s F(s)",
-        "note": "final value, if the limit exists",
+        "note": "final value, if f settles: poles of sF(s) in the left half-plane",
         "typst": [
          "f(∞) = lim_(s→0) s F(s)"
         ]
@@ -11689,7 +11689,7 @@
        {
         "show": "%OS = 100 e^{−πζ/√(1 − ζ^{2})}",
         "copy": "%OS = 100 e^(-πζ/√(1 - ζ^2))",
-        "note": "overshoot",
+        "note": "overshoot, 0 < ζ < 1",
         "typst": [
          "\\%\"OS\" = 100 e^((-π\\ζ)/(sqrt(1 - ζ^(2))))"
         ]
