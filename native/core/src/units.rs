@@ -2500,10 +2500,21 @@ fn quantity_text_now(v: &Value) -> Option<String> {
         // a compound in SI base units (`200 kg / s^2`) must read back as itself
         let text = format!("{amount} {unit_label}");
         let back = try_convert_opt(&text, &empty, &NO_VARS, false, shown)?;
-        return (back.kind == ValueKind::Number
-            && back.unit.as_deref() == Some(unit_label)
+        let reads_back = back.kind == ValueKind::Number
             && back.unit_id.as_deref().is_none_or(str::is_empty)
-            && same_scale(back.n, n))
+            && same_scale(back.n, n);
+        if reads_back && back.unit.as_deref() == Some(unit_label) {
+            return Some(text);
+        }
+        // native only: a conversion's own spelling (`5760 lb*in` from `… to lb*in`) reads back as the same amount
+        // written another way (`lb·in`); it's the same quantity when it converts back to that spelling
+        let again = format!("{text} to {unit_label}");
+        return (reads_back
+            && try_convert_opt(&again, &empty, &NO_VARS, false, shown).is_some_and(|b| {
+                b.kind == ValueKind::Number
+                    && b.unit.as_deref() == Some(unit_label)
+                    && same_scale(b.n, n)
+            }))
         .then_some(text);
     };
     // a symbol that reads back as another unit (g for gee, not gram) falls back to one of its names

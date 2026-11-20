@@ -586,3 +586,18 @@ fn more_named_constants_answer_in_words() {
     assert_eq!(sheet(&["a = 5", "a * 2"]), ["5", "10"]);
 }
 
+// 2026-11-11: `ans/2` after `160lbs*3ft to lb*in` had "no answer": a conversion to a compound unit kept no `ans`
+#[test]
+fn ans_after_a_conversion_to_a_compound_unit() {
+    assert_eq!(
+        sheet(&["160lbs*3ft to lb*in", "ans/2"]),
+        ["5760 lb*in", "2880 lb·in"]
+    );
+    assert_eq!(sheet(&["5 N*m to N*m", "ans*3"]), ["5 N*m", "15 N·m"]);
+    let q = evaluate_line("160lbs*3ft to lb*in", &opts())
+        .quantity
+        .unwrap_or_default();
+    assert!(!q.is_empty(), "the answer keeps a quantity for ans");
+    assert_eq!(after(&q, true, "ans/2").0, "2880 lb·in");
+}
+
