@@ -254,7 +254,9 @@ final class MessageFiles: NSObject, ObservableObject {
             case .changed: done(self.shareStatus("key-changed", to: to, what: what))
             case .none: done(self.shareStatus("no-key", to: to, what: what))
             case .unknown: done(self.shareStatus("unknown", to: to, what: what))
-            case let .offline(status): done(self.shareStatus(status == "not-yours" ? status : "network", to: to, what: what))
+            // the relay's own word when it gave one (too many asks: "try again in a minute", not "couldn't reach")
+            case let .offline(status):
+                done(self.shareStatus(["not-yours", "too-many"].contains(status) ? status : "network", to: to, what: what))
             }
         }
     }

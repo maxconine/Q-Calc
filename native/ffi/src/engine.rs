@@ -345,6 +345,10 @@ impl State {
         if jsstr::trim(&req.text).is_empty() {
             return None;
         }
+        // a money line with no rates on hand isn't wrong, just waiting (no squiggle under `usd`)
+        if live::waits_for_rates(&self.core_request(req), &req.text) {
+            return None;
+        }
         let names = blank::Names {
             variables: req.context.variables.keys().cloned().collect(),
             functions: req.context.functions.keys().cloned().collect(),

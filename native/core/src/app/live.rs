@@ -249,6 +249,26 @@ fn phrase_answer(
     .map(|p| (p.display, p.n))
 }
 
+/// ↵'s hint on a money line while there are no rates to convert with (never fetched, or over a week old).
+pub const NO_RATES_HINT: &str =
+    "no exchange rates yet · the ECB’s daily rates load once you’re online";
+
+/// native only (QA item 67): a currency line that would convert with rates, while there are none (a Mac that has
+/// been offline since install, or for over a week). It said “usd” isn’t a unit and underlined it.
+pub fn waits_for_rates(req: &LiveRequest, expr: &str) -> bool {
+    req.phrases
+        && crate::phrases::currency::CurrencyRates::from_json(&req.rates).is_none()
+        && !jstr::trim(expr).is_empty()
+        && answer_phrase(
+            expr,
+            req.now_ms,
+            12.0,
+            &crate::phrases::currency::stand_in_rates(),
+            req.time_zone.as_deref(),
+        )
+        .is_some()
+}
+
 /// native only (QA item 57): a line the grey parens close reads as they show it, in the bar (live and ↵). The
 /// plain path fills them itself; `det([1 2; 3 4]`, `solve(x^2 = 9`, `d/dx (x^3`, `∫(x^2, 0, 1`, `frac(1, 2` were
 /// blank until typed in, though Tab/→ (which types the grey ones) made them answer. Tried only after the line as
@@ -537,6 +557,7 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
         && !help
         && !games
         && !looks_like_natural_language(q)
+        && !waits_for_rates(req, q)
     {
         // the line itself was just evaluated, exactly as `evaluates` would (same text, same options), so its
         // first question is already answered: that saves a second evaluation of every blank line
@@ -863,6 +884,9 @@ pub fn commit(req: &LiveRequest, rows: &[Json], row_id: &str) -> Commit {
         )));
     }
     if jstr::trim(&expr).is_empty() || shown.is_empty() || is_improper_unit_conversion(&shown) {
+        if waits_for_rates(req, q) {
+            return unsaved(Some(NO_RATES_HINT.into()));
+        }
         let graph = is_graph_command(q);
         let span = if graph || jstr::trim(q).is_empty() {
             None

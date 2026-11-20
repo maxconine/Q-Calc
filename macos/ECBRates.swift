@@ -12,6 +12,9 @@ final class ECBRates {
     static let day: TimeInterval = 24 * 60 * 60
     // older than this and a conversion would quote a rate nobody trades at any more
     static let stale: TimeInterval = 7 * day
+    // a failed try (offline, the ecb down, a captive portal's page) is tried again this soon, on the hourly check,
+    // rather than a day later: a mac that wakes offline would otherwise wait a day once it's back online
+    static let retry: TimeInterval = 30 * 60
 
     struct Rates: Equatable {
         var date: String
@@ -26,6 +29,11 @@ final class ECBRates {
 
         func due(_ now: TimeInterval) -> Bool {
             now < checked || now - checked >= ECBRates.day
+        }
+
+        // a try at `now` that brought nothing usable: due again after `retry`, not a day
+        mutating func failed(_ now: TimeInterval) {
+            checked = min(checked, now - ECBRates.day + ECBRates.retry)
         }
 
         // what the page reads as __QCALC_RATES, or nil when there's nothing fresh enough
@@ -65,12 +73,15 @@ final class ECBRates {
     private let lock = NSLock()
     private var cache: Cache
     private let path: URL?
+    private let url: URL
     private var timer: Timer?
     // called on the main thread with the new page value (or nil) whenever it changes
     var onChange: ((String) -> Void)?
 
-    init(path: URL? = ECBRates.defaultPath) {
+    // `url` is the ecb's but for tests (rates_test.swift points it at a port nothing listens on)
+    init(path: URL? = ECBRates.defaultPath, url: URL = ECBRates.url) {
         self.path = path
+        self.url = url
         cache = path.flatMap { try? Data(contentsOf: $0) }.map(Cache.from) ?? Cache()
     }
 
@@ -110,14 +121,18 @@ final class ECBRates {
         self.timer = timer
     }
 
-    func refresh() {
+    /// `done` (tests only) is called once the try has finished, on URLSession's queue.
+    func refresh(done: (() -> Void)? = nil) {
         let now = Date().timeIntervalSince1970
         lock.lock()
         let due = cache.due(now)
         if due { cache.checked = now }
         lock.unlock()
-        guard due else { return }
-        var request = URLRequest(url: Self.url, timeoutInterval: 20)
+        guard due else {
+            done?()
+            return
+        }
+        var request = URLRequest(url: url, timeoutInterval: 20)
         request.cachePolicy = .reloadIgnoringLocalCacheData
         URLSession.shared.dataTask(with: request) { [weak self] data, _, _ in
             guard let self else { return }
@@ -126,6 +141,9 @@ final class ECBRates {
             if let data, data.count < 1 << 20, let fresh = Self.parse(data) {
                 self.cache.rates = fresh
                 self.cache.fetched = Date().timeIntervalSince1970
+            } else {
+                // what's cached stays (still used while under a week old)
+                self.cache.failed(Date().timeIntervalSince1970)
             }
             self.save()
             self.lock.unlock()
@@ -133,6 +151,7 @@ final class ECBRates {
             if after != before {
                 DispatchQueue.main.async { self.onChange?(after) }
             }
+            done?()
         }.resume()
     }
 

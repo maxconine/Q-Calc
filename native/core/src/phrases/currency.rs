@@ -65,6 +65,17 @@ const CODES: [&str; 25] = [
     "DKK", "HKD", "SGD", "KRW", "BRL", "ZAR", "PLN", "CZK", "HUF", "TRY", "ILS", "THB",
 ];
 
+/// Native only: every known currency at 1 per euro, to ask whether a line would convert at all when no rates are
+/// on hand (`live::waits_for_rates`); never used for an answer.
+pub fn stand_in_rates() -> Json {
+    let rates: serde_json::Map<String, Json> = CODES
+        .iter()
+        .filter(|c| **c != "EUR")
+        .map(|c| (c.to_string(), serde_json::json!(1.0)))
+        .collect();
+    serde_json::json!({ "base": "EUR", "rates": rates })
+}
+
 pub(super) fn symbol(s: &str) -> Option<Currency> {
     Some(match s {
         "$" => "USD",

@@ -39,12 +39,17 @@ enum RatesTest {
         check(cache.due(10), "a clock set back asks again")
         check(cache.pageValue(1000 + 6 * day) != nil, "fresh for a week")
         check(cache.pageValue(1000 + 7 * day) == nil, "stale after a week")
+        // a failed try is asked again in half an hour, not a day; a clock set back still asks at once
+        var failed = ECBRates.Cache(checked: 1000, fetched: 500, rates: r)
+        failed.failed(1000)
+        check(!failed.due(1000 + ECBRates.retry - 1) && failed.due(1000 + ECBRates.retry), "retry after a failure")
+        check(failed.fetched == 500 && failed.rates == r, "a failure keeps the cache")
         cache.rates = nil
         check(cache.pageValue(1000) == nil, "nothing to give")
 
         // the page gets { base, rates }, or null
         let page = ECBRates.javaScript(ECBRates.Cache(checked: 0, fetched: 0, rates: r).pageValue(10))
-        check(page == #"{"base":"EUR","rates":{"GBP":0.8375,"JPY":175.4,"USD":1.1204}}"#, "page json: \(page)")
+        check(page == #"{"base":"EUR","rates":{"GBP":0.8375,"JPY":175.4,"USD":1.1204},"date":"2026-10-22"}"#, "page json: \(page)")
         check(ECBRates.javaScript(nil) == "null", "null")
 
         // the cache round-trips, and the windows app's file reads the same
@@ -53,7 +58,34 @@ enum RatesTest {
         let windows = #"{"checked":5,"fetched":4,"date":"2026-10-22","rates":{"USD":1.1204,"EUR":1,"bad":2,"GBP":-1}}"#
         check(ECBRates.Cache.from(Data(windows.utf8)).rates == ECBRates.Rates(date: "2026-10-22", rates: ["USD": 1.1204]), "windows file")
         check(ECBRates.Cache.from(Data("nope".utf8)) == ECBRates.Cache(), "junk cache")
+        offline(r!)
         print("rates test passed")
+    }
+
+    // no network: the ecb asked at a port nothing listens on (never the real host, no system settings touched).
+    // the cached rates stay, the page value doesn't change, and the next try is in half an hour
+    static func offline(_ r: ECBRates.Rates) {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("qcalc-rates-\(UUID().uuidString)")
+        let path = dir.appendingPathComponent("rates.json")
+        let now = Date().timeIntervalSince1970
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try? ECBRates.Cache(checked: now - 2 * ECBRates.day, fetched: now - 2 * ECBRates.day, rates: r).json()!.write(to: path)
+        let rates = ECBRates(path: path, url: URL(string: "http://127.0.0.1:9/eurofxref-daily.xml")!)
+        let before = rates.pageJSON
+        var changed = false
+        rates.onChange = { _ in changed = true }
+        let finished = DispatchSemaphore(value: 0)
+        rates.refresh { finished.signal() }
+        check(finished.wait(timeout: .now() + 30) == .success, "offline try finishes")
+        let saved = ECBRates.Cache.from(try! Data(contentsOf: path))
+        check(rates.pageJSON == before && before.contains("USD") && !changed, "offline keeps the rates")
+        check(saved.rates == r && !saved.due(now + 60) && saved.due(now + ECBRates.retry + 60), "offline retries in half an hour: \(saved)")
+        // with nothing cached, the page gets null (the bar then says the rates haven't loaded)
+        let empty = ECBRates(path: dir.appendingPathComponent("none.json"), url: URL(string: "http://127.0.0.1:9/")!)
+        let second = DispatchSemaphore(value: 0)
+        empty.refresh { second.signal() }
+        check(second.wait(timeout: .now() + 30) == .success && empty.pageJSON == "null", "offline with no cache")
+        try? FileManager.default.removeItem(at: dir)
     }
 
     static func check(_ ok: Bool, _ what: String) {
