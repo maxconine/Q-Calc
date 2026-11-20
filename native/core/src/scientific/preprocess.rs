@@ -600,6 +600,14 @@ pub fn preprocess_ascii(expr: &str, extra: &[String]) -> String {
     static COUNT_CALL: Lazy = Lazy::new(|| js(r"\bcount\s*\(", ""));
     static RANGE: Lazy = Lazy::new(|| js(r"\[([^\][]*?)\s*\.\.\.\s*([^\][]*?)\]", ""));
     static LOG_BASE: Lazy = Lazy::new(|| js(r"\blog_(\d+(?:\.\d+)?)\s*\(([^)]+)\)", ""));
+    // native only: `log_2 8` with no parens takes the number or letter after it, as `\log_2 8` does (the web
+    // left it blank)
+    static LOG_BASE_BARE: Lazy = Lazy::new(|| {
+        js(
+            r"\blog_(\d+(?:\.\d+)?)\s*(\d+(?:\.\d+)?(?![\w.(^!])|[A-Za-z](?![\w.(^!]))",
+            "",
+        )
+    });
     static WORDS: crate::jsre::Lazy<Vec<(Regex, &'static str)>> = crate::jsre::Lazy::new(|| {
         [
             (r"\barcsin\b", "", "asin"),
@@ -720,6 +728,9 @@ pub fn preprocess_ascii(expr: &str, extra: &[String]) -> String {
     });
     let s = lit(&IMAG, &lit(&REAL, &s, "re"), "im");
     let s = replace(&LOG_BASE, &s, |c| format!("log({}, {})", g(c, 2), g(c, 1)));
+    let s = replace(&LOG_BASE_BARE, &s, |c| {
+        format!("log({}, {})", g(c, 2), g(c, 1))
+    });
     let callable = callable_names(extra);
     let s = replace(&callable.implicit, &s, |c| {
         format!("{}*{}{}", g(c, 1), g(c, 2), g(c, 3))

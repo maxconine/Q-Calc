@@ -547,14 +547,42 @@ pub fn preview_math(expr: &str) -> String {
     if let Some(d) = derivative_math(&s) {
         return d;
     }
+    if let Some(i) = indefinite_math(&s) {
+        return i;
+    }
     to_typst_math(&mark_units(&keyword_math(&s)))
+}
+
+/// native only: an integral with no bounds (`int x^2 dx`, `∫ sin x dx`, `integral of e^x`) as ∫ … dx; it had
+/// typeset as the word "int" and was hidden.
+fn indefinite_math(s: &str) -> Option<String> {
+    let m = caps(
+        lazy!(
+            r"^(?:∫|int\b|(?:the\s+)?integral\s+of\b|integrate\b)\s*(.+?)(?:\s*\bd([A-Za-z]))?$",
+            "is"
+        ),
+        s,
+    )?;
+    let body = jsre::group(&m, 1);
+    // bounds of any spelling are the keyword forms'
+    if jsre::test(lazy!(r"\bfrom\b|\.\.|^[_^]", "i"), body) {
+        return None;
+    }
+    let v = match jsre::group(&m, 2) {
+        "" => index_of(body, "x"),
+        v => v.to_string(),
+    };
+    Some(format!(
+        "integral {} dif {v}",
+        to_typst_math(&mark_units(body))
+    ))
 }
 
 /// The keyword forms the calculator reads, respelled with the limits and signs `to_typst_math` typesets.
 fn keyword_math(s: &str) -> String {
     let int_range = lazy!(r"^(?:int|integral|∫)\s*(\S+?)\s*\.\.\s*(\S+)\s+(.+)$", "is");
     let int_words = lazy!(
-        r"^(?:(?:the\s+)?integral\s+of|integrate)\s+(.+?)\s+from\s+(\S+)\s+to\s+(\S+)$",
+        r"^(?:(?:the\s+)?integral\s+of|integrate|int(?=\s)|∫)\s*(.+?)\s+from\s+(\S+)\s+to\s+(\S+)$",
         "is"
     );
     let sum_words = lazy!(
@@ -641,7 +669,7 @@ fn keyword_math(s: &str) -> String {
 }
 
 fn is_keyword_math(s: &str) -> bool {
-    derivative_math(s).is_some() || keyword_math(s) != s
+    derivative_math(s).is_some() || indefinite_math(s).is_some() || keyword_math(s) != s
 }
 
 /// The variable a sum or integral runs over: the usual one if it's there, else the body's only letter.

@@ -7,7 +7,7 @@
 //! - first order linear with varying coefficients, `y' + p(x) y = q(x)` where q/p is a constant: `k + C e^(-∫p)`
 //! - separable `y' = g(x) y^2`: `y = -1/(G + C)`
 //!
-//! Conditions after `;` (`y(0)=2`, `y'(0)=1`) settle the constants. Every answer, the general one with sample
+//! Conditions after `;` or `,` (`y(0)=2`, `y'(0)=1`) settle the constants. Every answer, the general one with sample
 //! constants and the one the conditions settle, is put back into the equation numerically before it's shown, and
 //! anything else stays blank. Derivatives are in radians whatever the angle mode: calculus of trig functions is.
 
@@ -100,7 +100,12 @@ static CONDITION: Lazy = Lazy::new(|| {
 /// None: not a differential equation. Some(None): one, but not one this reads.
 fn parse(raw: &str, sci: &ScientificContext) -> Option<Option<Ode>> {
     let text = raw.trim().replace(['′', '’'], "'").replace('″', "''");
-    let parts = split_top(&text, ';');
+    let mut parts = split_top(&text, ';');
+    // native only: conditions after a comma too (`y' = y, y(0)=1`), when every piece after the first is one
+    let commas = split_top(parts[0], ',');
+    if commas.len() > 1 && commas[1..].iter().all(|c| jsre::test(&CONDITION, c)) {
+        parts.splice(0..1, commas);
+    }
     let head = parts[0];
     // `dy/dx` and `d^2y/dx^2` as primes, keeping the letter they're by
     let mut var_from_leibniz: Option<String> = None;

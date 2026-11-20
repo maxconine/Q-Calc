@@ -833,9 +833,59 @@ fn parse_calculus(
     if text.is_empty() {
         return None;
     }
+    if let Some(d) = diff_call(text) {
+        return parse_derivative(&d, functions, variables);
+    }
     parse_derivative(text, functions, variables)
         .or_else(|| parse_integral(text, functions))
         .or_else(|| parse_limit(text))
+}
+
+/// native only: the CAS spelling `diff(x^3, x)` / `diff(sin x, x, 2)` as `d/dx (x^3)` / `d²/dx² (sin x)`
+/// (the web left it blank, `diff` not a name).
+fn diff_call(text: &str) -> Option<String> {
+    // `derivative(…)` stays blank: the web golden has mathjs's `derivative("x^2", "x")` blank, and its quotes are
+    // gone by the time the line gets here
+    let inner = text
+        .strip_prefix("diff")?
+        .trim_start()
+        .strip_prefix('(')?
+        .strip_suffix(')')?;
+    // the outer ( must close at the end, and the arguments split at commas outside brackets
+    let (mut depth, mut args, mut start) = (0i32, Vec::new(), 0);
+    for (i, ch) in inner.char_indices() {
+        match ch {
+            '(' | '[' | '{' => depth += 1,
+            ')' | ']' | '}' => {
+                depth -= 1;
+                if depth < 0 {
+                    return None;
+                }
+            }
+            ',' if depth == 0 => {
+                args.push(inner[start..i].trim());
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    args.push(inner[start..].trim());
+    let (body, v) = (*args.first()?, *args.get(1)?);
+    let order: u32 = match args.get(2) {
+        None => 1,
+        Some(n) => n.parse().ok()?,
+    };
+    static NAME: Lazy = Lazy::new(|| re(r"^(?:[A-Za-z]|[α-ωΑ-Ω])$", ""));
+    if body.is_empty() || args.len() > 3 || !jsre::test(&NAME, v) || !(1..=9).contains(&order) {
+        return None;
+    }
+    let d = match order {
+        1 => format!("d/d{v}"),
+        2 => format!("d²/d{v}²"),
+        3 => format!("d³/d{v}³"),
+        n => vec![format!("d/d{v}"); n as usize].join(" "),
+    };
+    Some(format!("{d} ({body})"))
 }
 
 /// Cheap syntactic check, true while a calculus line is still being typed.

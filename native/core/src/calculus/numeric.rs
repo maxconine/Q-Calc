@@ -613,24 +613,29 @@ fn oscillating_tail(f: RealFn, a: f64) -> Option<Estimate> {
     let mut zeros: Vec<f64> = Vec::new();
     let (mut y0, mut y1) = (f64::NAN, f(a + STEP));
     let mut top: f64 = y1.abs();
-    for i in 2..MAX_SCAN {
+    // the scan step widens to a 64th of the gap between zeros, so a slow wave (sin x/x in degrees, zeros 180
+    // apart) still shows its panels within the scan; a tight one keeps the 0.05 step
+    let (mut step, mut x1) = (STEP, a + STEP);
+    for _ in 2..MAX_SCAN {
         if zeros.len() > PANELS {
             break;
         }
-        let x = a + STEP * i as f64;
+        let x = x1 + step;
         let y2 = f(x);
         if !y2.is_finite() || spent(&mut budget) {
             return None;
         }
-        let x1 = x - STEP;
         let crosses = y1 * y2 < 0.0;
         let touches =
             y0.is_finite() && y1.abs() < y0.abs() && y1.abs() <= y2.abs() && y1.abs() < 0.05 * top;
         if crosses || touches {
-            let lo = if crosses { x1 } else { x1 - STEP };
+            let lo = if crosses { x1 } else { x1 - step };
             let z = extremum(&absf, lo, x, 1.0);
             // a dip that isn't a zero (a wobble on a positive tail) is no panel edge
-            if absf(z) <= 1e-6 * top && zeros.last().is_none_or(|&p| z > p + STEP / 2.0) {
+            if absf(z) <= 1e-6 * top && zeros.last().is_none_or(|&p| z > p + step / 2.0) {
+                if let Some(&p) = zeros.last() {
+                    step = STEP.max((z - p) / 64.0);
+                }
                 zeros.push(z);
                 top = 0.0;
             }
@@ -638,6 +643,7 @@ fn oscillating_tail(f: RealFn, a: f64) -> Option<Estimate> {
         top = top.max(y2.abs());
         y0 = y1;
         y1 = y2;
+        x1 = x;
     }
     if zeros.len() <= PANELS / 2 {
         return None;
