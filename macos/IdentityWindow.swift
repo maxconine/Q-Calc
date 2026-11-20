@@ -1565,19 +1565,19 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         setFilter(note.isEmpty ? formula : note)
     }
 
-    // the row a formula is (SheetMatch): one of a row's cells, either way round, or a chained row holding its sides;
-    // an exact cell anywhere wins over a chain
+    // the row a formula is (SheetMatch): the best tier wins (an exact cell anywhere over a chain over a looser match),
+    // the first such row on a tie
     private static func explainedRow(for formula: String, in sheets: [IdentitySheet]) -> IdentitySheet.Item? {
-        guard !SheetMatch.key(formula).isEmpty else { return nil }
+        guard let wanted = SheetMatch.Formula(formula) else { return nil }
         let rows = sheets.lazy.flatMap(\.sections).flatMap(\.groups).flatMap(\.items).filter { $0.explain != nil }
-        func cells(_ item: IdentitySheet.Item) -> [String] { (item.lead + [item.runs]).map { $0.map(\.text).joined() } }
-        let want = SheetMatch.key(formula)
-        let sides = formula.components(separatedBy: "=")
-        let flipped = sides.count == 2 ? SheetMatch.key(sides[1] + "=" + sides[0]) : nil
-        if let exact = rows.first(where: { cells($0).contains { SheetMatch.key($0) == want || SheetMatch.key($0) == flipped } }) {
-            return exact
+        var best: (tier: Int, item: IdentitySheet.Item)?
+        for item in rows {
+            let cells = (item.lead + [item.runs]).map { SheetMatch.markup($0.map { ($0.text, $0.shift) }) }
+            guard let tier = wanted.tier(cells), tier < (best?.tier ?? .max) else { continue }
+            best = (tier, item)
+            if tier == 0 { break }
         }
-        return rows.first { cells($0).contains { SheetMatch.same(formula, cell: $0) } }
+        return best?.item
     }
 
     // ↵ in the filter picks the first row it leaves (copies and explains it, or opens its sheet)
