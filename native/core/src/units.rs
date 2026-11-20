@@ -1762,6 +1762,18 @@ impl<'v> Parser<'v> {
 
     fn parse_primary(&mut self) -> Option<Qty> {
         self.skip();
+        // `-(2 m) * 3`: a minus before a bracket negates it (a number's own sign is read with the number)
+        if self.at(self.i) == Some('-') {
+            let mut k = self.i + 1;
+            while self.at(k) == Some(' ') {
+                k += 1;
+            }
+            if self.at(k) == Some('(') {
+                self.i = k;
+                let inner = self.parse_pow()?;
+                return Some(mul_qty(&Qty::plain(-1.0), &inner));
+            }
+        }
         if self.eat('(') {
             if self.depth >= MAX_BRACKETS {
                 return None;

@@ -612,6 +612,10 @@ fn feet_and_inches_marks() {
     assert_eq!(show("6'2\""), "6 ft 2 in");
     assert_eq!(show("6′2″"), "6 ft 2 in");
     assert_eq!(show("6'2"), "6 ft 2 in");
+    // smart quotes, as macOS types them
+    assert_eq!(show("6’2”"), "6 ft 2 in");
+    assert_eq!(show("1.0621\" + 0.328125”"), show("1.0621\" + 0.328125\""));
+    assert_eq!(show("0.328125”"), show("0.328125\""));
     assert_eq!(show("6'2\" + 1'11\""), "8 ft 1 in");
     assert_eq!(show("5 ft + 3 in"), "5 ft 3 in");
     assert_eq!(show("10''"), show("10\""));
@@ -902,4 +906,16 @@ fn with_respect_to_is_not_a_unit() {
     use qcalc_core::app::unit_spans::unit_spans;
     assert!(unit_spans("integrate t^2 with respect to t", &[], &[]).is_empty());
     assert_eq!(unit_spans("5 kg to t", &[], &[]).len(), 2);
+}
+
+/// A minus before a bracket of units negates it: `-(2 m) * 3` is -6 m, not blank.
+#[test]
+fn a_minus_before_a_bracket_of_units() {
+    assert_eq!(show("-(2 m) * 3"), "-6 m");
+    assert_eq!(show("- (2 m)"), "-2 m");
+    assert_eq!(show("-(1 V / 10 kΩ) * 33 kΩ"), "-3.3 V");
+    assert_eq!(show("-(2 m)^2"), "-4 m²");
+    assert_eq!(show("-(5 kg) / -(2 s)"), "2.5 kg/s");
+    assert_eq!(show("3 m - (1 m)"), "2 m");
+    assert_eq!(show("-(2*3)"), "-6");
 }

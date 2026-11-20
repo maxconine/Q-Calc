@@ -100,11 +100,19 @@ fn feet_and_fraction(inches: f64, denominator: f64, split: bool) -> String {
 }
 
 fn marks(text: &str) -> Cow<'_, str> {
-    if !text.contains(['\'', '′', '″']) {
+    if !text.contains(['\'', '′', '″', '’', '”', '“']) {
         return Cow::Borrowed(text);
     }
     let arc = text.contains('°');
+    // smart quotes (macOS turns `"` into `”` and `'` into `’`) are the same marks after a digit
     let chars: Vec<char> = text.chars().collect();
+    let chars: Vec<char> = (0..chars.len())
+        .map(|i| match chars[i] {
+            '’' if i > 0 && chars[i - 1].is_ascii_digit() => '\'',
+            '”' | '“' if i > 0 && chars[i - 1].is_ascii_digit() => '"',
+            c => c,
+        })
+        .collect();
     let mut out = String::with_capacity(text.len() + 1);
     let mut i = 0;
     while i < chars.len() {
