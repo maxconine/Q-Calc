@@ -238,11 +238,15 @@ Monterey stand-in. Every fork:
 | Settings forms (`groupedForm`) | `.formStyle(.grouped)` | Monterey's plain `Form` with 20 pt margins | no grouped cards behind the sections; section titles are plain headers |
 | Settings tab size (`macos/SettingsWindow.swift`) | `sizingOptions = [.preferredContentSize]` | `preferredContentSize` set to the tab's fixed size | none (each tab's content is a fixed frame) |
 | Open at login (`macos/LoginItem.swift`) | `SMAppService.mainApp` | a launch agent, `~/Library/LaunchAgents/<bundle id>.login.plist`, running `open -a <the app>` at login | it isn't listed under Login Items (Monterey shows no launch agents there); moving the app after turning it on needs it turned off and on again |
+| Graph settings button (`GraphPanel.swift`, `Compat12.swift` `sfSymbol13`) | `wrench.adjustable` | `wrench` (SF Symbols 4 names draw nothing on 12) | the wrench is the plain one, not the adjustable one |
+| Notifications button in Messages (`macos/Messages.swift` `openNotificationSettings`) | System Settings › Notifications extension | System Preferences › Notifications at the app's row | none (13's URL opened System Preferences on its grid) |
 
 Forks that were already there and only take the older path on 12 too: the bar's `NSHostingView.sizingOptions = []`
 (13; on 12 the hosting view keeps its default sizing constraints inside the autoresizing card), ↑ ↓ between system
 equations (`onKeyPress`, 14; Tab moves between them on 12 and 13), the input's inline prediction (14) and Writing Tools
 (15) switches.
+
+`scripts/test-compat12.sh` checks what the compiler doesn't: every SF Symbol name exists on 12 (or goes through `sfSymbol13`) and the web-view app's `macos/` Swift, which the settings forms share, typechecks at 12.
 
 Unverified: no macOS 12 machine or VM was available, so every 12 column above is built against the SDK with the
 compiler's availability checks (no errors at `arm64/x86_64-apple-macosx12.0`) but not run. On this Mac (macOS 26)

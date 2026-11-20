@@ -576,6 +576,14 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
 
     func openNotificationSettings() {
         let id = Bundle.main.bundleIdentifier ?? ""
+        // Monterey's System Preferences opens on any x-apple.systempreferences URL (so `open` says true) but
+        // doesn't know the 13+ extension id and stays on its grid: there the old pane, at this app's row
+        guard #available(macOS 13, *) else {
+            if let old = URL(string: "x-apple.systempreferences:com.apple.preference.notifications?id=\(id)") {
+                NSWorkspace.shared.open(old)
+            }
+            return
+        }
         let pane = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)")
         if let pane, NSWorkspace.shared.open(pane) { return }
         if let old = URL(string: "x-apple.systempreferences:com.apple.preference.notifications") { NSWorkspace.shared.open(old) }

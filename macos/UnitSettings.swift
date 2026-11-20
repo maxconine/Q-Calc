@@ -137,7 +137,7 @@ struct UnitSettingsView: View {
     var body: some View {
         Form {
             Section {
-                LabeledContent {
+                QLabeled {
                     Button("Reset") {
                         settings.resetDefaultUnits(notifyWeb: true)
                     }
@@ -161,7 +161,7 @@ struct UnitSettingsView: View {
                 }
             }
         }
-        .formStyle(.grouped)
+        .groupedForm()
     }
 
     private func binding(for dim: String) -> Binding<String> {

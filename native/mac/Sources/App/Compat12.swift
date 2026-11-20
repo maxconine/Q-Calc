@@ -80,3 +80,10 @@ final class HoverTrackingView: NSView {
         action?(convert(event.locationInWindow, from: nil))
     }
 }
+
+/// An SF Symbol from SF Symbols 4 (macOS 13): Monterey has no image by that name and draws nothing, so there the
+/// nearest older symbol. The compiler doesn't check symbol names; `scripts/test-compat12.sh` does.
+func sfSymbol13(_ name: String, else older: String) -> String {
+    if #available(macOS 13, *) { return name }
+    return older
+}

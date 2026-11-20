@@ -64,7 +64,7 @@ struct GraphPanel: View {
                 HeadIcon(symbol: "plus.magnifyingglass", tip: "Zoom in") { model.zoomGraph(0.8) }
                 HeadIcon(symbol: "plus", tip: "Add an equation") { model.addGraphLayer() }
                 HeadIcon(symbol: "camera", tip: "Export a picture of the graph", on: exportShown) { exportShown.toggle() }
-                HeadIcon(symbol: "wrench.adjustable", tip: "Graph settings", on: settingsShown) { settingsShown.toggle() }
+                HeadIcon(symbol: sfSymbol13("wrench.adjustable", else: "wrench"), tip: "Graph settings", on: settingsShown) { settingsShown.toggle() }
                 Button { model.homeGraph() } label: {
                     Text("reset")
                         .font(.system(size: Theme.small))
