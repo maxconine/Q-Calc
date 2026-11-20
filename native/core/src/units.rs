@@ -140,7 +140,14 @@ fn is_symbol_of_other(t: &str, unit: &UnitRef) -> bool {
 /// ignoring case.
 fn case_clash(typed: &Cs, unit: &UnitRef) -> bool {
     let sym: Vec<char> = unit.symbol.chars().collect();
-    let tail = st(&typed[1..]);
+    // `Mm2` / `Mm^2` against the table's `mm2`: the tail compares as the symbol writes it (m²)
+    let tail = st(&typed[1..]).replace("^2", "²").replace("^3", "³");
+    let tail = match tail.strip_suffix('2').or_else(|| tail.strip_suffix('3')) {
+        Some(t) if t.chars().last().is_some_and(char::is_alphabetic) => {
+            format!("{t}{}", if tail.ends_with('2') { '²' } else { '³' })
+        }
+        _ => tail,
+    };
     let (t0, s0) = (typed[0], sym.first().copied());
     let typed_s = st(typed);
     // only the prefix letter's case differs; `MG` or `MPH` in caps keep their table reading, and `pa` is still Pa
@@ -166,7 +173,7 @@ fn case_clash(typed: &Cs, unit: &UnitRef) -> bool {
         return false;
     }
     // `uF` is the table's µF either way
-    scale_unit(&base.unit, prefix)
+    scale_typed(&base.unit, prefix, true)
         .is_some_and(|s| s.dim != unit.dim || !same_scale(s.to_base, unit.to_base))
 }
 
@@ -208,6 +215,20 @@ fn match_unit_at_end(s: &Cs) -> Option<Hit<'_>> {
         });
     }
     None
+}
+
+/// native: a prefix symbol on m² or m³ prefixes the metre, so `Gm2` is (10⁹ m)² = 10¹⁸ m² and `km3` is 10⁹ m³ (the
+/// web scaled the whole square, 10⁹ m²); a spelled prefix (`kilosquare meter`) keeps the web's reading.
+fn scale_typed(base: &Unit, prefix: &Prefix, symbol: bool) -> Option<UnitRef> {
+    let p = match base.id.as_str() {
+        "m2" => 2,
+        "m3" => 3,
+        _ => 0,
+    };
+    if symbol && p > 0 {
+        return power_unit(p, prefix_exponent(prefix));
+    }
+    scale_unit(base, prefix)
 }
 
 /// `scaleUnit`: a unit with a prefix put on, the table's own when it has one of that size.
@@ -257,7 +278,7 @@ fn match_case_prefix_at_end<'a>(rest: &'a Cs, unit: &Unit) -> Option<Hit<'a>> {
         if trim(before).is_empty() {
             continue;
         }
-        let Some(scaled) = scale_unit(unit, prefix) else {
+        let Some(scaled) = scale_typed(unit, prefix, true) else {
             continue;
         };
         return Some(Hit {
@@ -359,9 +380,9 @@ fn match_bare_unit_at_start(s: &Cs) -> Option<Hit<'_>> {
     None
 }
 
-fn prefixed_unit_at_start<'a>(prefix: &Prefix, s: &'a Cs) -> Option<Hit<'a>> {
+fn prefixed_unit_at_start<'a>(prefix: &Prefix, s: &'a Cs, symbol: bool) -> Option<Hit<'a>> {
     let u = match_bare_unit_at_start(s)?;
-    let scaled = scale_unit(&u.unit, prefix)?;
+    let scaled = scale_typed(&u.unit, prefix, symbol)?;
     Some(Hit {
         unit: scaled,
         rest: u.rest,
@@ -377,7 +398,7 @@ fn match_spelled_prefix_at_start(t: &Cs) -> Option<Hit<'_>> {
         if t.len() < n || lower(&t[..n]) != *name {
             continue;
         }
-        if let Some(hit) = prefixed_unit_at_start(prefix, &t[n..]) {
+        if let Some(hit) = prefixed_unit_at_start(prefix, &t[n..], false) {
             return Some(hit);
         }
     }
@@ -402,7 +423,7 @@ fn match_unit_at_start(s: &Cs) -> Option<Hit<'_>> {
         if first != *sym {
             continue;
         }
-        if let Some(hit) = prefixed_unit_at_start(prefix, &t[1..]) {
+        if let Some(hit) = prefixed_unit_at_start(prefix, &t[1..], true) {
             return Some(hit);
         }
     }
