@@ -213,11 +213,30 @@ fn expand_power(n: &Node) -> Node {
     }
 }
 
+/// The largest power of a sum `rationalize` multiplies out (native only; mathjs has no limit).
+const MAX_EXPANDED_POWER: f64 = 64.0;
+
 /// `math.rationalize(expr)`.
 pub fn rationalize(expr: &Node) -> Result<Node, SymError> {
     let sets = rule_sets();
     let (mut expr, vars) = polynomial(expr, &sets.first)?;
     if !vars.is_empty() {
+        // `expand_power` recurses once per power: `(y - m)^100000` (fuzzed, from `y = x^1e-5 + 1 m for x`)
+        // overflowed the engine's stack, and past a few dozen the expansion is too big to read anyway
+        let mut too_big = false;
+        super::traverse(&expr, &mut |m, _| {
+            if let Node::Operator {
+                op: Op::Pow, args, ..
+            } = m
+                && matches!(args[0], Node::Parenthesis(_) | Node::Operator { .. })
+                && super::number_value(&args[1]).is_some_and(|k| k > MAX_EXPANDED_POWER)
+            {
+                too_big = true;
+            }
+        });
+        if too_big {
+            return err("power too large to expand");
+        }
         expr = expand_power(&expr);
         expr = simplify_with(&expr, &sets.first, &NO_EXACT)?;
         let mut distr = true;

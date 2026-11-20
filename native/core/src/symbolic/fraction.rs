@@ -75,6 +75,11 @@ impl Fraction {
                 z = format!("1e{k}").parse::<f64>().unwrap_or(f64::INFINITY);
                 p1 /= z;
             }
+            // below the smallest mediant 1/(1 + N) the search only walks dd up one at a time (10^7 steps for
+            // 1e-10) and ends at 0/1; answer that at once
+            if p1 < 1.0 / (1.0 + big_n) {
+                b = big_n + 1.0;
+            }
             while b <= big_n && dd <= big_n {
                 let m = (a + c) / (b + dd);
                 if p1 == m {
@@ -157,6 +162,11 @@ impl Fraction {
             e.n.to_u32()
                 .filter(|x| *x <= 100_000)
                 .ok_or(FractionError("exponent too large"))?;
+        // a result past 2^16 bits is far outside a double: the caller's float power answers it (`1e21^100000`
+        // took 15 s of bignum multiplying to print Infinity)
+        if (self.n.bits() + self.d.bits()).saturating_mul(u64::from(exp)) > 1 << 16 {
+            return Ok(None);
+        }
         if e.d.is_one() {
             if e.s < 0 {
                 return Fraction::new((BigInt::from(self.s) * &self.d).pow(exp), self.n.pow(exp))

@@ -121,6 +121,175 @@ const FORMS: &[&str] = &[
     "log({a}, {b})",
 ];
 
+/// FUZZ_TONIGHT set: every input is one of [`TONIGHT`] (the 20 Nov code paths: `||`, mol, tesla/siemens, VA, phasors,
+/// zones and date arithmetic, implicit 3D surfaces, isolate, definitions written first, Levin integrals) at numbers
+/// from [`EXTREMES`] and units from [`TONIGHT_UNITS`], sometimes mutated.
+fn tonight() -> bool {
+    static TONIGHT_ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *TONIGHT_ON.get_or_init(|| std::env::var_os("FUZZ_TONIGHT").is_some())
+}
+
+const TONIGHT_UNITS: &[&str] = &[
+    "Ω",
+    "kΩ",
+    "MΩ",
+    "mΩ",
+    "ohm",
+    "S",
+    "mS",
+    "µS",
+    "siemens",
+    "mho",
+    "T",
+    "mT",
+    "µT",
+    "nT",
+    "G",
+    "tesla",
+    "gauss",
+    "Wb",
+    "H",
+    "mH",
+    "F",
+    "µF",
+    "mol",
+    "mmol",
+    "kmol",
+    "mol/L",
+    "M",
+    "J/mol",
+    "J/(mol K)",
+    "VA",
+    "kVA",
+    "MVA",
+    "VAR",
+    "kVAR",
+    "W",
+    "kW",
+    "MW",
+    "V",
+    "kV",
+    "A",
+    "mA",
+    "Hz",
+    "kHz",
+    "rad/s",
+    "°",
+    "deg",
+    "rad",
+    "",
+];
+
+const TONIGHT: &[&str] = &[
+    "{a} {u} || {b} {v}",
+    "{a} {u} || {b} {v} || {c} {u}",
+    "({a} + j{b}) {u} || ({c} - j{a}) {u}",
+    "{a} || {b}",
+    "{a} {u} + j{b} {v}",
+    "{a} + j{b} {u}",
+    "({a} + {b}i) {u}",
+    "({a}+{b}j) {u} * ({c} {v})^2",
+    "{a}∠{b}° {u} / ({c} - {a}j) {v}",
+    "{a}∠{b} {u}",
+    "{a} {u} ∠ {b}°",
+    "1/(j 2 pi {a} Hz {b} mF)",
+    "1/(j 2 pi {a} Hz {b} {u})",
+    "j 2 pi {a} Hz {b} mH",
+    "sqrt(({a}+{b}j) {u})",
+    "sqrt({a} {u})",
+    "abs({a} {u})",
+    "conj({a} {u})",
+    "angle({a} + {b}i)",
+    "angle({a} {u})",
+    "phase({a}+{b}j)",
+    "pf(({a} + j{b}) {u})",
+    "power factor of ({a} + j{b}) Ω",
+    "({a} + {b}j) {u} in polar",
+    "{a}∠{b}° in rect",
+    "({a}+{b}i)^{c}",
+    "e^(i {a})",
+    "ln({a} + {b}i)",
+    "log({a} + {b}j)",
+    "{a} {u} to {v}",
+    "{a} {u} in {v}",
+    "{a} {u} * {b} {v}",
+    "{a} {u} / ({b} {v})",
+    "{a} g {b} in mol",
+    "{a} mol {b} in g",
+    "{a} g H2O in mol",
+    "{a} mol NaCl in g",
+    "{a} J/(mol K) * {b} K",
+    "{a} mol * 8.314 J/(mol K) * {b} K",
+    "{a} T * {b} m^2",
+    "{a} Wb / {b} m^2 in {u}",
+    "1/({a} Ω) in {u}",
+    "{a} S in Ω",
+    "{a}pm est in pst",
+    "{a}pm in tokyo",
+    "{a}pm tokyo time",
+    "{a}:{b} utc in {u}",
+    "{a} am london in new york",
+    "time in tokyo",
+    "{a} days from now",
+    "{a} weeks after today",
+    "today + {a} days",
+    "jan {a} + {b} days",
+    "march {a}, {b} - jan 1, {c}",
+    "days until dec {a}",
+    "{a} hours before {b}pm",
+    "{a} months ago",
+    "{a} years from {b}/{c}/2025",
+    "graph x^2 + y^2 + z^2 = {a}",
+    "graph x^2 + y^2 - z^2 = {a}",
+    "graph x^{a} + y^{b} + z^{c} = 1",
+    "graph sin(x) + sin(y) + sin(z) = {a}",
+    "graph x y z = {a}",
+    "graph z^2 = {a} x^2 + {b} y^2",
+    "graph x^2/{a} + y^2/{b} + z^2/{c} = 1",
+    "x^2 + y^2 + z^2 = {a}",
+    "{a} = 1/2 m v^2 for v",
+    "T = 2 pi sqrt(L/g) for g",
+    "s = u t + {a} a t^2 for u",
+    "KE = {a} m v^2 for m",
+    "y = {a} x^{b} + {c} for x",
+    "P = V^{a}/R for V",
+    "solve x^{a} = {b} for x",
+    "x = {a}; x^{b}",
+    "x = {a}; y = {b}; x y + {c}",
+    "g(x) = x^{a}; g({b})",
+    "f(x) = {a} x; f({b}) + f({c})",
+    "a = {a}, b = {b}: a b",
+    "x^{a} where x = {b}",
+    "∫ sin(x)/x dx from {a} to inf",
+    "∫ sin(x)^2/x^2 dx from {a} to ∞",
+    "∫ sin(x)/sqrt(x) dx from {a} to inf",
+    "∫ cos(x^2) dx from {a} to inf",
+    "∫ sin({a} x)/x dx from 0 to inf",
+    "∫ sin(x)/x^{a} dx from 1 to inf",
+    "∫ cos({a}x) e^(-{b} x) dx from 0 to inf",
+    "integral of sin(x^{a}) from 0 to infinity",
+    "∫ sin(x) dx from {a} to inf",
+    "∫ x sin(x) dx from 0 to inf",
+];
+
+fn tonight_case(r: &mut Rng, corpus: &[String]) -> String {
+    let mut n = || *r.pick(EXTREMES);
+    let (a, b, c) = (n(), n(), n());
+    let (u, v) = (*r.pick(TONIGHT_UNITS), *r.pick(TONIGHT_UNITS));
+    let line = r
+        .pick(TONIGHT)
+        .replace("{a}", a)
+        .replace("{b}", b)
+        .replace("{c}", c)
+        .replace("{u}", u)
+        .replace("{v}", v);
+    if r.chance(25) {
+        mutate(r, &line, corpus)
+    } else {
+        line
+    }
+}
+
 /// One of [`FORMS`], or a function from the engine's scope, at numbers from [`EXTREMES`].
 fn numeric_case(r: &mut Rng) -> String {
     let mut pick = || *r.pick(EXTREMES);
@@ -968,8 +1137,15 @@ fn main() {
         .spawn(move || {
             let mut r = Rng(seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) | 1);
             for _ in 0..cases {
-                let input = match if numeric() { 99 } else { r.below(10) } {
+                let input = match if numeric() {
+                    99
+                } else if tonight() {
+                    98
+                } else {
+                    r.below(10)
+                } {
                     99 => numeric_case(&mut r),
+                    98 => tonight_case(&mut r, &corpus),
                     0 => pathological(&mut r),
                     1 => {
                         let n = 1 + r.below(12);

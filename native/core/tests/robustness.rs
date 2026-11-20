@@ -195,3 +195,43 @@ fn unit_offers_share_one_simplify_budget() {
         );
     });
 }
+
+/// Fuzzed (item 93): an exact power far past a double (`x^1e-5 = 1e21 for x` isolates to `1e21^100000`)
+/// multiplied out 2 million digits for 15 s before printing Infinity (and `y = x^1e-5 + 1 m for x` overflowed
+/// the stack expanding `(y - m)^100000`), and every tiny decimal (`1e-10`) walked
+/// Fraction.js's Farey search 10^7 steps, 0.1 s a simplify (1.5 s for `1e-10 = 1/2 m v^2 for v`).
+#[test]
+fn huge_exact_powers_and_tiny_decimals_are_quick() {
+    on_engine_stack(|| {
+        for (line, want) in [
+            ("x^1e-5 = 1e21 for x", "no solution found"),
+            ("1e-10 = 1/2 m v^2 for v", "v = ±sqrt(2e-10/m)"),
+            ("1e-10 = m v for v", "v = 1e-10/m"),
+            ("2^1000", ""),
+            // isolate's tidy rationalized `(y - m)^100000`, one stack frame per power: stack overflow
+            ("y = x^1e-5 + 1 m for x", ""),
+        ] {
+            let t = std::time::Instant::now();
+            let got = show(line);
+            let took = t.elapsed().as_millis();
+            assert!(took < 2500, "{line}: {took} ms");
+            if !want.is_empty() {
+                assert_eq!(got, want, "{line}");
+            }
+        }
+        let s = |t: &str| {
+            let n = qcalc_core::symbolic::parse(t).unwrap();
+            qcalc_core::symbolic::to_string(
+                &qcalc_core::symbolic::simplify(&n).unwrap(),
+                &Default::default(),
+            )
+        };
+        assert_eq!(s("1e21^100000"), "Infinity");
+        assert_eq!(s("1e-10 / (1/2 m)"), "2e-10 / m");
+        assert_eq!(s("(2/3)^2"), "4 / 9");
+        let r =
+            |t: &str| qcalc_core::symbolic::rationalize(&qcalc_core::symbolic::parse(t).unwrap());
+        assert!(r("(y - m)^100000").is_err());
+        assert!(r("(x + 1)^3").is_ok());
+    });
+}
