@@ -405,7 +405,7 @@ struct MatrixGridPanel: View {
     /// arrows between cells; ← and → only once the caret is at that end of the cell's text
     private func move(from at: GridCell, value: String, dr: Int, dc: Int) -> Bool {
         guard let g = model.grid else { return false }
-        if dc != 0, let editor = NSApp.keyWindow?.firstResponder as? NSTextView {
+        if dc != 0, let editor = PasteWatch.keyEditor {
             let sel = editor.selectedRange(), length = (editor.string as NSString).length
             if sel.length > 0 || (dc < 0 && sel.location > 0) || (dc > 0 && sel.location < length) { return false }
         }

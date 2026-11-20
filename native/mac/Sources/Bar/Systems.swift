@@ -18,6 +18,12 @@ enum SysCommand: Equatable {
         guard let r = Range(m.range(at: 1), in: t), let n = Int(t[r]) else { return .hint("how many equations? sys2, sys3… up to sys5") }
         return (1...5).contains(n) ? .count(n) : .hint("up to 5 equations")
     }
+
+    /// an empty line, or one still typing its way to `sys` / `system` (a closed system's equations wait through it)
+    static func onTheWay(_ text: String) -> Bool {
+        let t = text.trimmingCharacters(in: .whitespaces).lowercased()
+        return t.isEmpty || "system".hasPrefix(t)
+    }
 }
 
 extension BarModel {
@@ -47,7 +53,7 @@ extension BarModel {
     /// the bar; false when there's nothing to add, or the caret isn't at the end, so → moves as usual
     func fillSysParens(_ i: Int) -> Bool {
         guard let lines = sysLines, lines.indices.contains(i),
-              let editor = NSApp.keyWindow?.firstResponder as? NSTextView,
+              let editor = PasteWatch.keyEditor,
               editor.selectedRange() == NSRange(location: (editor.string as NSString).length, length: 0),
               let fill = logic.call("engine/parens", "inferParens", [lines[i]]) as? [String: Any],
               let filled = fill["filled"] as? String, filled != lines[i] else { return false }
@@ -120,6 +126,7 @@ extension BarModel {
     }
 
     func closeSystem() {
+        sysClosed = nil
         sysLines = nil
         sysAnswer = nil
         sysFocus = nil
@@ -263,7 +270,7 @@ struct SystemPanel: View {
             }, deleteLine: { [weak model] in
                 // the equation's own editor has the keys, and isn't mid-IME
                 guard let model, let i = paste.field,
-                      let editor = NSApp.keyWindow?.firstResponder as? NSTextView,
+                      let editor = PasteWatch.keyEditor,
                       editor.isFieldEditor, !editor.hasMarkedText() else { return false }
                 model.sysDeleteLine(i)
                 return true
@@ -279,7 +286,7 @@ struct SystemPanel: View {
             // the caret at the end of the equation, not the whole of it selected for the next key to replace
             guard field != nil else { return }
             DispatchQueue.main.async {
-                guard let editor = NSApp.keyWindow?.firstResponder as? NSTextView, editor.isFieldEditor else { return }
+                guard let editor = PasteWatch.keyEditor, editor.isFieldEditor else { return }
                 editor.setSelectedRange(NSRange(location: (editor.string as NSString).length, length: 0))
             }
         }
@@ -314,7 +321,7 @@ final class PasteWatch {
                 return event
             }
             let mods = event.modifierFlags.intersection([.command, .option, .control, .shift])
-            let editor = NSApp.keyWindow?.firstResponder as? NSTextView
+            let editor = PasteWatch.keyEditor
             // mid-IME the keys are the input method's
             if editor?.hasMarkedText() == true { return event }
             // the field's, not the line's (SwiftUI's focus can still name a field once the line has the keys)
@@ -333,9 +340,16 @@ final class PasteWatch {
         }
     }
 
+    /// the text view with the bar's keys: the key window's, else the bar's own. The bar is a nonactivating panel, so
+    /// q calc needn't be the active app while it's up and NSApp.keyWindow can be nil there; read from that alone, ⌘Z,
+    /// ⌘⌫ and → filling parens in an equation or cell found no editor and did nothing (QA item 86)
+    static var keyEditor: NSTextView? {
+        (NSApp.keyWindow ?? NSApp.windows.first { $0 is OverlayPanel && $0.isVisible })?.firstResponder as? NSTextView
+    }
+
     /// the field editor's text and selection, when it's showing `value`
     static func editorSelection(_ value: String) -> NSRange? {
-        guard let editor = NSApp.keyWindow?.firstResponder as? NSTextView, editor.isFieldEditor,
+        guard let editor = PasteWatch.keyEditor, editor.isFieldEditor,
               editor.string == value else { return nil }
         return editor.selectedRange()
     }
@@ -344,7 +358,7 @@ final class PasteWatch {
     /// left at the end)
     static func select(_ step: Undo.Step) {
         func apply() {
-            guard let editor = NSApp.keyWindow?.firstResponder as? NSTextView, editor.isFieldEditor,
+            guard let editor = PasteWatch.keyEditor, editor.isFieldEditor,
                   editor.string == step.value else { return }
             let n = (step.value as NSString).length, start = min(step.start, n)
             editor.setSelectedRange(NSRange(location: start, length: max(0, min(step.end, n) - start)))
