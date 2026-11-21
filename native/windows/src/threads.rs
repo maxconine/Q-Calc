@@ -1399,13 +1399,7 @@ fn paint_field(c: &Canvas, f: Rect, name: String) {
         rgb(0xffffff, 1.0)
     };
     let focused = has_keys();
-    if focused {
-        c.fill_round(f, size::RADIUS_S, t.accent);
-        c.fill_round(f.inset(2.0, 2.0), size::RADIUS_S - 2.0, control);
-    } else {
-        c.fill_round(f, size::RADIUS_S, rgb(0x000000, 0.12));
-        c.fill_round(f.inset(0.5, 0.5), size::RADIUS_S - 0.5, control);
-    }
+    crate::surfaces::control(c, f, size::RADIUS_S, focused, control);
     let inner = f.inset(8.0, 0.0);
     c.push_clip(inner);
     with(|s| {

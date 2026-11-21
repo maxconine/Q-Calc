@@ -7,6 +7,7 @@
 #[cfg(windows)]
 mod a11y;
 mod autostart;
+mod card_rules;
 mod commands;
 mod edge;
 mod exponent;
@@ -116,6 +117,8 @@ mod sheets_typst;
 mod stacked_layout;
 #[cfg(windows)]
 mod stacked_text;
+#[cfg(windows)]
+mod surfaces;
 #[cfg(windows)]
 mod systems;
 #[cfg(windows)]

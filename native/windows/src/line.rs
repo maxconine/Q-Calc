@@ -391,7 +391,8 @@ pub fn paste(m: &mut BarModel, raw: &str) {
     m.field.paste(raw);
 }
 
-/// onPrefixStep: the answer one SI prefix up or down (stepPrefix), shown until the line changes.
+/// onPrefixStep: the answer one SI prefix up or down (stepLadder: squared and cubed lengths, hours and minutes
+/// too), shown until the line changes.
 fn step_prefix(m: &mut BarModel, dir: i32, engine: &EngineThread) {
     let base = m
         .line
@@ -434,7 +435,7 @@ fn step_prefix(m: &mut BarModel, dir: i32, engine: &EngineThread) {
             .engine
             .call_json(
                 "engine/units".into(),
-                "stepPrefix".into(),
+                "stepLadder".into(),
                 format!("[{base},{dir}]"),
             )
             .ok()?;

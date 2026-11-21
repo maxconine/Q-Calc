@@ -454,20 +454,64 @@ pub fn hint(what: &str, to: &str, name: &str) -> String {
         key,
         ..core::Messaging::default()
     };
+    let dropped = waiting_label();
+    if !name.is_empty() {
+        crate::messaging::check_name(name);
+    }
+    crate::share_drop::ensure_soon();
+    core::share_hint(&cmd, &m, true, crate::messaging::found_name(name), &dropped)
+}
+
+/// The files waiting on the line, as the hints say them (`a.pdf`, `2 files`); "" for none.
+pub fn waiting_label() -> String {
     let pending = with(|s| s.pending.clone());
-    let dropped = pending.first().map_or(String::new(), |p| {
+    pending.first().map_or(String::new(), |p| {
         core::dropped_label(
             &p.file_name()
                 .map(|n| n.to_string_lossy().into_owned())
                 .unwrap_or_default(),
             pending.len() as u32,
         )
-    });
-    if !name.is_empty() {
-        crate::messaging::check_name(name);
+    })
+}
+
+/// ↵ on a `message <name> …` line (commands.rs): files waiting on it (put back when the relay was out of reach) go
+/// with the words, as a drop on it would. True when there were some; a name that can't take them yet leaves the
+/// line as it was, the files still on it.
+pub fn message_enter(app: &mut App, name: &str) -> bool {
+    let waiting = with(|s| s.pending.clone());
+    if name.is_empty() || waiting.is_empty() {
+        return false;
     }
-    crate::share_drop::ensure_soon();
-    core::share_hint(&cmd, &m, true, crate::messaging::found_name(name), &dropped)
+    with(|s| s.pending.clear());
+    let before = app.model.field.text().to_string();
+    drop_files(app, waiting.clone());
+    if app.model.field.text() == before {
+        with(|s| s.pending = waiting);
+    }
+    true
+}
+
+/// Dropped files whose send never started (the relay out of reach, no key for them) wait on the line again, as
+/// `send file to <name>` or the `message <name> words` line they went from (`typed`, the whole of it when its
+/// words weren't sent either), so ↵ tries again (the line had been cleared and the drop lost). A line typed on
+/// since is left alone. The rule: card_rules.rs `put_back`.
+pub fn put_back(app: &mut App, files: Vec<PathBuf>, name: &str, typed: &str, words_unsent: bool) {
+    let line = app.model.field.text().to_string();
+    let waiting = with(|s| s.pending.clone());
+    let Some((back, waiting)) =
+        crate::card_rules::put_back(&files, name, typed, words_unsent, &line, &waiting)
+    else {
+        return;
+    };
+    with(|s| s.pending = waiting);
+    app.model.selected = None;
+    if app.model.field.text() != back {
+        app.model.field.set_text(&back);
+    }
+    // the slot's hint counts what waits, so it's worked out again even when the line didn't change
+    app.text_changed();
+    app.model.touch();
 }
 
 /// ↵ on a share line (commands.rs): the clipboard or a file goes to `name`; with no name set, settings open.
@@ -488,7 +532,7 @@ pub fn enter(app: &mut App, what: &str, name: &str) {
     }
     let dropped = with(|s| std::mem::take(&mut s.pending));
     if !dropped.is_empty() {
-        send_files(app, dropped, &name);
+        send_files_back(app, dropped, &name, Some(String::new()));
         return;
     }
     pick_and_send(app, &name);
@@ -648,6 +692,8 @@ fn found_status(f: &Found) -> String {
         Found::None => "no-key",
         Found::Unknown => "unknown",
         Found::Offline(s) if s == "not-yours" => "not-yours",
+        // the relay's own word on too many asks: "try again in a minute", not "couldn't reach the relay"
+        Found::Offline(s) if s == "too-many" => "too-many",
         Found::Offline(_) => "network",
     }
     .into()
@@ -658,6 +704,12 @@ fn found_status(f: &Found) -> String {
 /// Files to `to`: folders say to zip them, more than 20 send none, each other one is offered. Shortcuts and links
 /// are followed first (off the UI thread), so a `.lnk` to a folder says so too.
 pub fn send_files(app: &mut App, paths: Vec<PathBuf>, to: &str) {
+    send_files_back(app, paths, to, None);
+}
+
+/// `send_files` for files dropped on the bar: `back` is the line they went from (`message <name> words`, or "" for
+/// a plain drop), and each whose send never starts goes back on the line (`put_back`).
+pub fn send_files_back(app: &mut App, paths: Vec<PathBuf>, to: &str, back: Option<String>) {
     if paths.is_empty() {
         return;
     }
@@ -681,7 +733,7 @@ pub fn send_files(app: &mut App, paths: Vec<PathBuf>, to: &str) {
                 return;
             }
             for f in files {
-                send_file(app, f, &to);
+                send_file(app, f, &to, back.clone());
             }
         });
     });
@@ -740,7 +792,7 @@ fn shortcut_target(lnk: &Path) -> Option<PathBuf> {
     }
 }
 
-fn send_file(app: &mut App, path: PathBuf, to: &str) {
+fn send_file(app: &mut App, path: PathBuf, to: &str, back: Option<String>) {
     let to = to.to_string();
     let (me, relay_key) = crate::messaging::credentials();
     if me.is_empty() {
@@ -760,7 +812,8 @@ fn send_file(app: &mut App, path: PathBuf, to: &str) {
     let encrypting = format!("encrypting {name}…");
     say_to(app, &to, encrypting.clone());
     bg::spawn("qcalc-share", move || {
-        let result = offer(&path, &name, &to, &me, &relay_key);
+        let mut unsent = false;
+        let result = offer(&path, &name, &to, &me, &relay_key, &mut unsent);
         bg::post(move |app| match result {
             Ok(o) => {
                 // the file's own line in the thread takes over from here
@@ -807,7 +860,14 @@ fn send_file(app: &mut App, path: PathBuf, to: &str) {
                 persist_unfinished();
                 refresh_cards(app);
             }
-            Err(note) => say_to(app, &to, note),
+            Err(note) => {
+                // the send never started (no relay, no key for them): the drop waits on the line again
+                if unsent && let Some(typed) = &back {
+                    crate::threads::unsay(&to, &encrypting);
+                    put_back(app, vec![path], &to, typed, false);
+                }
+                say_to(app, &to, note);
+            }
         });
     });
 }
@@ -824,7 +884,15 @@ struct Offered {
 
 /// On a worker: hash, seal the facts, offer; the file is sealed into a temporary file alongside (another thread),
 /// so the offer and the recipient's accept don't wait for it, and the upload reads it as it's written.
-fn offer(path: &Path, name: &str, to: &str, me: &str, relay_key: &str) -> Result<Offered, String> {
+/// `unsent` is set when it never started because the relay couldn't be reached or had no key for them.
+fn offer(
+    path: &Path,
+    name: &str,
+    to: &str,
+    me: &str,
+    relay_key: &str,
+    unsent: &mut bool,
+) -> Result<Offered, String> {
     let meta = std::fs::metadata(path).map_err(|_| core::file_error_text("unreadable", to))?;
     if meta.is_dir() {
         return Err(core::file_error_text("folder", to));
@@ -836,6 +904,7 @@ fn offer(path: &Path, name: &str, to: &str, me: &str, relay_key: &str) -> Result
     let (theirs, their_text) = match keys::for_sending(me, relay_key, to) {
         Found::Key(k, t) => (k, t),
         other => {
+            *unsent = true;
             return Err(core::share_status_text(
                 &found_status(&other),
                 to,
@@ -2541,11 +2610,23 @@ pub fn drop_files(app: &mut App, paths: Vec<PathBuf>) -> bool {
     let line = app.model.field.text().to_string();
     let target = core::drop_target(&line, &m, true, None, files.len() as u32);
     if !target.name.is_empty() {
+        // `message max here you go` and a drop: the words go as a message, and each file as it would by
+        // `send file to max`; what doesn't go comes back on the line (the words with their whole line)
+        let typed = if target.text.is_empty() {
+            String::new()
+        } else {
+            line.clone()
+        };
         crate::commands::clear_line(app, false);
         if !target.text.is_empty() {
-            crate::messaging::send_line(app, target.name.clone(), target.text.clone());
+            crate::messaging::send_dropped_line(
+                app,
+                target.name.clone(),
+                target.text.clone(),
+                typed.clone(),
+            );
         }
-        send_files(app, files, &target.name);
+        send_files_back(app, files, &target.name, Some(typed));
         return true;
     }
     if !target.hint.is_empty() {

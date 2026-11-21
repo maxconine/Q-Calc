@@ -442,6 +442,9 @@ mod ui {
                     crate::settings_window::open(app);
                     return true;
                 }
+                if crate::share::message_enter(app, &name) {
+                    return true;
+                }
                 if name.is_empty() || text.is_empty() {
                     return true;
                 }
