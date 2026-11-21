@@ -38,9 +38,11 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use crate::compat::dpi_for_window as GetDpiForWindow;
-use crate::sheet_page::{self as page, Bx, Cell, Docs, Filter, Laid, Pages, Sizes};
+use crate::sheet_page::{
+    self as page, Bx, Catalog, Cell, Docs, Filter, Laid, Listing, Note, OWN, Pages, RowKey, Sizes,
+};
 use qcalc_core::app::elements::{self, ElementCategory, PeriodicTile};
-use qcalc_core::app::identities::{self, IdentitySheet, Shift};
+use qcalc_core::app::identities::{self, Identity, IdentitySheet, Shift};
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
 use windows::Win32::Graphics::Direct2D::D2D1_ROUNDED_RECT;
 use windows::Win32::Graphics::DirectWrite::{
@@ -154,6 +156,7 @@ impl Picks {
 const MAIN: &str = "sheets";
 const HINT_COPY: &str = "click to copy";
 const HINT_OPEN: &str = "click to open";
+const HINT_EXPLAIN: &str = "click to copy and explain";
 /// how long a copy stays boxed (and the header says so)
 const COPIED_MS: u32 = 250;
 
@@ -278,6 +281,8 @@ struct Periodic {
 /// One row of a formula sheet, ready to draw: what it typesets and the sizes, its words cells' and note's layouts,
 /// and for a row that isn't typeset, its raised and lowered runs.
 struct Prepared {
+    /// the row itself (from this sheet or, in a search, another)
+    item: Identity,
     docs: Docs,
     sizes: Sizes,
     /// per cell, the layout of a words cell
@@ -298,17 +303,21 @@ struct Prepared {
 struct Page {
     id: String,
     sheet: IdentitySheet,
-    items: HashMap<(usize, usize, usize), Prepared>,
+    /// each row listed so far, made once and kept as the filter changes
+    items: HashMap<RowKey, Prepared>,
     laid: Laid,
-    titles: HashMap<usize, Text>,
-    groups: HashMap<(usize, usize), Text>,
+    /// section and group titles, by their words
+    titles: HashMap<String, Text>,
+    groups: HashMap<String, Text>,
     heading: Option<Text>,
     figure: bool,
 }
 
 impl Page {
-    fn item(&self, si: usize, gi: usize, ii: usize) -> &identities::Identity {
-        &self.sheet.sections[si].groups[gi].items[ii]
+    /// The row at a place in the layout.
+    fn row(&self, i: usize) -> Option<(Bx, &Prepared)> {
+        let &(rect, key) = self.laid.rows.get(i)?;
+        Some((rect, self.items.get(&key)?))
     }
 
     /// The content's height and the window's (DIPs), for a monitor `work_h` high.
@@ -328,9 +337,12 @@ struct Chrome {
     placeholder: Option<Text>,
     copy: Option<Text>,
     open: Option<Text>,
+    explain: Option<Text>,
     copied: Option<Text>,
     none: Option<Text>,
     tick: Option<Text>,
+    closest: Option<Text>,
+    elsewhere: Option<Text>,
 }
 
 /// A formula sheet's window: its pages, the one up, the filter.
@@ -351,6 +363,10 @@ struct Book {
     boxed: Option<(usize, Bx)>,
     /// the thumb drag's start: (pointer y, scroll)
     drag: Option<(f32, f32)>,
+    /// the page's own rows searched, for a search typed before every sheet's index is ready
+    early: Option<Catalog>,
+    /// the filter's texts before each edit, for Ctrl+Z
+    undo: Vec<String>,
 }
 
 impl Book {
@@ -363,17 +379,57 @@ impl Book {
         self.boxed = None;
         self.drag = None;
         self.scroll = 0.0;
+        self.early = None;
+        self.undo.clear();
     }
 
-    /// The filter changed: the rows again, from the top.
-    fn refilter(&mut self) {
-        let items = &self.page.items;
-        self.page.laid = page::lay_out(&self.page.sheet, &self.filter.text, |s, g, i| {
-            items.get(&(s, g, i)).map_or(page::ROW, |p| p.height)
-        });
+    /// The filter changed: the rows again, from the top. A search reads every sheet once their index is ready
+    /// (`catalog`), the page's own rows before then.
+    fn refilter(&mut self, gfx: &Gfx, fonts: &Fonts, catalog: Option<&mut Catalog>) {
+        let query = self.filter.text.clone();
+        let mut cat: Option<&Catalog> = None;
+        let listing = if query.trim().is_empty() {
+            page::whole(&self.page.sheet)
+        } else {
+            let (hits, closest) = match catalog {
+                Some(c) => {
+                    // a part (`unit circle: Exact values`) isn't in the index: it goes in now, a few rows
+                    let open = match c.index_of(&self.page.id) {
+                        Some(n) => n,
+                        None => c.add(self.page.sheet.clone()),
+                    };
+                    let found = c.find(&query, Some(open));
+                    cat = Some(c);
+                    found
+                }
+                None => {
+                    let sheet = &self.page.sheet;
+                    let early = self.early.get_or_insert_with(|| {
+                        let mut c = Catalog::default();
+                        c.add(sheet.clone());
+                        c
+                    });
+                    early.find(&query, Some(0))
+                }
+            };
+            page::found(&self.page.sheet, &hits, closest, |n| {
+                cat.and_then(|c| c.sheet(n))
+            })
+        };
+        lay(&mut self.page, gfx, fonts, &listing, cat);
         self.copied = None;
         self.boxed = None;
         self.scroll = 0.0;
+    }
+
+    /// An edit to the filter: what it was goes on the undo list.
+    fn edited(&mut self, before: String) {
+        if self.undo.last() != Some(&before) {
+            self.undo.push(before);
+        }
+        if self.undo.len() > 100 {
+            self.undo.remove(0);
+        }
     }
 }
 
@@ -405,6 +461,9 @@ struct Sheets {
     /// the table's formula outlives its window, as the Mac's panel keeps it
     picks: Picks,
     registered: bool,
+    /// every sheet's rows, searched (built on a thread of its own once a sheet opens; gone with the last one)
+    catalog: Option<Catalog>,
+    indexing: bool,
 }
 
 thread_local! {
@@ -578,6 +637,8 @@ fn turn(hwnd: HWND, t: Turn) -> bool {
     let Some(retitled) = out else {
         return false;
     };
+    // a page change puts the explanation away
+    crate::sheet_explain::close_for(hwnd);
     if let Some(title) = retitled {
         // SAFETY: our window; its WM_SETTEXT goes to DefWindowProc
         let _ = unsafe { SetWindowTextW(hwnd, &HSTRING::from(title.as_str())) };
@@ -900,6 +961,7 @@ fn create_book(
     });
     show_window(hwnd, at.theme.dark);
     qlog!("sheet {key}: opened {id}");
+    start_index();
     Ok(())
 }
 
@@ -986,6 +1048,7 @@ pub fn retheme(theme: Theme) {
         set_dark(hwnd, theme.dark);
         invalidate(hwnd);
     }
+    crate::sheet_explain::retheme();
 }
 
 /// The front sheet window, and whether it's a formula sheet's.
@@ -1162,7 +1225,15 @@ fn plain_runs(
 }
 
 fn prepare(gfx: &Gfx, fonts: &Fonts, item: &identities::Identity, widths: &[f32]) -> Prepared {
-    let docs = page::docs(item);
+    let mut docs = page::docs(item);
+    // another sheet's row found by a search, its cells never typeset: drawn plain, as the Mac's undrawn sheets are
+    let compiled = docs.cells.iter().all(|c| match c {
+        Cell::Doc(d) => sheets_typst::size(d).is_some(),
+        Cell::Words(_) => true,
+    });
+    if !compiled && !docs.figure {
+        docs = Docs::default();
+    }
     let mut sizes = Sizes::default();
     let mut words = Vec::new();
     for cell in &docs.cells {
@@ -1209,6 +1280,7 @@ fn prepare(gfx: &Gfx, fonts: &Fonts, item: &identities::Identity, widths: &[f32]
         page::ROW
     };
     Prepared {
+        item: item.clone(),
         heading: item.copy.is_empty() && !docs.figure,
         docs,
         sizes,
@@ -1224,36 +1296,72 @@ fn prepare(gfx: &Gfx, fonts: &Fonts, item: &identities::Identity, widths: &[f32]
 /// A sheet's page, from its compiled cells (sheets_typst.rs): its rows' layouts and where they go.
 fn build_page(gfx: &Gfx, fonts: &Fonts, id: &str) -> Option<Page> {
     let sheet = page::page_sheet(id)?;
-    let mut items = HashMap::new();
-    let mut titles = HashMap::new();
-    let mut groups = HashMap::new();
-    for (si, section) in sheet.sections.iter().enumerate() {
-        let widths = page::lead_widths(section);
-        if let Some(t) = text(gfx, &section.title, &fonts.section) {
-            titles.insert(si, t);
-        }
-        for (gi, group) in section.groups.iter().enumerate() {
-            if let Some(t) = text(gfx, &group.title, &fonts.caption_medium) {
-                groups.insert((si, gi), t);
-            }
-            for (ii, item) in group.items.iter().enumerate() {
-                items.insert((si, gi, ii), prepare(gfx, fonts, item, &widths));
-            }
-        }
-    }
-    let laid = page::lay_out(&sheet, "", |s, g, i| {
-        items.get(&(s, g, i)).map_or(page::ROW, |p| p.height)
-    });
-    Some(Page {
+    let mut p = Page {
         id: id.to_string(),
         heading: text(gfx, &sheet.title, &fonts.heading),
         figure: page::has_figure(&sheet),
         sheet,
+        items: HashMap::new(),
+        laid: Laid::default(),
+        titles: HashMap::new(),
+        groups: HashMap::new(),
+    };
+    let listing = page::whole(&p.sheet);
+    lay(&mut p, gfx, fonts, &listing, None);
+    Some(p)
+}
+
+/// The rows and titles a listing shows, made where they aren't yet (a search's rows from other sheets the first time
+/// they're found; a few dozen at most), then laid out.
+fn lay(p: &mut Page, gfx: &Gfx, fonts: &Fonts, listing: &Listing, catalog: Option<&Catalog>) {
+    let Page {
+        sheet,
         items,
-        laid,
         titles,
         groups,
-    })
+        laid,
+        ..
+    } = p;
+    let sheet: &IdentitySheet = sheet;
+    let sheet_of = |n: u32| {
+        if n == OWN {
+            Some(sheet)
+        } else {
+            catalog.and_then(|c| c.sheet(n))
+        }
+    };
+    for entry in &listing.shown {
+        let Some(section) = sheet_of(entry.sheet).and_then(|x| x.sections.get(entry.s)) else {
+            continue;
+        };
+        if !titles.contains_key(&entry.title)
+            && let Some(t) = text(gfx, &entry.title, &fonts.section)
+        {
+            titles.insert(entry.title.clone(), t);
+        }
+        let widths = page::lead_widths(section);
+        for (gi, rows) in &entry.groups {
+            let Some(group) = section.groups.get(*gi) else {
+                continue;
+            };
+            if !groups.contains_key(&group.title)
+                && let Some(t) = text(gfx, &group.title, &fonts.caption_medium)
+            {
+                groups.insert(group.title.clone(), t);
+            }
+            for &ii in rows {
+                let key = RowKey::new(entry.sheet, entry.s, *gi, ii);
+                if let (false, Some(item)) = (items.contains_key(&key), group.items.get(ii)) {
+                    items.insert(key, prepare(gfx, fonts, item, &widths));
+                }
+            }
+        }
+    }
+    *laid = page::lay_out(
+        listing,
+        |n, s| sheet_of(n).and_then(|x| x.sections.get(s)),
+        |k| items.get(&k).map_or(page::ROW, |p| p.height),
+    );
 }
 
 fn chrome(gfx: &Gfx, fonts: &Fonts) -> Chrome {
@@ -1261,16 +1369,27 @@ fn chrome(gfx: &Gfx, fonts: &Fonts) -> Chrome {
         placeholder: text(gfx, "Filter", &fonts.math),
         copy: text(gfx, HINT_COPY, &fonts.caption),
         open: text(gfx, HINT_OPEN, &fonts.caption),
+        explain: text(gfx, HINT_EXPLAIN, &fonts.caption),
         copied: text(gfx, "✓ copied", &fonts.caption),
         none: text(gfx, "no matches", &fonts.quiet),
         tick: text(gfx, "✓", &fonts.caption),
+        closest: text(
+            gfx,
+            "no row has every word · closest matches",
+            &fonts.caption,
+        ),
+        elsewhere: text(gfx, "in other sheets", &fonts.caption),
     }
 }
 
 fn scroll_to(b: &mut Book, section: usize, client_h: f32) {
-    // a page that shows only its picture has the one section
-    let section = if b.page.figure { 0 } else { section };
-    if let Some(&(_, top)) = b.page.laid.tops.iter().find(|(s, _)| *s == section) {
+    // a page that shows only its picture: at the picture
+    let top = if b.page.figure {
+        b.page.laid.tops.first()
+    } else {
+        b.page.laid.tops.iter().find(|(s, _)| *s == section)
+    };
+    if let Some(&(_, top)) = top {
         let most = (b.page.laid.height - (client_h - page::TOP)).max(0.0);
         b.scroll = top.min(most);
     }
@@ -1299,6 +1418,8 @@ fn build(made: Made, hwnd: HWND, dpi: u32) -> Option<Sheet> {
                 copied: None,
                 boxed: None,
                 drag: None,
+                early: None,
+                undo: Vec::new(),
             }))
         }
     };
@@ -1342,6 +1463,15 @@ unsafe extern "system" fn sheet_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARA
             return LRESULT(0);
         }
         WM_MOUSEACTIVATE => return LRESULT(3), // MA_NOACTIVATE
+        // the table's tiles for screen readers (UI Automation)
+        windows::Win32::UI::WindowsAndMessaging::WM_GETOBJECT => {
+            let periodic = with(|s| s.open.iter().any(|w| w.hwnd == hwnd && w.key == "periodic"));
+            if periodic == Some(true)
+                && let Some(r) = crate::uia::get_object(hwnd, wp, lp, periodic_tree)
+            {
+                return r;
+            }
+        }
         WM_ERASEBKGND => return LRESULT(1),
         WM_PAINT => {
             paint(hwnd);
@@ -1430,7 +1560,21 @@ unsafe extern "system" fn sheet_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARA
             })
             .flatten();
             raise(hwnd);
+            // a click anywhere but on a row (which explains itself, or not) puts an explanation away
+            if !matches!(hit, Some(Hit::Row(_))) {
+                crate::sheet_explain::close_for(hwnd);
+            }
             match hit {
+                // with the bar away, a tile clicked gives the table the keys (↵, ⌫, Esc)
+                Some(Hit::Tile(_))
+                    if !right && !crate::app::with_app(|a| a.bar.visible).unwrap_or(true) =>
+                {
+                    // SAFETY: our window, brought forward by the user's click
+                    unsafe {
+                        let _ = SetForegroundWindow(hwnd);
+                        let _ = SetFocus(Some(hwnd));
+                    }
+                }
                 // the filter takes the keys once it's clicked
                 Some(Hit::Field) if !right => {
                     // SAFETY: our window, brought forward by the user's click
@@ -1555,11 +1699,18 @@ unsafe extern "system" fn sheet_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARA
             return LRESULT(0);
         }
         WM_DESTROY => {
+            // a closed sheet takes its explanation with it (before the factories it draws with go)
+            crate::sheet_explain::close_for(hwnd);
+            crate::uia::forget(hwnd);
             let last = with(|s| {
                 if let Some(i) = s.open.iter().position(|w| w.hwnd == hwnd) {
                     let w = s.open.remove(i);
                     s.order.retain(|k| *k != w.key);
                     qlog!("sheet {}: closed", w.key);
+                }
+                // the last formula sheet gone: the search's index goes
+                if !s.open.iter().any(|w| matches!(w.body, Body::Identity(_))) {
+                    s.catalog = None;
                 }
                 // the last one gone: its factories and fonts go too
                 if s.open.is_empty() {
@@ -1791,10 +1942,7 @@ fn hit_test(s: &Sheet, x: i32, y: i32) -> Option<Hit> {
 
 /// A row a click does something on (a table's heading isn't).
 fn clickable(b: &Book, i: usize) -> bool {
-    let Some(&(_, si, gi, ii)) = b.page.laid.rows.get(i) else {
-        return false;
-    };
-    let Some(p) = b.page.items.get(&(si, gi, ii)) else {
+    let Some((_, p)) = b.page.row(i) else {
         return false;
     };
     if p.docs.typeset() {
@@ -1805,15 +1953,13 @@ fn clickable(b: &Book, i: usize) -> bool {
 
 /// What a point on a row (design DIPs, window coordinates) boxes and copies, on a typeset row.
 fn row_target(b: &Book, i: usize, x: f32, y: f32) -> Option<(Bx, String)> {
-    let &(rect, si, gi, ii) = b.page.laid.rows.get(i)?;
-    let p = b.page.items.get(&(si, gi, ii))?;
+    let (rect, p) = b.page.row(i)?;
     if !p.docs.typeset() {
         return None;
     }
-    let item = b.page.item(si, gi, ii);
     let cy = y - page::TOP + b.scroll;
     page::target(
-        item,
+        &p.item,
         &p.docs,
         &p.sizes,
         &p.widths,
@@ -1896,9 +2042,8 @@ fn mouse_move(hwnd: HWND, x: i32, y: i32) {
 /// A press on a row: a typeset row (one that doesn't open a sheet) copies now. True when it did.
 fn press_row(hwnd: HWND, i: usize, x: f32, y: f32) -> bool {
     let copy = on_book(hwnd, |b, _| {
-        let &(_, si, gi, ii) = b.page.laid.rows.get(i)?;
-        let p = b.page.items.get(&(si, gi, ii))?;
-        if !p.docs.typeset() || b.page.item(si, gi, ii).open.is_some() {
+        let (_, p) = b.page.row(i)?;
+        if !p.docs.typeset() || p.item.open.is_some() {
             return None;
         }
         let (bx, copy) = row_target(b, i, x, y)?;
@@ -1910,9 +2055,45 @@ fn press_row(hwnd: HWND, i: usize, x: f32, y: f32) -> bool {
     match copy {
         Some(copy) => {
             copied(hwnd, &copy);
+            explain(hwnd, i);
             true
         }
         None => false,
+    }
+}
+
+/// A row that was copied opens its explanation beside it (sheet_explain.rs); a row without one closes any that's up.
+fn explain(hwnd: HWND, i: usize) {
+    let found = on_sheet(hwnd, |s, _| {
+        let Body::Identity(b) = &s.body else {
+            return None;
+        };
+        let (rect, p) = b.page.row(i)?;
+        let e = p.item.explain.clone()?;
+        // the row on the screen, physical px
+        let k = s.dpi as f32 / 96.0;
+        let y = rect.y + page::TOP - b.scroll;
+        Some((
+            e,
+            p.item.clone(),
+            [rect.x * k, y * k, rect.w * k, rect.h * k],
+        ))
+    })
+    .flatten();
+    match found {
+        Some((e, item, r)) => {
+            let mut origin = POINT::default();
+            // SAFETY: our window, a live out point
+            let _ = unsafe { windows::Win32::Graphics::Gdi::ClientToScreen(hwnd, &mut origin) };
+            let row = [
+                f64::from(origin.x) + f64::from(r[0]),
+                f64::from(origin.y) + f64::from(r[1]),
+                f64::from(r[2]),
+                f64::from(r[3]),
+            ];
+            crate::sheet_explain::show(hwnd, row, e, item);
+        }
+        None => crate::sheet_explain::close_for(hwnd),
     }
 }
 
@@ -1973,17 +2154,7 @@ fn act_on(hwnd: HWND, hit: Hit, right: bool, x: f32) {
                 formula_changed(s, hwnd);
             });
         }
-        Hit::Formula if !right => {
-            if let Some(mass) = take_formula() {
-                // two steps: the bar shows (if it's away), then the mass goes in the line it shows
-                crate::app::poke(|app| {
-                    if !app.bar.visible {
-                        app.op(crate::app::Op::Show);
-                    }
-                });
-                crate::app::poke(|app| app.model.insert_text(&mass, &app.engine));
-            }
-        }
+        Hit::Formula if !right => put_in_bar_from_table(),
         Hit::Row(i) if right => row_menu(hwnd, i),
         Hit::Row(i) => click_row(hwnd, i, x),
         Hit::Back if !right => go_later(hwnd, -1),
@@ -1997,38 +2168,58 @@ fn act_on(hwnd: HWND, hit: Hit, right: bool, x: f32) {
 /// under it (a plain row; a typeset one copied on the press).
 fn click_row(hwnd: HWND, i: usize, x: f32) {
     let act = on_book(hwnd, |b, _| {
-        let &(rect, si, gi, ii) = b.page.laid.rows.get(i)?;
-        let item = b.page.item(si, gi, ii);
-        if let Some(line) = &item.open {
+        let (rect, p) = b.page.row(i)?;
+        if let Some(line) = &p.item.open {
             return Some(Err(line.clone()));
         }
-        let p = b.page.items.get(&(si, gi, ii))?;
         if p.docs.typeset() || p.heading {
             return None;
         }
-        b.copied = Some((i, None));
         let at = x - rect.x;
-        Some(Ok(p
+        let copy = p
             .cells
             .iter()
             .find(|(right, _)| at < *right)
-            .map_or_else(|| item.copy.clone(), |(_, copy)| copy.clone())))
+            .map_or_else(|| p.item.copy.clone(), |(_, copy)| copy.clone());
+        b.copied = Some((i, None));
+        Some(Ok(copy))
     })
     .flatten();
     match act {
         Some(Err(line)) => open_line(hwnd, line, false),
-        Some(Ok(copy)) if !copy.is_empty() => copied(hwnd, &copy),
+        Some(Ok(copy)) if !copy.is_empty() => {
+            copied(hwnd, &copy);
+            explain(hwnd, i);
+        }
+        _ => {}
+    }
+}
+
+/// ↵ in the filter: the first row a search leaves, as if clicked (copied and explained, or its sheet opened).
+fn pick_first(hwnd: HWND) {
+    let act = on_book(hwnd, |b, _| {
+        let i = b.page.laid.first?;
+        let (_, p) = b.page.row(i)?;
+        if let Some(line) = &p.item.open {
+            return Some((i, Err(line.clone())));
+        }
+        b.copied = Some((i, None));
+        Some((i, Ok(p.item.copy.clone())))
+    })
+    .flatten();
+    match act {
+        Some((_, Err(line))) => open_line(hwnd, line, false),
+        Some((i, Ok(copy))) if !copy.is_empty() => {
+            copied(hwnd, &copy);
+            explain(hwnd, i);
+        }
         _ => {}
     }
 }
 
 /// A right click on a row that opens a sheet: its menu's Open in New Window.
 fn row_menu(hwnd: HWND, i: usize) {
-    let Some(line) = on_book(hwnd, |b, _| {
-        let &(_, si, gi, ii) = b.page.laid.rows.get(i)?;
-        b.page.item(si, gi, ii).open.clone()
-    })
-    .flatten() else {
+    let Some(line) = on_book(hwnd, |b, _| b.page.row(i)?.1.item.open.clone()).flatten() else {
         return;
     };
     let dark = with(|s| s.theme.map(|t| t.dark)).flatten().unwrap_or(false);
@@ -2086,22 +2277,98 @@ fn field_click(hwnd: HWND, x: f32) {
     invalidate(hwnd);
 }
 
-/// The filter, as if typed (the dev pipe's `sheetfilter:`), or cleared.
+/// The filter, as if typed (the dev pipe's `sheetfilter:`, a Related formula with no row of its own), or cleared.
 fn set_filter(hwnd: HWND, text: Option<&str>) {
-    on_book(hwnd, |b, _| {
+    on_full(hwnd, |b, gfx, fonts, catalog, _| {
+        let before = b.filter.text.clone();
         match text {
             Some(t) => b.filter.set(t),
             None => b.filter.clear(),
         }
+        b.edited(before);
         b.filter_text = None;
-        b.refilter();
+        b.refilter(gfx, fonts, catalog);
     });
     invalidate(hwnd);
 }
 
-/// A key while the sheet has the keys: the filter's, Esc, back and forward, Ctrl+W. True when taken.
+/// Ctrl+F (and a click in it): the filter takes the keys, its text selected.
+fn focus_filter(hwnd: HWND) {
+    // SAFETY: our window, brought forward by the user's key or click; the bar stays up (it's our process)
+    unsafe {
+        let _ = SetForegroundWindow(hwnd);
+        let _ = SetFocus(Some(hwnd));
+    }
+    on_book(hwnd, |b, _| b.filter.select_all());
+    invalidate(hwnd);
+}
+
+/// The keys of the sheets' own windows (WM_KEYDOWN): the periodic table's, else a formula sheet's.
 fn key_down(hwnd: HWND, vk: u32, m: crate::keys::Mods) -> bool {
+    if with(|s| s.open.iter().any(|w| w.hwnd == hwnd && w.key == "periodic")) == Some(true) {
+        return periodic_key(hwnd, vk, m);
+    }
+    book_key(hwnd, vk, m)
+}
+
+/// The table holding the keys (a tile clicked with the bar away): ↵ puts the formula's molar mass in the bar as a
+/// click on the formula does, ⌫ takes the last element away, Esc clears the formula and a second Esc closes it.
+fn periodic_key(hwnd: HWND, vk: u32, m: crate::keys::Mods) -> bool {
+    if m.ctrl || m.alt || m.win {
+        return false;
+    }
+    match vk {
+        0x0D => {
+            put_in_bar_from_table();
+            invalidate(hwnd);
+            true
+        }
+        0x08 => {
+            with(|s| {
+                if s.picks.0.pop().is_some() {
+                    formula_changed(s, hwnd);
+                }
+            });
+            invalidate(hwnd);
+            true
+        }
+        0x1B => {
+            let had = with(|s| {
+                let had = !s.picks.0.is_empty();
+                s.picks.0.clear();
+                formula_changed(s, hwnd);
+                had
+            });
+            if had == Some(false) {
+                // SAFETY: our window; WM_CLOSE comes back through the loop
+                let _ = unsafe { PostMessageW(Some(hwnd), WM_CLOSE, WPARAM(0), LPARAM(0)) };
+            }
+            invalidate(hwnd);
+            true
+        }
+        _ => false,
+    }
+}
+
+/// A click on the formula, or ↵ with the table holding the keys: the mass in the bar, which shows if it's away.
+fn put_in_bar_from_table() {
+    if let Some(mass) = take_formula() {
+        // two steps: the bar shows (if it's away), then the mass goes in the line it shows
+        crate::app::poke(|app| {
+            if !app.bar.visible {
+                app.op(crate::app::Op::Show);
+            }
+        });
+        crate::app::poke(|app| app.model.insert_text(&mass, &app.engine));
+    }
+}
+
+/// A key while a formula sheet has the keys: the explanation's first (sheet_explain.rs: Tab into its Related links,
+/// ↵ follows one, Esc closes it, Ctrl+[ / Ctrl+] through its chain), then the filter's, back and forward, Ctrl+F,
+/// Ctrl+W. True when taken.
+fn book_key(hwnd: HWND, vk: u32, m: crate::keys::Mods) -> bool {
     const BACK_KEY: u32 = 0x08;
+    const ENTER: u32 = 0x0D;
     const ESC: u32 = 0x1B;
     const PRIOR: u32 = 0x21;
     const NEXT: u32 = 0x22;
@@ -2112,6 +2379,9 @@ fn key_down(hwnd: HWND, vk: u32, m: crate::keys::Mods) -> bool {
     const RIGHT: u32 = 0x27;
     const DOWN: u32 = 0x28;
     const DELETE: u32 = 0x2E;
+    if crate::sheet_explain::key_down(hwnd, vk, m) {
+        return true;
+    }
     let ctrl = m.ctrl && !m.alt;
     let plain = !m.ctrl && !m.alt && !m.win;
     // back and forward: Alt+← / Alt+→, Ctrl+[ / Ctrl+]
@@ -2131,14 +2401,36 @@ fn key_down(hwnd: HWND, vk: u32, m: crate::keys::Mods) -> bool {
         let _ = unsafe { PostMessageW(Some(hwnd), WM_CLOSE, WPARAM(0), LPARAM(0)) };
         return true;
     }
+    if ctrl && vk == 0x46 {
+        focus_filter(hwnd);
+        return true;
+    }
+    if plain && vk == ENTER {
+        pick_first(hwnd);
+        return true;
+    }
     if m.alt {
         return false;
     }
     let paste = (ctrl && vk == 0x56)
         .then(|| crate::clip::get(hwnd))
         .flatten();
+    // Ctrl+C and Ctrl+X take the filter's text while it's all selected
+    if ctrl && (vk == 0x43 || vk == 0x58) {
+        let text = on_book(hwnd, |b, _| {
+            (b.filter.all && !b.filter.text.is_empty()).then(|| b.filter.text.clone())
+        })
+        .flatten();
+        if let Some(t) = text {
+            crate::clip::set(hwnd, &t);
+            if vk == 0x58 {
+                set_filter(hwnd, None);
+            }
+        }
+        return true;
+    }
     let page_h = on_sheet(hwnd, |s, _| client_h(hwnd, s.dpi) - page::TOP).unwrap_or(0.0);
-    let edit = on_book(hwnd, |b, _| {
+    let edit = on_full(hwnd, |b, gfx, fonts, catalog, _| {
         let before = b.filter.text.clone();
         match vk {
             ESC if plain => {
@@ -2159,6 +2451,14 @@ fn key_down(hwnd: HWND, vk: u32, m: crate::keys::Mods) -> bool {
                     b.filter.insert(p.lines().next().unwrap_or(""));
                 }
             }
+            // Ctrl+Z: the filter's text before
+            0x5A if ctrl && !m.shift => {
+                let back = b.undo.pop()?;
+                b.filter.set(&back);
+                b.filter_text = None;
+                b.refilter(gfx, fonts, catalog);
+                return Some(false);
+            }
             UP | DOWN | PRIOR | NEXT | HOME | END => {
                 let most = (b.page.laid.height - page_h).max(0.0);
                 b.scroll = match vk {
@@ -2175,8 +2475,9 @@ fn key_down(hwnd: HWND, vk: u32, m: crate::keys::Mods) -> bool {
             _ => return None,
         }
         if b.filter.text != before {
+            b.edited(before);
             b.filter_text = None;
-            b.refilter();
+            b.refilter(gfx, fonts, catalog);
         }
         Some(false)
     })
@@ -2198,7 +2499,7 @@ fn key_down(hwnd: HWND, vk: u32, m: crate::keys::Mods) -> bool {
 
 /// Text typed while the sheet has the keys goes in the filter, which filters live.
 fn typed(hwnd: HWND, unit: u16) {
-    on_book(hwnd, |b, _| {
+    on_full(hwnd, |b, gfx, fonts, catalog, _| {
         let c = match unit {
             0xD800..=0xDBFF => {
                 b.high = Some(unit);
@@ -2212,12 +2513,228 @@ fn typed(hwnd: HWND, unit: u16) {
             u => char::from_u32(u32::from(u)),
         };
         if let Some(c) = c {
+            let before = b.filter.text.clone();
             b.filter.insert(&c.to_string());
+            b.edited(before);
             b.filter_text = None;
-            b.refilter();
+            b.refilter(gfx, fonts, catalog);
         }
     });
+    crate::sheet_explain::leave_links(hwnd);
     invalidate(hwnd);
+}
+
+/// A formula sheet's window with what refiltering needs: its book, the sheets' factories and fonts, the search's
+/// index (once ready) and the client's height.
+fn on_full<R>(
+    hwnd: HWND,
+    f: impl FnOnce(&mut Book, &Gfx, &Fonts, Option<&mut Catalog>, f32) -> R,
+) -> Option<R> {
+    with(|s| {
+        let Sheets {
+            gfx, open, catalog, ..
+        } = s;
+        let (g, fonts) = gfx.as_ref()?;
+        let w = open.iter_mut().find(|w| w.hwnd == hwnd)?;
+        let ch = client_h(hwnd, w.dpi);
+        match &mut w.body {
+            Body::Identity(b) => Some(f(b, g, fonts, catalog.as_mut(), ch)),
+            Body::Periodic(_) => None,
+        }
+    })
+    .flatten()
+}
+
+// ---- the search's index ----
+
+/// Every sheet's rows indexed on a thread of its own (a few hundred ms, once), as a formula sheet opens, so a search
+/// reads them all from its first keystroke; a search typed sooner reads the page's own rows, and runs again when
+/// the index lands. It goes with the last sheet window.
+fn start_index() {
+    let go = with(|s| {
+        let go = s.catalog.is_none() && !s.indexing;
+        s.indexing |= go;
+        go
+    });
+    if go != Some(true) {
+        return;
+    }
+    let spawned = std::thread::Builder::new()
+        .name("qcalc-sheet-index".into())
+        .spawn(|| {
+            let t = std::time::Instant::now();
+            let c = Catalog::every();
+            let ms = t.elapsed().as_secs_f64() * 1000.0;
+            crate::bg::post(move |_| landed(c, ms));
+        });
+    if spawned.is_err() {
+        with(|s| s.indexing = false);
+    }
+}
+
+fn landed(c: Catalog, ms: f64) {
+    qlog!(
+        "sheet search: {} rows of {} sheets indexed in {ms:.0} ms",
+        c.rows(),
+        c.sheets.len()
+    );
+    let searching: Vec<HWND> = with(|s| {
+        s.indexing = false;
+        if !s.open.iter().any(|w| matches!(w.body, Body::Identity(_))) {
+            return Vec::new();
+        }
+        s.catalog = Some(c);
+        s.open
+            .iter_mut()
+            .filter_map(|w| match &mut w.body {
+                Body::Identity(b) => {
+                    b.early = None;
+                    (!b.filter.text.trim().is_empty()).then_some(w.hwnd)
+                }
+                Body::Periodic(_) => None,
+            })
+            .collect()
+    })
+    .unwrap_or_default();
+    // a search typed before it was ready had this sheet's rows alone: again, with every sheet
+    for hwnd in searching {
+        on_full(hwnd, |b, gfx, fonts, catalog, _| {
+            b.refilter(gfx, fonts, catalog)
+        });
+        invalidate(hwnd);
+    }
+}
+
+/// The explained row a Related formula is (sheet_match.rs), in the window's page and then every sheet: its
+/// explanation and the row.
+pub fn related_row(hwnd: HWND, formula: &str) -> Option<(identities::Explanation, Identity)> {
+    with(|s| {
+        let page = s.open.iter().find_map(|w| match &w.body {
+            Body::Identity(b) if w.hwnd == hwnd => Some(&b.page.sheet),
+            _ => None,
+        });
+        let sheets: Vec<&IdentitySheet> = page
+            .into_iter()
+            .chain(s.catalog.iter().flat_map(|c| c.sheets.iter()))
+            .collect();
+        let (n, si, gi, ii) =
+            crate::sheet_match::explained_row(formula, sheets.iter().copied().enumerate())?;
+        let item = sheets[n].sections[si].groups[gi].items[ii].clone();
+        Some((item.explain.clone()?, item))
+    })
+    .flatten()
+}
+
+/// A Related formula no row is: the sheets searched for it (its note's words, else the formula).
+pub fn search_for(hwnd: HWND, text: String) {
+    let h = hwnd.0 as usize;
+    later::free("sheet-search", 0, move || {
+        if let Some(hwnd) = alive(h) {
+            set_filter(hwnd, Some(&text));
+        }
+    });
+}
+
+/// An explanation's Try it: its line in the bar, in place of what was there, and the bar up with the keys.
+pub fn try_line(line: String) {
+    later::free("sheet-try", 0, move || {
+        // two steps, as the table's formula: the bar shows (a showing may bring back or clear the draft), then the
+        // line goes in; a bar that's up only takes the keys back from the sheet
+        crate::app::poke(|app| {
+            if app.bar.visible {
+                app.op(crate::app::Op::Run(crate::bg::Later(focus_bar)));
+            } else {
+                app.op(crate::app::Op::Show);
+            }
+        });
+        crate::app::poke(move |app| {
+            app.model.field.set_text(&line);
+            app.model.text_changed(&app.engine);
+        });
+    });
+}
+
+/// The bar takes the keys (outside the app's borrow).
+fn focus_bar() {
+    if let Some(hwnd) = crate::app::with_app(|a| a.bar.hwnd) {
+        // SAFETY: our bar, brought forward by the user's click
+        unsafe {
+            let _ = SetForegroundWindow(hwnd);
+            let _ = SetFocus(Some(hwnd));
+        }
+    }
+}
+
+/// The sheets' factories, for a window drawn with them (the explanation: its typeset equation is the sheet's).
+pub fn with_gfx<R>(f: impl FnOnce(&Gfx) -> R) -> Option<R> {
+    with(|s| s.gfx.as_ref().map(|(g, _)| f(g))).flatten()
+}
+
+/// The theme the sheets draw in.
+pub fn theme() -> Theme {
+    with(|s| s.theme)
+        .flatten()
+        .unwrap_or_else(|| Theme::for_setting("system"))
+}
+
+/// The table for screen readers: each tile a button named by its symbol, its name and its molar mass, its value how
+/// many are in the formula; the formula a button that puts its mass in the bar.
+fn periodic_tree(hwnd: HWND) -> Option<crate::uia::Tree> {
+    use crate::uia::{Node, Role, Tree};
+    let mut origin = POINT::default();
+    // SAFETY: our window, a live out point
+    let _ = unsafe { windows::Win32::Graphics::Gdi::ClientToScreen(hwnd, &mut origin) };
+    with(|s| {
+        let w = s.open.iter().find(|w| w.hwnd == hwnd)?;
+        let Body::Periodic(p) = &w.body else {
+            return None;
+        };
+        let k = f64::from(w.dpi) / 96.0 * f64::from(p.scale);
+        let on_screen = |r: Rect| {
+            [
+                f64::from(origin.x) + f64::from(r.x) * k,
+                f64::from(origin.y) + f64::from(r.y) * k,
+                f64::from(r.w) * k,
+                f64::from(r.h) * k,
+            ]
+        };
+        let mut nodes: Vec<Node> = p
+            .tiles
+            .iter()
+            .enumerate()
+            .map(|(i, t)| {
+                let count = s.picks.count(&t.symbol);
+                Node {
+                    id: i as i32 + 1,
+                    role: Role::Button,
+                    name: format!("{}, {}, {} grams per mole", t.symbol, t.name, t.mass),
+                    value: Some(if count > 0 {
+                        format!("{count} in formula")
+                    } else {
+                        String::new()
+                    }),
+                    help: "Click adds one to the formula; a right click takes one away".into(),
+                    rect: on_screen(cell(t.row, t.col)),
+                    ..Node::default()
+                }
+            })
+            .collect();
+        if let (Some(f), Some((_, r, ..))) = (s.picks.formula(), p.formula.first()) {
+            nodes.push(Node {
+                id: 1000,
+                role: Role::Button,
+                name: format!("{}, {} grams per mole", f.formula, f.mass),
+                help: "Puts the molar mass in the bar".into(),
+                rect: on_screen(*r),
+                ..Node::default()
+            });
+        }
+        Some(Tree {
+            name: "Periodic Table".into(),
+            nodes,
+        })
+    })
+    .flatten()
 }
 
 fn order_of(picks: &Picks) -> Vec<String> {
@@ -2389,6 +2906,8 @@ fn paint_header(c: &Canvas, b: &Book, hover: Option<Hit>) {
         &b.chrome.copied
     } else if b.page.laid.opens {
         &b.chrome.open
+    } else if b.page.laid.explains {
+        &b.chrome.explain
     } else {
         &b.chrome.copy
     };
@@ -2498,9 +3017,10 @@ fn paint_book(c: &Canvas, b: &mut Book, client_h: f32, hover: Option<Hit>, press
     c.push_clip(Rect::new(0.0, page::TOP, width, view.max(0.0)));
     let dy = page::TOP - b.scroll;
     let visible = |y: f32, h: f32| y + dy + h >= page::TOP && y + dy <= client_h;
-    for &(y, si) in &b.page.laid.titles {
+    for (y, words) in &b.page.laid.titles {
+        let y = *y;
         if visible(y, page::SECTION_TITLE)
-            && let Some(title) = b.page.titles.get(&si)
+            && let Some(title) = b.page.titles.get(words)
         {
             title.draw(c, page::INSET, y + dy + 4.0, t.ink);
             c.fill(
@@ -2514,18 +3034,30 @@ fn paint_book(c: &Canvas, b: &mut Book, client_h: f32, hover: Option<Hit>, press
             );
         }
     }
-    for &(x, y, si, gi) in &b.page.laid.groups {
-        if visible(y, 16.0)
-            && let Some(title) = b.page.groups.get(&(si, gi))
+    for (x, y, words) in &b.page.laid.groups {
+        if visible(*y, 16.0)
+            && let Some(title) = b.page.groups.get(words)
         {
-            title.draw(c, x, y + dy, t.muted);
+            title.draw(c, *x, y + dy, t.muted);
         }
     }
-    for (i, &(rect, si, gi, ii)) in b.page.laid.rows.iter().enumerate() {
+    // a search's quiet lines: closest matches, and where the other sheets' rows start
+    for &(y, note) in &b.page.laid.notes {
+        let words = match note {
+            Note::Closest => &b.chrome.closest,
+            Note::Elsewhere => &b.chrome.elsewhere,
+        };
+        if visible(y, 14.0)
+            && let Some(w) = words
+        {
+            w.draw(c, page::INSET, y + dy, with_alpha(t.muted, 0.7));
+        }
+    }
+    for (i, &(rect, key)) in b.page.laid.rows.iter().enumerate() {
         if !visible(rect.y, rect.h) {
             continue;
         }
-        let Some(p) = b.page.items.get(&(si, gi, ii)) else {
+        let Some(p) = b.page.items.get(&key) else {
             continue;
         };
         let r = Rect::new(rect.x, rect.y + dy, rect.w, rect.h);
@@ -2712,6 +3244,17 @@ pub fn debug(cmd: &str) -> Option<serde_json::Value> {
     };
     match name {
         "sheetpages" => Some(pages_debug()),
+        "sheetexplain" => Some(crate::sheet_explain::debug()),
+        // ↵ in the front sheet's filter (as `sheetkey:13` does when the sheet has the keys)
+        "sheetpick" => {
+            let h = hwnd?.0 as usize;
+            later::free("sheet-debug", 0, move || {
+                if let Some(hwnd) = alive(h) {
+                    pick_first(hwnd);
+                }
+            });
+            Some(ok)
+        }
         "sheetfilter" => {
             let h = hwnd?.0 as usize;
             let text = arg.to_string();
@@ -2732,8 +3275,8 @@ pub fn debug(cmd: &str) -> Option<serde_json::Value> {
             let (x, y) = (*p.first()?, *p.get(1)?);
             let line = on_book(hwnd, |b, _| {
                 let cy = y - page::TOP + b.scroll;
-                let &(_, si, gi, ii) = b.page.laid.rows.iter().find(|r| r.0.contains(x, cy))?;
-                b.page.item(si, gi, ii).open.clone()
+                let i = b.page.laid.rows.iter().position(|r| r.0.contains(x, cy))?;
+                b.page.row(i)?.1.item.open.clone()
             })
             .flatten();
             let opened = line.is_some();
@@ -2758,13 +3301,71 @@ pub fn debug(cmd: &str) -> Option<serde_json::Value> {
             }
             Some(ok)
         }
+        // `sheetkey:<vk>[,shift|ctrl|alt]`: straight to the sheet's key handling, with those modifiers down
         "sheetkey" => {
-            let vk: usize = arg.trim().parse().ok()?;
-            let hwnd = hwnd?;
-            // SAFETY: our window; the key comes back through the loop
-            let _ = unsafe { PostMessageW(Some(hwnd), WM_KEYDOWN, WPARAM(vk), LPARAM(0)) };
+            let mut parts = arg.split(',');
+            let vk: u32 = parts.next()?.trim().parse().ok()?;
+            let rest: Vec<&str> = parts.map(str::trim).collect();
+            let m = crate::keys::Mods {
+                ctrl: rest.contains(&"ctrl"),
+                alt: rest.contains(&"alt"),
+                shift: rest.contains(&"shift"),
+                win: false,
+            };
+            let h = hwnd?.0 as usize;
+            later::free("sheet-debug", 0, move || {
+                if let Some(hwnd) = alive(h) {
+                    key_down(hwnd, vk, m);
+                    invalidate(hwnd);
+                }
+            });
             Some(ok)
         }
+        // `sheettype:<text>`: typed into the front sheet's filter a character at a time (no window moves, so
+        // here and now), each keystroke's search and layout timed
+        "sheettype" => {
+            let hwnd = hwnd?;
+            let ms: Vec<f64> = arg
+                .encode_utf16()
+                .map(|u| {
+                    let t = std::time::Instant::now();
+                    typed(hwnd, u);
+                    t.elapsed().as_secs_f64() * 1000.0
+                })
+                .collect();
+            Some(serde_json::json!({ "ok": true, "ms": ms }))
+        }
+        // `sheettablekey:<vk>`: the table's keys
+        "sheettablekey" => {
+            let vk: u32 = arg.trim().parse().ok()?;
+            let table = window_of("periodic")?;
+            let h = table.0 as usize;
+            later::free("sheet-debug", 0, move || {
+                if let Some(hwnd) = alive(h) {
+                    periodic_key(hwnd, vk, crate::keys::Mods::default());
+                }
+            });
+            Some(serde_json::json!({ "ok": true, "picks": with(|s| s.picks.0.clone()) }))
+        }
+        // `sheettablepick:<symbol>`: a tile clicked
+        "sheettablepick" => {
+            let table = window_of("periodic")?;
+            with(|s| {
+                s.picks.pick(arg.trim());
+                formula_changed(s, table);
+            });
+            invalidate(table);
+            Some(serde_json::json!({ "ok": true, "picks": with(|s| s.picks.0.clone()) }))
+        }
+        "sheettable" => Some(serde_json::json!({
+            "open": window_of("periodic").is_some(),
+            "picks": with(|s| s.picks.0.clone()),
+            "tree": window_of("periodic").and_then(periodic_tree).map(|t| {
+                t.nodes.iter().filter(|n| n.value.as_deref().is_some_and(|v| !v.is_empty()) || n.id == 1 || n.id == 1000)
+                    .map(|n| serde_json::json!({ "name": n.name, "value": n.value }))
+                    .collect::<Vec<_>>()
+            }),
+        })),
         _ => None,
     }
 }
@@ -2798,14 +3399,15 @@ fn pages_debug() -> serde_json::Value {
                         .laid
                         .rows
                         .iter()
-                        .map(|&(rect, si, gi, ii)| {
-                            let item = b.page.item(si, gi, ii);
-                            let p = b.page.items.get(&(si, gi, ii));
+                        .map(|&(rect, key)| {
+                            let p = b.page.items.get(&key);
+                            let item = p.map(|p| &p.item);
                             let y = rect.y + page::TOP - b.scroll;
                             serde_json::json!({
                                 "x": rect.x, "y": y, "w": rect.w, "h": rect.h,
                                 "shown": y + rect.h > page::TOP && y < view,
-                                "copy": item.copy, "open": item.open,
+                                "copy": item.map(|i| &i.copy), "open": item.and_then(|i| i.open.as_ref()),
+                                "own": key.own(), "explain": item.and_then(|i| i.explain.as_ref()).map(|e| &e.title),
                                 "typeset": p.is_some_and(|p| p.docs.typeset()),
                                 "figure": p.is_some_and(|p| p.docs.figure),
                                 "cells": p.map(|p| p.sizes.cells.clone()),
@@ -2962,6 +3564,10 @@ fn paint_periodic(
             c.fill_round(inner, 4.5, with_alpha(tone, alpha));
         } else {
             c.fill_round(r, 6.0, with_alpha(tone, alpha));
+        }
+        // a contrast theme edges every tile (the Mac's Increase Contrast)
+        if crate::contrast::on() {
+            stroke_round(c, r, 6.0, t.ink);
         }
         let Some((number, symbol, mass)) = p.labels.get(i) else {
             continue;

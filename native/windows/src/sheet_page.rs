@@ -4,7 +4,6 @@
 //! and copies (`target`), and a window's pages with back and forward (`Pages`). sheets.rs draws them.
 
 use qcalc_core::app::identities::{self, Identity, IdentitySheet};
-use unicode_normalization::UnicodeNormalization;
 
 // ---- design (IdentityWindowController), DIPs ----
 
@@ -73,18 +72,11 @@ impl Bx {
 
 // ---- the sheet a page shows ----
 
-/// The sheet as the native apps typeset it, with only its pictured sections when it has a picture (the table is
-/// still there by its own name) and the rows with nothing to show dropped, as SheetData.raw does.
+/// The sheet as the native apps typeset it, with the rows with nothing to show dropped, as SheetData.raw does. Every
+/// section is kept: a sheet with a picture shows only the picture (`whole`), but a search finds its other rows (the
+/// unit circle's exact values).
 pub fn page_sheet(id: &str) -> Option<IdentitySheet> {
     let mut sheet = identities::native_identity_sheet_by_id(id)?;
-    let pictured = |s: &identities::IdentitySection| {
-        s.groups
-            .iter()
-            .any(|g| g.items.iter().any(|i| i.figure.is_some()))
-    };
-    if sheet.sections.iter().any(pictured) {
-        sheet.sections.retain(pictured);
-    }
     for section in &mut sheet.sections {
         for group in &mut section.groups {
             group
@@ -95,6 +87,14 @@ pub fn page_sheet(id: &str) -> Option<IdentitySheet> {
     }
     sheet.sections.retain(|s| !s.groups.is_empty());
     (!sheet.sections.is_empty()).then_some(sheet)
+}
+
+/// A section that holds a picture.
+pub fn pictured(section: &identities::IdentitySection) -> bool {
+    section
+        .groups
+        .iter()
+        .any(|g| g.items.iter().any(|i| i.figure.is_some()))
 }
 
 pub fn has_figure(sheet: &IdentitySheet) -> bool {
@@ -236,107 +236,6 @@ pub fn row_height(sizes: &Sizes) -> f32 {
 
 // ---- the filter ----
 
-/// Case, accents and width folded, `−` read as `-`.
-pub fn fold(text: &str) -> String {
-    text.nfd()
-        .filter(|c| !('\u{300}'..='\u{36f}').contains(c))
-        .map(|c| match c {
-            '\u{2212}' => '-',
-            '\u{ff01}'..='\u{ff5e}' => char::from_u32(c as u32 - 0xfee0).unwrap_or(c),
-            '\u{3000}' => ' ',
-            c => c,
-        })
-        .flat_map(char::to_lowercase)
-        .collect()
-}
-
-/// Letters and digits alone, so `tmax` finds τ_max's `t_max` and `x2` finds x^{2}.
-fn compact(text: &str) -> String {
-    text.chars().filter(|c| c.is_alphanumeric()).collect()
-}
-
-/// Lowercase greek in latin letters, as the mac's ICU Greek-Latin transform then folded: τ is t, θ is th, ω is o.
-fn latin(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    for c in text.chars() {
-        out.push_str(match c {
-            'α' => "a",
-            'β' => "b",
-            'γ' => "g",
-            'δ' => "d",
-            'ε' | 'ϵ' | 'η' => "e",
-            'ζ' => "z",
-            'θ' | 'ϑ' => "th",
-            'ι' => "i",
-            'κ' => "k",
-            'λ' => "l",
-            'μ' => "m",
-            'ν' => "n",
-            'ξ' => "x",
-            'ο' | 'ω' => "o",
-            'π' => "p",
-            'ρ' => "r",
-            'σ' | 'ς' => "s",
-            'τ' => "t",
-            'υ' => "y",
-            'φ' | 'ϕ' => "ph",
-            'χ' => "ch",
-            'ψ' => "ps",
-            _ => {
-                out.push(c);
-                continue;
-            }
-        });
-    }
-    out
-}
-
-/// The filter's words.
-pub fn words(filter: &str) -> Vec<String> {
-    fold(filter)
-        .split_whitespace()
-        .map(str::to_string)
-        .collect()
-}
-
-/// Every word is somewhere in the texts, or in one of their words squeezed to its letters and digits.
-pub fn matches(words: &[String], texts: &[&str]) -> bool {
-    let hay = fold(&texts.join(" "));
-    // squeezed a word at a time, so `sin` doesn't run across `s in`; and again with greek spelled in latin
-    // (τ is t, σ is s, θ is th), so `tmax` finds τ_max while a typed `τ` still finds only τ (as the mac)
-    let mut tight: Vec<String> = hay.split_whitespace().map(compact).collect();
-    let spelled: Vec<String> = tight
-        .iter()
-        .map(|t| latin(t))
-        .filter(|l| !tight.contains(l))
-        .collect();
-    tight.extend(spelled);
-    words.iter().all(|word| {
-        hay.contains(word.as_str()) || {
-            let w = compact(word);
-            !w.is_empty() && tight.iter().any(|t| t.contains(&w))
-        }
-    })
-}
-
-/// What a filter is matched on: the row's words, its note, what it copies and opens, its cells' and pieces' copies.
-pub fn search_text(item: &Identity) -> Vec<String> {
-    let runs = |show: &str| -> String {
-        identities::identity_runs(show)
-            .into_iter()
-            .map(|r| r.text)
-            .collect()
-    };
-    let mut out: Vec<String> = item.lead.iter().flatten().map(|l| runs(l)).collect();
-    out.push(runs(&item.show));
-    out.extend(item.note.clone());
-    out.push(item.copy.clone());
-    out.extend(item.open.clone());
-    out.extend(item.lead_copy.iter().flatten().cloned());
-    out.extend(item.parts.iter().flatten().map(|p| p.copy.clone()));
-    out
-}
-
 /// The filter field's text and caret (a byte offset); `all` while Ctrl+A has it all selected.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Filter {
@@ -447,81 +346,258 @@ impl Filter {
     }
 }
 
-// ---- layout ----
+// ---- the rows a page lists ----
+
+/// A row's place: its sheet (`OWN`, the page's own, else the catalog's), section, group and item.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct RowKey {
+    pub sheet: u32,
+    pub s: u32,
+    pub g: u32,
+    pub i: u32,
+}
+
+/// The page's own sheet, in a `RowKey`.
+pub const OWN: u32 = u32::MAX;
+
+impl RowKey {
+    pub fn new(sheet: u32, s: usize, g: usize, i: usize) -> RowKey {
+        RowKey {
+            sheet,
+            s: s as u32,
+            g: g as u32,
+            i: i as u32,
+        }
+    }
+
+    pub fn own(&self) -> bool {
+        self.sheet == OWN
+    }
+}
+
+/// A search's rows from other sheets, at most this many.
+pub const ELSEWHERE_MOST: usize = 60;
+
+/// A section a page lists: its title, where it's from, and the rows each of its groups keeps, in order.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Shown {
+    pub title: String,
+    pub sheet: u32,
+    pub s: usize,
+    pub own: bool,
+    /// a picture's section: no headings over it
+    pub figure: bool,
+    pub groups: Vec<(usize, Vec<usize>)>,
+}
+
+/// What a page lists, for its filter.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Listing {
+    pub shown: Vec<Shown>,
+    pub searching: bool,
+    /// no row had every word: these have all but one
+    pub closest: bool,
+    /// some row (not a picture) matched
+    pub matched: bool,
+    /// the sheet is only a picture, which has nothing to filter
+    pub only_figure: bool,
+}
+
+fn all_rows(section: &identities::IdentitySection) -> Vec<(usize, Vec<usize>)> {
+    section
+        .groups
+        .iter()
+        .enumerate()
+        .map(|(gi, g)| (gi, (0..g.items.len()).collect()))
+        .collect()
+}
+
+/// The whole sheet, no search: a sheet with a picture shows the picture alone; its other rows come up in a search.
+pub fn whole(sheet: &IdentitySheet) -> Listing {
+    let any = sheet.sections.iter().any(pictured);
+    Listing {
+        shown: sheet
+            .sections
+            .iter()
+            .enumerate()
+            .filter(|(_, s)| !any || pictured(s))
+            .map(|(si, s)| Shown {
+                title: s.title.clone(),
+                sheet: OWN,
+                s: si,
+                own: true,
+                figure: pictured(s),
+                groups: all_rows(s),
+            })
+            .collect(),
+        only_figure: sheet.sections.iter().all(pictured),
+        ..Listing::default()
+    }
+}
+
+/// A search's rows (`hits`, best first, the page's own keyed `OWN`) under their sections: the page's picture first,
+/// whatever the search; then each row once (a one-formula sheet repeats a big sheet's row), its table's heading rows
+/// ahead of it, under its section ("<sheet> · <section>" for another sheet's, at most 60 of those).
+pub fn found<'a>(
+    sheet: &'a IdentitySheet,
+    hits: &[RowKey],
+    closest: bool,
+    other: impl Fn(u32) -> Option<&'a IdentitySheet>,
+) -> Listing {
+    let mut out = Listing {
+        searching: true,
+        closest,
+        only_figure: sheet.sections.iter().all(pictured),
+        ..Listing::default()
+    };
+    for (si, s) in sheet
+        .sections
+        .iter()
+        .enumerate()
+        .filter(|(_, s)| pictured(s))
+    {
+        out.shown.push(Shown {
+            title: s.title.clone(),
+            sheet: OWN,
+            s: si,
+            own: true,
+            figure: true,
+            groups: all_rows(s),
+        });
+    }
+    let mut seen = std::collections::HashSet::new();
+    let mut elsewhere = 0;
+    let mut at: std::collections::HashMap<(u32, usize), usize> = std::collections::HashMap::new();
+    for &key in hits {
+        let from = if key.own() {
+            Some(sheet)
+        } else {
+            other(key.sheet)
+        };
+        let (s, g, i) = (key.s as usize, key.g as usize, key.i as usize);
+        let Some((from, section)) = from.and_then(|f| Some((f, f.sections.get(s)?))) else {
+            continue;
+        };
+        let Some(item) = section.groups.get(g).and_then(|gr| gr.items.get(i)) else {
+            continue;
+        };
+        if !key.own() && elsewhere >= ELSEWHERE_MOST {
+            continue;
+        }
+        if !seen.insert(item.copy.as_str()) {
+            continue;
+        }
+        if !key.own() {
+            elsewhere += 1;
+        }
+        out.matched = true;
+        let e = *at.entry((key.sheet, s)).or_insert_with(|| {
+            out.shown.push(Shown {
+                title: if key.own() {
+                    section.title.clone()
+                } else {
+                    format!("{} · {}", from.title, section.title)
+                },
+                sheet: key.sheet,
+                s,
+                own: key.own(),
+                figure: pictured(section),
+                groups: Vec::new(),
+            });
+            out.shown.len() - 1
+        });
+        let groups = &mut out.shown[e].groups;
+        match groups.iter_mut().find(|x| x.0 == g) {
+            Some(gr) => gr.1.push(i),
+            None => {
+                // a table's heading rows go first, as on the sheet
+                let mut rows: Vec<usize> = section.groups[g]
+                    .items
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, x)| x.copy.is_empty())
+                    .map(|(n, _)| n)
+                    .collect();
+                rows.push(i);
+                groups.push((g, rows));
+            }
+        }
+    }
+    out
+}
+
+/// A quiet line in a search's list.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Note {
+    /// no row has every word · closest matches
+    Closest,
+    /// in other sheets
+    Elsewhere,
+}
 
 /// Where a page's titles and rows go, from the top of the scrolled content.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Laid {
-    /// section titles: (y, section)
-    pub titles: Vec<(f32, usize)>,
-    /// group titles: (x, y, section, group)
-    pub groups: Vec<(f32, f32, usize, usize)>,
-    /// rows: (rect, section, group, item)
-    pub rows: Vec<(Bx, usize, usize, usize)>,
-    /// each shown section's top, for opening at one
+    /// section titles: (y, title)
+    pub titles: Vec<(f32, String)>,
+    /// group titles: (x, y, title)
+    pub groups: Vec<(f32, f32, String)>,
+    /// rows: (rect, row)
+    pub rows: Vec<(Bx, RowKey)>,
+    /// quiet lines: (y, which)
+    pub notes: Vec<(f32, Note)>,
+    /// each of the page's own sections' top, for opening at one
     pub tops: Vec<(usize, f32)>,
     /// the `no matches` line's top, when the filter left nothing
     pub none: Option<f32>,
     /// a row opens a sheet (the status reads `click to open`)
     pub opens: bool,
+    /// a row explains itself (the status reads `click to copy and explain`)
+    pub explains: bool,
+    /// a search's first row to pick (↵ in the filter): its index in `rows`
+    pub first: Option<usize>,
     pub height: f32,
 }
 
-/// The rows the filter leaves, each group in whichever column is shorter so far (a wide section's one under
-/// another at the full width), a picture with no headings over it. `height(s, g, i)` is a row's height.
-pub fn lay_out(
-    sheet: &IdentitySheet,
-    filter: &str,
-    height: impl Fn(usize, usize, usize) -> f32,
+/// The listed rows, each group in whichever column is shorter so far (a wide section's one under another at the full
+/// width), a picture with no headings over it; a search's quiet lines over its closest matches and where the other
+/// sheets' start. `section(sheet, s)` finds a listed section, `height(row)` is a row's height.
+pub fn lay_out<'a>(
+    listing: &Listing,
+    section: impl Fn(u32, usize) -> Option<&'a identities::IdentitySection>,
+    height: impl Fn(RowKey) -> f32,
 ) -> Laid {
     let width = width();
-    let words = words(filter);
     let mut out = Laid::default();
     let mut y = 0.0f32;
-    let mut matched = false;
-    for (si, section) in sheet.sections.iter().enumerate() {
-        let bare = section
-            .groups
-            .iter()
-            .any(|g| g.items.iter().any(|i| i.figure.is_some()));
-        // each group's rows the filter keeps: a heading row stays when its table has a match below it
-        let groups: Vec<(usize, Vec<usize>)> = section
-            .groups
-            .iter()
-            .enumerate()
-            .filter_map(|(gi, group)| {
-                if words.is_empty() || bare {
-                    return Some((gi, (0..group.items.len()).collect()));
-                }
-                let kept: Vec<usize> = group
-                    .items
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, item)| {
-                        item.copy.is_empty() || {
-                            let texts = search_text(item);
-                            let mut all: Vec<&str> = vec![&section.title, &group.title];
-                            all.extend(texts.iter().map(String::as_str));
-                            matches(&words, &all)
-                        }
-                    })
-                    .map(|(i, _)| i)
-                    .collect();
-                if !kept.iter().any(|&i| !group.items[i].copy.is_empty()) {
-                    return None;
-                }
-                matched = true;
-                Some((gi, kept))
-            })
-            .collect();
-        if groups.is_empty() {
+    let say = |out: &mut Laid, y: &mut f32, note: Note| {
+        out.notes.push((*y + 2.0, note));
+        *y += 20.0;
+    };
+    if listing.closest && listing.matched {
+        say(&mut out, &mut y, Note::Closest);
+    }
+    // "in other sheets" once this sheet's are all above
+    let last_own = listing.shown.iter().rposition(|e| e.own && !e.figure);
+    let mut said_elsewhere = false;
+    for (n, entry) in listing.shown.iter().enumerate() {
+        let Some(sec) = section(entry.sheet, entry.s) else {
             continue;
+        };
+        let bare = entry.figure;
+        if !entry.own && !said_elsewhere {
+            said_elsewhere = true;
+            if last_own.is_none_or(|l| n > l) {
+                say(&mut out, &mut y, Note::Elsewhere);
+            }
         }
-        out.tops.push((si, y));
+        if entry.own && !out.tops.iter().any(|t| t.0 == entry.s) {
+            out.tops.push((entry.s, y));
+        }
         if !bare {
-            out.titles.push((y, si));
+            out.titles.push((y, entry.title.clone()));
         }
-        let wide = section.wide == Some(true);
+        let wide = sec.wide == Some(true);
         let first = if bare { y - 6.0 } else { y + SECTION_TITLE };
         let mut columns = if wide {
             vec![first]
@@ -529,21 +605,37 @@ pub fn lay_out(
             vec![first, first]
         };
         let span = if wide { width - INSET * 2.0 } else { COLUMN };
-        for (gi, items) in groups {
+        for (gi, items) in &entry.groups {
+            let Some(group) = sec.groups.get(*gi) else {
+                continue;
+            };
             let c = usize::from(columns.len() > 1 && columns[1] < columns[0]);
             let x = INSET + c as f32 * (COLUMN + INSET);
             let mut gy = columns[c] + 6.0;
             if !bare {
-                out.groups.push((x + 6.0, gy + 2.0, si, gi));
+                out.groups.push((x + 6.0, gy + 2.0, group.title.clone()));
                 gy += GROUP_TITLE;
             }
-            for ii in items {
-                let item = &section.groups[gi].items[ii];
+            for &ii in items {
+                let Some(item) = group.items.get(ii) else {
+                    continue;
+                };
+                let key = RowKey::new(entry.sheet, entry.s, *gi, ii);
                 if item.open.is_some() {
                     out.opens = true;
+                } else if (!item.copy.is_empty() || item.figure.is_some()) && item.explain.is_some()
+                {
+                    out.explains = true;
                 }
-                let h = height(si, gi, ii);
-                out.rows.push((Bx::new(x, gy, span, h), si, gi, ii));
+                if listing.searching
+                    && out.first.is_none()
+                    && item.figure.is_none()
+                    && !item.copy.is_empty()
+                {
+                    out.first = Some(out.rows.len());
+                }
+                let h = height(key);
+                out.rows.push((Bx::new(x, gy, span, h), key));
                 gy += h;
             }
             columns[c] = gy;
@@ -551,17 +643,96 @@ pub fn lay_out(
         y = columns.iter().copied().fold(y, f32::max) + 14.0;
     }
     // a sheet that is only a picture has nothing to filter, so it never says so
-    let only_figure = sheet.sections.iter().all(|s| {
-        s.groups
-            .iter()
-            .any(|g| g.items.iter().any(|i| i.figure.is_some()))
-    });
-    if !words.is_empty() && !matched && !only_figure {
+    if listing.searching && !listing.matched && !listing.only_figure {
         out.none = Some(y + 10.0);
         y += 40.0;
     }
     out.height = (y + INSET - 14.0).max(0.0);
     out
+}
+
+// ---- the search's index ----
+
+/// Every sheet's rows in one search (sheet_search.rs), built off the UI thread once a sheet opens (sheets.rs), or
+/// one sheet's (a search typed before that's ready). A row's key's sheet is its place in `sheets`.
+#[derive(Default)]
+pub struct Catalog {
+    pub sheets: Vec<IdentitySheet>,
+    ids: std::collections::HashMap<String, u32>,
+    refs: Vec<RowKey>,
+    search: crate::sheet_search::Search,
+}
+
+impl Catalog {
+    /// Every sheet the native app searches (the web's four, then its own; not the part sheets, which repeat them).
+    pub fn every() -> Catalog {
+        let mut c = Catalog::default();
+        for id in identities::native_sheet_ids() {
+            if let Some(sheet) = page_sheet(&id) {
+                c.add(sheet);
+            }
+        }
+        c.search.done_adding();
+        c
+    }
+
+    /// A sheet's rows into the index (a picture isn't searched; the rows beside it are); its place.
+    pub fn add(&mut self, sheet: IdentitySheet) -> u32 {
+        let n = self.sheets.len() as u32;
+        for (s, section) in sheet.sections.iter().enumerate() {
+            for (g, group) in section.groups.iter().enumerate() {
+                for (i, item) in group.items.iter().enumerate() {
+                    if item.copy.is_empty() || item.figure.is_some() {
+                        continue;
+                    }
+                    let text = crate::sheet_search::RowText::of(item);
+                    self.search
+                        .add(&text, [&sheet.title, &section.title, &group.title]);
+                    self.refs.push(RowKey::new(n, s, g, i));
+                }
+            }
+        }
+        self.ids.insert(sheet.id.clone(), n);
+        self.sheets.push(sheet);
+        n
+    }
+
+    pub fn index_of(&self, id: &str) -> Option<u32> {
+        self.ids.get(id).copied()
+    }
+
+    pub fn sheet(&self, n: u32) -> Option<&IdentitySheet> {
+        self.sheets.get(n as usize)
+    }
+
+    pub fn rows(&self) -> usize {
+        self.refs.len()
+    }
+
+    /// The rows a query finds, best first, the open sheet's ahead of a tie and keyed `OWN`; and whether they are
+    /// only the closest matches.
+    pub fn find(&mut self, query: &str, open: Option<u32>) -> (Vec<RowKey>, bool) {
+        use crate::sheet_search::{OPEN_SHEET_BONUS, Search};
+        let outcome = self.search.search(query);
+        let refs = &self.refs;
+        let hits = Search::ranked(&outcome, |n| {
+            if Some(refs[n].sheet) == open {
+                OPEN_SHEET_BONUS
+            } else {
+                0
+            }
+        })
+        .into_iter()
+        .map(|n| {
+            let mut k = refs[n];
+            if Some(k.sheet) == open {
+                k.sheet = OWN;
+            }
+            k
+        })
+        .collect();
+        (hits, outcome.closest)
+    }
 }
 
 // ---- what a point boxes and copies ----
@@ -766,20 +937,6 @@ mod tests {
     }
 
     #[test]
-    fn the_unit_circle_shows_only_its_picture() {
-        let s = page_sheet("unit circle").unwrap();
-        assert!(has_figure(&s));
-        assert_eq!(s.sections.len(), 1);
-        let fig = &s.sections[0].groups[0].items[0];
-        let d = docs(fig);
-        assert!(d.figure && d.spots.len() > 20);
-        assert!(sheet_docs(&s).len() > 20);
-        // the table is still there as its own part
-        let t = page_sheet("unit circle: Exact values").unwrap();
-        assert!(!has_figure(&t));
-    }
-
-    #[test]
     fn the_web_sheets_typeset_from_the_cell_table() {
         let s = page_sheet("conversions").unwrap();
         let typeset = s
@@ -802,69 +959,87 @@ mod tests {
         assert_eq!(parts.parts[3].1, "2.54");
     }
 
-    #[test]
-    fn folding_reads_case_accents_width_and_the_minus() {
-        assert_eq!(fold("Thévenin"), "thevenin");
-        assert_eq!(fold("Ａb−c"), "ab-c");
-        assert_eq!(words("  Ohm  LAW "), vec!["ohm", "law"]);
+    /// A sheet laid out for a query, searched in `c` (the sheet alone when it's empty), rows `h` tall.
+    fn laid(sheet: &IdentitySheet, query: &str, c: &mut Catalog, h: f32) -> Laid {
+        if c.sheets.is_empty() {
+            c.add(sheet.clone());
+        }
+        let listing = if query.trim().is_empty() {
+            whole(sheet)
+        } else {
+            let open = c.index_of(&sheet.id);
+            let (hits, closest) = c.find(query, open);
+            found(sheet, &hits, closest, |n| c.sheet(n))
+        };
+        lay_out(
+            &listing,
+            |n, s| if n == OWN { Some(sheet) } else { c.sheet(n) }.and_then(|x| x.sections.get(s)),
+            |_| h,
+        )
+    }
+
+    fn item_at<'a>(sheet: &'a IdentitySheet, c: &'a Catalog, k: RowKey) -> &'a Identity {
+        let from = if k.own() {
+            sheet
+        } else {
+            c.sheet(k.sheet).unwrap()
+        };
+        &from.sections[k.s as usize].groups[k.g as usize].items[k.i as usize]
     }
 
     #[test]
-    fn a_filter_word_matches_text_or_a_squeezed_word() {
-        let w = words("tmax");
-        assert!(matches(&w, &["τ_max = T r / J", "t_max"]));
-        assert!(!matches(&w, &["t", "max"]));
-        // greek spelled in latin: `tmax` finds τ_max alone, and a typed τ still finds only τ
-        assert!(matches(&w, &["τ_max = (σ_1 - σ_3)/2"]));
-        assert!(matches(&words("sx"), &["σ_x"]));
-        assert!(!matches(&words("theta"), &["θ"]));
-        assert!(matches(&words("th"), &["θ"]));
-        assert!(!matches(&words("τ"), &["t_max"]));
-        // sin doesn't run across `s in`
-        assert!(!matches(&words("sin"), &["s in"]));
-        assert!(matches(&words("sin cos"), &["sin^2 + cos^2 = 1"]));
-        assert!(!matches(&words("sin tan"), &["sin^2 + cos^2 = 1"]));
-    }
-
-    #[test]
-    fn the_filter_keeps_matching_rows_their_tables_and_titles() {
-        let s = page_sheet("continuum mechanics").unwrap();
-        let all = lay_out(&s, "", |_, _, _| ROW);
-        let torsion = lay_out(&s, "torsion", |_, _, _| ROW);
-        assert!(torsion.rows.len() < all.rows.len() && !torsion.rows.is_empty());
-        // `torsion` keeps the Torsion section whole
-        let si = s
-            .sections
-            .iter()
-            .position(|x| x.title == "Torsion")
-            .unwrap();
-        let in_torsion = s.sections[si]
-            .groups
-            .iter()
-            .map(|g| g.items.len())
-            .sum::<usize>();
-        assert_eq!(
-            torsion.rows.iter().filter(|r| r.1 == si).count(),
-            in_torsion
-        );
-        let none = lay_out(&s, "zzzqqq", |_, _, _| ROW);
-        assert!(none.rows.is_empty() && none.none.is_some());
-        assert!(all.none.is_none());
-        // the figure is never filtered, and a picture alone never says `no matches`
-        let uc = page_sheet("unit circle").unwrap();
-        let l = lay_out(&uc, "zzzqqq", |_, _, _| 690.0);
+    fn the_unit_circle_shows_its_picture_and_finds_its_values() {
+        let s = page_sheet("unit circle").unwrap();
+        assert!(has_figure(&s));
+        // every section is kept, so a search finds the exact values; the page shows the picture alone
+        assert!(s.sections.len() > 1);
+        let fig = s.sections.iter().position(pictured).unwrap();
+        let d = docs(&s.sections[fig].groups[0].items[0]);
+        assert!(d.figure && d.spots.len() > 20);
+        assert!(sheet_docs(&s).len() > 20);
+        let mut c = Catalog::default();
+        let l = laid(&s, "", &mut c, 690.0);
         assert_eq!(l.rows.len(), 1);
-        assert!(l.none.is_none() && l.titles.is_empty() && l.groups.is_empty());
+        assert!(l.titles.is_empty() && l.groups.is_empty() && l.none.is_none());
+        // `sin 30` lists rows under the picture
+        let l = laid(&s, "sin 30", &mut c, ROW);
+        assert!(l.rows.len() > 1, "{:?}", l.rows);
+        assert!(!l.titles.is_empty());
+        // ↵ picks the first row past the picture and its table's heading
+        let first = l.first.unwrap();
+        assert!(first >= 1 && !item_at(&s, &c, l.rows[first].1).copy.is_empty());
+        // the picture stays whatever the search, and the rows beside it can say `no matches`
+        let l = laid(&s, "zzzqqq", &mut c, 690.0);
+        assert_eq!(l.rows.len(), 1);
+        assert!(l.none.is_some());
+        // the table is still there as its own part
+        let t = page_sheet("unit circle: Exact values").unwrap();
+        assert!(!has_figure(&t));
     }
 
     #[test]
-    fn a_heading_row_stays_with_its_table() {
-        let s = page_sheet("unit circle: Exact values").unwrap();
-        let l = lay_out(&s, "135", |_, _, _| ROW);
-        let items = &s.sections[0].groups[0].items;
-        let kept: Vec<&Identity> = l.rows.iter().map(|r| &items[r.3]).collect();
+    fn a_search_lists_rows_best_first_with_their_headings() {
+        let s = page_sheet("continuum mechanics").unwrap();
+        let mut c = Catalog::default();
+        let all = laid(&s, "", &mut c, ROW);
+        let torsion = laid(&s, "torsion", &mut c, ROW);
+        assert!(torsion.rows.len() < all.rows.len() && !torsion.rows.is_empty());
+        assert!(all.none.is_none() && all.first.is_none());
+        assert_eq!(torsion.first, Some(0));
+        // greek spelled in latin: `tmax` finds τ_max first
+        let tmax = laid(&s, "tmax", &mut c, ROW);
+        let first = item_at(&s, &c, tmax.rows[tmax.first.unwrap()].1);
+        assert!(first.show.contains("τ_{max}"), "{}", first.show);
+        let none = laid(&s, "zzzqqq", &mut c, ROW);
+        assert!(none.rows.is_empty() && none.none.is_some());
+        // a table's heading row comes with its match
+        let t = page_sheet("unit circle: Exact values").unwrap();
+        let mut c = Catalog::default();
+        let l = laid(&t, "135", &mut c, ROW);
+        let kept: Vec<&Identity> = l.rows.iter().map(|r| item_at(&t, &c, r.1)).collect();
         assert!(kept[0].copy.is_empty(), "the heading first");
-        assert!(kept.len() >= 2 && kept.len() < items.len());
+        assert!(kept.len() >= 2);
+        assert_eq!(l.first, Some(1));
     }
 
     #[test]
@@ -876,11 +1051,38 @@ mod tests {
         };
         assert_eq!(row_height(&tall), 40.0);
         let s = page_sheet("formulas").unwrap();
-        let l = lay_out(&s, "", |_, _, _| 30.0);
+        let l = laid(&s, "", &mut Catalog::default(), 30.0);
         assert!(l.opens);
         assert!(l.rows.iter().all(|r| r.0.h == 30.0));
         assert!(l.rows.iter().all(|r| r.0.right() <= width() - INSET + 0.01));
         assert!(l.tops.windows(2).all(|w| w[1].1 > w[0].1));
+    }
+
+    #[test]
+    fn a_search_reads_every_sheet() {
+        let mut c = Catalog::every();
+        assert!(c.rows() > 1000, "{}", c.rows());
+        let finance = page_sheet("finance").unwrap();
+        let l = laid(&finance, "ohm", &mut c, ROW);
+        // the other sheets' rows, under a quiet line and `<sheet> · <section>`
+        assert!(l.notes.iter().any(|n| n.1 == Note::Elsewhere));
+        assert!(l.titles.iter().any(|t| t.1.contains(" · ")));
+        assert!(l.rows.len() <= ELSEWHERE_MOST + 40);
+        assert!(l.rows.iter().all(|r| !r.1.own()));
+        // a misspelling with no row having every word: closest matches
+        let l = laid(&finance, "effective anual yield", &mut c, ROW);
+        assert!(!l.rows.is_empty());
+        let first = item_at(&finance, &c, l.rows[l.first.unwrap()].1);
+        assert!(first.explain.is_some(), "{}", first.show);
+        // each row once
+        let copies: Vec<&str> = l
+            .rows
+            .iter()
+            .map(|r| item_at(&finance, &c, r.1).copy.as_str())
+            .filter(|c| !c.is_empty())
+            .collect();
+        let unique: std::collections::HashSet<&&str> = copies.iter().collect();
+        assert_eq!(unique.len(), copies.len());
     }
 
     #[test]
