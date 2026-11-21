@@ -1,0 +1,2277 @@
+{
+ "a x^{2} + b x + c = a(x + b/(2a))^{2} + c − b^{2}/(4a)": {
+  "title": "Completing the square",
+  "about": "Rewrites a quadratic as a perfect square plus a constant, which shows the vertex at once and is how the quadratic formula is derived.",
+  "vars": [
+   [
+    "a, b, c",
+    "coefficients of the quadratic, a ≠ 0",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "y = a(x − h)^{2} + k",
+    "vertex form, h = −b/(2a)"
+   ],
+   [
+    "x = (−b ± √(b^{2} − 4ac))/(2a)",
+    "what solving the square gives"
+   ]
+  ],
+  "example": {
+   "problem": "Write x^{2} + 6x + 5 in vertex form.",
+   "steps": [
+    "Half of 6 is 3, so x^{2} + 6x = (x + 3)^{2} − 9",
+    "x^{2} + 6x + 5 = (x + 3)^{2} − 4"
+   ],
+   "answer": "(x + 3)^{2} − 4, vertex (−3, −4)"
+  }
+ },
+ "r_{1} + r_{2} = −b/a,  r_{1} r_{2} = c/a": {
+  "title": "Vieta's formulas: sum and product of the roots",
+  "about": "For ax² + bx + c = 0 the two roots add to −b/a and multiply to c/a, real or complex. Handy for checking roots and for building a quadratic from its roots.",
+  "vars": [
+   [
+    "r_{1}, r_{2}",
+    "the roots",
+    ""
+   ],
+   [
+    "a, b, c",
+    "coefficients",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "x^{2} − (r_{1} + r_{2}) x + r_{1} r_{2} = 0",
+    "the monic quadratic with those roots"
+   ]
+  ],
+  "example": {
+   "problem": "Without solving, find the sum and product of the roots of 2x^{2} − 7x + 3 = 0.",
+   "steps": [
+    "Sum = 7/2 = 3.5",
+    "Product = 3/2 = 1.5",
+    "Check: the roots are 3 and 1/2"
+   ],
+   "answer": "sum 3.5, product 1.5"
+  }
+ },
+ "p(x) = (x − r) q(x) + p(r)": {
+  "title": "Remainder and factor theorems",
+  "about": "Dividing a polynomial by x − r leaves remainder p(r). So x − r is a factor exactly when p(r) = 0, which is how roots are tested and polynomials factored.",
+  "vars": [
+   [
+    "p(x)",
+    "the polynomial",
+    ""
+   ],
+   [
+    "q(x)",
+    "quotient, one degree lower",
+    ""
+   ],
+   [
+    "r",
+    "the number tested",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Is x − 2 a factor of p(x) = x^{3} − 3x^{2} + 4?",
+   "steps": [
+    "p(2) = 8 − 12 + 4 = 0",
+    "The remainder is 0, so x − 2 is a factor: p(x) = (x − 2)(x^{2} − x − 2)"
+   ],
+   "answer": "yes, p(2) = 0"
+  }
+ },
+ "log_{b}(x) = y ⇔ b^{y} = x": {
+  "title": "What a logarithm is",
+  "about": "log_b(x) is the exponent you raise b to in order to get x. Turning a log equation into exponent form (or back) is the first step in solving most of them.",
+  "assumptions": [
+   "b > 0 and b ≠ 1; x > 0"
+  ],
+  "vars": [
+   [
+    "b",
+    "base",
+    ""
+   ],
+   [
+    "x",
+    "argument, positive",
+    ""
+   ],
+   [
+    "y",
+    "the log, an exponent",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "b^{log_{b}x} = x",
+    "the two undo each other"
+   ]
+  ],
+  "example": {
+   "problem": "Solve log_{2}(x) = 5.",
+   "steps": [
+    "In exponent form, x = 2^{5}"
+   ],
+   "answer": "x = 32"
+  }
+ },
+ "log_{b}(x/y) = log_{b}(x) − log_{b}(y)": {
+  "title": "Quotient rule for logarithms",
+  "about": "The log of a quotient is the difference of the logs, because dividing powers of b subtracts their exponents.",
+  "assumptions": [
+   "x > 0 and y > 0"
+  ],
+  "vars": [
+   [
+    "x, y",
+    "positive numbers",
+    ""
+   ],
+   [
+    "b",
+    "base",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "log_{b}(xy) = log_{b}(x) + log_{b}(y)",
+    "product rule"
+   ]
+  ],
+  "example": {
+   "problem": "Find log_{10}(500) − log_{10}(5).",
+   "steps": [
+    "= log_{10}(500/5) = log_{10}(100)"
+   ],
+   "answer": "2"
+  }
+ },
+ "y = a f(b(x − h)) + k": {
+  "title": "Transformations of a graph",
+  "about": "Starting from y = f(x): h shifts the graph right, k shifts it up, a stretches it vertically (and flips it if negative), and b squeezes it horizontally by 1/b (flipping it if negative).",
+  "vars": [
+   [
+    "a",
+    "vertical stretch; a < 0 reflects in the x-axis",
+    ""
+   ],
+   [
+    "b",
+    "horizontal squeeze by 1/b; b < 0 reflects in the y-axis",
+    ""
+   ],
+   [
+    "h",
+    "shift right",
+    ""
+   ],
+   [
+    "k",
+    "shift up",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Describe y = −2(x − 3)^{2} + 1 starting from y = x^{2}.",
+   "steps": [
+    "h = 3: right 3; k = 1: up 1",
+    "a = −2: stretched by 2 and flipped"
+   ],
+   "answer": "a downward parabola, vertex (3, 1), twice as steep"
+  }
+ },
+ "f(−x) = f(x)": {
+  "title": "Even function",
+  "about": "A function is even when replacing x by −x leaves it unchanged; its graph is a mirror image across the y-axis. Examples: x², cos(x), |x|.",
+  "vars": [
+   [
+    "f",
+    "the function",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "f(−x) = −f(x)",
+    "odd function"
+   ]
+  ],
+  "example": {
+   "problem": "Is f(x) = x^{4} − 3x^{2} even?",
+   "steps": [
+    "f(−x) = (−x)^{4} − 3(−x)^{2} = x^{4} − 3x^{2} = f(x)"
+   ],
+   "answer": "yes, even"
+  }
+ },
+ "f(−x) = −f(x)": {
+  "title": "Odd function",
+  "about": "A function is odd when replacing x by −x flips its sign; its graph is unchanged by a half turn about the origin. Examples: x³, sin(x), tan(x). The integral of an odd function over [−a, a] is 0.",
+  "vars": [
+   [
+    "f",
+    "the function",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "f(−x) = f(x)",
+    "even function"
+   ]
+  ],
+  "example": {
+   "problem": "Is f(x) = x^{3} + x odd?",
+   "steps": [
+    "f(−x) = −x^{3} − x = −(x^{3} + x) = −f(x)"
+   ],
+   "answer": "yes, odd"
+  }
+ },
+ "(f ∘ g)(x) = f(g(x))": {
+  "title": "Composition of functions",
+  "about": "Apply g first, then f to its result. Order matters: f(g(x)) is usually not g(f(x)).",
+  "vars": [
+   [
+    "f, g",
+    "functions",
+    ""
+   ],
+   [
+    "x",
+    "input",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "With f(x) = x^{2} and g(x) = x + 1, find (f ∘ g)(3) and (g ∘ f)(3).",
+   "steps": [
+    "f(g(3)) = f(4) = 16",
+    "g(f(3)) = g(9) = 10"
+   ],
+   "answer": "16 and 10"
+  }
+ },
+ "f(f^{−1}(x)) = x": {
+  "title": "Inverse function",
+  "about": "The inverse undoes the function. To find it, write y = f(x), swap x and y, and solve for y. Its graph is the mirror image of f's across y = x; f must be one-to-one.",
+  "vars": [
+   [
+    "f^{−1}",
+    "inverse of f",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Find the inverse of f(x) = 2x + 3.",
+   "steps": [
+    "x = 2y + 3",
+    "y = (x − 3)/2"
+   ],
+   "answer": "f^{−1}(x) = (x − 3)/2"
+  }
+ },
+ "(f(x + h) − f(x))/h": {
+  "title": "Difference quotient: average rate of change",
+  "about": "The slope of the secant line from x to x + h: how fast f changes on average over a step h. As h shrinks to 0 it becomes the derivative f′(x).",
+  "assumptions": [
+   "h ≠ 0",
+   "f defined at x and x + h"
+  ],
+  "vars": [
+   [
+    "f",
+    "the function",
+    ""
+   ],
+   [
+    "x",
+    "the starting point",
+    ""
+   ],
+   [
+    "h",
+    "the step",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "f′(x) = lim_{h→0} (f(x + h) − f(x))/h",
+    "the derivative it tends to"
+   ],
+   [
+    "m = (y_{2} − y_{1})/(x_{2} − x_{1})",
+    "the same slope between two points"
+   ]
+  ],
+  "example": {
+   "problem": "Simplify the difference quotient of f(x) = x^{2}.",
+   "steps": [
+    "f(x + h) − f(x) = x^{2} + 2xh + h^{2} − x^{2} = 2xh + h^{2}",
+    "Divide by h: 2x + h"
+   ],
+   "answer": "2x + h, which tends to 2x as h → 0"
+  }
+ },
+ "r^{2} = x^{2} + y^{2}": {
+  "title": "Polar radius from rectangular coordinates",
+  "about": "A point (x, y) lies at distance r = √(x² + y²) from the origin, by Pythagoras. Pair it with θ = atan2(y, x) for the angle.",
+  "vars": [
+   [
+    "r",
+    "distance from the origin",
+    ""
+   ],
+   [
+    "x, y",
+    "rectangular coordinates",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "x = r cos(θ)",
+    "back to rectangular"
+   ],
+   [
+    "θ = atan2(y, x)",
+    "the angle"
+   ]
+  ],
+  "example": {
+   "problem": "Convert (−3, 4) to polar.",
+   "steps": [
+    "r = √(9 + 16) = 5",
+    "θ = atan2(4, −3) ≈ 126.87°"
+   ],
+   "answer": "r = 5, θ ≈ 126.87°"
+  }
+ },
+ "c^{2} = a^{2} − b^{2}": {
+  "title": "Foci of an ellipse",
+  "about": "For x²/a² + y²/b² = 1 with a > b, the foci sit on the long axis at (±c, 0). Every point on the ellipse has distances to the two foci that add to 2a.",
+  "vars": [
+   [
+    "a",
+    "semi-major axis",
+    ""
+   ],
+   [
+    "b",
+    "semi-minor axis",
+    ""
+   ],
+   [
+    "c",
+    "centre to focus",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "e = c/a",
+    "eccentricity"
+   ]
+  ],
+  "example": {
+   "problem": "Find the foci of x^{2}/25 + y^{2}/9 = 1.",
+   "steps": [
+    "c^{2} = 25 − 9 = 16, c = 4"
+   ],
+   "answer": "foci (±4, 0)"
+  }
+ },
+ "c^{2} = a^{2} + b^{2}": {
+  "title": "Foci of a hyperbola",
+  "about": "For x²/a² − y²/b² = 1 the foci are at (±c, 0) with c² = a² + b². Every point on the hyperbola has distances to the foci that differ by 2a.",
+  "vars": [
+   [
+    "a",
+    "centre to vertex",
+    ""
+   ],
+   [
+    "b",
+    "sets the asymptote slope b/a",
+    ""
+   ],
+   [
+    "c",
+    "centre to focus",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "y = ±(b/a) x",
+    "asymptotes"
+   ]
+  ],
+  "example": {
+   "problem": "Find the foci of x^{2}/9 − y^{2}/16 = 1.",
+   "steps": [
+    "c^{2} = 9 + 16 = 25, c = 5"
+   ],
+   "answer": "foci (±5, 0)"
+  }
+ },
+ "y = ±(b/a) x": {
+  "title": "Asymptotes of a hyperbola",
+  "about": "Far from the centre, x²/a² − y²/b² = 1 hugs the two lines y = ±(b/a)x. Sketch the box of half-width a and half-height b; its diagonals are the asymptotes.",
+  "vars": [
+   [
+    "a, b",
+    "the hyperbola's parameters",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Give the asymptotes of x^{2}/4 − y^{2}/9 = 1.",
+   "steps": [
+    "a = 2, b = 3, slope b/a = 1.5"
+   ],
+   "answer": "y = ±1.5 x"
+  }
+ },
+ "x^{2} = 4 p y": {
+  "title": "Parabola opening up (focus and directrix)",
+  "about": "Every point is equally far from the focus (0, p) and the directrix y = −p. Negative p opens down. Light from the focus reflects parallel to the axis, which is why dishes are parabolic.",
+  "vars": [
+   [
+    "p",
+    "vertex to focus distance",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "y^{2} = 4 p x",
+    "opening right"
+   ]
+  ],
+  "example": {
+   "problem": "A dish follows x^{2} = 8y. Where is its focus?",
+   "steps": [
+    "4p = 8, p = 2"
+   ],
+   "answer": "focus (0, 2)"
+  }
+ },
+ "e = c/a": {
+  "title": "Eccentricity of a conic",
+  "about": "How stretched a conic is: 0 for a circle, between 0 and 1 for an ellipse, 1 for a parabola, more than 1 for a hyperbola. For an orbit it sets the shape of the ellipse.",
+  "vars": [
+   [
+    "e",
+    "eccentricity",
+    ""
+   ],
+   [
+    "c",
+    "centre to focus",
+    ""
+   ],
+   [
+    "a",
+    "semi-major axis (or centre to vertex)",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "An ellipse has a = 5 and b = 3. Find e.",
+   "steps": [
+    "c = √(25 − 9) = 4",
+    "e = 4/5"
+   ],
+   "answer": "e = 0.8"
+  }
+ },
+ "dT/dt = −k (T − T_{a})": {
+  "title": "Newton's law of cooling as an ODE",
+  "about": "A body's temperature changes at a rate proportional to its difference from the surroundings. The solution is T = T_{a} + (T_{0} − T_{a}) e^{−kt}.",
+  "assumptions": [
+   "Ambient temperature constant; the body has one uniform temperature (lumped)"
+  ],
+  "vars": [
+   [
+    "T",
+    "body temperature",
+    "K"
+   ],
+   [
+    "T_{a}",
+    "ambient temperature",
+    "K"
+   ],
+   [
+    "k",
+    "rate constant, hA/(mc)",
+    "1/s"
+   ]
+  ],
+  "related": [
+   [
+    "T = T_{a} + (T_{0} − T_{a}) e^{−kt}",
+    "solution"
+   ]
+  ],
+  "example": {
+   "problem": "Coffee at 90 °C sits in a 20 °C room with k = 0.05 /min. What is it after 10 min?",
+   "steps": [
+    "T = 20 + 70 e^{−0.5}",
+    "= 20 + 70 × 0.6065"
+   ],
+   "answer": "≈ 62.5 °C"
+  }
+ },
+ "dy/dt + p y = q y^{n}": {
+  "title": "Bernoulli differential equation",
+  "about": "A nonlinear first-order equation that the substitution v = y^{1−n} turns into a linear one: dv/dt + (1 − n) p v = (1 − n) q. Solve that with an integrating factor.",
+  "assumptions": [
+   "n ≠ 0, 1 (for those it is already linear)"
+  ],
+  "vars": [
+   [
+    "p, q",
+    "functions of t",
+    ""
+   ],
+   [
+    "n",
+    "the power",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "v = y^{1−n}",
+    "the substitution"
+   ]
+  ],
+  "example": {
+   "problem": "Solve dy/dt − y = −y^{2}.",
+   "steps": [
+    "n = 2, v = 1/y: dv/dt + v = 1",
+    "v = 1 + C e^{−t}"
+   ],
+   "answer": "y = 1/(1 + C e^{−t}), the logistic curve"
+  }
+ },
+ "M dx + N dy = 0": {
+  "title": "Exact equation",
+  "about": "If ∂M/∂y = ∂N/∂x, the left side is the total differential of some F(x, y). Find F from F_x = M and F_y = N; the solution is F(x, y) = C.",
+  "vars": [
+   [
+    "M, N",
+    "functions of x and y",
+    ""
+   ],
+   [
+    "F",
+    "potential function",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Solve (2xy) dx + (x^{2} + 1) dy = 0.",
+   "steps": [
+    "∂M/∂y = 2x = ∂N/∂x, so exact",
+    "F = x^{2} y + y"
+   ],
+   "answer": "x^{2} y + y = C"
+  }
+ },
+ "y′′ + 2ζω_{n} y′ + ω_{n}^{2} y = 0": {
+  "title": "Damped oscillator in standard form",
+  "about": "Dividing m y′′ + c y′ + k y = 0 by m. ζ < 1 oscillates (underdamped), ζ = 1 is critically damped, ζ > 1 creeps back (overdamped). The roots are r = −ζω_{n} ± ω_{n}√(ζ² − 1).",
+  "vars": [
+   [
+    "ω_{n}",
+    "natural frequency √(k/m)",
+    "rad/s"
+   ],
+   [
+    "ζ",
+    "damping ratio c/(2√(km))",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "y′′ + 4y′ + 16y = 0. Find ω_n and ζ.",
+   "steps": [
+    "ω_{n}^{2} = 16, ω_{n} = 4",
+    "2ζ × 4 = 4, ζ = 0.5"
+   ],
+   "answer": "ω_{n} = 4 rad/s, ζ = 0.5 (underdamped)"
+  }
+ },
+ "a t^{2} y′′ + b t y′ + c y = 0": {
+  "title": "Euler-Cauchy equation",
+  "about": "Each derivative is multiplied by the matching power of t, so y = t^{r} works. Distinct real r give t^{r₁} and t^{r₂}; a repeated r gives t^{r} and t^{r} ln t; complex α ± jβ give t^{α} cos(β ln t) and t^{α} sin(β ln t).",
+  "assumptions": [
+   "t > 0"
+  ],
+  "vars": [
+   [
+    "a, b, c",
+    "constants",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "a r(r − 1) + b r + c = 0",
+    "indicial equation"
+   ]
+  ],
+  "example": {
+   "problem": "Solve t^{2} y″ − 2y = 0.",
+   "steps": [
+    "r(r − 1) − 2 = 0, so r = 2 or r = −1"
+   ],
+   "answer": "y = c_{1} t^{2} + c_{2}/t"
+  }
+ },
+ "a r(r − 1) + b r + c = 0": {
+  "title": "Indicial equation of an Euler-Cauchy equation",
+  "about": "Putting y = t^{r} into a t² y″ + b t y′ + c y = 0 and dividing by t^{r} leaves this quadratic in r. Its roots give the solutions.",
+  "vars": [
+   [
+    "r",
+    "the power in y = t^{r}",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Find r for t^{2} y″ + 3t y′ + y = 0.",
+   "steps": [
+    "r(r − 1) + 3r + 1 = r^{2} + 2r + 1 = 0",
+    "r = −1, repeated"
+   ],
+   "answer": "y = (c_{1} + c_{2} ln t)/t"
+  }
+ },
+ "y = y_{h} + y_{p}": {
+  "title": "General solution of a linear nonhomogeneous ODE",
+  "about": "Every solution is the homogeneous solution (with its free constants) plus any one particular solution. Fit the constants to the initial conditions last, to the whole y.",
+  "vars": [
+   [
+    "y_{h}",
+    "solves the equation with zero forcing",
+    ""
+   ],
+   [
+    "y_{p}",
+    "any one solution with the forcing",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Solve y″ + y = 2.",
+   "steps": [
+    "y_{h} = c_{1} cos t + c_{2} sin t",
+    "y_{p} = 2"
+   ],
+   "answer": "y = c_{1} cos t + c_{2} sin t + 2"
+  }
+ },
+ "y_{p} = −y_{1} ∫ y_{2} g/W dt + y_{2} ∫ y_{1} g/W dt": {
+  "title": "Variation of parameters",
+  "about": "A particular solution for any forcing g, built from two homogeneous solutions y₁, y₂ and their Wronskian. Use it when undetermined coefficients has no guess (tan t, 1/t, …).",
+  "assumptions": [
+   "The equation is written with y″ having coefficient 1"
+  ],
+  "vars": [
+   [
+    "y_{1}, y_{2}",
+    "independent homogeneous solutions",
+    ""
+   ],
+   [
+    "W",
+    "Wronskian y₁y₂′ − y₂y₁′",
+    ""
+   ],
+   [
+    "g",
+    "forcing",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Find y_p for y″ + y = sec t.",
+   "steps": [
+    "y_{1} = cos t, y_{2} = sin t, W = 1",
+    "y_{p} = −cos t ∫ tan t dt + sin t ∫ 1 dt"
+   ],
+   "answer": "y_p = cos t ln|cos t| + t sin t"
+  }
+ },
+ "t^{n} ‖ A_{n} t^{n} + … + A_{1} t + A_{0}": {
+  "title": "Undetermined coefficients: polynomial forcing",
+  "about": "For a polynomial forcing of degree n, guess a full polynomial of the same degree and match coefficients. Multiply by t if a constant already solves the homogeneous equation (c = 0).",
+  "vars": [
+   [
+    "A_{k}",
+    "coefficients to find",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Find y_p for y″ + y = t^{2}.",
+   "steps": [
+    "Guess A t^{2} + B t + C: 2A + A t^{2} + B t + C = t^{2}",
+    "A = 1, B = 0, C = −2"
+   ],
+   "answer": "y_p = t^{2} − 2"
+  }
+ },
+ "e^{at} ‖ A e^{at}": {
+  "title": "Undetermined coefficients: exponential forcing",
+  "about": "Exponential in, same exponential out. If a is a root of the characteristic equation, multiply the guess by t (by t² for a double root).",
+  "vars": [
+   [
+    "a",
+    "exponent rate",
+    "1/s"
+   ],
+   [
+    "A",
+    "coefficient to find",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Find y_p for y″ − y = e^{2t}.",
+   "steps": [
+    "Guess A e^{2t}: 4A − A = 1"
+   ],
+   "answer": "y_p = e^{2t}/3"
+  }
+ },
+ "cos(ωt), sin(ωt) ‖ A cos(ωt) + B sin(ωt)": {
+  "title": "Undetermined coefficients: sinusoidal forcing",
+  "about": "Even if only a cosine drives the system, guess both cosine and sine, since damping shifts the phase. At resonance (jω a root) multiply by t.",
+  "vars": [
+   [
+    "ω",
+    "forcing frequency",
+    "rad/s"
+   ],
+   [
+    "A, B",
+    "coefficients to find",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Find y_p for y″ + y′ = cos t.",
+   "steps": [
+    "(−A + B) cos t + (−B − A) sin t = cos t",
+    "A = −1/2, B = 1/2"
+   ],
+   "answer": "y_p = (sin t − cos t)/2"
+  }
+ },
+ "e^{at} cos(ωt) ‖ e^{at} (A cos(ωt) + B sin(ωt))": {
+  "title": "Undetermined coefficients: decaying or growing sinusoid",
+  "about": "A product of exponential and sinusoid gets the same product as its guess, with both cosine and sine. Multiply by t if a ± jω is a characteristic root.",
+  "vars": [
+   [
+    "a",
+    "growth or decay rate",
+    "1/s"
+   ],
+   [
+    "ω",
+    "frequency",
+    "rad/s"
+   ]
+  ],
+  "example": {
+   "problem": "Find y_p for y″ = e^{t} cos t.",
+   "steps": [
+    "y″ of e^{t}(A cos t + B sin t) is e^{t}(2B cos t − 2A sin t)",
+    "2B = 1, A = 0"
+   ],
+   "answer": "y_p = (1/2) e^{t} sin t"
+  }
+ },
+ "cos(ω_{0}t), sin(ω_{0}t) ‖ t (A cos(ω_{0}t) + B sin(ω_{0}t))": {
+  "title": "Undetermined coefficients: resonance, times t",
+  "about": "When the forcing is at the natural frequency, A cos(ω_{0}t) + B sin(ω_{0}t) already solves the homogeneous equation and can't be a particular solution. Multiply the guess by t; undamped, the response then grows linearly without bound.",
+  "assumptions": [
+   "±jω_{0} are roots of the characteristic equation (undamped, y″ + ω_{0}^{2} y = g)",
+   "If they are double roots, multiply by t^{2}"
+  ],
+  "vars": [
+   [
+    "ω_{0}",
+    "natural (and forcing) frequency",
+    "rad/s"
+   ],
+   [
+    "A, B",
+    "coefficients to find",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "cos(ωt), sin(ωt) ‖ A cos(ωt) + B sin(ωt)",
+    "away from resonance"
+   ]
+  ],
+  "example": {
+   "problem": "Find y_p for y″ + y = cos t.",
+   "steps": [
+    "cos t solves y″ + y = 0, so guess t (A cos t + B sin t)",
+    "y_p″ + y_p = 2B cos t − 2A sin t = cos t",
+    "A = 0, B = 1/2"
+   ],
+   "answer": "y_p = (t/2) sin t"
+  }
+ },
+ "x = c_{1} v_{1} e^{λ_{1}t} + c_{2} v_{2} e^{λ_{2}t}": {
+  "title": "General solution of x′ = A x (distinct eigenvalues)",
+  "about": "Each eigenvalue and eigenvector give a solution that moves along that eigenvector; the general solution adds them. Negative real parts mean the motion decays to rest.",
+  "vars": [
+   [
+    "λ_{i}",
+    "eigenvalues of A",
+    ""
+   ],
+   [
+    "v_{i}",
+    "eigenvectors",
+    ""
+   ],
+   [
+    "c_{i}",
+    "constants from x(0)",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "x′ = [2 0; 0 −1] x, x(0) = (1, 1). Find x(t).",
+   "steps": [
+    "λ = 2 with v = (1, 0); λ = −1 with v = (0, 1)"
+   ],
+   "answer": "x = (e^{2t}, e^{−t})"
+  }
+ },
+ "u = X(x) T(t)": {
+  "title": "Separation of variables",
+  "about": "Guess a product of one-variable functions. A PDE such as the heat equation then splits into two ODEs linked by a separation constant, and the boundary conditions pick the allowed modes, which add up as a Fourier series.",
+  "vars": [
+   [
+    "X(x)",
+    "space part",
+    ""
+   ],
+   [
+    "T(t)",
+    "time part",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Separate u_t = α u_{xx} with u = 0 at x = 0 and x = L.",
+   "steps": [
+    "X T′ = α X″ T, so T′/(αT) = X″/X = −λ",
+    "X = sin(nπx/L), λ = (nπ/L)^{2}"
+   ],
+   "answer": "u = Σ b_{n} sin(nπx/L) e^{−α(nπ/L)^{2} t}"
+  }
+ },
+ "u = f(x − ct) + g(x + ct)": {
+  "title": "d'Alembert's solution of the wave equation",
+  "about": "Any solution of the 1D wave equation is a shape moving right plus a shape moving left, both at speed c. With u(x, 0) = φ and u_t(x, 0) = 0, f = g = φ/2.",
+  "assumptions": [
+   "Infinite string, no damping"
+  ],
+  "vars": [
+   [
+    "c",
+    "wave speed",
+    "m/s"
+   ],
+   [
+    "f, g",
+    "right- and left-moving shapes",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "A string starts at rest with shape φ(x). What is u?",
+   "steps": [
+    "u = (φ(x − ct) + φ(x + ct))/2"
+   ],
+   "answer": "two half-height copies moving apart at speed c"
+  }
+ },
+ "c = (a + b)/2": {
+  "title": "Bisection method",
+  "about": "If f(a) and f(b) have opposite signs, a root lies between. Test the midpoint c and keep the half where the sign still changes. Slow but it can't fail for a continuous f.",
+  "assumptions": [
+   "f continuous on [a, b], f(a) f(b) < 0"
+  ],
+  "vars": [
+   [
+    "a, b",
+    "bracket ends",
+    ""
+   ],
+   [
+    "c",
+    "midpoint",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "|e_{n}| ≤ (b − a)/2^{n}",
+    "error bound"
+   ]
+  ],
+  "example": {
+   "problem": "One step on f(x) = x^{2} − 2 over [1, 2].",
+   "steps": [
+    "c = 1.5, f(1.5) = 0.25 > 0, and f(1) < 0"
+   ],
+   "answer": "new bracket [1, 1.5]"
+  }
+ },
+ "x_{n+1} = g(x_{n})": {
+  "title": "Fixed-point iteration",
+  "about": "Rewrite f(x) = 0 as x = g(x) and iterate. It converges near a fixed point where |g′| < 1, and faster the smaller |g′| is.",
+  "vars": [
+   [
+    "g",
+    "iteration function",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Solve x = cos(x) from x₀ = 1.",
+   "steps": [
+    "x₁ = cos 1 = 0.5403, x₂ = 0.8576, x₃ = 0.6543, …"
+   ],
+   "answer": "converges to x ≈ 0.7391"
+  }
+ },
+ "y = y_{0} + (y_{1} − y_{0})(x − x_{0})/(x_{1} − x_{0})": {
+  "title": "Linear interpolation",
+  "about": "Reads a value between two table entries by assuming a straight line between them. Error is about h² f″/8 for spacing h.",
+  "vars": [
+   [
+    "(x_{0}, y_{0}), (x_{1}, y_{1})",
+    "the two known points",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "A steam table gives 2.0 at 100 and 2.6 at 120. Estimate at 105.",
+   "steps": [
+    "y = 2.0 + 0.6 × 5/20"
+   ],
+   "answer": "2.15"
+  }
+ },
+ "p(x) = Σ_{i=0}^{n} y_{i} Π_{j≠i} (x − x_{j})/(x_{i} − x_{j})": {
+  "title": "Lagrange interpolating polynomial",
+  "about": "The one polynomial of degree ≤ n through n + 1 points. Each basis term is 1 at its own point and 0 at the others. High degrees on evenly spaced points can wiggle badly (Runge).",
+  "vars": [
+   [
+    "(x_{i}, y_{i})",
+    "data points, distinct x",
+    ""
+   ],
+   [
+    "n",
+    "degree",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Fit (0, 1), (1, 3), (2, 7) and evaluate at x = 1.5.",
+   "steps": [
+    "p(x) = x^{2} + x + 1 fits all three",
+    "p(1.5) = 2.25 + 1.5 + 1"
+   ],
+   "answer": "4.75"
+  }
+ },
+ "f′(x) ≈ (f(x) − f(x − h))/h": {
+  "title": "Backward difference",
+  "about": "A one-sided slope using the point behind. First-order accurate, error ≈ (h/2) f″. Used when only past values exist, as in backward Euler.",
+  "vars": [
+   [
+    "h",
+    "step",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "f(x) = x^{2}, x = 1, h = 0.1.",
+   "steps": [
+    "(1 − 0.81)/0.1"
+   ],
+   "answer": "1.9 (exact 2)"
+  }
+ },
+ "∫ f dx ≈ h Σ_{i=0}^{n−1} f(x_{i} + h/2)": {
+  "title": "Midpoint rule",
+  "about": "Each strip uses f at its centre. Second-order accurate, with an error about half the trapezoid rule's and of opposite sign.",
+  "vars": [
+   [
+    "h",
+    "strip width (b − a)/n",
+    ""
+   ],
+   [
+    "x_{i}",
+    "left end of strip i",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Estimate ∫ x^{2} dx from 0 to 1 with the midpoint rule and n = 2.",
+   "steps": [
+    "h = 0.5; midpoints 0.25 and 0.75",
+    "0.5 × (0.0625 + 0.5625)"
+   ],
+   "answer": "≈ 0.3125 (exact 1/3)"
+  },
+  "try": "0.5 * (0.25^2 + 0.75^2)"
+ },
+ "E_{T} = −(b − a) h^{2} f′′(ξ)/12": {
+  "title": "Error of the composite trapezoid rule",
+  "about": "The trapezoid rule's error shrinks with h²: halve the step and the error falls about 4 times. A convex f (f″ > 0) is overestimated.",
+  "vars": [
+   [
+    "h",
+    "step",
+    ""
+   ],
+   [
+    "ξ",
+    "some point in [a, b]",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Bound the error for ∫ e^{x} dx on [0, 1] with h = 0.1.",
+   "steps": [
+    "|f″| ≤ e on [0, 1]",
+    "1 × 0.01 × 2.718/12"
+   ],
+   "answer": "≤ 0.0023"
+  }
+ },
+ "y_{n+1} = y_{n} + h f(t_{n+1}, y_{n+1})": {
+  "title": "Backward (implicit) Euler",
+  "about": "Uses the slope at the end of the step, so y_{n+1} appears on both sides and must be solved for. First-order accurate but stable for stiff problems at any step size.",
+  "vars": [
+   [
+    "h",
+    "step",
+    "s"
+   ],
+   [
+    "f",
+    "slope function, y′ = f(t, y)",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "y′ = −10y, y₀ = 1, h = 0.5. One step.",
+   "steps": [
+    "y₁ = 1 − 5 y₁, y₁ = 1/6"
+   ],
+   "answer": "y₁ ≈ 0.167 (forward Euler gives −4: unstable)"
+  }
+ },
+ "y_{n+1} = y_{n} + (h/2)(f(t_{n}, y_{n}) + f(t_{n+1}, y_{n} + h f(t_{n}, y_{n})))": {
+  "title": "Heun's method (improved Euler)",
+  "about": "Predict with an Euler step, then average the slopes at the start and at that predicted end. Second-order accurate; a two-stage Runge-Kutta method.",
+  "vars": [
+   [
+    "h",
+    "step",
+    "s"
+   ]
+  ],
+  "example": {
+   "problem": "y′ = y, y₀ = 1, h = 0.1. One step.",
+   "steps": [
+    "Predictor: 1.1",
+    "y₁ = 1 + 0.05(1 + 1.1)"
+   ],
+   "answer": "1.105 (exact 1.10517)"
+  }
+ },
+ "A = L U": {
+  "title": "LU decomposition",
+  "about": "Gaussian elimination stored as a lower-triangular L and upper-triangular U. Factor once, then solve each new right side cheaply by forward and back substitution. Partial pivoting (PA = LU) keeps it stable.",
+  "vars": [
+   [
+    "L",
+    "lower triangular, 1s on the diagonal",
+    ""
+   ],
+   [
+    "U",
+    "upper triangular",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Factor A = [4 3; 6 3].",
+   "steps": [
+    "l₂₁ = 6/4 = 1.5; row 2 − 1.5 row 1 = [0 −1.5]"
+   ],
+   "answer": "L = [1 0; 1.5 1], U = [4 3; 0 −1.5]"
+  }
+ },
+ "x_{i}^{(k+1)} = (b_{i} − Σ_{j≠i} a_{ij} x_{j}^{(k)})/a_{ii}": {
+  "title": "Jacobi iteration",
+  "about": "Solve each equation for its own unknown, using the last guess for the others. Converges when A is diagonally dominant. Gauss-Seidel uses each new value at once and usually converges faster.",
+  "vars": [
+   [
+    "a_{ij}",
+    "entries of A",
+    ""
+   ],
+   [
+    "k",
+    "iteration number",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "4x + y = 6, x + 3y = 7, from (0, 0). One step.",
+   "steps": [
+    "x = 6/4 = 1.5, y = 7/3 ≈ 2.333"
+   ],
+   "answer": "(1.5, 2.333); the solution is (1, 2)"
+  }
+ },
+ "x_{k+1} = A x_{k}/‖A x_{k}‖": {
+  "title": "Power method",
+  "about": "Repeated multiplication by A turns any start vector toward the eigenvector of the largest-magnitude eigenvalue. The Rayleigh quotient xᵀAx/xᵀx estimates that eigenvalue.",
+  "vars": [
+   [
+    "x_{k}",
+    "current vector",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "A = [2 1; 1 2], x₀ = (1, 0). Iterate.",
+   "steps": [
+    "A x₀ = (2, 1), then (5, 4), then (14, 13), …"
+   ],
+   "answer": "tends to (1, 1)/√2 with λ = 3"
+  }
+ },
+ "|e_{n+1}| ≈ C |e_{n}|^{p}": {
+  "title": "Order of convergence",
+  "about": "How fast an iteration's error shrinks. p = 1 is linear (a fixed fraction each step, as bisection), p ≈ 1.618 is the secant method, p = 2 is quadratic (Newton: the correct digits double each step).",
+  "vars": [
+   [
+    "e_{n}",
+    "error at step n",
+    ""
+   ],
+   [
+    "p",
+    "order",
+    ""
+   ],
+   [
+    "C",
+    "asymptotic constant",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Newton's errors go 10^{−2}, 10^{−4}, … What comes next?",
+   "steps": [
+    "p = 2: (10^{−4})^{2}"
+   ],
+   "answer": "about 10^{−8}"
+  }
+ },
+ "log_{2}(n!) ≈ n log_{2}(n)": {
+  "title": "Lower bound for comparison sorting",
+  "about": "A comparison sort must tell apart all n! orderings, and each comparison gives one bit, so it needs at least log₂(n!) ≈ n log₂ n − 1.44 n comparisons. Merge sort and heapsort meet this bound.",
+  "vars": [
+   [
+    "n",
+    "number of items",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "At least how many comparisons does sorting 1000 items take?",
+   "steps": [
+    "log₂(1000!) ≈ 8530"
+   ],
+   "answer": "about 8,530 comparisons"
+  }
+ },
+ "T(n) = 2T(n/2) + Θ(n) = Θ(n log n)": {
+  "title": "Merge sort recurrence",
+  "about": "Split in half, sort both halves, merge in linear time. Each of the log₂ n levels does Θ(n) work: case 2 of the master theorem.",
+  "vars": [
+   [
+    "n",
+    "input size",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "T(n) = Θ(n^{log_{b} a} log n)",
+    "master theorem, case 2"
+   ]
+  ],
+  "example": {
+   "problem": "About how many steps for n = 1,048,576 = 2^{20}?",
+   "steps": [
+    "n log₂ n = 2^{20} × 20"
+   ],
+   "answer": "≈ 2.1 × 10^{7}"
+  }
+ },
+ "T(n) = T(n/2) + Θ(1) = Θ(log n)": {
+  "title": "Binary search recurrence",
+  "about": "Each comparison halves a sorted range, so a search takes about log₂ n steps.",
+  "vars": [
+   [
+    "n",
+    "items in the sorted array",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Most comparisons to find a key among 1,000,000 sorted items?",
+   "steps": [
+    "⌈log₂ 1,000,000⌉ = 20"
+   ],
+   "answer": "20"
+  }
+ },
+ "E = 1/(1 − α)": {
+  "title": "Expected probes in open addressing",
+  "about": "With uniform hashing, an unsuccessful search (or an insert) probes about 1/(1 − α) slots. It blows up as the table fills, which is why tables resize near α = 0.7.",
+  "vars": [
+   [
+    "α",
+    "load factor n/m",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Expected probes at α = 0.9?",
+   "steps": [
+    "1/(1 − 0.9)"
+   ],
+   "answer": "10 probes"
+  }
+ },
+ "n = 2^{h+1} − 1": {
+  "title": "Nodes in a perfect binary tree",
+  "about": "Each level doubles: 1 + 2 + 4 + … + 2^{h}. So a balanced tree of n nodes has height about log₂ n.",
+  "vars": [
+   [
+    "h",
+    "height, the root at 0",
+    ""
+   ],
+   [
+    "n",
+    "nodes",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "How many nodes does a perfect binary tree of height 9 hold?",
+   "steps": [
+    "2^{10} − 1"
+   ],
+   "answer": "1023"
+  }
+ },
+ "E = V − 1": {
+  "title": "Edges in a tree",
+  "about": "A tree on V vertices, connected and without cycles, always has exactly V − 1 edges. Adding any edge makes a cycle; removing one disconnects it.",
+  "vars": [
+   [
+    "V",
+    "vertices",
+    ""
+   ],
+   [
+    "E",
+    "edges",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "A spanning tree of a 50-city network has how many links?",
+   "steps": [
+    "50 − 1"
+   ],
+   "answer": "49"
+  }
+ },
+ "E = V(V − 1)/2": {
+  "title": "Edges in a complete graph",
+  "about": "Every pair of vertices joined: V choose 2. That is the most a simple undirected graph can have, so a dense graph has Θ(V²) edges.",
+  "vars": [
+   [
+    "V",
+    "vertices",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "How many handshakes among 20 people?",
+   "steps": [
+    "20 × 19/2"
+   ],
+   "answer": "190"
+  }
+ },
+ "Σ deg(v) = 2E": {
+  "title": "Handshake lemma",
+  "about": "Each edge adds 1 to the degree of both its ends, so the degrees add to twice the edges. Hence the number of odd-degree vertices is even.",
+  "vars": [
+   [
+    "deg(v)",
+    "edges at vertex v",
+    ""
+   ],
+   [
+    "E",
+    "edges",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "10 vertices each of degree 3. How many edges?",
+   "steps": [
+    "2E = 30"
+   ],
+   "answer": "E = 15"
+  }
+ },
+ "V − E + F = 2": {
+  "title": "Euler's formula for planar graphs",
+  "about": "A connected graph drawn in the plane without crossings has V − E + F = 2, counting the outer face. It gives E ≤ 3V − 6, so K₅ is not planar.",
+  "vars": [
+   [
+    "V, E, F",
+    "vertices, edges, faces",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "A planar graph has 8 vertices and 12 edges. How many faces?",
+   "steps": [
+    "F = 2 − 8 + 12"
+   ],
+   "answer": "6 (a cube)"
+  }
+ },
+ "0 ≤ x ≤ 2^{n} − 1": {
+  "title": "Range of an unsigned integer",
+  "about": "n bits hold 2ⁿ values, from 0 up to 2ⁿ − 1. Going past the top wraps around to 0.",
+  "vars": [
+   [
+    "n",
+    "bits",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Largest value of a 16-bit unsigned integer?",
+   "steps": [
+    "2^{16} − 1"
+   ],
+   "answer": "65535"
+  }
+ },
+ "−2^{n−1} ≤ x ≤ 2^{n−1} − 1": {
+  "title": "Range of a two's complement integer",
+  "about": "Signed n-bit integers in two's complement give half the codes to negatives, so there is one more negative value than positive. Negate by flipping the bits and adding 1.",
+  "vars": [
+   [
+    "n",
+    "bits",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Range of a signed 8-bit integer?",
+   "steps": [
+    "−2^{7} to 2^{7} − 1"
+   ],
+   "answer": "−128 to 127"
+  }
+ },
+ "S = (1 − p) + p N": {
+  "title": "Gustafson's law",
+  "about": "Speedup when the problem grows with the machine: with N processors and parallel fraction p of the run, the scaled speedup is close to N. A more hopeful view than Amdahl's fixed-size law.",
+  "vars": [
+   [
+    "p",
+    "parallel fraction of the parallel run",
+    ""
+   ],
+   [
+    "N",
+    "processors",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "S = 1/((1 − p) + p/s)",
+    "Amdahl, fixed problem size"
+   ]
+  ],
+  "example": {
+   "problem": "p = 0.95 on 64 processors.",
+   "steps": [
+    "0.05 + 0.95 × 64"
+   ],
+   "answer": "S ≈ 60.85"
+  }
+ },
+ "L = λ W": {
+  "title": "Little's law",
+  "about": "In a steady system, the average number inside equals the arrival rate times the average time each spends inside. It holds for any queue, store or server.",
+  "vars": [
+   [
+    "L",
+    "average number in the system",
+    ""
+   ],
+   [
+    "λ",
+    "arrival rate",
+    "1/s"
+   ],
+   [
+    "W",
+    "average time in the system",
+    "s"
+   ]
+  ],
+  "example": {
+   "problem": "A server gets 200 requests/s and each takes 50 ms. How many are in flight?",
+   "steps": [
+    "200 × 0.05"
+   ],
+   "answer": "10 requests"
+  }
+ },
+ "d = d_{proc} + d_{queue} + d_{trans} + d_{prop}": {
+  "title": "Total delay at one network hop",
+  "about": "A packet waits for processing, for the queue, to be pushed onto the link (L/R) and to travel the link (d/s). Add them over the hops for end-to-end delay.",
+  "vars": [
+   [
+    "d_{trans}",
+    "L/R",
+    "s"
+   ],
+   [
+    "d_{prop}",
+    "distance/speed",
+    "s"
+   ]
+  ],
+  "example": {
+   "problem": "1500-byte packet on a 100 Mbit/s link of 2000 km (2 × 10^{8} m/s), no queue.",
+   "steps": [
+    "d_{trans} = 12000/10^{8} = 0.12 ms",
+    "d_{prop} = 2 × 10^{6}/2 × 10^{8} = 10 ms"
+   ],
+   "answer": "≈ 10.12 ms"
+  }
+ },
+ "w = (X^{T} X + λI)^{−1} X^{T} y": {
+  "title": "Ridge regression, closed form",
+  "about": "Least squares with an L2 penalty λ‖w‖². Adding λI keeps XᵀX invertible and shrinks the weights, trading a little bias for less variance. Usually the intercept is not penalized.",
+  "vars": [
+   [
+    "X",
+    "data matrix, one row per sample",
+    ""
+   ],
+   [
+    "λ",
+    "regularization strength",
+    ""
+   ],
+   [
+    "y",
+    "targets",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "One feature, X = [1; 2], y = [1; 2], λ = 1.",
+   "steps": [
+    "XᵀX = 5, Xᵀy = 5",
+    "w = 5/(5 + 1)"
+   ],
+   "answer": "w ≈ 0.833 (plain least squares gives 1)"
+  }
+ },
+ "ŷ = σ(w · x + b)": {
+  "title": "Logistic regression",
+  "about": "A linear score squashed by the sigmoid into a probability of the positive class. Trained by minimizing binary cross-entropy; the decision boundary w · x + b = 0 is a line or plane.",
+  "vars": [
+   [
+    "w, b",
+    "weights and bias",
+    ""
+   ],
+   [
+    "ŷ",
+    "predicted probability",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "w · x + b = 2. What is the predicted probability?",
+   "steps": [
+    "σ(2) = 1/(1 + e^{−2})"
+   ],
+   "answer": "≈ 0.881"
+  }
+ },
+ "d(x, y) = √(Σ (x_{i} − y_{i})^{2})": {
+  "title": "Euclidean distance",
+  "about": "Straight-line distance between two feature vectors; what k-nearest neighbours and k-means use. Scale the features first, or the largest one dominates.",
+  "vars": [
+   [
+    "x, y",
+    "feature vectors",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Distance between (1, 2, 3) and (4, 6, 3)?",
+   "steps": [
+    "√(9 + 16 + 0)"
+   ],
+   "answer": "5"
+  }
+ },
+ "σ′(z) = σ(z)(1 − σ(z))": {
+  "title": "Derivative of the sigmoid",
+  "about": "The sigmoid's slope comes from its own value, which makes backpropagation cheap. It peaks at 0.25 at z = 0 and vanishes for large |z|, the vanishing-gradient problem.",
+  "vars": [
+   [
+    "z",
+    "input",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "σ′(0)?",
+   "steps": [
+    "σ(0) = 0.5"
+   ],
+   "answer": "0.5 × 0.5 = 0.25"
+  }
+ },
+ "tanh(z) = (e^{z} − e^{−z})/(e^{z} + e^{−z})": {
+  "title": "Hyperbolic tangent activation",
+  "about": "An S-curve from −1 to 1, centred on 0, which often trains better than the sigmoid. tanh(z) = 2σ(2z) − 1, and its derivative is 1 − tanh².",
+  "vars": [
+   [
+    "z",
+    "input",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "tanh(1)?",
+   "steps": [
+    "(e − 1/e)/(e + 1/e)"
+   ],
+   "answer": "≈ 0.7616"
+  }
+ },
+ "A = softmax(Q K^{T}/√(d_{k})) V": {
+  "title": "Scaled dot-product attention",
+  "about": "The core of transformers. Each query scores every key by dot product, scaled by √d_k so softmax stays soft; the softmax weights then average the values.",
+  "vars": [
+   [
+    "Q, K, V",
+    "query, key and value matrices",
+    ""
+   ],
+   [
+    "d_{k}",
+    "key dimension",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "One query q = (1, 0) and keys (1, 0), (0, 1), with d_k = 2. Find the weights.",
+   "steps": [
+    "Scores 1/√2 ≈ 0.707 and 0",
+    "softmax: e^{0.707}/(e^{0.707} + 1)"
+   ],
+   "answer": "weights ≈ 0.67 and 0.33"
+  }
+ },
+ "RMSE = √(MSE)": {
+  "title": "Root mean squared error",
+  "about": "The square root of the MSE, in the target's own units. It punishes large errors more than MAE does.",
+  "vars": [
+   [
+    "MSE",
+    "mean squared error",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Errors 1, −2, 3. Find the RMSE.",
+   "steps": [
+    "MSE = (1 + 4 + 9)/3 = 4.667"
+   ],
+   "answer": "RMSE ≈ 2.16"
+  }
+ },
+ "MAE = (1/n) Σ |y_{i} − ŷ_{i}|": {
+  "title": "Mean absolute error",
+  "about": "The average size of the errors, in the target's units. Less sensitive to outliers than MSE; minimizing it gives the median.",
+  "vars": [
+   [
+    "y_{i}, ŷ_{i}",
+    "true and predicted values",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Errors 1, −2, 3. Find the MAE.",
+   "steps": [
+    "(1 + 2 + 3)/3"
+   ],
+   "answer": "2"
+  }
+ },
+ "R^{2} = 1 − SS_{res}/SS_{tot}": {
+  "title": "Coefficient of determination (R squared)",
+  "about": "The share of the target's variance the model explains: 1 is perfect, 0 is no better than predicting the mean, and negative is worse. SS_res = Σ(yᵢ − ŷᵢ)², SS_tot = Σ(yᵢ − ȳ)².",
+  "vars": [
+   [
+    "SS_{res}",
+    "residual sum of squares",
+    ""
+   ],
+   [
+    "SS_{tot}",
+    "total sum of squares",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "SS_res = 20 and SS_tot = 100.",
+   "steps": [
+    "1 − 20/100"
+   ],
+   "answer": "R² = 0.8"
+  }
+ },
+ "L = −(y ln(ŷ) + (1 − y) ln(1 − ŷ))": {
+  "title": "Binary cross-entropy (log loss)",
+  "about": "The loss for yes/no classifiers with a probability output. A confident wrong answer costs a lot; average it over the samples.",
+  "vars": [
+   [
+    "y",
+    "true label, 0 or 1",
+    ""
+   ],
+   [
+    "ŷ",
+    "predicted probability of 1",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "y = 1 and ŷ = 0.9. Then ŷ = 0.1?",
+   "steps": [
+    "−ln 0.9 = 0.105",
+    "−ln 0.1 = 2.303"
+   ],
+   "answer": "0.105 and 2.303"
+  }
+ },
+ "L = max(0, 1 − y ŷ)": {
+  "title": "Hinge loss",
+  "about": "The support vector machine's loss: zero once a sample is on the right side with margin 1, rising linearly otherwise.",
+  "vars": [
+   [
+    "y",
+    "label, ±1",
+    ""
+   ],
+   [
+    "ŷ",
+    "raw score w · x + b",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "A sample has label y = 1. Find the hinge loss when the score ŷ is 2, 0.5 and −1.",
+   "steps": [
+    "ŷ = 2: max(0, 1 − 2) = 0, past the margin",
+    "ŷ = 0.5: max(0, 1 − 0.5) = 0.5, right side but inside the margin",
+    "ŷ = −1: max(0, 1 + 1) = 2, wrong side"
+   ],
+   "answer": "L = 0, 0.5 and 2"
+  }
+ },
+ "L + λ ‖w‖_{1}": {
+  "title": "L1 regularization (lasso)",
+  "about": "Adds the sum of absolute weights to the loss. Unlike L2 it drives many weights exactly to 0, which selects features.",
+  "vars": [
+   [
+    "λ",
+    "regularization strength",
+    ""
+   ],
+   [
+    "‖w‖_{1}",
+    "Σ |w_{i}|",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "L + λ ‖w‖^{2}",
+    "L2 (ridge)"
+   ]
+  ],
+  "example": {
+   "problem": "Loss 0.40, w = (0.5, −0.2, 0), λ = 0.1.",
+   "steps": [
+    "‖w‖₁ = 0.7"
+   ],
+   "answer": "0.40 + 0.07 = 0.47"
+  }
+ },
+ "G = 1 − Σ p_{i}^{2}": {
+  "title": "Gini impurity",
+  "about": "How mixed the classes at a decision-tree node are: 0 for a pure node, 0.5 at most for two classes. A split is chosen to lower the weighted impurity most.",
+  "vars": [
+   [
+    "p_{i}",
+    "fraction of class i at the node",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "A node is 70% class A and 30% class B.",
+   "steps": [
+    "1 − (0.49 + 0.09)"
+   ],
+   "answer": "0.42"
+  }
+ },
+ "IG = H(parent) − Σ (n_{k}/n) H(child_{k})": {
+  "title": "Information gain",
+  "about": "The fall in entropy from a split, the children weighted by size. ID3 and C4.5 trees split on the feature that gains most.",
+  "vars": [
+   [
+    "H",
+    "entropy −Σ p log₂ p",
+    "bit"
+   ],
+   [
+    "n_{k}",
+    "samples in child k",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "A 50/50 parent (H = 1) splits into two pure halves.",
+   "steps": [
+    "Each child has H = 0"
+   ],
+   "answer": "IG = 1 bit"
+  }
+ },
+ "v ← β v + ∇L,  w ← w − η v": {
+  "title": "Gradient descent with momentum",
+  "about": "Keeps a running sum of past gradients, which speeds travel along consistent directions and damps zigzags. β ≈ 0.9 is typical.",
+  "vars": [
+   [
+    "v",
+    "velocity",
+    ""
+   ],
+   [
+    "β",
+    "momentum",
+    ""
+   ],
+   [
+    "η",
+    "learning rate",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Gradient stays 1, β = 0.9. What does v tend to?",
+   "steps": [
+    "v = 1/(1 − β)"
+   ],
+   "answer": "10: steps up to 10 times larger"
+  }
+ },
+ "w ← w − η m̂/(√(v̂) + ϵ)": {
+  "title": "Adam optimizer",
+  "about": "Keeps running averages of the gradient (m) and its square (v), corrects their start-up bias, and gives each weight its own step size. Defaults: η = 0.001, β₁ = 0.9, β₂ = 0.999, ϵ = 10⁻⁸.",
+  "vars": [
+   [
+    "m̂",
+    "bias-corrected mean of the gradients",
+    ""
+   ],
+   [
+    "v̂",
+    "bias-corrected mean of their squares",
+    ""
+   ],
+   [
+    "η",
+    "learning rate",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "With m̂ = 0.2, v̂ = 0.04, η = 0.001, how far does w move?",
+   "steps": [
+    "0.001 × 0.2/0.2"
+   ],
+   "answer": "0.001: Adam's steps are about η in size"
+  }
+ },
+ "x′ = (x − x_{min})/(x_{max} − x_{min})": {
+  "title": "Min-max normalization",
+  "about": "Rescales a feature to [0, 1] using the training set's minimum and maximum. Sensitive to outliers; standardization is the alternative.",
+  "vars": [
+   [
+    "x_{min}, x_{max}",
+    "smallest and largest training values",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Ages run from 18 to 68. Scale 43.",
+   "steps": [
+    "(43 − 18)/50"
+   ],
+   "answer": "0.5"
+  }
+ },
+ "TNR = TN/(TN + FP)": {
+  "title": "Specificity (true negative rate)",
+  "about": "Of the real negatives, the share correctly called negative. Pairs with recall (sensitivity) in medical tests.",
+  "vars": [
+   [
+    "TN",
+    "true negatives",
+    ""
+   ],
+   [
+    "FP",
+    "false positives",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "90 true negatives and 10 false positives.",
+   "steps": [
+    "90/100"
+   ],
+   "answer": "0.9"
+  }
+ },
+ "FPR = FP/(FP + TN)": {
+  "title": "False positive rate",
+  "about": "Of the real negatives, the share wrongly flagged: 1 − specificity. The ROC curve plots recall against FPR as the threshold moves; its area is the AUC.",
+  "vars": [
+   [
+    "FP",
+    "false positives",
+    ""
+   ],
+   [
+    "TN",
+    "true negatives",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "10 false positives and 90 true negatives.",
+   "steps": [
+    "10/100"
+   ],
+   "answer": "0.1"
+  }
+ },
+ "EAR = (1 + r/n)^{n} − 1": {
+  "title": "Effective annual rate (APY)",
+  "about": "What a quoted annual rate compounded n times a year really earns in a year. Compare loans and accounts by EAR, not APR.",
+  "vars": [
+   [
+    "r",
+    "nominal annual rate (APR)",
+    ""
+   ],
+   [
+    "n",
+    "compounding periods per year",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "12% APR compounded monthly.",
+   "steps": [
+    "(1.01)^{12} − 1"
+   ],
+   "answer": "≈ 12.68%"
+  }
+ },
+ "FV = PV (1 + r)^{n}": {
+  "title": "Future value of a single sum",
+  "about": "How much a sum grows to in n periods at rate r per period. The inverse of discounting.",
+  "vars": [
+   [
+    "PV",
+    "present value",
+    ""
+   ],
+   [
+    "r",
+    "rate per period",
+    ""
+   ],
+   [
+    "n",
+    "periods",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "$1000 at 5% a year for 10 years.",
+   "steps": [
+    "1000 × 1.05^{10}"
+   ],
+   "answer": "≈ $1628.89"
+  }
+ },
+ "PV = FV e^{−r t}": {
+  "title": "Continuous discounting",
+  "about": "Present value of a future amount when interest compounds continuously; the inverse of A = P e^{rt}.",
+  "vars": [
+   [
+    "r",
+    "continuous annual rate",
+    "1/yr"
+   ],
+   [
+    "t",
+    "years",
+    "yr"
+   ]
+  ],
+  "example": {
+   "problem": "$10,000 due in 5 years at 4% continuous.",
+   "steps": [
+    "10000 e^{−0.2}"
+   ],
+   "answer": "≈ $8187.31"
+  }
+ },
+ "B = P (1 + r)^{k} − M ((1 + r)^{k} − 1)/r": {
+  "title": "Loan balance after k payments",
+  "about": "What is still owed: the loan grown with interest, less the payments grown with interest. Early payments are mostly interest.",
+  "vars": [
+   [
+    "P",
+    "amount borrowed",
+    ""
+   ],
+   [
+    "M",
+    "payment per period",
+    ""
+   ],
+   [
+    "r",
+    "rate per period",
+    ""
+   ],
+   [
+    "k",
+    "payments made",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "M = P r/(1 − (1 + r)^{−n})",
+    "the payment"
+   ]
+  ],
+  "example": {
+   "problem": "$200,000 at 0.5% a month with M = $1199.10. Balance after 60 payments?",
+   "steps": [
+    "200000 × 1.005^{60} = 269,770",
+    "1199.10 × (1.005^{60} − 1)/0.005 = 83,661"
+   ],
+   "answer": "≈ $186,109"
+  }
+ },
+ "PV = C/r": {
+  "title": "Perpetuity",
+  "about": "Present value of a payment C every period forever. A preferred share or an endowment that pays only its interest.",
+  "vars": [
+   [
+    "C",
+    "payment per period",
+    ""
+   ],
+   [
+    "r",
+    "rate per period",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "$5000 a year forever at 4%.",
+   "steps": [
+    "5000/0.04"
+   ],
+   "answer": "$125,000"
+  }
+ },
+ "PV = C/(r − g)": {
+  "title": "Growing perpetuity (Gordon growth model)",
+  "about": "Present value of payments that start at C next period and grow at g forever. As a stock price, P₀ = D₁/(r − g).",
+  "assumptions": [
+   "r > g"
+  ],
+  "vars": [
+   [
+    "C",
+    "next period's payment",
+    ""
+   ],
+   [
+    "r",
+    "discount rate",
+    ""
+   ],
+   [
+    "g",
+    "growth rate",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Next dividend $2, growth 3%, required return 8%.",
+   "steps": [
+    "2/(0.08 − 0.03)"
+   ],
+   "answer": "$40"
+  }
+ },
+ "E[R] = r_{f} + β (E[R_{m}] − r_{f})": {
+  "title": "Capital asset pricing model (CAPM)",
+  "about": "The return investors should expect from an asset: the risk-free rate plus β times the market risk premium. β measures how the asset moves with the market.",
+  "vars": [
+   [
+    "r_{f}",
+    "risk-free rate",
+    ""
+   ],
+   [
+    "β",
+    "beta, sensitivity to the market",
+    ""
+   ],
+   [
+    "E[R_{m}]",
+    "expected market return",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "r_f = 4%, β = 1.2, market return 10%.",
+   "steps": [
+    "4% + 1.2 × 6%"
+   ],
+   "answer": "11.2%"
+  }
+ },
+ "S = (R_{p} − r_{f})/σ_{p}": {
+  "title": "Sharpe ratio",
+  "about": "Excess return per unit of risk (standard deviation). Higher is better when comparing portfolios.",
+  "vars": [
+   [
+    "R_{p}",
+    "portfolio return",
+    ""
+   ],
+   [
+    "σ_{p}",
+    "standard deviation of return",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Return 12%, risk-free 4%, volatility 16%.",
+   "steps": [
+    "(12 − 4)/16"
+   ],
+   "answer": "0.5"
+  }
+ },
+ "WACC = (E/V) r_{E} + (D/V) r_{D} (1 − T)": {
+  "title": "Weighted average cost of capital",
+  "about": "A firm's blended cost of money, the weights being market values of equity and debt. Interest is tax-deductible, hence (1 − T). Used as the discount rate for projects.",
+  "vars": [
+   [
+    "E, D",
+    "equity and debt value, V = E + D",
+    ""
+   ],
+   [
+    "r_{E}, r_{D}",
+    "costs of equity and debt",
+    ""
+   ],
+   [
+    "T",
+    "tax rate",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "E = 60, D = 40, r_E = 10%, r_D = 5%, T = 25%.",
+   "steps": [
+    "0.6 × 10% + 0.4 × 5% × 0.75"
+   ],
+   "answer": "7.5%"
+  }
+ },
+ "P = Σ_{t=1}^{n} C/(1 + y)^{t} + F/(1 + y)^{n}": {
+  "title": "Bond price",
+  "about": "The present value of the coupons and the face value at the yield. When yields rise, prices fall; a bond whose coupon rate equals its yield sells at par.",
+  "vars": [
+   [
+    "C",
+    "coupon per period",
+    ""
+   ],
+   [
+    "F",
+    "face value",
+    ""
+   ],
+   [
+    "y",
+    "yield per period",
+    ""
+   ],
+   [
+    "n",
+    "periods to maturity",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "3-year bond, face $1000, 5% annual coupon, yield 6%.",
+   "steps": [
+    "50/1.06 + 50/1.06^{2} + 1050/1.06^{3}"
+   ],
+   "answer": "≈ $973.27"
+  }
+ },
+ "PM = (R − C)/R": {
+  "title": "Profit margin",
+  "about": "The share of each sale kept as profit.",
+  "vars": [
+   [
+    "R",
+    "revenue",
+    ""
+   ],
+   [
+    "C",
+    "costs",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Revenue $500k, costs $420k.",
+   "steps": [
+    "80/500"
+   ],
+   "answer": "16%"
+  }
+ },
+ "D = (C − S)/n": {
+  "title": "Straight-line depreciation",
+  "about": "Spreads an asset's cost, less what it can be sold for at the end, evenly over its life.",
+  "vars": [
+   [
+    "C",
+    "cost",
+    ""
+   ],
+   [
+    "S",
+    "salvage value",
+    ""
+   ],
+   [
+    "n",
+    "useful life",
+    "yr"
+   ]
+  ],
+  "example": {
+   "problem": "A $50,000 machine, salvage $5000, 9 years.",
+   "steps": [
+    "45000/9"
+   ],
+   "answer": "$5000 a year"
+  }
+ }
+}

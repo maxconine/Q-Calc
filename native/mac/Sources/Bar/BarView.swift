@@ -294,7 +294,7 @@ struct LiveAnswerView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            if model.copied { CopiedCheck() }
+            if model.copied { CopiedCheck().id(model.copyCount) }
             content
         }
         .lineLimit(1)
@@ -756,6 +756,21 @@ private struct HistoryTape: View {
     @ObservedObject var model: BarModel
     /// the most the tape may take (BarView.fitTape)
     var limit: CGFloat = .infinity
+    /// the row under the pointer: it alone is lit while there is one, else the row ↑ ↓ picked
+    @State private var hoverRow: Int?
+    /// ↑ ↓ ← → moved the pick: the pointer's row and box give way to it until the pointer moves again
+    @State private var muted = false
+    @State private var mutedAt = NSPoint.zero
+
+    private func mute() {
+        muted = true
+        mutedAt = NSEvent.mouseLocation
+    }
+
+    /// a hover change while muted counts only if the pointer really moved (a scroll to the pick moves rows under it)
+    private func unmuteIfMoved() {
+        if muted, hypot(NSEvent.mouseLocation.x - mutedAt.x, NSEvent.mouseLocation.y - mutedAt.y) > 2 { muted = false }
+    }
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -763,8 +778,15 @@ private struct HistoryTape: View {
                        || CGFloat(model.visibleRange.count) * Theme.tapeRow > limit) {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(model.visibleRange), id: \.self) { i in
+                        let pointer = muted ? nil : hoverRow
+                        let lit = pointer.map { $0 == i } ?? (model.selected == i)
                         HistoryRowView(model: model, index: i, row: model.rows[i], selected: model.selected == i,
-                                       picked: model.selected == i ? model.pick : nil)
+                                       lit: lit, hovered: pointer == i, muted: muted,
+                                       onHover: { on in
+                                           if on { hoverRow = i } else if hoverRow == i { hoverRow = nil }
+                                           unmuteIfMoved()
+                                       },
+                                       picked: model.selected == i && lit ? model.pick : nil)
                             .equatable()
                             .id(i)
                     }
@@ -776,8 +798,15 @@ private struct HistoryTape: View {
             .onChange(of: limit) { _ in proxy.scrollTo(model.selected ?? model.rows.count - 1, anchor: model.selected == nil ? .bottom : nil) }
             .onChange(of: model.selected) { i in
                 if let i { proxy.scrollTo(i) }
+                if i != nil { mute() }
             }
+            .onChange(of: model.pick) { _ in if model.selected != nil { mute() } }
+            .pointerHover { _ in unmuteIfMoved() }
             .onAppear { proxy.scrollTo(model.rows.count - 1, anchor: .bottom) }
+            // a scroll opened it: the newest row stays at the bottom, older ones above to scroll to
+            .onChange(of: model.tapeOpen) { open in
+                if open, model.selected == nil { DispatchQueue.main.async { proxy.scrollTo(model.rows.count - 1, anchor: .bottom) } }
+            }
             // a new row scrolls to the newest; a delete or ⌘Z with a row picked stays on it (it had jumped to the end)
             .onChange(of: model.rows.count) { n in
                 if let t = TapeRules.scrollTarget(selected: model.selected, count: n) {
@@ -788,6 +817,13 @@ private struct HistoryTape: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Calculation history")
     }
+}
+
+/// the "Insert … at the cursor" hover labels on tape rows: gone once the user has inserted from the tape (native only)
+enum TapeTips {
+    static let key = "qcalc.tape.insertLearned"
+    static var learned: Bool { UserDefaults.standard.bool(forKey: key) }
+    static func learn() { if !learned { UserDefaults.standard.set(true, forKey: key) } }
 }
 
 /// the keys held for a click on a tape row (⇧ keeps the tape open, ⌥ leaves off the unit); the dev drive's
@@ -803,13 +839,26 @@ private struct HistoryRowView: View, Equatable {
     let index: Int
     let row: HistoryRow
     let selected: Bool
+    /// filled: the row under the pointer, else (with none) the row ↑ ↓ picked; one row at a time
+    let lit: Bool
+    /// under the pointer: the copy button shows only here
+    let hovered: Bool
+    /// the keys moved the pick since the pointer last moved: no hover box on an answer or the expression
+    var muted = false
+    /// the pointer came onto the row or left it: the row itself, an answer (its drag source took the row's hover,
+    /// so over an answer the row had read as left and its copy button hid) or the copy button
+    var onHover: (Bool) -> Void = { _ in }
+    @State private var rowIn = false
+    @State private var cellIn = false
+    @State private var copyIn = false
+    private func report() { onHover(rowIn || cellIn || copyIn) }
     // which part ← → picked: 0 the expression, 1 the first answer, 2 the second of a dual
     let picked: Int?
-    @State private var hover = false
     @State private var exprHover = false
 
     static func == (a: Self, b: Self) -> Bool {
-        a.index == b.index && a.row == b.row && a.selected == b.selected && a.picked == b.picked
+        a.index == b.index && a.row == b.row && a.selected == b.selected && a.lit == b.lit && a.hovered == b.hovered && a.muted == b.muted
+            && a.picked == b.picked
     }
 
     /// the expression as typed; stacked as the bar draws it while "Stacked fractions and powers" is on
@@ -830,14 +879,15 @@ private struct HistoryRowView: View, Equatable {
                     model.insertFromRow(index, answer: false, keep: mods.contains(.shift))
                 } label: {
                     exprText
-                        .foregroundStyle(exprHover || picked == 0 ? Color.qInk : Color.qMuted)
+                        .foregroundStyle(exprOn || picked == 0 ? Color.qInk : Color.qMuted)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         // a stacked expression takes the whole row's height
                         .padding(.vertical, StackedText.stacks(row.expr) ? 0 : 4)
-                        .padding(.horizontal, picked == 0 || exprHover ? 4 : 0)
+                        // the box hugs the expression, as an answer's does
+                        .padding(.horizontal, picked == 0 || exprOn ? 4 : 0)
+                        .background(PickedMark(on: picked == 0 || exprOn))
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(PickedMark(on: picked == 0 || exprHover))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -852,18 +902,20 @@ private struct HistoryRowView: View, Equatable {
                     answers
                         .frame(minWidth: 120, maxWidth: max(120, (geo.size.width - 16) * 0.46), alignment: .trailing)
                 }
-                RowCopyButton(shown: hover || selected, note: row.kind == .note) {
+                RowCopyButton(shown: hovered, note: row.kind == .note) {
                     model.copyRow(row, answer: true)
                     model.focusField?()
                 }
+                .onHover { copyIn = $0; report() }
             }
             .padding(.leading, 8)
             .padding(.trailing, 4)
             .frame(height: Theme.tapeRow)
-            .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(selected ? Color.qFillSelected : hover ? Color.qFillHover : .clear))
+            .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(!lit ? .clear : selected ? Color.qFillSelected : Color.qFillHover))
         }
         .frame(height: Theme.tapeRow)
-        .onHover { hover = $0 }
+        .contentShape(Rectangle())
+        .onHover { rowIn = $0; report() }
         .contextMenu {
             if row.kind == .note {
                 Button("Copy Note") { model.copyRow(row, answer: false) }
@@ -887,7 +939,11 @@ private struct HistoryRowView: View, Equatable {
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
+    private var exprOn: Bool { exprHover && !muted }
+
     private var exprTip: String {
+        // how to insert goes once the user has inserted from the tape; a long expression still reads in full
+        if TapeTips.learned { return row.expr.count > 40 ? row.expr : "" }
         let what = row.kind == .system ? "Edit equations" : row.kind == .definition ? "Insert word at the cursor"
             : row.kind == .note ? "Insert note at the cursor" : "Insert expression at the cursor"
         let keep = row.kind == .system ? what : "\(what) · ⇧-click keeps the history open"
@@ -977,12 +1033,14 @@ private struct HistoryRowView: View, Equatable {
         let unit = model.numberAndUnit(text)
         let more = row.kind == .definition ? " · ⇧-click keeps the history open"
             : unit != nil ? " · ⇧-click keeps the history open, ⌥-click leaves off the unit" : " · ⇧-click keeps the history open"
-        return AnswerCell(text: text, split: unit, unitName: model.unitName(forAnswer: text), picked: picked, fill: fill, tip: tip + more, spoken: spoken,
+        return AnswerCell(text: text, split: unit, unitName: model.unitName(forAnswer: text), picked: picked, muted: muted, fill: fill,
+                          tip: TapeTips.learned ? "" : tip + more, spoken: spoken,
                           hint: unit != nil ? "Inserts it at the cursor; with Shift the history stays open, with Option it goes in without its unit"
                               : "Inserts it at the cursor; with Shift the history stays open") {
             let mods = TapeClick.flags
             model.insertFromRow(index, answer: true, at: at, keep: mods.contains(.shift), bare: mods.contains(.option))
         }
+        .onHover { cellIn = $0; report() }
         .onDrag { NSItemProvider(object: model.rowCopy(row) as NSString) }
     }
 }
@@ -1030,6 +1088,8 @@ private struct AnswerCell: View {
     let split: (number: String, unit: String)?
     let unitName: String?
     let picked: Bool
+    /// the keys moved the pick: no hover box here until the pointer moves
+    var muted = false
     /// a lone answer is the whole column (display: block), so its pick ring is too
     var fill = false
     var tip = "Insert the answer at the cursor"
@@ -1065,14 +1125,16 @@ private struct AnswerCell: View {
         }
         .padding(.vertical, 4)
         // native only: hovering shows the same box ← → picks with
-        .padding(.horizontal, picked || hover ? 4 : 0)
-        .background(PickedMark(on: picked || hover))
+        .padding(.horizontal, picked || on ? 4 : 0)
+        .background(PickedMark(on: picked || on))
         .onHover { hover = $0 }
     }
 
+    private var on: Bool { hover && !muted }
+
     private func part(_ s: String) -> some View {
         RadicalText(text: s, size: Theme.row, tracking: -0.015 * Theme.row, monospaced: true)
-            .foregroundStyle(hover ? Color.qAnswerHover : Color.qAnswer)
+            .foregroundStyle(on ? Color.qAnswerHover : Color.qAnswer)
     }
 }
 

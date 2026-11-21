@@ -400,3 +400,27 @@ this Mac); the item numbers are `native/QA_BACKLOG.md`'s.
 |---|---|---|
 | QA 65: Typst's documents, paths and memos dropped (`clearCaches`, then `$ x^2 $` again) 30 s after a hide | 200 committed lines then hidden, `top` mem at 5 s / 37 s: 67 / 67 MB (old build 95 / 95). Where the growth is: a fresh launch with the bar up is 37 MB; the first 6 plain lines (`3/7 + 2/3`) add 16 MB (first use of the typing path: regexes, Typst's first real page, the tape), then each new kind of line ~1-2 MB once (units, solve, matrix `^-1`, d/dx, ∫: 53 → 63 MB over 54 lines), then ~1 MB a 50 lines, flat by ~500 (item 51). The first graph adds ~8 MB, a 3D surface ~5 and an implicit one ~9 more, each once, kept after the hide; no 60 MB step seen (item 51's figure included `snap:`, which alone took the app 67 → 201 MB for a moment and 85 MB after) | reverted |
 | QA 69: the evaluation and app-logic threads' compiled regexes freed 30 s after a hide, as on Windows (`Engine.ownCompiled`/`releaseCompiled`, then `malloc_zone_pressure_relief`; warm-up steps at the next showing; other threads keep seek, `jsre::seek_on_every_thread`) | re-signed copy, 12 committed lines (units, solve, d/dx, ∫, matrix, phrases) then hidden, `top` mem shown / 5 s / 40 s hidden / shown again and typed: 72 / 72 / 71 / 73 MB. 668-672 statics freed in 7-16 ms, but malloc gives back almost no pages (pressure relief 0 KB): the regexes' blocks sit among longer-lived ones in its tiny and small regions, so the freed space is reused rather than returned. Windows needed its own slabs for that (heap.rs); a Mac equivalent is a malloc zone for `building_compiled` allocations | kept (caps regrowth; real return needs the zone) |
+
+### Sheet search (2026-11-20, arm64, native only)
+
+A sheet's filter (`macos/IdentityWindow.swift`, now ranked by `macos/SheetSearch.swift`), timed by the dev build's
+`sheetbench:` (each query in `mac/Tests/sheetsearch/queries.tsv` typed a character at a time, each keystroke from the
+text changing to the sheet laid out and drawn). Rerun with `bash native/mac/scripts/test-sheet-search.sh --app`; without
+`--app` it is the headless recall check (each query's row in the first 3 results). The machine was loaded by other
+builds during both runs (load average 15-60), so read these as rough.
+
+| | before | after |
+|---|---|---|
+| identities sheet, a keystroke: median / p90 / p99 / max | 198 / 443 / 520 / 1189 ms (986 keystrokes) | 8.1 / 26 / 44 / 51 ms (first pass, labels still remade) |
+| statics and dynamics sheet, a keystroke: median / p90 / p99 / max | not measured | 1.8 / 3.4 / 4.7 / 31 ms (1,162 keystrokes; the max is the first key) |
+| the search alone, a keystroke (headless, 2,165 rows of every sheet) | (inside the above) | median 0.3 ms, max 3 ms |
+| the index, built once off the main thread when a sheet opens | (every row refolded each keystroke) | ~300 ms |
+| recall, 96 queries, the row in the first 3 | (not measured) | 96/96, 82 first |
+
+What was slow: every keystroke folded every row of all 135 sheets' text (and ran ICU's Greek-Latin transform on
+it) up to three times, then threw away and remade every row, title, group label and separator view. Now each row's
+words go into one vocabulary once; a query word is scored against the vocabulary once while it is typed on; only
+what is in view (and a screen past it) is made, more as the sheet scrolls; views are kept and put back on the next
+keystroke, and those still wanted aren't taken out at all; a slow layout makes the next keys wait for the typing to
+pause (the delay is the last layout's time, at most 60 ms). Left: the first keystroke after opening a sheet makes its
+views (~30-45 ms), and the identities run after the label reuse wasn't measured (the app couldn't be driven).

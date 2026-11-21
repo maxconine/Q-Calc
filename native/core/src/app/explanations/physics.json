@@ -505,7 +505,7 @@
     },
     "try": "1.2 kg * (0.31 m)^2"
   },
-  "Rod ‖ m L^{2}/12": {
+  "Rod ‖ (1/12) m L^{2}": {
     "title": "Mass moment of inertia: slender rod about its centre",
     "about": "A thin uniform rod rotating about an axis through its midpoint, perpendicular to the rod.",
     "assumptions": [
@@ -532,7 +532,7 @@
     ],
     "related": [
       [
-        "Rod, about one end ‖ m L^{2}/3",
+        "Rod, about one end ‖ (1/3) m L^{2}",
         "axis at one end"
       ],
       [
@@ -557,7 +557,7 @@
     },
     "try": "1.5 kg * (1.2 m)^2 / 12"
   },
-  "Rod, about one end ‖ m L^{2}/3": {
+  "Rod, about one end ‖ (1/3) m L^{2}": {
     "title": "Mass moment of inertia: slender rod about one end",
     "about": "A thin uniform rod pivoting about one end. It follows from the centre value by the parallel-axis theorem: m L^{2}/12 + m(L/2)^{2} = m L^{2}/3.",
     "assumptions": [
@@ -583,7 +583,7 @@
     ],
     "related": [
       [
-        "Rod ‖ m L^{2}/12",
+        "Rod ‖ (1/12) m L^{2}",
         "axis at the centre"
       ],
       [
@@ -5208,5 +5208,456 @@
       "answer": "E ≈ 28.3 MeV"
     },
     "try": "0.0304 * 931.5"
+  },
+  "R = v_{0}^{2} sin(2θ)/g": {
+    "title": "Projectile range on level ground",
+    "about": "Horizontal distance for a launch and landing at the same height, no air resistance. Maximum at 45°.",
+    "assumptions": [],
+    "vars": [
+      [
+        "v_{0}",
+        "launch speed",
+        "m/s"
+      ],
+      [
+        "θ",
+        "launch angle",
+        "rad"
+      ],
+      [
+        "g",
+        "gravity",
+        "m/s²"
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "20 m/s at 30°.",
+      "steps": [
+        "400 sin 60°/9.81"
+      ],
+      "answer": "≈ 35.3 m"
+    },
+    "try": "(20 m/s)^2 sin(60 deg)/(9.81 m/s^2)"
+  },
+  "H = v_{0}^{2} sin^{2}(θ)/(2g)": {
+    "title": "Maximum height of a projectile",
+    "about": "The peak height of a projectile, reached when its vertical velocity is zero. Only the vertical part of the launch speed, v_{0} sin θ, matters.",
+    "assumptions": [
+      "No air resistance",
+      "Height above the launch point; g = 9.81 m/s^{2}"
+    ],
+    "vars": [
+      [
+        "v_{0}",
+        "launch speed",
+        "m/s"
+      ],
+      [
+        "θ",
+        "launch angle",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "t = 2 v_{0} sin(θ)/g",
+        "time of flight; the peak comes at half of it"
+      ],
+      [
+        "R = v_{0}^{2} sin(2θ)/g",
+        "range"
+      ]
+    ],
+    "example": {
+      "problem": "A ball is thrown at 20 m/s, 30° above level. How high does it rise?",
+      "steps": [
+        "v_{0} sin θ = 10 m/s",
+        "H = 10^{2}/(2 × 9.81)"
+      ],
+      "answer": "H ≈ 5.10 m"
+    },
+    "try": "(20 m/s)^2 sin(30 deg)^2/(2*9.81 m/s^2)"
+  },
+  "t = 2 v_{0} sin(θ)/g": {
+    "title": "Time of flight of a projectile",
+    "about": "How long a projectile stays in the air when it lands at its launch height: up for v_{0} sin θ/g and the same time back down.",
+    "assumptions": [
+      "No air resistance",
+      "Lands at the launch height"
+    ],
+    "vars": [
+      [
+        "v_{0}",
+        "launch speed",
+        "m/s"
+      ],
+      [
+        "θ",
+        "launch angle",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "R = v_{0}^{2} sin(2θ)/g",
+        "range = horizontal speed × this time"
+      ],
+      [
+        "H = v_{0}^{2} sin^{2}(θ)/(2g)",
+        "peak height"
+      ]
+    ],
+    "example": {
+      "problem": "A ball is thrown at 20 m/s, 30° above level ground. How long is it in the air?",
+      "steps": [
+        "v_{0} sin θ = 10 m/s",
+        "t = 2 × 10/9.81"
+      ],
+      "answer": "t ≈ 2.04 s"
+    },
+    "try": "2 * 20 m/s * sin(30 deg)/(9.81 m/s^2)"
+  },
+  "m_{1} v_{1} + m_{2} v_{2} = m_{1} v′_{1} + m_{2} v′_{2}": {
+    "title": "Conservation of momentum (collisions)",
+    "about": "With no external force total momentum is the same before (v) and after (v′), elastic or not.",
+    "assumptions": [],
+    "vars": [
+      [
+        "m_{1}, m_{2}",
+        "masses",
+        "kg"
+      ],
+      [
+        "v, v′",
+        "velocities before and after",
+        "m/s"
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "A 2 kg cart at 3 m/s hits and sticks to a 1 kg cart at rest.",
+      "steps": [
+        "6 = 3 v′"
+      ],
+      "answer": "2 m/s"
+    }
+  },
+  "F_{c} = m v^{2}/r": {
+    "title": "Centripetal force",
+    "about": "The net inward force needed to keep a mass moving on a circle. It is not a new kind of force: friction, tension, gravity or a normal force supplies it.",
+    "assumptions": [
+      "Uniform circular motion (constant speed)",
+      "Directed toward the centre; with ω, F_{c} = m ω^{2} r"
+    ],
+    "vars": [
+      [
+        "m",
+        "mass",
+        "kg"
+      ],
+      [
+        "v",
+        "speed",
+        "m/s"
+      ],
+      [
+        "r",
+        "radius",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "a_{c} = v^{2}/r",
+        "centripetal acceleration"
+      ],
+      [
+        "μ_{s} m g ≥ m v^{2}/r",
+        "a flat curve: friction must supply it"
+      ]
+    ],
+    "example": {
+      "problem": "A 1200 kg car takes a 50 m radius flat curve at 20 m/s. What sideways friction force do the tyres supply?",
+      "steps": [
+        "F_{c} = 1200 × 20^{2}/50",
+        "= 1200 × 400/50"
+      ],
+      "answer": "F_{c} = 9600 N"
+    },
+    "try": "1200 kg (20 m/s)^2/(50 m)"
+  },
+  "x(t) = A cos(ωt + φ)": {
+    "title": "Simple harmonic motion",
+    "about": "The motion of any undamped linear oscillator: a mass on a spring, a small-angle pendulum, an LC circuit. A sets the size, ω the rate and φ the starting point.",
+    "assumptions": [
+      "Restoring force proportional to displacement",
+      "No damping"
+    ],
+    "vars": [
+      [
+        "A",
+        "amplitude",
+        "m"
+      ],
+      [
+        "ω",
+        "angular frequency",
+        "rad/s"
+      ],
+      [
+        "φ",
+        "phase",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "v(t) = −Aω sin(ωt + φ)",
+        "velocity, largest Aω at x = 0"
+      ],
+      [
+        "a(t) = −ω^{2} x",
+        "acceleration"
+      ]
+    ],
+    "example": {
+      "problem": "A mass oscillates with A = 0.1 m and ω = 4 rad/s. Find its maximum speed and maximum acceleration.",
+      "steps": [
+        "v_{max} = Aω = 0.1 × 4",
+        "a_{max} = Aω^{2} = 0.1 × 16"
+      ],
+      "answer": "v_{max} = 0.4 m/s, a_{max} = 1.6 m/s^{2}"
+    }
+  },
+  "ω = √(k/m)": {
+    "title": "Natural frequency of a mass on a spring",
+    "about": "The angular frequency a mass on a spring oscillates at. Stiffer springs and lighter masses oscillate faster; it doesn't depend on the amplitude.",
+    "assumptions": [
+      "Linear spring, no damping",
+      "Spring mass small next to m"
+    ],
+    "vars": [
+      [
+        "ω",
+        "angular frequency",
+        "rad/s"
+      ],
+      [
+        "k",
+        "spring constant",
+        "N/m"
+      ],
+      [
+        "m",
+        "mass",
+        "kg"
+      ]
+    ],
+    "related": [
+      [
+        "f = ω/(2π)",
+        "frequency in Hz"
+      ],
+      [
+        "T = 2π√(m/k)",
+        "period"
+      ]
+    ],
+    "example": {
+      "problem": "A 0.5 kg mass hangs on a 200 N/m spring. Find ω and the period.",
+      "steps": [
+        "ω = √(200/0.5) = √400 = 20 rad/s",
+        "T = 2π/20"
+      ],
+      "answer": "ω = 20 rad/s, T ≈ 0.314 s"
+    },
+    "try": "sqrt(200 N/m / 0.5 kg)"
+  },
+  "f_{n} = n v/(4L)": {
+    "title": "Harmonics of a pipe closed at one end",
+    "about": "Only odd harmonics fit: a node at the closed end, an antinode at the open end.",
+    "assumptions": [],
+    "vars": [
+      [
+        "n",
+        "1, 3, 5, …",
+        ""
+      ],
+      [
+        "v",
+        "speed of sound",
+        "m/s"
+      ],
+      [
+        "L",
+        "pipe length",
+        "m"
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Fundamental of a 0.5 m closed pipe, v = 343 m/s.",
+      "steps": [
+        "343/2"
+      ],
+      "answer": "171.5 Hz"
+    },
+    "try": "343 m/s/(4*0.5 m)"
+  },
+  "ΔL = α L ΔT": {
+    "title": "Linear thermal expansion",
+    "about": "Length change for a temperature change.",
+    "assumptions": [],
+    "vars": [
+      [
+        "α",
+        "coefficient of expansion",
+        "1/K"
+      ],
+      [
+        "L",
+        "length",
+        "m"
+      ],
+      [
+        "ΔT",
+        "temperature change",
+        "K"
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "100 m steel rail (α = 12 × 10⁻⁶ /K) warms 30 K.",
+      "steps": [
+        "12e-6 · 100 · 30"
+      ],
+      "answer": "3.6 cm"
+    },
+    "try": "12e-6/K * 100 m * 30 K to cm"
+  },
+  "r = m v/(q B)": {
+    "title": "Radius of a charged particle in a magnetic field",
+    "about": "The magnetic force supplies the centripetal force. The basis of mass spectrometers and cyclotrons.",
+    "assumptions": [],
+    "vars": [
+      [
+        "m",
+        "mass",
+        "kg"
+      ],
+      [
+        "v",
+        "speed",
+        "m/s"
+      ],
+      [
+        "q",
+        "charge",
+        "C"
+      ],
+      [
+        "B",
+        "field",
+        "T"
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Proton at 10⁶ m/s in 0.5 T.",
+      "steps": [
+        "1.67e-27 · 1e6/(1.6e-19 · 0.5)"
+      ],
+      "answer": "≈ 2.1 cm"
+    }
+  },
+  "p = F/A": {
+    "title": "Pressure",
+    "about": "Pressure is the normal force spread over an area. The same force on a smaller area gives a higher pressure, which is why knives cut and snowshoes don't sink.",
+    "assumptions": [
+      "Force perpendicular to the surface and spread evenly; otherwise it is the average pressure",
+      "Gauge pressure is measured above the atmosphere's 101.3 kPa; absolute pressure includes it"
+    ],
+    "vars": [
+      [
+        "p",
+        "pressure",
+        "Pa"
+      ],
+      [
+        "F",
+        "normal force",
+        "N"
+      ],
+      [
+        "A",
+        "area",
+        "m^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "p = p_{0} + ρgh",
+        "pressure at a depth in a fluid"
+      ],
+      [
+        "1 Pa = 1 N/m^{2}",
+        "the unit"
+      ]
+    ],
+    "example": {
+      "problem": "A 60 kg person stands on one foot with a 0.02 m^{2} sole. Find the pressure on the floor.",
+      "steps": [
+        "F = 60 kg × 9.81 m/s^{2} = 588.6 N",
+        "p = 588.6 N/0.02 m^{2}"
+      ],
+      "answer": "p ≈ 29.4 kPa"
+    },
+    "try": "60 kg * 9.81 m/s^2 / 0.02 m^2 to kPa"
+  },
+  "U = (1/2) C V^{2}": {
+    "title": "Energy stored in a capacitor",
+    "about": "The energy stored in a capacitor's electric field grows with the square of its voltage. Doubling the voltage stores four times the energy.",
+    "assumptions": [
+      "Ideal, linear capacitor",
+      "Measured from zero charge",
+      "Charging through a resistor from a fixed source loses as much energy in the resistor as ends up stored"
+    ],
+    "vars": [
+      [
+        "U",
+        "stored energy",
+        "J"
+      ],
+      [
+        "C",
+        "capacitance",
+        "F"
+      ],
+      [
+        "V",
+        "voltage across the capacitor",
+        "V"
+      ]
+    ],
+    "related": [
+      [
+        "U = Q^{2}/(2C) = QV/2",
+        "in terms of charge"
+      ],
+      [
+        "u = (1/2) ε_{0} E^{2}",
+        "energy density of the field E between the plates"
+      ]
+    ],
+    "example": {
+      "problem": "A camera flash charges a 220 µF capacitor to 330 V. How much energy does it store?",
+      "steps": [
+        "U = 0.5 × 220 × 10^{−6} F × (330 V)^{2}",
+        "U = 0.5 × 220 × 10^{−6} × 108900 = 11.98 J"
+      ],
+      "answer": "E ≈ 12.0 J"
+    },
+    "try": "0.5 * 220 uF * (330 V)^2 to J"
   }
 }

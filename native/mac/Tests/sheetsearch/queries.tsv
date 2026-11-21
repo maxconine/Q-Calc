@@ -1,0 +1,875 @@
+# A sheet search's query, a tab, then text the row it should find holds (its formula, note or explanation's title;
+# any case), and optionally a tab and the id of the sheet that is open. It passes when such a row is in the first 3
+# results. Lines starting # are skipped.
+ohms law	Ohm's law
+ohm	Ohm's law
+ohms	Ohm's law
+kinetic energy	kinetic energy
+KE	kinetic energy
+PE	potential energy
+potential energy	potential energy
+gravitational potential	Gravitational potential energy
+MOI	moment of inertia
+moment of inertia	moment of inertia
+moment of inertia sphere	solid sphere
+parallel axis	Parallel axis
+newtons second law	Newton's second law
+F = m a	Newton's second law
+forces	force
+rotating matrices	rotation matri
+rotation matrix	Rotation about
+deriv	Derivative
+derivative of ln	Derivative of the natural log
+integral	integra
+integration by parts	Integration by parts
+sohcahtoa	SohCahToa
+quadratic formula	Quadratic formula
+quadratic	Quadratic formula
+pythagorean	Pythagorean
+chain rule	Chain rule
+product rule	Product rule
+power rule	Power rule
+ideal gas	Ideal gas law
+ideal gas law	Ideal gas law
+centripetal	Centripetal
+centripetal accelaration	Centripetal acceleration
+pendulum period	Period of a simple pendulum
+bernoulli	Bernoulli
+reynolds number	Reynolds
+hookes law	Hooke's law
+youngs modulus	Young's modulus
+friction	friction
+bayes	Bayes
+variance	variance
+std dev	standard deviation
+standard deviation	standard deviation
+half life	Half-life
+doppler	Doppler
+snells law	Snell
+coulombs law	Coulomb's law
+faradays law	Faraday's law
+KVL	Kirchhoff's voltage law
+kirchoff current	Kirchhoff's current law
+voltage divider	Voltage divider
+taylor series	Taylor series
+maclaurin sin	sin x = Σ
+law of cosines	Law of cosines
+eulers formula	Euler's formula
+eigenvalues	Eigenvalue
+determinant 2x2	Determinant of a 2 × 2
+compound interest	Compound interest
+mortgage	mortgage
+resonant frequency	resonant frequency
+capacitor impedance	Impedance of a capacitor
+thin lens	Thin lens
+escape velocity	Escape velocity
+kepler	Kepler
+photon energy	Photon energy
+P = V I	Electrical power
+circumference	Circumference
+slope intercept	Slope-intercept
+midpoint	Midpoint
+change of base	Change of base
+gradient descent	Gradient descent
+sigmoid	Sigmoid
+dot product	Dot product
+cross product	Cross product
+impulse momentum	Impulse–momentum
+angular momentum	Angular momentum
+natural frequency	natural frequency
+spring potential	Spring potential energy
+work energy	Work–energy
+double angle sin	Double angle for sine
+shannon entropy	Shannon entropy
+newtons method	Newton's method
+binomial theorem	Binomial theorem
+derivatives	Derivative
+integrals	integra
+rotational kinetic energy	Rotational kinetic energy
+springs	spring
+newton second law	second law
+eigenvector	eigen
+capacitance	capacit
+snell	Snell
+moment inertia rod	rod
+log of a product	Log of a product
+z transform	z transform (two-sided
+a cos b sin	harmonic addition
+modulus	magnitude, modulus	complex numbers
+gradient	∇f = 	vector calculus
+# The sheet critics' round-2 and round-3 queries (a want fixed where the row found was as right)
+slope	Slope of a line
+point slope	point-slope form
+perpendicular lines	perpendicular slopes
+distance between two points	Distance between two points
+discriminant	discriminant
+vertex of a parabola	vertex
+vertex form	vertex form
+complete the square	completing the square
+sum and product of roots	Vieta
+difference of squares	difference of squares
+factor cubes	sum of cubes
+binomial expansion	binomial theorem
+pascal	binomial theorem
+synthetic division	remainder
+log rules	product rule
+log of a quotient	quotient
+exponent rules	aman
+negative exponent	a−n
+doubling time	doubling time
+shift a graph	transformations
+even function	even
+odd function	odd
+inverse function	inverse
+composition	composition
+polar to rectangular	x = r cos
+equation of a circle	circle, centre
+ellipse	ellipse
+foci of ellipse	ellipse foci
+hyperbola asymptotes	hyperbola asymptotes
+parabola focus directrix	focus
+eccentricity	eccentricity
+arithmetic sequence	arithmetic sequence
+arithmetic series sum	arithmetic series
+geometric series	geometric series
+infinite geometric series	infinite geometric
+nth term	nth term
+difference quotient	difference quotient
+integrating factor	integrating factor
+first order linear	linear first order
+separable	separable
+newton cooling ode	Newton's law of cooling
+bernoulli equation	Bernoulli equation
+exact equation	exact
+characteristic equation	characteristic
+auxiliary equation	characteristic
+repeated roots	Repeated
+complex roots	Complex
+damped oscillator	damped oscillator
+wronskian	Wronskian
+euler cauchy	Euler-Cauchy
+cauchy euler	Euler-Cauchy
+equidimensional	Euler-Cauchy
+particular solution	yh + yp
+variation of parameters	variation of parameters
+undetermined coefficients	Undetermined coefficients
+method of undetermined coefficients	Undetermined coefficients
+system of odes	linear system
+eigenvalue solution	eigen
+heat equation	heat (diffusion) equation
+diffusion equation	diffusion
+wave equation	wave equation
+laplace equation	Laplace's equation
+separation of variables	separation of variables
+dalembert	d'Alembert
+newton raphson	Newton-Raphson
+secant method	secant
+bisection	bisection
+fixed point	fixed-point
+interpolation	linear interpolation
+lagrange polynomial	Lagrange
+least squares	least squares
+normal equations	normal equation
+forward difference	forward difference
+central difference	central difference
+second derivative finite difference	second derivative
+simpsons rule	Simpson
+simpson 1/3	Simpson
+trapezoidal rule	trapezoid rule
+midpoint rule	midpoint rule
+quadrature error	error
+euler method	Euler (explicit
+backward euler	backward Euler
+implicit euler	backward Euler
+stiff	stiff
+heun	Heun
+improved euler	Heun
+rk2	Heun
+rk4	RK4
+runge kutta	RK4
+lu decomposition	LU decomposition
+gaussian elimination	LU
+jacobi	Jacobi
+power method	power method
+dominant eigenvalue	power method
+condition number	condition number
+relative error	relative error
+absolute error	absolute error
+order of convergence	order of convergence
+angle of repose	angle of repose
+belt friction	belt friction
+capstan	capstan
+centroid integral	centroid by integration
+power force velocity	power
+conservation of momentum	conservation of momentum
+springs in parallel	springs in parallel
+springs in series	springs in series
+equivalent spring	springs
+underdamped response	underdamped
+log decrement	log decrement
+logarithmic decrement	log
+forced vibration	harmonic forcing
+magnification factor	magnification
+phase lag	phase lag
+transmissibility	transmissibility
+vibration isolation	transmissibility
+damping ratio	damping ratio
+fouriers law	Fourier's law
+conduction	conduction
+heat flux	heat flux
+convection	convection
+newtons law of cooling	Newton's law of cooling
+radiation	radiation
+thermal resistance	thermal
+cylinder resistance	cylinder
+pipe insulation	cylinder
+sphere resistance	spherical
+overall heat transfer coefficient	overall U
+critical radius	critical
+thermal diffusivity	thermal diffusivity
+biot number	Biot
+lumped capacitance	lumped
+time constant	lumped time constant
+fourier number	Fourier number
+fin efficiency	fin efficiency
+fin heat transfer	fin heat rate
+nusselt	Nusselt
+prandtl	Prandtl
+grashof	Grashof
+natural convection	Grashof
+rayleigh number	Rayleigh number
+dittus boelter	Dittus-Boelter
+turbulent pipe flow	Dittus
+laminar pipe	laminar pipe
+flat plate	flat plate
+lmtd	LMTD
+log mean temperature difference	log mean
+ntu	number of transfer units
+effectiveness	effectiveness
+counterflow	counterflow
+heat exchanger	exchanger
+energy balance	energy balance
+stefan boltzmann	Stefan-Boltzmann
+blackbody	blackbody
+emissivity	radiation
+wien	Wien
+view factor	view factor
+reciprocity	reciprocity
+big o	O(n
+arithmetic series	arithmetic series
+master theorem	master theorem
+divide and conquer	master theorem
+merge sort	merge sort
+binary search	binary search
+sorting lower bound	sorting lower bound
+load factor	load factor
+hash collision	birthday
+birthday paradox	birthday
+open addressing	open addressing
+binary tree nodes	binary tree
+edges in a tree	tree
+complete graph	complete graph
+handshake	handshake
+planar graph	planar
+bits needed	bits needed
+two's complement	two's complement
+unsigned range	unsigned
+entropy	Shannon entropy
+amdahl	Amdahl
+gustafson	Gustafson
+speedup	speedup
+cpi	CPU time
+cpu time	CPU time
+amat	average memory access time
+cache miss	miss rate
+littles law	Little's law
+queueing	Little
+transmission delay	transmission delay
+propagation delay	propagation delay
+bandwidth delay product	bandwidth-delay
+latency	delay
+linear regression	linear regression
+ols	ordinary least squares
+normal equation	normal equation
+ridge	ridge
+logistic regression	logistic regression
+knn	Euclidean
+k-means	Euclidean
+cosine similarity	cosine similarity
+sigmoid derivative	derivative of the sigmoid
+tanh	hyperbolic tangent
+relu	ReLU
+softmax	softmax
+attention	attention
+transformer	attention
+mse	mean squared error
+rmse	root mean squared
+mae	mean absolute error
+r squared	coefficient of determination
+cross entropy	cross-entropy
+log loss	log loss
+hinge loss	hinge
+svm	hinge
+kl divergence	KL
+l2 regularization	L2
+weight decay	L2
+lasso	L1
+gini	Gini
+information gain	information gain
+decision tree	decision trees
+learning rate	gradient descent
+momentum sgd	momentum
+adam	Adam
+standardization	standardization
+normalization	min-max
+precision	precision
+recall	recall
+sensitivity	sensitivity
+specificity	specificity
+false positive rate	false positive rate
+roc	ROC
+f1	F1
+accuracy	accuracy
+keplers third law	Kepler's third law
+orbital period	Kepler
+binary star mass	binary
+orbital velocity	circular orbit
+vis viva	vis-viva
+surface gravity	surface gravity
+black hole	Schwarzschild
+luminosity	luminosity
+wiens law	Wien
+inverse square law	inverse square
+apparent magnitude	apparent magnitude
+absolute magnitude	distance modulus
+distance modulus	distance modulus
+mass luminosity	mass-luminosity
+stellar lifetime	main-sequence lifetime
+parallax	parallax
+parsec	parallax
+angular size	small-angle
+hubble law	Hubble's law
+age of the universe	Hubble time
+redshift	redshift
+resolution telescope	diffraction limit
+rayleigh criterion	Rayleigh criterion
+magnification telescope	magnification
+light gathering	light-gathering
+aperture	light-gathering
+simple interest	simple interest
+continuous compounding	continuous compounding
+apy	APY
+cagr	compound annual growth rate
+rule of 72	rule of 72
+inflation	inflation
+present value	present value
+future value	future value
+discount	discounting
+npv	net present value
+irr	IRR
+annuity	annuity
+amortization	amortization
+loan balance	loan balance
+perpetuity	perpetuity
+dividend discount	Gordon
+roi	return on investment
+capm	CAPM
+beta	CAPM
+sharpe	Sharpe
+wacc	weighted average cost
+bond price	bond price
+yield to maturity	bond price
+break even	break-even
+profit margin	profit margin
+depreciation	depreciation
+moles	moles from mass
+molar mass	molar mass
+avogadro	Avogadro
+percent composition	percent composition
+percent yield	percent yield
+molarity	molarity
+molality	molality
+mole fraction	mole fraction
+dilution	dilution
+beer's law	Beer-Lambert
+absorbance	Beer-Lambert
+pv=nrt	ideal gas
+gas density	gas density
+combined gas law	combined gas law
+partial pressure	partial pressures
+van der waals	van der Waals
+effusion	Graham
+rms speed	root-mean-square
+calorimetry	calorimetry
+specific heat	specific heat
+bond energy	bond energies
+hess's law	Hess
+enthalpy of formation	ΔH°f
+entropy change	entropy change
+gibbs free energy	Gibbs
+spontaneous	spontaneous
+equilibrium constant	aA + bB
+kp kc	Kp
+reaction quotient	reaction quotient
+le chatelier	reaction quotient
+van't hoff	van 't Hoff
+henry's law	Henry
+ksp	solubility product
+ph	acidity
+poh	pOH
+ka	acid dissociation
+pka	pKa
+weak acid ph	weak acid
+kw	Kw
+buffer	Henderson-Hasselbalch
+henderson hasselbalch	Henderson
+half life first order	ln(2)/k
+integrated rate law	Integrated
+rate law	rate law
+arrhenius	Arrhenius
+activation energy	Arrhenius
+cell potential	cell potential
+nernst	Nernst
+faraday	Faraday
+electrolysis	electrolysis
+boiling point elevation	boiling point
+freezing point depression	freezing point
+osmotic pressure	osmotic
+raoult	Raoult
+rydberg	Rydberg
+bohr	Bohr
+formal charge	formal charge
+exponential growth	exponential growth
+logistic growth	logistic
+carrying capacity	carrying capacity
+geometric growth	geometric growth
+mark recapture	mark-recapture
+lincoln index	Lincoln
+predator prey	Lotka-Volterra
+npp	net primary productivity
+gpp	net primary
+10% rule	trophic
+shannon index	Shannon diversity
+simpson index	Simpson
+hardy weinberg	Hardy-Weinberg
+allele frequency	allele frequencies
+chi square	chi-square
+gametes	gametes
+heritability	heritability
+breeder's equation	breeder
+recombination frequency	recombination
+map units	recombination
+michaelis menten	Michaelis-Menten
+km vmax	Michaelis-Menten
+lineweaver burk	Lineweaver-Burk
+double reciprocal	Lineweaver-Burk
+kcat	turnover
+competitive inhibition	competitive inhibition
+noncompetitive inhibition	noncompetitive
+hill equation	Hill
+cooperativity	Hill
+resting membrane potential	Goldman
+goldman	Goldman
+equilibrium potential	Nernst
+fick's law	Fick
+diffusion	Fick
+surface area to volume	surface area to volume
+water potential	water potential
+solute potential	solute potential
+photosynthesis	photosynthesis
+cellular respiration	respiration
+atp	ATP
+q10	Q10
+respiratory quotient	respiratory quotient
+cardiac output	cardiac output
+stroke volume	stroke volume
+ejection fraction	ejection fraction
+mean arterial pressure	mean arterial pressure
+blood pressure	mean arterial
+poiseuille	Poiseuille
+bmi	body mass index
+drug half life	half-life
+elimination	first-order elimination
+volume of distribution	volume of distribution
+clearance	clearance
+loading dose	loading dose
+pcr	PCR
+bacterial growth	bacterial growth
+generation time	generation time
+magnification	magnification: image
+normal stress	normal stress
+shear stress	average shear stress
+strain	normal strain
+shear strain	shear strain
+cauchy stress	traction
+deviatoric	deviatoric
+stress transformation	σx′
+principal stresses	principal stresses
+max shear stress	in plane
+principal angle	principal angle
+mohrs circle	Mohr
+von mises	von Mises
+tresca	Tresca
+factor of safety	factor of safety
+stress concentration	stress concentration
+poisson's ratio	Poisson
+generalized hooke	3D Hooke
+lame	Lamé
+shear modulus	shear modulus
+bulk modulus	bulk modulus
+viscosity	viscosity
+kronecker delta	Kronecker
+levi civita	permutation symbol
+epsilon delta identity	εijk εimn
+tensor transformation	rotating a 2nd-order tensor
+stress invariants	invariant
+equilibrium equations	∂σij/∂xj
+elongation	elongation
+axial deformation	elongation
+thermal expansion	thermal growth
+thermal stress	thermal stress
+strain energy	strain energy
+statically indeterminate	compatibility
+hoop stress	hoop
+pressure vessel	cylinder, hoop
+thin wall sphere	sphere
+torsion	torsion
+angle of twist	angle of twist
+polar moment of inertia	J = πd4/32
+shaft power	power, ω
+thin walled tube torsion	thin wall
+bending stress	neutral axis
+flexure formula	neutral axis
+section modulus	S = I/c
+shear formula	shear formula
+shear flow	shear flow
+shear diagram	dV/dx
+moment curvature	EI d2v/dx2
+deflection	Deflection
+cantilever deflection	Cantilever
+simply supported beam	Simply supported
+euler buckling	Euler buckling
+effective length	Euler buckling
+slenderness ratio	slenderness
+radius of gyration	radius of gyration
+second moment of area	rectangle
+moment of inertia rectangle	bh3/12
+hydrostatic pressure	hydrostatic
+buoyancy	buoyancy
+archimedes	Archimedes
+force on submerged plate	centroid
+continuity equation	continuity
+torricelli	Torricelli
+drag	drag force
+lift	lift force
+head loss	head loss
+darcy friction factor	friction factor
+minor losses	minor losses
+hydraulic diameter	hydraulic diameter
+pump power	pump
+reynolds transport	Reynolds transport
+control volume momentum	momentum
+steady flow energy equation	energy, h enthalpy
+navier stokes	Navier-Stokes
+ΔG	ΔG = ΔH − T ΔS
+pKa	pKa
+Ksp	solubility product
+Q10	Q10
+Km	Michaelis
+Vd	volume of distribution
+Bi	Biot
+Nu	Nusselt
+Pr	Prandtl
+NTU	number of transfer units
+κ	condition number
+ζ	damping ratio
+ωn	natural frequency
+EAR	effective annual rate
+PMT	annuity
+FV	future value
+PV	present value
+H0	Hubble
+z score	z-score
+stirling	Stirling
+gauss sum	n(n + 1)/2
+sum 1 to n	n(n + 1)/2
+exponential decay	decay
+radioactive decay	decay
+abc formula	quadratic formula
+roots of a quadratic	quadratic formula
+line through two points	slope
+gradient of a line	slope
+asymptote	asymptote
+directrix	directrix
+logistic curve	logistic
+ode cooling	cooling
+homogeneous solution	homogeneous
+phase plane	linear system
+eigenvectors ode	eigen
+finite difference	difference,
+numerical derivative	difference,
+numerical integration	rule
+ode solver	Euler
+error bound trapezoid	trapezoid rule error
+iterative method	Jacobi
+gauss seidel	Jacobi
+spectral radius	power method
+truncation error	error
+heat sink fin	fin
+insulated tip	adiabatic tip
+composite wall	resistances in series
+convection coefficient	convection
+free convection	natural
+forced convection	Dittus
+parallel flow heat exchanger	LMTD
+gray body	radiation
+kirchhoff radiation	Kirchhoff's law of thermal
+recurrence	master theorem
+time complexity	master theorem
+hash table	load factor
+graph edges	edges
+information content	entropy
+log2	bits
+parallel speedup	Amdahl
+throughput	Little
+round trip time	bandwidth-delay
+weights update	gradient descent
+backprop	derivative of the sigmoid
+activation function	activation
+neural network	activation
+loss function	loss
+overfitting	regularization
+regularization	regularization
+confusion matrix	TP
+true positive rate	true positive rate
+type i error	false positive rate
+embedding similarity	cosine similarity
+feature scaling	z-score
+orbit	orbit
+satellite speed	circular orbit
+moon	Moon
+star brightness	magnitude
+stellar temperature	Wien
+peak wavelength	Wien
+light year	parallax
+expanding universe	Hubble
+telescope	Telescopes
+mortgage payment	mortgage
+car loan	loan
+savings	annuity
+retirement	annuity
+stock valuation	Gordon
+risk adjusted return	Sharpe
+cost of capital	cost of capital
+coupon	bond
+growth rate	compound annual growth rate
+net profit	profit margin
+nusselt number	Nusselt
+Re	Reynolds
+reynolds	Reynolds
+biot	Biot
+Gr	Grashof
+Ra	Rayleigh number
+Fo	Fourier number
+alpha thermal	thermal diffusivity
+omega natural	natural frequency
+Euler's equations	principal axes
+eulers equations	principal axes
+euler equations rigid body	principal axes
+free body diagram	FBD
+free body	Force equilibrium
+FBD	FBD
+rolling without slipping	Rolling without slipping
+rolling	rolling
+heat exchanger effectiveness	effectiveness
+LMTD	log mean
+big O	master theorem
+big o notation	O(
+coriolis	Coriolis
+resonance	magnification
+impulse	impulse
+coefficient of restitution	restitution
+moment of inertia rod	Rod
+lagrange equations	Lagrange
+lagranges equation	Lagrange
+virtual work	D'Alembert
+simpson	Simpson
+trapazoid rule	trapezoid
+eulers method	Euler (explicit
+taylor error	error
+quadradic formula	quadratic formula
+vertex	vertex
+logarithm rules	product rule
+ln rules	log
+hyperbola	hyperbola
+parabola	parabola
+sigma notation	Σ
+homogeneous	homogeneous
+eigenvalues ode	eigen
+loan payment	loan
+apr	effective annual rate
+interest	interest
+NPV	net present value
+IRR	net present value
+beta stock	CAPM
+WACC	cost of capital
+bond	bond price
+CAGR	compound annual
+pH	acidity
+gas constant	ideal gas
+gibbs	Gibbs
+enthalpy	enthalpy
+vapor pressure	Raoult
+Kc	aA + bB
+Kp	K_{p}
+Ka	acid dissociation
+stoichiometry	moles
+limiting reagent	percent yield
+hardy-weinburg	Hardy-Weinberg
+michaelis	Michaelis-Menten
+km	Michaelis-Menten
+Vmax	Michaelis-Menten
+lotka volterra	Lotka-Volterra
+chi squared	chi-square
+membrane potential	Goldman
+resting potential	Goldman
+serial dilution	dilution
+magnification microscope	magnification
+shannon diversity	Shannon diversity
+ATP	ATP
+hubble	Hubble
+magnitude	Magnitude of a vector
+apparent brightness	flux
+angular resolution	Rayleigh criterion
+age of universe	Hubble time
+main sequence	main-sequence
+r2	coefficient of determination
+standardize	standardization
+roc curve	false positive rate
+auc	false positive rate
+entropy decision tree	information gain
+k nearest neighbors	nearest neighbours
+amdahls law	Amdahl
+cache	memory access
+bandwidth	bandwidth-delay
+binary tree height	perfect binary tree
+nodes in binary tree	perfect binary tree
+euler planar	planar
+twos complement	two's complement
+entropy bits	Shannon entropy
+log n factorial	Stirling
+stress	normal stress
+poisson ratio	Poisson
+mohr circle	Mohr
+principal stress	principal stresses
+polar moment	J = πd
+beam deflection	Deflection
+cantilever	Cantilever
+simply supported	Simply supported
+buckling	buckling
+column	buckling
+area moment of inertia	rectangle
+hydrostatic	hydrostatic
+darcy	Darcy
+friction factor	friction factor
+moody	friction factor
+control volume	Reynolds transport
+kronecker	Kronecker
+einstein notation	repeated index
+invariants	invariant
+cauchy	Cauchy
+fourier's law	Fourier's law
+r value	plane wall
+fin	fin
+insulation	critical insulation
+turbulent pipe	Dittus-Boelter
+blackbody emissive	blackbody
+log mean temperature	log mean
+absorptivity	absorbed
+charles law	Charles
+boyle	Boyle
+perihelion	periapsis
+first order reaction	First-order integrated rate law
+undetermined coefficients	Undetermined coefficients
+method of undetermined coefficients	Undetermined coefficients
+# Greek and symbols typed as letters, misspellings, words half typed, course phrases
+tau max	Maximum in-plane shear
+sigma	σ
+omega n	Undamped natural frequency
+omega d	Damped natural frequency
+zeta	Damping ratio
+lambda	λ
+epsilon 0	ε0
+nabla	Gradient
+del f	Gradient
+xbar	Sample mean
+rho g h	ρ g
+kirchoff	Kirchhoff
+bernouli	Bernoulli
+reynold	Reynolds
+eigan value	Eigenvalue
+derivitive	derivative
+intergral	integral
+hookes	Hooke
+coulombs	Coulomb's law
+thevinin	Thévenin
+nortons	Norton
+lapalce	Laplace
+fourrier	Fourier
+torqe	torque
+accleration	acceleration
+momentem	momentum
+centripital	Centripetal acceleration
+pendelum	pendulum
+capacitence	capacitance
+inductence	Inductance
+logarithim	logarithm
+quadradic	Quadratic formula
+parabala	parabola
+hyperbolla	Hyperbola
+binomail	Binomial
+standard devation	standard deviation
+varience	variance
+parall	Parallel axis
+momen	Moment of inertia
+centrip	Centripetal
+pend	pendulum
+capac	capacit
+induct	induct
+quadr	Quadratic formula
+pyth	Pythagorean
+eigenv	eigenvalue
+lapl	Laplace
+bern	Bernoulli
+reyn	Reynolds
+thev	Thévenin
+conserv	Conservation of momentum
+angular mom	angular momentum
+torq	torque
+friction coe	friction
+spring con	Springs in
+ideal ga	Ideal gas law
+half li	half-life
+compound int	Compound interest
+standard dev	standard deviation
+binom	Binomial theorem
+normal dist	Normal (Gaussian) distribution
+statics equilibrium	Force equilibrium
+first law thermo	First law of thermodynamics
+rc time constant	RC time constant
+inverse 2x2	Inverse of a 2 × 2
+gauss law	Gauss's law
+convolution	Convolution
+second order step response	overshoot
+confidence interval	Confidence interval
+average	Sample mean
+flux	flux
+resonance guess	times t
+perihelion	periapsis
+aphelion	apoapsis
+boyles law	Boyle
+gay lussac	Gay-Lussac
+projectile motion	projectile
+projectile range	range
+ratio test	ratio test
+radius of convergence	radius of convergence

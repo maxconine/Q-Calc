@@ -58,6 +58,7 @@ final class SheetData {
                     if let copies = i["leadCopy"] { item["leadCopy"] = copies }
                     if let line = i["open"] { item["open"] = line }
                     if let explain = i["explain"] { item["explain"] = explain }
+                    if let tags = i["tags"] { item["tags"] = tags }
                     if let parts = i["parts"] as? [[String: Any]] {
                         item["parts"] = parts.map { part -> [String: Any] in
                             ["doc": logic.string("lib/identities", "sheetMathDocument", [part["typst"] as? String ?? ""]) ?? "", "copy": part["copy"] as? String ?? ""]

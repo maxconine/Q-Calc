@@ -116,6 +116,8 @@ final class BarModel: ObservableObject {
     @Published private(set) var forms: [String] = [] { didSet { if forms != oldValue { refreshTypeset() } } }
     @Published private(set) var formIndex = 0 { didSet { if formIndex != oldValue { refreshTypeset() } } }
     @Published private(set) var copied = false
+    /// one more each copy: the "✓ copied" check starts over, so a second copy soon after shows it again
+    @Published private(set) var copyCount = 0
     /// the status line under the bar; VoiceOver hears each new one, since nothing moves its focus there
     @Published var hint: String? {
         didSet { if let hint, !hint.isEmpty, hint != oldValue { Self.announce(hint) } }
@@ -1316,6 +1318,7 @@ final class BarModel: ObservableObject {
 
     private func finishRowInsert(_ piece: String, keep: Bool = false) {
         track("history.insert")
+        TapeTips.learn()
         guard keep else {
             keptInsert = nil
             selected = nil
@@ -1414,6 +1417,26 @@ final class BarModel: ObservableObject {
         selected = nil
         tapeOpen = false
         hint = "history cleared"
+        // gone after 2 s, unless something else took the line since
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            if self?.hint == "history cleared" { self?.hint = nil }
+        }
+    }
+
+    /// native only: a scroll up over the bar opens the whole history, no row picked (↑ picks the newest)
+    func scrollOpenTape() -> Bool {
+        guard !tapeOpen, !rows.isEmpty, !gamesShown, settings.historyShow != "always" else { return false }
+        helpShown = false
+        tapeOpen = true
+        selected = nil
+        return true
+    }
+
+    /// native only: a scroll down past the newest row closes a history scrolling opened (none picked)
+    func scrollCloseTape() -> Bool {
+        guard tapeOpen, selected == nil, settings.historyShow != "always" else { return false }
+        tapeOpen = false
+        return true
     }
 
     /// a d/dt chip: move the letter to the other side (EvalOptions.timeVarying), and answer again
@@ -1667,6 +1690,7 @@ final class BarModel: ObservableObject {
     func flashCopied() {
         tourAfterCopy()
         copied = true
+        copyCount += 1
         copiedTimer?.invalidate()
         copiedTimer = Timer.scheduledTimer(withTimeInterval: 1.2, repeats: false) { [weak self] _ in self?.copied = false }
         NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested,

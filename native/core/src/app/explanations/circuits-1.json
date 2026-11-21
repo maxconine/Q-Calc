@@ -1478,55 +1478,6 @@
     },
     "try": "10 kΩ * sqrt(100 nF / 1 mH)"
   },
-  "dB = 20 log_{10}(V_{out}/V_{in})": {
-    "title": "Voltage gain in decibels",
-    "about": "Gain in decibels is 20 log₁₀ of the voltage ratio. Decibels turn multiplication into addition, so cascaded gains add. ×10 is +20 dB, ×2 is about +6 dB, and 1/√2 is −3 dB.",
-    "assumptions": [
-      "For voltage (or current) ratios; for power ratios use 10 log₁₀(P_{out}/P_{in})",
-      "The two forms agree only when both voltages are across the same resistance",
-      "Use magnitudes"
-    ],
-    "vars": [
-      [
-        "dB",
-        "gain in decibels",
-        ""
-      ],
-      [
-        "V_{out}",
-        "output voltage amplitude",
-        "V"
-      ],
-      [
-        "V_{in}",
-        "input voltage amplitude",
-        "V"
-      ]
-    ],
-    "related": [
-      [
-        "dB = 10 log_{10}(P_{out}/P_{in})",
-        "power ratio"
-      ],
-      [
-        "V_{out}/V_{in} = 10^{dB/20}",
-        "back to a ratio"
-      ],
-      [
-        "|H|_{dB} = 20 log_{10}|H|",
-        "transfer function magnitude"
-      ]
-    ],
-    "example": {
-      "problem": "An amplifier turns 25 mV into 2 V. What is its gain in dB?",
-      "steps": [
-        "Ratio = 2/0.025 = 80",
-        "dB = 20 log₁₀(80) = 20 × 1.903 = 38.06 dB"
-      ],
-      "answer": "≈ 38.1 dB"
-    },
-    "try": "20 log10(2 V / 25 mV)"
-  },
   "V_{out}/V_{in} = −R_{f}/R_{in}": {
     "title": "Inverting op amp gain",
     "about": "An op amp with the input fed through R_{in} to the inverting input and R_{f} from output back to it. The gain is set by the resistor ratio alone, and the minus sign flips the signal. The input resistance is R_{in}.",
@@ -3547,5 +3498,257 @@
       "answer": "f = 20 kHz"
     },
     "try": "1 MHz / 50 to kHz"
+  },
+  "R_{N} = R_{th}": {
+    "title": "Norton resistance",
+    "about": "Norton and Thévenin equivalents share one resistance: turn off the independent sources and look into the terminals.",
+    "assumptions": [],
+    "vars": [
+      [
+        "R_{N}",
+        "Norton resistance",
+        "Ω"
+      ],
+      [
+        "R_{th}",
+        "Thévenin resistance",
+        "Ω"
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "V_th = 12 V, R_th = 4 Ω. Find the Norton equivalent.",
+      "steps": [
+        "I_N = 12/4 = 3 A",
+        "R_N = 4 Ω"
+      ],
+      "answer": "3 A in parallel with 4 Ω"
+    }
+  },
+  "V_{s} = I_{s} R": {
+    "title": "Source transformation",
+    "about": "A voltage source in series with R equals a current source in parallel with the same R.",
+    "assumptions": [],
+    "vars": [
+      [
+        "V_{s}",
+        "voltage source",
+        "V"
+      ],
+      [
+        "I_{s}",
+        "current source",
+        "A"
+      ],
+      [
+        "R",
+        "resistance",
+        "Ω"
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Convert 2 A in parallel with 5 Ω.",
+      "steps": [
+        "2 · 5"
+      ],
+      "answer": "10 V in series with 5 Ω"
+    }
+  },
+  "V_{rms} = √((1/T) ∫_{T} v^{2} dt)": {
+    "title": "RMS value of any periodic waveform",
+    "about": "The DC voltage that would heat a resistor the same. For a sine it reduces to V_peak/√2.",
+    "assumptions": [],
+    "vars": [
+      [
+        "T",
+        "period",
+        "s"
+      ],
+      [
+        "v(t)",
+        "voltage",
+        "V"
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "A square wave switching between +5 V and −5 V.",
+      "steps": [
+        "v² = 25 always"
+      ],
+      "answer": "5 V"
+    }
+  },
+  "V = I Z": {
+    "title": "Ohm's law for phasors",
+    "about": "Ohm's law for sinusoidal steady state: phasor voltage equals phasor current times complex impedance. Magnitudes multiply and angles add, so every DC method (dividers, nodes, Thévenin) works with complex numbers.",
+    "assumptions": [
+      "Linear circuit, one frequency, steady state",
+      "V and I as phasors (peak or rms, but the same for both)"
+    ],
+    "vars": [
+      [
+        "V",
+        "phasor voltage",
+        "V"
+      ],
+      [
+        "I",
+        "phasor current",
+        "A"
+      ],
+      [
+        "Z",
+        "impedance",
+        "Ω"
+      ]
+    ],
+    "related": [
+      [
+        "Z_{L} = jωL, Z_{C} = 1/(jωC)",
+        "element impedances"
+      ],
+      [
+        "S = V I^{*}",
+        "complex power, rms phasors"
+      ]
+    ],
+    "example": {
+      "problem": "I = 2∠0° A flows through Z = 3 + 4j Ω. Find V.",
+      "steps": [
+        "V = 2(3 + 4j) = 6 + 8j",
+        "|V| = 10, ∠V = atan2(8, 6) = 53.1°"
+      ],
+      "answer": "V = 10∠53.1° V"
+    },
+    "try": "abs(2(3 + 4i))"
+  },
+  "Z = R + j(ωL − 1/(ωC))": {
+    "title": "Impedance of a series RLC circuit",
+    "about": "The reactances cancel at resonance, ω = 1/√(LC), leaving R.",
+    "assumptions": [],
+    "vars": [
+      [
+        "R",
+        "resistance",
+        "Ω"
+      ],
+      [
+        "L",
+        "inductance",
+        "H"
+      ],
+      [
+        "C",
+        "capacitance",
+        "F"
+      ],
+      [
+        "ω",
+        "angular frequency",
+        "rad/s"
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "R = 10 Ω, L = 10 mH, C = 100 µF, ω = 1000 rad/s.",
+      "steps": [
+        "ωL = 10",
+        "1/(ωC) = 10"
+      ],
+      "answer": "10 Ω (resonance)"
+    }
+  },
+  "P = (1/2) V_{m} I_{m} cos(θ)": {
+    "title": "Average AC power from peak values",
+    "about": "Same as V_rms I_rms cos θ, written with amplitudes.",
+    "assumptions": [],
+    "vars": [
+      [
+        "V_{m}, I_{m}",
+        "peak voltage and current",
+        ""
+      ],
+      [
+        "θ",
+        "angle of V minus angle of I",
+        "rad"
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "V_m = 170 V, I_m = 10 A, θ = 30°.",
+      "steps": [
+        "0.5 · 170 · 10 · cos 30°"
+      ],
+      "answer": "≈ 736 W"
+    },
+    "try": "0.5*170*10*cos(30 deg)"
+  },
+  "e_{ss} = 1/K_{v}": {
+    "title": "Steady-state error to a ramp, type 1",
+    "about": "A type 1 loop (one integrator) follows a ramp input with a constant lag. Raising the gain shrinks the lag; a second integrator removes it.",
+    "assumptions": [
+      "Unity feedback, closed loop stable",
+      "Unit ramp input; for slope A the error is A/K_{v}"
+    ],
+    "vars": [
+      [
+        "K_{v}",
+        "velocity error constant",
+        "1/s"
+      ]
+    ],
+    "related": [
+      [
+        "K_{v} = lim_{s→0} s G(s)",
+        "velocity error constant"
+      ],
+      [
+        "e_{ss} = 1/(1 + K_{p})",
+        "step input, type 0"
+      ]
+    ],
+    "example": {
+      "problem": "An antenna tracker has K_{v} = 20 s^{−1} and follows a target moving at 0.5 rad/s. Find the steady lag.",
+      "steps": [
+        "e_{ss} = 0.5/20"
+      ],
+      "answer": "e_{ss} = 0.025 rad"
+    },
+    "try": "0.5/20"
+  },
+  "K_{v} = lim_{s→0} s G(s)": {
+    "title": "Velocity error constant",
+    "about": "The low-frequency gain of a type 1 open loop once its integrator is cancelled. It fixes the ramp-tracking error 1/K_{v}.",
+    "assumptions": [
+      "Zero for type 0, infinite for type 2 or higher"
+    ],
+    "vars": [
+      [
+        "G(s)",
+        "open-loop transfer function",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "e_{ss} = 1/K_{v}",
+        "ramp error"
+      ],
+      [
+        "K_{p} = lim_{s→0} G(s)",
+        "position constant"
+      ]
+    ],
+    "example": {
+      "problem": "G(s) = 10/(s(s + 2)). Find K_{v} and the ramp error.",
+      "steps": [
+        "s G(s) = 10/(s + 2) → 5 at s = 0",
+        "e_{ss} = 1/5"
+      ],
+      "answer": "K_{v} = 5 s^{−1}, e_{ss} = 0.2"
+    }
   }
 }

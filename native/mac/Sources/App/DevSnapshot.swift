@@ -244,8 +244,10 @@ enum DevSnapshot {
                                wheel1: Int32(nums[2]), wheel2: Int32(nums.count > 3 ? nums[3] : 0), wheel3: 0) else { return }
         cg.location = CGPoint(x: local.x, y: top - local.y)
         if parts.contains("shift") { cg.flags = .maskShift }
-        guard let event = NSEvent(cgEvent: cg),
-              let hit = content.hitTest(content.superview?.convert(local, from: nil) ?? local) else { return }
+        guard let event = NSEvent(cgEvent: cg) else { return }
+        // a scroll that opens or closes the history stops there, as the bar's scroll monitor does
+        if OverlayController.devTapeScroll?(event, local) == true { return }
+        guard let hit = content.hitTest(content.superview?.convert(local, from: nil) ?? local) else { return }
         hit.scrollWheel(with: event)
     }
 

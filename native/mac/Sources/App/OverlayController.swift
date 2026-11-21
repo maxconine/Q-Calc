@@ -89,6 +89,7 @@ final class OverlayController: NSObject {
     private var host: NSHostingView<BarView>?
     let model: BarModel
     private var escapeMonitor: Any?
+    private var scrollMonitor: Any?
     private var dragMonitor: Any?
     private var clickAwayMonitor: Any?
     private var clickAwayLocalMonitor: Any?
@@ -198,6 +199,7 @@ final class OverlayController: NSObject {
     private func build() {
         let panel = makePanel()
         installEscapeMonitor()
+        installScrollMonitor()
         installDragMonitor()
         installClickAwayMonitors()
         observe()
@@ -706,6 +708,42 @@ final class OverlayController: NSObject {
             self.hide(because: "click in another window")
             return event
         }
+    }
+
+    /// native only: scrolling up over the bar opens the whole history (no row picked), and scrolling down with the
+    /// history at its newest row closes it again; a graph's own scroll (zoom) and the line's are left alone
+    private func installScrollMonitor() {
+        guard scrollMonitor == nil else { return }
+        scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
+            guard let self, let panel = self.panel, event.window === panel else { return event }
+            return self.tapeScroll(event, at: event.locationInWindow) ? nil : event
+        }
+        // the dev drive's `scroll:` makes its events without a window, so it asks here first
+        Self.devTapeScroll = { [weak self] event, at in self?.tapeScroll(event, at: at) ?? false }
+    }
+    static var devTapeScroll: ((NSEvent, NSPoint) -> Bool)?
+
+    /// true when the scroll opened or closed the history (the event is then used up)
+    private func tapeScroll(_ event: NSEvent, at point: NSPoint) -> Bool {
+        guard let panel, panel.isVisible, event.momentumPhase.isEmpty,
+              abs(event.scrollingDeltaY) > abs(event.scrollingDeltaX), let content = panel.contentView else { return false }
+        var view = content.hitTest(content.superview?.convert(point, from: nil) ?? point)
+        var tape: NSScrollView?
+        while let v = view {
+            if v is GraphPinchable { return false }
+            if let sv = v as? NSScrollView, !(sv.documentView is NSTextView) { tape = sv; break }
+            view = v.superview
+        }
+        // a gesture's first step (or a mouse wheel's click) decides; the rest of it scrolls as usual
+        guard event.phase.isEmpty || event.phase.contains(.began) else { return false }
+        if event.scrollingDeltaY > 0 { return model.scrollOpenTape() }
+        guard event.scrollingDeltaY < 0 else { return false }
+        let atNewest = tape.map { sv in
+            guard let doc = sv.documentView else { return true }
+            let seen = sv.contentView.bounds
+            return doc.isFlipped ? seen.maxY >= doc.bounds.height - 2 : seen.minY <= 2
+        } ?? true
+        return atNewest && model.scrollCloseTape()
     }
 
     private func installEscapeMonitor() {

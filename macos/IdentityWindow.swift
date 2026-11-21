@@ -48,6 +48,8 @@ struct IdentitySheet {
         var spots: [Spot] = []
         // the native app's explanation, opened by a click beside the copy
         var explain: Explanation?
+        // words the search finds it by that it doesn't show (the native sheets' `tags`)
+        var tags = ""
     }
 
     // what a row says, when it holds, what each letter is and a worked example (core `Explanation`); its text
@@ -126,7 +128,7 @@ struct IdentitySheet {
                                                                let x = (spot["x"] as? NSNumber)?.doubleValue, let y = (spot["y"] as? NSNumber)?.doubleValue else { return nil }
                                                          return Spot(center: CGPoint(x: x, y: y), drawn: picture, copy: copy)
                                                      },
-                                                     explain: Explanation(i["explain"]))
+                                                     explain: Explanation(i["explain"]), tags: i["tags"] as? String ?? "")
                 }
                 return items.isEmpty ? nil : Group(title: title, items: items)
             }
@@ -218,6 +220,13 @@ private final class IdentityRow: NSView {
     var copied = false { didSet { if copied != oldValue { needsDisplay = true } } }
     private var hovered = false { didSet { if hovered != oldValue { fill() } } }
     private var pressed = false { didSet { if pressed != oldValue { fill() } } }
+
+    /// put back in the sheet by a search: no hover, press or copied tint left from before
+    func reset() {
+        hovered = false
+        pressed = false
+        copied = false
+    }
 
     private static let size: CGFloat = 13
     private static let font = NSFont.systemFont(ofSize: size)
@@ -973,6 +982,8 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
     // typing while the sheet has the keys filters its rows; Esc clears it, then closes
     private var filterField: NSSearchField?
     private var keyObserver: NSObjectProtocol?
+    private var scrollObserver: NSObjectProtocol?
+    private var readyObserver: NSObjectProtocol?
     private let id: String
     // a second sheet opens a little down and right of the first rather than on top of it
     private let cascade: Int
@@ -1000,6 +1011,12 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         }
         if let keyObserver {
             NotificationCenter.default.removeObserver(keyObserver)
+        }
+        if let scrollObserver {
+            NotificationCenter.default.removeObserver(scrollObserver)
+        }
+        if let readyObserver {
+            NotificationCenter.default.removeObserver(readyObserver)
         }
     }
 
@@ -1040,127 +1057,256 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
     // a search's rows from other sheets, at most this many
     private static let elsewhereMost = 60
 
-    // the rows a filter leaves, laid out afresh; the figure is never filtered. A filter lists this sheet's matches,
-    // then (the native app) every other sheet's under "<sheet> · <section>"; a row matches when it has every word,
-    // or, when no row anywhere does, all but one of them ("closest matches")
-    private func layout(_ content: NSView, _ sheet: IdentitySheet, filter: String) {
-        content.subviews.forEach { $0.removeFromSuperview() }
-        sectionTops = [:]
-        firstPick = nil
-        idleHint = Self.hint
-        let width = content.frame.width
-        let words = Self.searchWords(filter)
-        var y: CGFloat = 0
-        var matched = false
-        // this sheet's sections (with their index, for `idt summation`), then the other sheets' while searching
-        var shown: [(index: Int?, title: String, section: IdentitySheet.Section)] =
-            sheet.sections.enumerated().map { ($0.offset, $0.element.title, $0.element) }
-        let others = words.isEmpty ? [] : (Self.allSheets?() ?? []).filter { $0.id != sheet.id }
-        for other in others {
-            for section in other.sections where !section.groups.contains(where: { $0.items.contains(where: \.figure) }) {
-                shown.append((nil, "\(other.title) · \(section.title)", section))
-            }
-        }
-        // a formula typed with spaces (`P = V I`) is first looked for whole, in one of a row's texts; its words alone
-        // match nearly every row (`=`, `v` and `i` are everywhere)
-        let formulaLike = words.contains { $0.count == 1 || !$0.allSatisfy(\.isLetter) }
-        let phrase = words.count > 1 && formulaLike ? Self.compact(words.joined()) : ""
-        func kept(_ need: Int, whole: Bool = false) -> [[(IdentitySheet.Group, [IdentitySheet.Item])]] {
-            var elsewhere = 0
-            // a row listed once: a one-formula sheet (`ohm's law`) repeats its row from the big sheet
-            var seen = Set<String>()
-            return shown.map { entry in
-                let section = entry.section
-                let bare = section.groups.contains { $0.items.contains(where: \.figure) }
-                return section.groups.compactMap { group in
-                    if words.isEmpty || bare { return entry.index == nil ? nil : (group, group.items) }
-                    if entry.index == nil, elsewhere >= Self.elsewhereMost { return nil }
-                    let rows = group.items.filter { item in
-                        guard !item.copy.isEmpty else { return true }
-                        guard whole ? Self.hasPhrase(phrase, Self.formulaText(item))
-                                    : Self.matchCount(words, [entry.title, group.title] + Self.searchText(item)) >= need,
-                              entry.index != nil || !seen.contains(item.copy) else { return false }
-                        seen.insert(item.copy)
-                        return true
+    // a row in the search's index: its sheet, section, group and place in the group
+    private struct RowRef {
+        let sheet: String
+        let section: Int
+        let group: Int
+        let item: Int
+    }
+
+    // the search's index: every sheet (the native app; built off the main thread once a sheet opens) or each sheet
+    // as it's searched (the web-view app)
+    private static var search = SheetSearch()
+    private static var searchRefs: [RowRef] = []
+    private static var indexed = Set<String>()
+    private static var preparing = false
+    // every sheet is in the index (the native app's, once `prepare` has built it)
+    private static var everything = false
+    // posted when it has: a search typed before then had this sheet's rows alone, and is run again
+    private static let indexReady = Notification.Name("qcalc.sheetSearchIndexReady")
+
+    /// the sheets a search looks through: this one, then (the native app) every other one
+    private static func searched(_ sheet: IdentitySheet) -> [IdentitySheet] {
+        [sheet] + (allSheets?() ?? []).filter { $0.id != sheet.id }
+    }
+
+    /// the rows of the sheets not in the index yet, with their texts; a picture's section isn't searched
+    private static func unindexed(_ sheets: [IdentitySheet], skip: Set<String>) -> [(RowRef, SheetSearch.RowText, [String])] {
+        var out: [(RowRef, SheetSearch.RowText, [String])] = []
+        var ids = skip
+        for sheet in sheets where ids.insert(sheet.id).inserted {
+            for (s, section) in sheet.sections.enumerated() where !section.groups.contains(where: { $0.items.contains(where: \.figure) }) {
+                for (g, group) in section.groups.enumerated() {
+                    for (i, item) in group.items.enumerated() where !item.copy.isEmpty {
+                        out.append((RowRef(sheet: sheet.id, section: s, group: g, item: i), rowText(item), [sheet.title, section.title, group.title]))
                     }
-                    let count = rows.filter { !$0.copy.isEmpty }.count
-                    if count == 0 { return nil }
-                    if entry.index == nil { elsewhere += count }
-                    return (group, rows)
                 }
             }
         }
-        // a figure's section is kept whatever the filter, so it isn't a match
-        func anyMatch(_ found: [[(IdentitySheet.Group, [IdentitySheet.Item])]]) -> Bool {
-            shown.indices.contains { !found[$0].isEmpty && !shown[$0].section.groups.contains { $0.items.contains(where: \.figure) } }
+        return out
+    }
+
+    /// each sheet's rows into the index, once
+    private static func index(_ sheets: [IdentitySheet]) {
+        for (ref, text, titles) in unindexed(sheets, skip: indexed) {
+            search.add(text, titles: titles)
+            searchRefs.append(ref)
+            indexed.insert(ref.sheet)
         }
-        var found = kept(words.count)
-        if phrase.count > 1 {
-            let whole = kept(0, whole: true)
-            if anyMatch(whole) { found = whole }
+        indexed.formUnion(sheets.map(\.id))
+    }
+
+    /// every sheet's rows indexed off the main thread (a few hundred ms, once), so the first keystroke doesn't wait.
+    /// A search typed before it's ready indexes its own sheet alone (`layout`), and is run again when it is
+    private static func prepare(_ sheet: IdentitySheet) {
+        guard !preparing, !everything, allSheets != nil else { return }
+        preparing = true
+        let sheets = searched(sheet)
+        let rows = unindexed(sheets, skip: [])
+        DispatchQueue.global(qos: .userInitiated).async {
+            let built = SheetSearch()
+            for (_, text, titles) in rows { built.add(text, titles: titles) }
+            DispatchQueue.main.async {
+                preparing = false
+                // what was indexed meanwhile (a sheet searched early) is in this too, or is added by the next search
+                search = built
+                searchRefs = rows.map(\.0)
+                indexed = Set(sheets.map(\.id))
+                everything = true
+                NotificationCenter.default.post(name: indexReady, object: nil)
+            }
         }
+    }
+
+    // what a filter is matched on (SheetSearch): the row's words, its note and what it copies (symbols such as τ
+    // included), its tags, and its explanation's title, related formulas and letters with their units' names
+    private static func rowText(_ item: IdentitySheet.Item) -> SheetSearch.RowText {
+        var r = SheetSearch.RowText()
+        r.lead = item.lead.map { $0.map(\.text).joined() }
+        r.show = item.runs.map(\.text).joined()
+        r.copy = item.copy
+        r.note = item.note
+        r.leadCopy = item.leadCopy
+        r.parts = item.parts.map(\.copy)
+        r.open = item.open
+        r.tags = item.tags
+        if let e = item.explain {
+            r.explainTitle = e.title
+            r.vars = e.vars
+            r.related = e.related
+        }
+        return r
+    }
+
+    // what's laid out but not yet made: a search makes only what's in view, and the rest as it scrolls in
+    private enum Piece {
+        case row(IdentitySheet.Item, [CGFloat]?)
+        case title(String)
+        case rule
+        case group(String)
+    }
+    private struct Planned {
+        let key: String
+        let frame: NSRect
+        let piece: Piece
+    }
+    private var planned: [Planned] = []
+    // made already, kept to be put back as the filter changes (a few hundred at most); what's in the sheet now
+    private var made: [String: NSView] = [:]
+    private var placed: [String: NSView] = [:]
+    // what's in the sheet besides: its quiet lines
+    private var notes: [NSView] = []
+    private var firstPickKey: String?
+
+    // the rows a filter leaves, laid out afresh; the figure is never filtered. A filter lists the rows that match it
+    // (SheetSearch), best first, this sheet's before another's that scores the same, then (the native app) every
+    // other sheet's under "<sheet> · <section>"; when no row has every word, those with all but one ("closest
+    // matches")
+    private func layout(_ content: NSView, _ sheet: IdentitySheet, filter: String) {
+        notes.forEach { $0.removeFromSuperview() }
+        notes = []
+        // what was in the sheet stays where it's wanted again, and goes once the new layout is placed
+        let before = placed
+        placed = [:]
+        // a key used twice in a layout (a group title on two sections) is told apart by a count
+        var uses: [String: Int] = [:]
+        func plan(_ key: String, _ frame: NSRect, _ piece: Piece) -> String {
+            let n = uses[key, default: 0]
+            uses[key] = n + 1
+            let unique = n == 0 ? key : "\(key)\u{2}\(n)"
+            planned.append(Planned(key: unique, frame: frame, piece: piece))
+            return unique
+        }
+        sectionTops = [:]
+        firstPick = nil
+        firstPickKey = nil
+        planned = []
+        idleHint = Self.hint
+        let width = content.frame.width
+        let searching = !filter.trimmingCharacters(in: .whitespaces).isEmpty
+        var y: CGFloat = 0
+        // each section shown: its title, its sheet's id and index there (for `idt summation`, this sheet's alone),
+        // its groups, each with its rows in their place in the group
+        var shown: [(title: String, sheet: IdentitySheet, s: Int, own: Bool, section: IdentitySheet.Section, groups: [(Int, [Int])])] = []
         var closest = false
-        if words.count > 1, !anyMatch(found) {
-            let near = kept(words.count - 1)
-            if anyMatch(near) { found = near; closest = true }
+        var matched = false
+        let isFigure: (IdentitySheet.Section) -> Bool = { $0.groups.contains { $0.items.contains(where: \.figure) } }
+        if !searching {
+            shown = sheet.sections.enumerated().map { s in
+                (s.element.title, sheet, s.offset, true, s.element, s.element.groups.indices.map { ($0, Array(s.element.groups[$0].items.indices)) })
+            }
+        } else {
+            let sheets = Self.searched(sheet)
+            if Self.allSheets != nil, !Self.everything {
+                // every sheet's index is still being built (or not started: a filter set as the sheet opens): this
+                // sheet's rows meanwhile, not a second build of them all on the main thread
+                Self.prepare(sheet)
+                Self.index([sheet])
+            } else {
+                Self.index(sheets)
+            }
+            let byId = Dictionary(sheets.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+            let result = Self.search.search(filter)
+            closest = result.closest
+            // the best first, this sheet's ahead of a tie; a row once (a one-formula sheet repeats its row)
+            let hits = Self.search.ranked(result, bonus: { Self.searchRefs[$0].sheet == sheet.id ? SheetSearch.openSheetBonus : 0 })
+                .filter { byId[Self.searchRefs[$0].sheet] != nil }
+            var seen = Set<String>()
+            var elsewhere = 0
+            var at: [String: Int] = [:]
+            // a picture's section stays whatever the filter, at the top
+            for (s, section) in sheet.sections.enumerated() where isFigure(section) {
+                shown.append((section.title, sheet, s, true, section, section.groups.indices.map { ($0, Array(section.groups[$0].items.indices)) }))
+            }
+            for n in hits {
+                let ref = Self.searchRefs[n]
+                guard let from = byId[ref.sheet], from.sections.indices.contains(ref.section) else { continue }
+                let section = from.sections[ref.section]
+                guard section.groups.indices.contains(ref.group), section.groups[ref.group].items.indices.contains(ref.item) else { continue }
+                let item = section.groups[ref.group].items[ref.item]
+                let own = ref.sheet == sheet.id
+                if !own, elsewhere >= Self.elsewhereMost { continue }
+                guard seen.insert(item.copy).inserted else { continue }
+                if !own { elsewhere += 1 }
+                matched = true
+                let key = "\(ref.sheet)\u{1}\(ref.section)"
+                let e: Int
+                if let found = at[key] {
+                    e = found
+                } else {
+                    e = shown.count
+                    at[key] = e
+                    shown.append((own ? section.title : "\(from.title) · \(section.title)", from, ref.section, own, section, []))
+                }
+                if let g = shown[e].groups.firstIndex(where: { $0.0 == ref.group }) {
+                    shown[e].groups[g].1.append(ref.item)
+                } else {
+                    // a table's heading rows go first, as on the sheet
+                    let headings = section.groups[ref.group].items.indices.filter { section.groups[ref.group].items[$0].copy.isEmpty }
+                    shown[e].groups.append((ref.group, headings + [ref.item]))
+                }
+            }
         }
-        matched = anyMatch(found)
         // a quiet line over a closest-match search, and where the other sheets' matches start
         func say(_ text: String) {
             let note = label(text, size: 11, weight: .regular, color: .tertiaryLabelColor)
             note.frame = NSRect(x: inset, y: y + 2, width: width - inset * 2, height: 14)
             content.addSubview(note)
+            notes.append(note)
             y += 20
         }
-        if closest { say("no row has every word · closest matches") }
+        if closest, matched { say("no row has every word · closest matches") }
+        // "in other sheets" once this sheet's are all above
+        let lastOwn = shown.lastIndex { $0.own && !isFigure($0.section) } ?? -1
         var saidElsewhere = false
         for (n, entry) in shown.enumerated() {
             let section = entry.section
-            let bare = section.groups.contains { $0.items.contains(where: \.figure) }
-            let groups = found[n]
-            if groups.isEmpty { continue }
-            if entry.index == nil, !saidElsewhere {
+            let bare = isFigure(section)
+            if !entry.own, !saidElsewhere {
                 saidElsewhere = true
-                say("in other sheets")
+                if n > lastOwn { say("in other sheets") }
             }
-            if let index = entry.index { sectionTops[index] = y }
-            let titleFrame = NSRect(x: inset, y: y + 4, width: width - inset * 2, height: 16)
+            if entry.own, sectionTops[entry.s] == nil { sectionTops[entry.s] = y }
             if !bare {
-                let title = label(entry.title, size: 12, weight: .semibold, color: .labelColor)
-                title.frame = titleFrame
-                content.addSubview(title)
-                let rule = NSBox(frame: NSRect(x: inset, y: y + sectionTitle - 3, width: width - inset * 2, height: 1))
-                rule.boxType = .separator
-                content.addSubview(rule)
+                _ = plan("t\u{1}\(entry.title)", NSRect(x: inset, y: y + 4, width: width - inset * 2, height: 16), .title(entry.title))
+                _ = plan("r", NSRect(x: inset, y: y + sectionTitle - 3, width: width - inset * 2, height: 1), .rule)
             }
             // each group goes in whichever column is shorter so far; a wide section has the one, the sheet's width
             let first = bare ? y - 6 : y + sectionTitle
             var columns: [CGFloat] = section.wide ? [first] : [first, first]
             let span = section.wide ? width - inset * 2 : column
-            for (group, items) in groups {
+            for (g, items) in entry.groups {
+                let group = section.groups[g]
                 let c = columns.count > 1 && columns[1] < columns[0] ? 1 : 0
                 let x = inset + CGFloat(c) * (column + inset)
                 var gy = columns[c] + 6
-                let nameFrame = NSRect(x: x + 6, y: gy + 2, width: span - 6, height: 14)
                 if !bare {
-                    let name = label(group.title, size: 11, weight: .medium, color: .secondaryLabelColor)
-                    name.frame = nameFrame
-                    content.addSubview(name)
+                    _ = plan("g\u{1}\(group.title)\u{1}\(span)", NSRect(x: x + 6, y: gy + 2, width: span - 6, height: 14), .group(group.title))
+                    gy += groupTitle
                 }
-                if !bare { gy += groupTitle }
-                for item in items {
+                for i in items {
+                    let item = group.items[i]
                     let height = IdentityRow.height(item, least: rowHeight)
-                    let row = IdentityRow(item, leadWidths: section.leadWidths, frame: NSRect(x: x, y: gy, width: span, height: height))
+                    // a row made once is put back as it was; one typeset since is made again
+                    let key = plan("\(entry.sheet.id)\u{1}\(entry.s)\u{1}\(g)\u{1}\(i)\u{1}\(span)\u{1}\(item.cells.count)",
+                                   NSRect(x: x, y: gy, width: span, height: height), .row(item, section.leadWidths))
                     if !item.open.isEmpty {
-                        row.onPick = { [weak self] in self?.onOpen?($0.item.open) }
-                        if onOpenNew != nil { row.onOpenNew = { [weak self] in self?.onOpenNew?($0.item.open) } }
                         idleHint = "click to open"
-                    } else if !item.copy.isEmpty || item.figure {
-                        row.onPick = { [weak self] in self?.copy($0) }
-                        if item.explain != nil { idleHint = Self.explainHint }
+                    } else if !item.copy.isEmpty || item.figure, item.explain != nil {
+                        idleHint = Self.explainHint
                     }
-                    content.addSubview(row)
-                    if firstPick == nil, !words.isEmpty, row.onPick != nil, !item.figure { firstPick = row }
+                    if firstPickKey == nil, searching, !item.figure, !item.copy.isEmpty { firstPickKey = key }
                     gy += height
                 }
                 columns[c] = gy
@@ -1169,87 +1315,70 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         }
         // nothing left but (perhaps) the figure: a quiet line says so
         // a sheet that is only a picture has nothing to filter, so it never says so
-        let onlyFigure = sheet.sections.allSatisfy { $0.groups.contains { $0.items.contains(where: \.figure) } }
-        if !words.isEmpty, !matched, !onlyFigure {
+        let onlyFigure = sheet.sections.allSatisfy(isFigure)
+        if searching, !matched, !onlyFigure {
             let none = label("no matches", size: 12, weight: .regular, color: .tertiaryLabelColor)
             none.alignment = .center
             none.frame = NSRect(x: inset, y: y + 10, width: width - inset * 2, height: 16)
             content.addSubview(none)
+            notes.append(none)
             y += 40
         }
         content.setFrameSize(NSSize(width: width, height: max(0, y + inset - 14)))
-    }
-
-    // what a filter is matched on: the row's words, its note and what it copies (symbols such as τ included), and its
-    // explanation's title, related formulas and letters, each letter's unit with that unit's name (`ohm` finds rows in Ω, `newton` and
-    // `force` rows in N)
-    private static func searchText(_ item: IdentitySheet.Item) -> [String] {
-        let runs = (item.lead + [item.runs]).map { $0.map(\.text).joined() }
-        var texts = runs + [item.note, item.copy, item.open] + item.leadCopy + item.parts.map(\.copy)
-        if let e = item.explain {
-            texts.append(e.title)
-            // its related formulas and what each is (`effective annual yield` finds compound interest)
-            texts += e.related.map { $0.joined(separator: " ") }
-            for v in e.vars {
-                texts.append(v.dropFirst().joined(separator: " "))
-                if v.count > 2, let name = unitNames[v[2].trimmingCharacters(in: .whitespaces)] { texts.append(name) }
-            }
+        // the whole sheet is made at once (VoiceOver reads it all, and `idt summation` scrolls to a section); a
+        // search's rows only as they come into view, from the top
+        if searching {
+            let height = scroll?.contentView.bounds.height ?? 620
+            place(in: NSRect(x: 0, y: 0, width: width, height: height), content)
+        } else {
+            place(in: nil, content)
         }
-        return texts
+        for (key, view) in before where placed[key] !== view { view.removeFromSuperview() }
+        if made.count > 800 {
+            made = made.filter { placed[$0.key] != nil }
+        }
     }
 
-    // the SI units the explanations give, by name and by what they measure, so a word finds the symbol
-    private static let unitNames: [String: String] = [
-        "Ω": "ohm ohms resistance resistor", "S": "siemens conductance", "V": "volt volts voltage potential emf",
-        "A": "amp amps ampere current", "W": "watt watts power", "J": "joule joules energy work heat",
-        "N": "newton newtons force", "N·m": "newton meter torque moment", "Pa": "pascal pressure stress",
-        "C": "coulomb charge", "F": "farad capacitance capacitor", "H": "henry inductance inductor",
-        "T": "tesla magnetic field flux density", "Wb": "weber magnetic flux", "Hz": "hertz frequency",
-        "rad/s": "angular frequency velocity", "kg": "kilogram mass", "m": "meter metre length distance",
-        "s": "second seconds time", "K": "kelvin temperature", "°C": "celsius temperature", "mol": "mole moles amount",
-        "m/s": "velocity speed", "m/s^{2}": "acceleration", "kg·m/s": "momentum impulse", "m^{2}": "area",
-        "m^{3}": "volume", "kg/m^{3}": "density", "W/(m·K)": "thermal conductivity", "N/m": "spring constant stiffness",
-        "kg·m^{2}": "moment of inertia", "m^{4}": "second moment of area", "rad": "radian angle", "lm": "lumen", "cd": "candela",
-        "V/m": "electric field", "A/m": "magnetic field strength", "Pa·s": "viscosity", "m^{3}/s": "flow rate",
-    ]
-
-    private static func fold(_ text: String) -> String {
-        text.folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: nil)
-            .replacingOccurrences(of: "\u{2212}", with: "-")
+    /// the planned rows in `rect` and a screen past it (or all of them) made, or put back, in the sheet
+    private func place(in rect: NSRect?, _ content: NSView) {
+        let near = rect?.insetBy(dx: 0, dy: -max(rect?.height ?? 0, 300))
+        for plan in planned where placed[plan.key] == nil && (near?.intersects(plan.frame) ?? true) {
+            let view = made[plan.key] ?? make(plan)
+            made[plan.key] = view
+            if view.frame != plan.frame { view.frame = plan.frame }
+            (view as? IdentityRow)?.reset()
+            if view.superview !== content { content.addSubview(view) }
+            placed[plan.key] = view
+            if plan.key == firstPickKey { firstPick = view as? IdentityRow }
+        }
     }
 
-    // letters and digits alone, so `tmax` finds τ_max's `t_max` and `x2` finds x^{2}
-    private static func compact(_ text: String) -> String {
-        String(text.unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }.map(Character.init))
+    // scrolled or resized: the rows coming into view
+    private func placeVisible() {
+        guard placed.count < planned.count, let clip = scroll?.contentView, let content = scroll?.documentView else { return }
+        place(in: clip.bounds, content)
     }
 
-    private static func searchWords(_ filter: String) -> [String] {
-        fold(filter).split(whereSeparator: \.isWhitespace).map(String.init)
-    }
-
-    // how many of the filter's words are somewhere in the row, its group's or its section's title
-    private static func matchCount(_ words: [String], _ texts: [String]) -> Int {
-        let hay = fold(texts.joined(separator: " "))
-        let squeezed = hay.split(whereSeparator: \.isWhitespace).map { compact(String($0)) }
-        let tight = squeezed + squeezed.map(latin).filter { !squeezed.contains($0) }
-        return words.filter { word in
-            hay.contains(word) || { let w = compact(word); return !w.isEmpty && tight.contains { $0.contains(w) } }()
-        }.count
-    }
-
-    // the row's own formula, as drawn and as copied (not its explanation's related ones)
-    private static func formulaText(_ item: IdentitySheet.Item) -> [String] {
-        (item.lead + [item.runs]).map { $0.map(\.text).joined() } + [item.copy] + item.leadCopy + item.parts.map(\.copy)
-    }
-
-    // the filter's letters and digits, together, inside one of a row's texts
-    private static func hasPhrase(_ phrase: String, _ texts: [String]) -> Bool {
-        texts.contains { let c = compact(fold($0)); return c.contains(phrase) || latin(c).contains(phrase) }
-    }
-
-    // greek in latin letters (ICU's Greek-Latin), folded again: τ_max is t_max, ω is o, Δ is d
-    private static func latin(_ text: String) -> String {
-        fold(text.applyingTransform(.toLatin, reverse: false) ?? text)
+    private func make(_ plan: Planned) -> NSView {
+        switch plan.piece {
+        case .title(let text):
+            return label(text, size: 12, weight: .semibold, color: .labelColor)
+        case .group(let text):
+            return label(text, size: 11, weight: .medium, color: .secondaryLabelColor)
+        case .rule:
+            let rule = NSBox(frame: plan.frame)
+            rule.boxType = .separator
+            return rule
+        case .row(let item, let leadWidths):
+            let row = IdentityRow(item, leadWidths: leadWidths, frame: plan.frame)
+            if !item.open.isEmpty {
+                row.onPick = { [weak self] in self?.onOpen?($0.item.open) }
+                if onOpenNew != nil { row.onOpenNew = { [weak self] in self?.onOpenNew?($0.item.open) } }
+            } else if !item.copy.isEmpty || item.figure {
+                row.onPick = { [weak self] in self?.copy($0) }
+            }
+            return row
+        }
     }
 
     /// the filter as if typed (the dev build's `sheetfilter:` command, which works while q calc isn't in front)
@@ -1258,17 +1387,61 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         refilter()
     }
 
+    /// dev builds (`sheetbench:<queries file>|<out file>`): each query typed a character at a time, each keystroke
+    /// timed from the text changing to the sheet laid out and drawn; writes `{"ms": [...], "queries": [...]}`
+    func bench(_ queries: [String]) -> [String: Any] {
+        var all: [Double] = []
+        var per: [[String: Any]] = []
+        for query in queries {
+            var times: [Double] = []
+            for n in 1...max(1, query.count) {
+                let start = DispatchTime.now().uptimeNanoseconds
+                filterField?.stringValue = String(query.prefix(n))
+                refilter()
+                panel?.displayIfNeeded()
+                times.append(Double(DispatchTime.now().uptimeNanoseconds - start) / 1e6)
+            }
+            all += times
+            per.append(["query": query, "ms": times, "rows": scroll?.documentView?.subviews.count ?? 0])
+        }
+        filterField?.stringValue = ""
+        refilter()
+        return ["ms": all, "queries": per]
+    }
+
+    // typing faster than the sheet lays out: the keys in between are skipped, the filter laid out once they stop
+    private var refilterSoon: DispatchWorkItem?
+    private var lastLayout: (at: UInt64, ms: Double) = (0, 0)
+
+    private func typed() {
+        refilterSoon?.cancel()
+        let now = DispatchTime.now().uptimeNanoseconds
+        // a quick layout, or the first key in a while: at once
+        if lastLayout.ms < 12 || now - lastLayout.at > 150_000_000 {
+            refilter()
+            return
+        }
+        let soon = DispatchWorkItem { [weak self] in self?.refilter() }
+        refilterSoon = soon
+        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(Int(min(lastLayout.ms, 60))), execute: soon)
+    }
+
     // the filter changed: the rows again, from the top
     private var shownFilter = ""
     private func refilter() {
+        refilterSoon?.cancel()
+        refilterSoon = nil
         guard let sheet, let content = scroll?.documentView else { return }
         let text = filterField?.stringValue ?? ""
         guard text != shownFilter else { return }
         shownFilter = text
         copiedRow = nil
+        let start = DispatchTime.now().uptimeNanoseconds
         layout(content, sheet, filter: text)
         scroll?.contentView.scroll(to: .zero)
         scroll?.reflectScrolledClipView(scroll!.contentView)
+        let end = DispatchTime.now().uptimeNanoseconds
+        lastLayout = (end, Double(end - start) / 1e6)
     }
 
     private func build(_ sheet: IdentitySheet) {
@@ -1377,7 +1550,19 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
             guard let self, let panel = self.panel, let filter = self.filterField, filter.currentEditor() == nil else { return }
             panel.makeFirstResponder(filter)
         }
+        // a search makes the rows that scroll into view
+        scroll.contentView.postsBoundsChangedNotifications = true
+        scrollObserver = NotificationCenter.default.addObserver(forName: NSView.boundsDidChangeNotification, object: scroll.contentView, queue: .main) {
+            [weak self] _ in self?.placeVisible()
+        }
         observeSettings()
+        // the search's index, ready before the first keystroke; a search typed sooner, run again with every sheet
+        readyObserver = NotificationCenter.default.addObserver(forName: Self.indexReady, object: nil, queue: .main) { [weak self] _ in
+            guard let self, !(self.filterField?.stringValue ?? "").trimmingCharacters(in: .whitespaces).isEmpty else { return }
+            self.shownFilter = "\u{0}"
+            self.refilter()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { Self.prepare(sheet) }
     }
 
     private func arrow(_ symbol: String, _ tip: String, _ action: Selector, x: CGFloat) -> NSButton {
@@ -1427,6 +1612,8 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
     /// ↵ in the filter (and the dev build's `sheetpick`): the first row the search leaves, as if clicked
     @discardableResult
     func pickFirst() -> Bool {
+        // the filter as typed, if its layout was waiting
+        if refilterSoon != nil { refilter() }
         guard let row = firstPick else { return false }
         row.onPick?(row)
         return true
@@ -1695,11 +1882,11 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
     }
 
     func controlTextDidChange(_ note: Notification) {
-        refilter()
+        typed()
     }
 
     @objc private func filterChanged() {
-        refilter()
+        typed()
     }
 
     private func observeSettings() {

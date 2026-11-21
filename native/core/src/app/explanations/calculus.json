@@ -3563,5 +3563,754 @@
       "answer": "32π ≈ 100.5"
     },
     "try": "3 * 4/3 pi 2^3"
+  },
+  "(x, y) = (cos θ, sin θ)": {
+    "title": "Point on the unit circle",
+    "about": "The point at angle θ from the positive x axis has x = cos θ and y = sin θ. All three are positive in quadrant I, only sin in II, tan in III, cos in IV (All Students Take Calculus).",
+    "assumptions": [],
+    "vars": [
+      [
+        "θ",
+        "angle, counterclockwise from +x",
+        "rad"
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Where is the point at 150°?",
+      "steps": [
+        "cos 150° = −√3/2",
+        "sin 150° = 1/2"
+      ],
+      "answer": "(−√3/2, 1/2)"
+    }
+  },
+  "θ_{rad} = θ_{deg} π/180": {
+    "title": "Degrees to radians",
+    "about": "A full turn is 360° or 2π rad. Multiply by π/180 to go to radians, by 180/π to go back.",
+    "assumptions": [],
+    "vars": [
+      [
+        "θ_{deg}",
+        "angle in degrees",
+        "°"
+      ],
+      [
+        "θ_{rad}",
+        "angle in radians",
+        "rad"
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Convert 135° to radians.",
+      "steps": [
+        "135 π/180"
+      ],
+      "answer": "3π/4 ≈ 2.356"
+    },
+    "try": "135 deg to rad"
+  },
+  "f(x) = Σ_{n=0}^{∞} f^{(n)}(0) x^{n}/n!": {
+    "title": "Maclaurin series",
+    "about": "A Taylor series centred at a = 0.",
+    "assumptions": [],
+    "vars": [
+      [
+        "f^{(n)}(0)",
+        "nth derivative at 0",
+        ""
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Find the Maclaurin series of e^{2x} to x².",
+      "steps": [
+        "f(0) = 1, f′(0) = 2, f′′(0) = 4"
+      ],
+      "answer": "1 + 2x + 2x² + …"
+    }
+  },
+  "f(x) ≈ f(a) + f′(a)(x − a)": {
+    "title": "Linear approximation (tangent line)",
+    "about": "The tangent line at a: the first two Taylor terms. Near a it is the best straight-line stand-in for f, and the basis of linearising a nonlinear system around an operating point.",
+    "assumptions": [
+      "f differentiable at a",
+      "Error grows like f″(a)(x − a)^{2}/2"
+    ],
+    "vars": [
+      [
+        "a",
+        "point of tangency",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "f(x) = Σ f^{(n)}(a)(x − a)^{n}/n!",
+        "the whole series"
+      ],
+      [
+        "Δf ≈ f′(a) Δx",
+        "in differential form"
+      ]
+    ],
+    "example": {
+      "problem": "Estimate √4.1 with the tangent line at a = 4.",
+      "steps": [
+        "f = √x, f(4) = 2, f′(4) = 1/4",
+        "2 + 0.1/4"
+      ],
+      "answer": "≈ 2.025 (true 2.02485)"
+    },
+    "try": "sqrt(4.1)"
+  },
+  "R_{n}(x) = f^{(n+1)}(c) (x − a)^{n+1}/(n + 1)!": {
+    "title": "Lagrange remainder (Taylor error bound)",
+    "about": "The error after the degree-n polynomial, with c somewhere between a and x. Bound f^{(n+1)} to bound the error.",
+    "assumptions": [],
+    "vars": [
+      [
+        "n",
+        "degree of the polynomial",
+        ""
+      ],
+      [
+        "c",
+        "unknown point between a and x",
+        ""
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Bound the error of sin x ≈ x − x³/6 at x = 0.5.",
+      "steps": [
+        "next nonzero term: |f^{(5)}| ≤ 1",
+        "0.5⁵/5! ≈ 0.00026"
+      ],
+      "answer": "error < 0.00026"
+    }
+  },
+  "L = lim_{n→∞} |a_{n+1}/a_{n}|": {
+    "title": "Ratio test for a series",
+    "about": "Compare each term with the one before. If the ratio settles below 1 the terms shrink at least geometrically and Σ a_{n} converges (absolutely); above 1 it diverges. At L = 1 the test says nothing: use another.",
+    "assumptions": [
+      "The terms are eventually nonzero",
+      "L = 1 is inconclusive (Σ 1/n diverges, Σ 1/n^{2} converges)",
+      "Best for factorials and powers; weak for p-series"
+    ],
+    "vars": [
+      [
+        "a_{n}",
+        "the series' nth term",
+        ""
+      ],
+      [
+        "L",
+        "limit of the ratio of successive terms",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "R = lim_{n→∞} |a_{n}/a_{n+1}|",
+        "radius of convergence of a power series"
+      ],
+      [
+        "S = a_{1}/(1 − r)",
+        "geometric series, |r| < 1"
+      ]
+    ],
+    "example": {
+      "problem": "Does Σ n/2^{n} converge?",
+      "steps": [
+        "a_{n+1}/a_{n} = ((n + 1)/2^{n+1})/(n/2^{n}) = (n + 1)/(2n)",
+        "L = lim (n + 1)/(2n) = 1/2 < 1"
+      ],
+      "answer": "L = 1/2: it converges"
+    }
+  },
+  "R = lim_{n→∞} |a_{n}/a_{n+1}|": {
+    "title": "Radius of convergence of a power series",
+    "about": "The ratio test applied to Σ a_{n} (x − a)^{n}: the series converges for |x − a| < R and diverges for |x − a| > R. The endpoints x = a ± R are checked separately.",
+    "assumptions": [
+      "The limit exists (R may be 0 or ∞)",
+      "Says nothing at |x − a| = R"
+    ],
+    "vars": [
+      [
+        "a_{n}",
+        "coefficient of (x − a)^{n}",
+        ""
+      ],
+      [
+        "R",
+        "radius of convergence",
+        ""
+      ],
+      [
+        "a",
+        "the series' centre",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "L = lim_{n→∞} |a_{n+1}/a_{n}|",
+        "ratio test"
+      ],
+      [
+        "f(x) = Σ_{n=0}^{∞} f^{(n)}(a) (x − a)^{n}/n!",
+        "Taylor series"
+      ]
+    ],
+    "example": {
+      "problem": "Find the radius of convergence of Σ n x^{n}/3^{n}.",
+      "steps": [
+        "a_{n} = n/3^{n}",
+        "|a_{n}/a_{n+1}| = (n/3^{n})(3^{n+1}/(n + 1)) = 3n/(n + 1) → 3"
+      ],
+      "answer": "R = 3: converges for |x| < 3"
+    }
+  },
+  "tan x = x + x^{3}/3 + 2x^{5}/15 + …": {
+    "title": "Series for tan x",
+    "about": "An odd function, so only odd powers. The coefficients have no simple pattern, and it converges only for |x| < π/2, where tan blows up.",
+    "assumptions": [
+      "x in radians, |x| < π/2"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "tan x ≈ x",
+        "small angle"
+      ],
+      [
+        "tan^{−1} x = x − x^{3}/3 + x^{5}/5 − …",
+        "the inverse"
+      ]
+    ],
+    "example": {
+      "problem": "Estimate tan(0.3) with two terms.",
+      "steps": [
+        "0.3 + 0.027/3"
+      ],
+      "answer": "≈ 0.309 (true 0.3093)"
+    },
+    "try": "tan(0.1 rad)"
+  },
+  "1/(1 + x) = 1 − x + x^{2} − x^{3} + …": {
+    "title": "Alternating geometric series",
+    "about": "The geometric series with −x; integrate it to get ln(1 + x).",
+    "assumptions": [],
+    "vars": [
+      [
+        "x",
+        "|x| < 1",
+        ""
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Estimate 1/1.1.",
+      "steps": [
+        "1 − 0.1 + 0.01 − 0.001"
+      ],
+      "answer": "≈ 0.909"
+    },
+    "try": "1/1.1"
+  },
+  "ln(1 − x) = −x − x^{2}/2 − x^{3}/3 − …": {
+    "title": "Series for ln(1 − x)",
+    "about": "ln(1 + x) with −x: every term is negative.",
+    "assumptions": [],
+    "vars": [
+      [
+        "x",
+        "−1 ≤ x < 1",
+        ""
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Estimate ln 0.9.",
+      "steps": [
+        "x = 0.1: −0.1 − 0.005 − 0.00033"
+      ],
+      "answer": "≈ −0.1054"
+    },
+    "try": "ln(0.9)"
+  },
+  "√(1 + x) = 1 + x/2 − x^{2}/8 + …": {
+    "title": "Series for √(1 + x)",
+    "about": "The binomial series with a = 1/2. Two terms, 1 + x/2, is the usual quick estimate of a square root near 1.",
+    "assumptions": [
+      "Converges for |x| ≤ 1; fast only for small x"
+    ],
+    "vars": [
+      [
+        "x",
+        "|x| ≤ 1",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "(1 + x)^{a} = 1 + ax + a(a − 1)x^{2}/2! + …",
+        "the general binomial series"
+      ],
+      [
+        "1/√(1 − x) ≈ 1 + x/2",
+        "a = −1/2, as in γ ≈ 1 + v^{2}/(2c^{2})"
+      ]
+    ],
+    "example": {
+      "problem": "Estimate √1.02.",
+      "steps": [
+        "x = 0.02: 1 + 0.01 − 0.00005"
+      ],
+      "answer": "≈ 1.00995"
+    },
+    "try": "sqrt(1.02)"
+  },
+  "sin x ≈ x": {
+    "title": "Small-angle approximation for sine",
+    "about": "For small x in radians, sin x ≈ x; the error is about x³/6. Within 1% up to about 14°.",
+    "assumptions": [],
+    "vars": [
+      [
+        "x",
+        "angle",
+        "rad"
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Compare at 0.1 rad.",
+      "steps": [
+        "sin 0.1 = 0.0998"
+      ],
+      "answer": "≈ 0.1 (exactly 0.0998)"
+    },
+    "try": "sin(0.1 rad)"
+  },
+  "cos x ≈ 1 − x^{2}/2": {
+    "title": "Small-angle approximation for cosine",
+    "about": "The first two Maclaurin terms of cos x. It is why a pendulum's height and a sagging cable are parabolic near the bottom.",
+    "assumptions": [
+      "x in radians",
+      "Error under 0.3% for |x| < 0.5 rad"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "sin x ≈ x",
+        "small-angle sine"
+      ],
+      [
+        "cos x = 1 − x^{2}/2! + x^{4}/4! − …",
+        "the full series"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 m pendulum swings 0.2 rad from vertical. How far does the bob rise?",
+      "steps": [
+        "h = L(1 − cos x) ≈ L x^{2}/2",
+        "= 2 × 0.04/2"
+      ],
+      "answer": "h ≈ 0.04 m"
+    },
+    "try": "2 m * (1 - cos(0.2 rad))"
+  },
+  "e^{x} ≈ 1 + x": {
+    "title": "First-order approximation of e^x",
+    "about": "Good for small x, as in small growth rates.",
+    "assumptions": [],
+    "vars": [
+      [
+        "x",
+        "small number",
+        ""
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Estimate e^{0.03}.",
+      "steps": [
+        "1 + 0.03"
+      ],
+      "answer": "≈ 1.03 (exactly 1.0305)"
+    },
+    "try": "e^0.03"
+  },
+  "(1 + x)^{a} ≈ 1 + a x": {
+    "title": "Binomial approximation",
+    "about": "The first two terms of the binomial series, for |x| ≪ 1. Used in relativity and error propagation.",
+    "assumptions": [],
+    "vars": [
+      [
+        "a",
+        "any real power",
+        ""
+      ],
+      [
+        "x",
+        "small number",
+        ""
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Estimate 1.01^{10}.",
+      "steps": [
+        "1 + 10 · 0.01"
+      ],
+      "answer": "≈ 1.1 (exactly 1.1046)"
+    },
+    "try": "1.01^10"
+  },
+  "D_{u} f = ∇f · u": {
+    "title": "Directional derivative",
+    "about": "How fast f changes as you move in the direction of the unit vector u. It is largest, |∇f|, along the gradient and zero along a level curve.",
+    "assumptions": [
+      "u must be a unit vector; divide by its length first",
+      "f differentiable at the point"
+    ],
+    "vars": [
+      [
+        "u",
+        "unit vector",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∇f = (∂f/∂x, ∂f/∂y, ∂f/∂z)",
+        "gradient"
+      ],
+      [
+        "max D_{u} f = |∇f|",
+        "steepest ascent"
+      ]
+    ],
+    "example": {
+      "problem": "f = x^{2} + y^{2}. Find its rate of change at (1, 2) toward (4, 6).",
+      "steps": [
+        "∇f = (2, 4)",
+        "direction (3, 4), u = (0.6, 0.8)",
+        "D_{u} f = 2(0.6) + 4(0.8)"
+      ],
+      "answer": "4.4"
+    },
+    "try": "2*0.6 + 4*0.8"
+  },
+  "∇ · (f F) = f ∇ · F + F · ∇f": {
+    "title": "Product rule for divergence",
+    "about": "The product rule for divergence: scaling a field by a varying f changes its outflow both by the field's own divergence and by how f changes along the field.",
+    "assumptions": [
+      "f and F differentiable"
+    ],
+    "vars": [
+      [
+        "f",
+        "scalar field",
+        ""
+      ],
+      [
+        "F",
+        "vector field",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∇ × (f F) = f ∇ × F + ∇f × F",
+        "the curl version"
+      ],
+      [
+        "∇ · (∇f) = ∇^{2} f",
+        "divergence of a gradient"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∇ · (f F) for f = x^{2} and F = (x, y, z) at (1, 2, 0).",
+      "steps": [
+        "∇ · F = 3, so f ∇ · F = 3x^{2}",
+        "∇f = (2x, 0, 0), F · ∇f = 2x^{2}",
+        "Total 5x^{2}, at x = 1"
+      ],
+      "answer": "5"
+    }
+  },
+  "∇ × (∇ × F) = ∇(∇ · F) − ∇^{2} F": {
+    "title": "Curl of a curl",
+    "about": "Rewrites a double curl as a gradient of the divergence minus the vector Laplacian. It is the step that turns Maxwell's equations into the wave equation.",
+    "assumptions": [
+      "Cartesian components: ∇^{2} F applies the Laplacian to each component",
+      "F twice differentiable"
+    ],
+    "vars": [
+      [
+        "F",
+        "vector field",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∇^{2} E = μ_{0} ε_{0} ∂^{2}E/∂t^{2}",
+        "the wave equation it gives, wave speed 1/√(μ_{0} ε_{0}) = c"
+      ]
+    ],
+    "example": {
+      "problem": "In free space ∇ · E = 0 and ∇ × E = −∂B/∂t. Take the curl of Faraday's law.",
+      "steps": [
+        "∇ × (∇ × E) = ∇(0) − ∇^{2} E",
+        "= −∂(∇ × B)/∂t = −μ_{0} ε_{0} ∂^{2}E/∂t^{2}"
+      ],
+      "answer": "∇^{2} E = μ_{0} ε_{0} ∂^{2}E/∂t^{2}"
+    }
+  },
+  "∫_{C} F · dr = ∫_{a}^{b} F(r(t)) · r′(t) dt": {
+    "title": "Line integral of a vector field",
+    "about": "Parametrise the curve and integrate F along it: the work done by a force.",
+    "assumptions": [],
+    "vars": [
+      [
+        "r(t)",
+        "curve, a ≤ t ≤ b",
+        ""
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "F = (y, x) along r = (t, t), 0 ≤ t ≤ 1.",
+      "steps": [
+        "F · r′ = 2t",
+        "∫₀¹ 2t dt"
+      ],
+      "answer": "1"
+    }
+  },
+  "ds = |r′(t)| dt": {
+    "title": "Arc length element",
+    "about": "The length of a small piece of a curve traced by r(t): speed times time. Integrate it for arc length, or weight it to find a wire's mass or a line integral of a scalar.",
+    "assumptions": [
+      "r(t) smooth, r′(t) ≠ 0",
+      "In 2D, |r′| = √(x′^{2} + y′^{2})"
+    ],
+    "vars": [
+      [
+        "r(t)",
+        "parametrised curve",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "L = ∫_{a}^{b} |r′(t)| dt",
+        "arc length"
+      ],
+      [
+        "∫_{C} F · dr = ∫ F · r′(t) dt",
+        "line integral of a field"
+      ]
+    ],
+    "example": {
+      "problem": "Find the length of the helix r = (cos t, sin t, t) for 0 ≤ t ≤ 2π.",
+      "steps": [
+        "r′ = (−sin t, cos t, 1), |r′| = √2",
+        "L = √2 × 2π"
+      ],
+      "answer": "L = 2√2 π ≈ 8.886"
+    },
+    "try": "2 sqrt(2) pi"
+  },
+  "∬_{S} F · dS = ∬_{D} F · (r_{u} × r_{v}) du dv": {
+    "title": "Flux integral through a parametrised surface",
+    "about": "r_u × r_v is a normal of size equal to the area patch.",
+    "assumptions": [],
+    "vars": [
+      [
+        "r(u, v)",
+        "surface",
+        ""
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Flux of F = (0, 0, 1) through the unit square z = 0, upward.",
+      "steps": [
+        "normal (0, 0, 1)"
+      ],
+      "answer": "1"
+    }
+  },
+  "dA = r dr dθ": {
+    "title": "Area element in polar coordinates",
+    "about": "The area of a small polar patch: dr wide and r dθ long. The extra r (the Jacobian) is why area grows away from the origin; forgetting it is the classic mistake.",
+    "assumptions": [
+      "x = r cos θ, y = r sin θ",
+      "r ≥ 0"
+    ],
+    "vars": [
+      [
+        "r, θ",
+        "polar coordinates",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "dV = r dr dθ dz",
+        "cylindrical volume element"
+      ],
+      [
+        "∬ e^{−(x^{2} + y^{2})} dA = π",
+        "the Gaussian integral, done in polar"
+      ]
+    ],
+    "example": {
+      "problem": "Find the area of a disk of radius 3 m by integrating.",
+      "steps": [
+        "A = ∫_{0}^{2π} ∫_{0}^{3} r dr dθ",
+        "= (9/2)(2π)"
+      ],
+      "answer": "A = 9π ≈ 28.27 m^{2}"
+    },
+    "try": "9 pi"
+  },
+  "dV = r dr dθ dz": {
+    "title": "Volume element in cylindrical coordinates",
+    "about": "The volume of a small cylindrical-coordinate box: a polar patch r dr dθ stacked dz high. Use it for anything with an axis of symmetry: pipes, cylinders, cones.",
+    "assumptions": [
+      "r ≥ 0, θ from 0 to 2π for a full turn",
+      "x = r cos θ, y = r sin θ, z = z"
+    ],
+    "vars": [
+      [
+        "r, θ, z",
+        "cylindrical coordinates",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "dA = r dr dθ",
+        "polar area element"
+      ],
+      [
+        "dV = ρ^{2} sin(φ) dρ dθ dφ",
+        "spherical"
+      ]
+    ],
+    "example": {
+      "problem": "Find the volume of a cylinder of radius 2 m and height 3 m by integrating.",
+      "steps": [
+        "V = ∫_{0}^{3} ∫_{0}^{2π} ∫_{0}^{2} r dr dθ dz",
+        "= (2^{2}/2)(2π)(3) = 12π"
+      ],
+      "answer": "V = 12π ≈ 37.70 m^{3}"
+    },
+    "try": "12 pi"
+  },
+  "dV = ρ^{2} sin(φ) dρ dθ dφ": {
+    "title": "Volume element in spherical coordinates",
+    "about": "The volume of a small spherical-coordinate box. ρ is the distance from the origin, φ the angle down from the +z axis and θ the angle around it. Use it for balls, shells and cones from the origin.",
+    "assumptions": [
+      "φ from 0 to π, θ from 0 to 2π (the math convention; physics often swaps θ and φ)",
+      "x = ρ sin φ cos θ, y = ρ sin φ sin θ, z = ρ cos φ"
+    ],
+    "vars": [
+      [
+        "ρ, θ, φ",
+        "spherical coordinates",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "dV = r dr dθ dz",
+        "cylindrical"
+      ],
+      [
+        "dS = R^{2} sin(φ) dθ dφ",
+        "on a sphere of radius R"
+      ]
+    ],
+    "example": {
+      "problem": "Find the volume of a ball of radius 2 m by integrating.",
+      "steps": [
+        "V = ∫_{0}^{π} ∫_{0}^{2π} ∫_{0}^{2} ρ^{2} sin φ dρ dθ dφ",
+        "= (8/3)(2π)(2)"
+      ],
+      "answer": "V = 32π/3 ≈ 33.51 m^{3}"
+    },
+    "try": "32 pi/3"
+  },
+  "∇ × F = 0": {
+    "title": "Conservative (curl-free) field",
+    "about": "On a simply connected region a curl-free field is a gradient, so line integrals depend only on the end points.",
+    "assumptions": [],
+    "vars": [
+      [
+        "F",
+        "vector field",
+        ""
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Is F = (2x, 2y, 0) conservative?",
+      "steps": [
+        "curl = 0"
+      ],
+      "answer": "yes, F = ∇(x² + y²)"
+    }
+  },
+  "∂Q/∂x = ∂P/∂y": {
+    "title": "Test for a conservative field in 2D",
+    "about": "The quick test for whether a 2D field F = (P, Q) is conservative: its scalar curl ∂Q/∂x − ∂P/∂y is zero. If it passes on a simply connected region, F = ∇f and line integrals depend only on the endpoints.",
+    "assumptions": [
+      "P, Q have continuous first partials",
+      "The region has no holes; around a hole the test can pass and F still fail (F = (−y, x)/(x^{2} + y^{2}))"
+    ],
+    "vars": [
+      [
+        "P, Q",
+        "components of F",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∇ × F = 0",
+        "the 3D test"
+      ],
+      [
+        "∫_{C} ∇f · dr = f(b) − f(a)",
+        "what conservative buys you"
+      ]
+    ],
+    "example": {
+      "problem": "Is F = (2xy, x^{2} + 1) conservative? If so, find f.",
+      "steps": [
+        "∂Q/∂x = 2x, ∂P/∂y = 2x: equal",
+        "f = x^{2}y + y"
+      ],
+      "answer": "Conservative, f = x^{2}y + y"
+    }
   }
 }

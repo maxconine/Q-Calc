@@ -1,0 +1,2350 @@
+{
+ "P^{2} = a^{3}": {
+  "title": "Kepler's third law in solar units",
+  "about": "For bodies orbiting the Sun, with the period in years and the semi-major axis in AU, the constants cancel to P² = a³.",
+  "assumptions": [
+   "The orbiting body's mass is negligible next to the Sun's"
+  ],
+  "vars": [
+   [
+    "P",
+    "orbital period",
+    "yr"
+   ],
+   [
+    "a",
+    "semi-major axis",
+    "AU"
+   ]
+  ],
+  "related": [
+   [
+    "T^{2} = 4π^{2} a^{3}/(G M)",
+    "the general form"
+   ]
+  ],
+  "example": {
+   "problem": "Mars orbits at 1.524 AU. What is its year?",
+   "steps": [
+    "P = 1.524^{1.5}"
+   ],
+   "answer": "≈ 1.88 years"
+  }
+ },
+ "T^{2} = 4π^{2} a^{3}/(G (M_{1} + M_{2}))": {
+  "title": "Kepler's third law for a binary",
+  "about": "Both bodies orbit their common centre of mass, and the period gives their total mass. This is how star and exoplanet-host masses are measured.",
+  "vars": [
+   [
+    "a",
+    "semi-major axis of the relative orbit",
+    "m"
+   ],
+   [
+    "M_{1} + M_{2}",
+    "total mass",
+    "kg"
+   ]
+  ],
+  "example": {
+   "problem": "A binary has a = 20 AU and P = 50 yr. Total mass in Suns?",
+   "steps": [
+    "In solar units M = a^{3}/P^{2} = 8000/2500"
+   ],
+   "answer": "3.2 solar masses"
+  }
+ },
+ "r_{p} = a(1 − e),  r_{a} = a(1 + e)": {
+  "title": "Periapsis and apoapsis",
+  "about": "The closest and farthest distances of an elliptical orbit from the body at its focus (perihelion and aphelion around the Sun).",
+  "vars": [
+   [
+    "a",
+    "semi-major axis",
+    "m"
+   ],
+   [
+    "e",
+    "eccentricity",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Earth: a = 1.496 × 10^{8} km, e = 0.0167.",
+   "steps": [
+    "r_p = 1.496 × 0.9833 × 10^{8}",
+    "r_a = 1.496 × 1.0167 × 10^{8}"
+   ],
+   "answer": "1.471 × 10^{8} km and 1.521 × 10^{8} km"
+  }
+ },
+ "m_{1} − m_{2} = −2.5 log_{10}(F_{1}/F_{2})": {
+  "title": "Apparent magnitude scale (Pogson)",
+  "about": "Magnitudes run backwards and logarithmically: 5 magnitudes is a factor of 100 in flux, 1 magnitude about 2.512.",
+  "vars": [
+   [
+    "m",
+    "apparent magnitude",
+    ""
+   ],
+   [
+    "F",
+    "flux",
+    "W/m^{2}"
+   ]
+  ],
+  "example": {
+   "problem": "Star A is 10 times brighter than star B. How do their magnitudes differ?",
+   "steps": [
+    "−2.5 log₁₀ 10"
+   ],
+   "answer": "m_A − m_B = −2.5"
+  }
+ },
+ "L/L_{sun} = (M/M_{sun})^{3.5}": {
+  "title": "Mass-luminosity relation",
+  "about": "On the main sequence, luminosity climbs steeply with mass. The exponent ranges from about 3 to 4 depending on mass.",
+  "assumptions": [
+   "Main-sequence stars only; rough"
+  ],
+  "vars": [
+   [
+    "L",
+    "luminosity",
+    "W"
+   ],
+   [
+    "M",
+    "mass",
+    "kg"
+   ]
+  ],
+  "example": {
+   "problem": "How luminous is a 2-solar-mass star?",
+   "steps": [
+    "2^{3.5}"
+   ],
+   "answer": "≈ 11 L_sun"
+  }
+ },
+ "t ≈ 10^{10} yr (M/M_{sun})^{−2.5}": {
+  "title": "Main-sequence lifetime",
+  "about": "Fuel goes as M but burn rate as L ∝ M^{3.5}, so lifetime goes as M^{−2.5}. The Sun lasts about 10 billion years; massive stars only millions.",
+  "vars": [
+   [
+    "M",
+    "star mass",
+    "kg"
+   ]
+  ],
+  "example": {
+   "problem": "Lifetime of a 10-solar-mass star?",
+   "steps": [
+    "10^{10} × 10^{−2.5}"
+   ],
+   "answer": "≈ 3 × 10^{7} years"
+  }
+ },
+ "θ = D/d": {
+  "title": "Small-angle formula",
+  "about": "An object of size D at distance d spans θ = D/d radians when θ is small. Multiply by 206265 for arcseconds.",
+  "assumptions": [
+   "θ ≪ 1 rad"
+  ],
+  "vars": [
+   [
+    "θ",
+    "angular size",
+    "rad"
+   ],
+   [
+    "D",
+    "physical size",
+    "m"
+   ],
+   [
+    "d",
+    "distance",
+    "m"
+   ]
+  ],
+  "example": {
+   "problem": "The Moon is 3474 km across and 384,400 km away. Angular size?",
+   "steps": [
+    "3474/384400 = 0.00904 rad"
+   ],
+   "answer": "≈ 0.52°"
+  }
+ },
+ "t_{H} = 1/H_{0}": {
+  "title": "Hubble time",
+  "about": "If the universe had always expanded at today's rate, 1/H₀ would be its age. With H₀ ≈ 70 km/s/Mpc it is about 14 billion years, close to the measured 13.8.",
+  "vars": [
+   [
+    "H_{0}",
+    "Hubble constant",
+    "1/s"
+   ]
+  ],
+  "example": {
+   "problem": "H₀ = 70 km/s/Mpc. Find 1/H₀ in years.",
+   "steps": [
+    "1 Mpc = 3.086 × 10^{19} km, so 1/H₀ = 4.41 × 10^{17} s"
+   ],
+   "answer": "≈ 1.4 × 10^{10} years"
+  }
+ },
+ "v = c z": {
+  "title": "Recession speed from redshift",
+  "about": "For small redshift, the Doppler shift gives the speed directly. Above z ≈ 0.1 relativity and cosmology are needed.",
+  "assumptions": [
+   "z ≪ 1"
+  ],
+  "vars": [
+   [
+    "z",
+    "redshift",
+    ""
+   ],
+   [
+    "c",
+    "speed of light",
+    "m/s"
+   ]
+  ],
+  "example": {
+   "problem": "A galaxy has z = 0.01. Its speed and distance with H₀ = 70?",
+   "steps": [
+    "v = 3 × 10^{5} × 0.01 = 3000 km/s",
+    "d = 3000/70"
+   ],
+   "answer": "v = 3000 km/s, d ≈ 43 Mpc"
+  }
+ },
+ "1 + z = λ_{obs}/λ_{emit}": {
+  "title": "Redshift as stretch",
+  "about": "Light's wavelength stretches by 1 + z on its way. In cosmology the universe itself has grown by that factor since the light left.",
+  "vars": [
+   [
+    "λ_{obs}",
+    "observed wavelength",
+    "m"
+   ],
+   [
+    "λ_{emit}",
+    "emitted wavelength",
+    "m"
+   ]
+  ],
+  "example": {
+   "problem": "Hα (656.3 nm) is seen at 721.9 nm. Find z.",
+   "steps": [
+    "721.9/656.3 = 1.100"
+   ],
+   "answer": "z ≈ 0.10"
+  }
+ },
+ "θ = 1.22 λ/D": {
+  "title": "Diffraction limit (Rayleigh criterion)",
+  "about": "The smallest angle a circular aperture can resolve. Bigger mirrors and shorter wavelengths see finer detail; on the ground the atmosphere usually limits first.",
+  "vars": [
+   [
+    "λ",
+    "wavelength",
+    "m"
+   ],
+   [
+    "D",
+    "aperture diameter",
+    "m"
+   ],
+   [
+    "θ",
+    "angle",
+    "rad"
+   ]
+  ],
+  "example": {
+   "problem": "An 8 m telescope at 550 nm?",
+   "steps": [
+    "1.22 × 550 × 10^{−9}/8 = 8.4 × 10^{−8} rad"
+   ],
+   "answer": "≈ 0.017 arcsec"
+  }
+ },
+ "M = f_{o}/f_{e}": {
+  "title": "Telescope magnification",
+  "about": "The objective's focal length over the eyepiece's. Swapping eyepieces changes the magnification; useful magnification is limited to about 2 per mm of aperture.",
+  "vars": [
+   [
+    "f_{o}",
+    "objective focal length",
+    "m"
+   ],
+   [
+    "f_{e}",
+    "eyepiece focal length",
+    "m"
+   ]
+  ],
+  "example": {
+   "problem": "1200 mm objective with a 25 mm eyepiece.",
+   "steps": [
+    "1200/25"
+   ],
+   "answer": "48×"
+  }
+ },
+ "P_{1}/P_{2} = (D_{1}/D_{2})^{2}": {
+  "title": "Light-gathering power",
+  "about": "A telescope collects light in proportion to its aperture area, so doubling the diameter gathers 4 times the light.",
+  "vars": [
+   [
+    "D",
+    "aperture diameter",
+    "m"
+   ]
+  ],
+  "example": {
+   "problem": "An 8-inch telescope against a dark-adapted 7 mm pupil?",
+   "steps": [
+    "(203/7)^{2}"
+   ],
+   "answer": "≈ 840 times more light"
+  }
+ },
+ "tan(φ) = μ": {
+  "title": "Angle of friction (angle of repose)",
+  "about": "A block on a slope starts to slide when the slope's angle reaches φ with tan φ = μ_s. The resultant of normal and friction force is then tilted φ from the normal.",
+  "vars": [
+   [
+    "φ",
+    "angle of friction",
+    "rad"
+   ],
+   [
+    "μ",
+    "coefficient of static friction",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "μ_s = 0.5. Steepest slope before sliding?",
+   "steps": [
+    "φ = atan(0.5)"
+   ],
+   "answer": "≈ 26.6°"
+  }
+ },
+ "T_{2} = T_{1} e^{μβ}": {
+  "title": "Belt friction (capstan equation)",
+  "about": "A rope or belt wrapped over a fixed drum can hold a much larger tension T₂ on one side than T₁ on the other, growing exponentially with the wrap angle. T₂ is the tight side.",
+  "assumptions": [
+   "Rope on the point of slipping; rope mass ignored; flat belt (a V-belt uses μ/sin(α/2))"
+  ],
+  "vars": [
+   [
+    "T_{1}, T_{2}",
+    "slack and tight side tensions",
+    "N"
+   ],
+   [
+    "μ",
+    "friction coefficient",
+    ""
+   ],
+   [
+    "β",
+    "wrap angle",
+    "rad"
+   ]
+  ],
+  "example": {
+   "problem": "A rope wraps 1.5 turns round a post, μ = 0.3. Holding 100 N, what load can it hold?",
+   "steps": [
+    "β = 3π rad",
+    "T₂ = 100 e^{0.3 × 3π}"
+   ],
+   "answer": "≈ 1690 N"
+  }
+ },
+ "x̄ = (∫ x dA)/(∫ dA)": {
+  "title": "Centroid by integration",
+  "about": "The centroid is the area-weighted average position. Pick strips whose area is easy to write, then integrate.",
+  "vars": [
+   [
+    "x̄",
+    "centroid coordinate",
+    "m"
+   ],
+   [
+    "dA",
+    "area element",
+    "m^{2}"
+   ]
+  ],
+  "example": {
+   "problem": "Centroid of the triangle under y = x from 0 to b?",
+   "steps": [
+    "∫ x · x dx = b^{3}/3, ∫ x dx = b^{2}/2"
+   ],
+   "answer": "x̄ = 2b/3"
+  }
+ },
+ "k_{eq} = k_{1} + k_{2}": {
+  "title": "Springs in parallel",
+  "about": "Springs that stretch the same amount share the load, so their stiffnesses add.",
+  "vars": [
+   [
+    "k_{1}, k_{2}",
+    "spring stiffnesses",
+    "N/m"
+   ]
+  ],
+  "example": {
+   "problem": "Two 500 N/m springs side by side.",
+   "steps": [
+    "500 + 500"
+   ],
+   "answer": "1000 N/m"
+  }
+ },
+ "1/k_{eq} = 1/k_{1} + 1/k_{2}": {
+  "title": "Springs in series",
+  "about": "Springs end to end carry the same force and their stretches add, so the combination is softer than either.",
+  "vars": [
+   [
+    "k_{1}, k_{2}",
+    "spring stiffnesses",
+    "N/m"
+   ]
+  ],
+  "example": {
+   "problem": "300 N/m in series with 600 N/m.",
+   "steps": [
+    "1/k = 1/300 + 1/600 = 1/200"
+   ],
+   "answer": "200 N/m"
+  }
+ },
+ "x = A e^{−ζω_{n}t} cos(ω_{d}t − φ)": {
+  "title": "Underdamped free response",
+  "about": "A damped system with ζ < 1 oscillates at ω_d inside a decaying envelope A e^{−ζω_n t}. A and φ come from the initial position and velocity.",
+  "vars": [
+   [
+    "ζ",
+    "damping ratio",
+    ""
+   ],
+   [
+    "ω_{n}",
+    "natural frequency",
+    "rad/s"
+   ],
+   [
+    "ω_{d}",
+    "damped frequency",
+    "rad/s"
+   ]
+  ],
+  "example": {
+   "problem": "ζ = 0.1, ω_n = 10 rad/s. How long until the envelope halves?",
+   "steps": [
+    "e^{−t} = 0.5 since ζω_n = 1"
+   ],
+   "answer": "t = ln 2 ≈ 0.69 s"
+  }
+ },
+ "ζ = δ/√(4π^{2} + δ^{2})": {
+  "title": "Damping ratio from the logarithmic decrement",
+  "about": "Measure two successive peaks of a free vibration, take δ = ln(x₁/x₂), and this gives ζ. For light damping ζ ≈ δ/(2π).",
+  "vars": [
+   [
+    "δ",
+    "logarithmic decrement",
+    ""
+   ],
+   [
+    "ζ",
+    "damping ratio",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Successive peaks are 10 mm and 6 mm.",
+   "steps": [
+    "δ = ln(10/6) = 0.511",
+    "ζ = 0.511/√(39.48 + 0.261)"
+   ],
+   "answer": "ζ ≈ 0.081"
+  }
+ },
+ "m x′′ + c x′ + k x = F_{0} cos(ωt)": {
+  "title": "Forced vibration equation",
+  "about": "A mass-spring-damper driven by a harmonic force. The solution is the decaying free response plus a steady oscillation at the driving frequency ω.",
+  "vars": [
+   [
+    "F_{0}",
+    "force amplitude",
+    "N"
+   ],
+   [
+    "ω",
+    "driving frequency",
+    "rad/s"
+   ]
+  ],
+  "related": [
+   [
+    "X = (F_{0}/k)/√((1 − r^{2})^{2} + (2ζr)^{2})",
+    "steady amplitude"
+   ]
+  ],
+  "example": {
+   "problem": "m = 1 kg, k = 100 N/m, no damping, F₀ = 10 N at ω = 5 rad/s. Steady amplitude?",
+   "steps": [
+    "r = 5/10 = 0.5",
+    "X = 0.1/(1 − 0.25)"
+   ],
+   "answer": "≈ 0.133 m"
+  }
+ },
+ "X = (F_{0}/k)/√((1 − r^{2})^{2} + (2ζr)^{2})": {
+  "title": "Steady-state amplitude (magnification factor)",
+  "about": "The static deflection F₀/k times a magnification that peaks near resonance (r = 1) at about 1/(2ζ), and falls below 1 for r > √2.",
+  "vars": [
+   [
+    "r",
+    "frequency ratio ω/ω_n",
+    ""
+   ],
+   [
+    "ζ",
+    "damping ratio",
+    ""
+   ],
+   [
+    "F_{0}/k",
+    "static deflection",
+    "m"
+   ]
+  ],
+  "example": {
+   "problem": "At resonance with ζ = 0.05, how many times the static deflection?",
+   "steps": [
+    "1/(2 × 0.05)"
+   ],
+   "answer": "10 times"
+  }
+ },
+ "tan(φ) = 2ζr/(1 − r^{2})": {
+  "title": "Phase lag of forced vibration",
+  "about": "How far the response lags the force: near 0 below resonance, 90° at resonance, near 180° well above it.",
+  "vars": [
+   [
+    "φ",
+    "phase lag",
+    "rad"
+   ],
+   [
+    "r",
+    "ω/ω_n",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "ζ = 0.2 at r = 0.5.",
+   "steps": [
+    "tan φ = 0.2/0.75 = 0.267"
+   ],
+   "answer": "φ ≈ 14.9°"
+  }
+ },
+ "TR = √(1 + (2ζr)^{2})/√((1 − r^{2})^{2} + (2ζr)^{2})": {
+  "title": "Transmissibility (vibration isolation)",
+  "about": "The share of a vibrating force passed through the mounts (or of base motion passed to the mass). Isolation needs r > √2: soft mounts, low natural frequency.",
+  "vars": [
+   [
+    "r",
+    "ω/ω_n",
+    ""
+   ],
+   [
+    "ζ",
+    "damping ratio",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "A machine runs at r = 3 on mounts with ζ = 0.05.",
+   "steps": [
+    "√(1 + 0.09)/√(64 + 0.09)"
+   ],
+   "answer": "TR ≈ 0.13, so 87% isolated"
+  }
+ },
+ "Q̇ = k A (T_{1} − T_{2})/L": {
+  "title": "Steady conduction through a plane wall",
+  "about": "Fourier's law integrated across a flat wall: heat flows from hot face to cold face at a rate set by conductivity, area and thickness.",
+  "assumptions": [
+   "Steady, one-dimensional, constant k, no heat generated"
+  ],
+  "vars": [
+   [
+    "k",
+    "thermal conductivity",
+    "W/(m·K)"
+   ],
+   [
+    "A",
+    "wall area",
+    "m^{2}"
+   ],
+   [
+    "L",
+    "thickness",
+    "m"
+   ]
+  ],
+  "example": {
+   "problem": "A 0.2 m brick wall (k = 0.72), 12 m², faces at 20 °C and 0 °C.",
+   "steps": [
+    "0.72 × 12 × 20/0.2"
+   ],
+   "answer": "864 W"
+  }
+ },
+ "q″ = Q̇/A": {
+  "title": "Heat flux",
+  "about": "Heat rate per unit area; the quantity conduction and convection laws give directly.",
+  "vars": [
+   [
+    "q″",
+    "heat flux",
+    "W/m^{2}"
+   ],
+   [
+    "A",
+    "area",
+    "m^{2}"
+   ]
+  ],
+  "example": {
+   "problem": "864 W through 12 m².",
+   "steps": [
+    "864/12"
+   ],
+   "answer": "72 W/m²"
+  }
+ },
+ "R = ln(r_{2}/r_{1})/(2π k L)": {
+  "title": "Thermal resistance of a cylinder wall",
+  "about": "Conduction outward through a pipe wall or insulation layer. The log appears because the area grows with radius.",
+  "vars": [
+   [
+    "r_{1}, r_{2}",
+    "inner and outer radii",
+    "m"
+   ],
+   [
+    "k",
+    "conductivity",
+    "W/(m·K)"
+   ],
+   [
+    "L",
+    "length",
+    "m"
+   ]
+  ],
+  "example": {
+   "problem": "1 m of insulation (k = 0.04) from r = 5 cm to 10 cm.",
+   "steps": [
+    "ln 2/(2π × 0.04)"
+   ],
+   "answer": "≈ 2.76 K/W"
+  }
+ },
+ "R = (1/r_{1} − 1/r_{2})/(4π k)": {
+  "title": "Thermal resistance of a spherical shell",
+  "about": "Conduction outward through a spherical layer, such as a tank's insulation.",
+  "vars": [
+   [
+    "r_{1}, r_{2}",
+    "inner and outer radii",
+    "m"
+   ],
+   [
+    "k",
+    "conductivity",
+    "W/(m·K)"
+   ]
+  ],
+  "example": {
+   "problem": "Shell from 0.5 m to 0.6 m, k = 0.05.",
+   "steps": [
+    "(2 − 1.667)/(4π × 0.05)"
+   ],
+   "answer": "≈ 0.53 K/W"
+  }
+ },
+ "r_{cr} = k/h": {
+  "title": "Critical radius of insulation",
+  "about": "Insulation on a thin pipe or wire adds surface area as well as resistance. Below r = k/h more insulation increases heat loss; above it, it reduces it. For a sphere r_cr = 2k/h.",
+  "vars": [
+   [
+    "k",
+    "insulation conductivity",
+    "W/(m·K)"
+   ],
+   [
+    "h",
+    "outside convection coefficient",
+    "W/(m^{2}·K)"
+   ]
+  ],
+  "example": {
+   "problem": "Find the critical radius for insulation with k = 0.1 W/(m·K) in still air, h = 10 W/(m^{2}·K).",
+   "steps": [
+    "r_{cr} = 0.1/10 = 0.01 m"
+   ],
+   "answer": "r_{cr} = 1 cm"
+  },
+  "try": "0.1 W/(m K) / (10 W/(m^2 K)) to cm"
+ },
+ "α = k/(ρ c_{p})": {
+  "title": "Thermal diffusivity",
+  "about": "How fast temperature changes spread: conduction over heat storage. Metals are high, insulators and water low.",
+  "vars": [
+   [
+    "k",
+    "conductivity",
+    "W/(m·K)"
+   ],
+   [
+    "ρ",
+    "density",
+    "kg/m^{3}"
+   ],
+   [
+    "c_{p}",
+    "specific heat",
+    "J/(kg·K)"
+   ]
+  ],
+  "example": {
+   "problem": "Copper: k = 401, ρ = 8933, c_p = 385.",
+   "steps": [
+    "401/(8933 × 385)"
+   ],
+   "answer": "≈ 1.17 × 10^{−4} m²/s"
+  }
+ },
+ "Fo = α t/L^{2}": {
+  "title": "Fourier number",
+  "about": "Dimensionless time for transient conduction. Heat penetrates a depth of about √(αt), so Fo ≈ 1 means it has reached across L.",
+  "vars": [
+   [
+    "α",
+    "diffusivity",
+    "m^{2}/s"
+   ],
+   [
+    "t",
+    "time",
+    "s"
+   ],
+   [
+    "L",
+    "characteristic length",
+    "m"
+   ]
+  ],
+  "example": {
+   "problem": "Find the Fourier number for a 2 cm steel slab (α = 1.2 × 10^{−5} m^{2}/s) after 60 s.",
+   "steps": [
+    "Fo = 1.2 × 10^{−5} × 60/0.02^{2}"
+   ],
+   "answer": "Fo = 1.8"
+  },
+  "try": "1.2e-5 * 60 / 0.02^2"
+ },
+ "m = √(h P/(k A_{c}))": {
+  "title": "Fin parameter",
+  "about": "Sets how quickly a fin's temperature falls along its length; 1/m is the decay length. A fin longer than about 3/m is effectively infinite.",
+  "vars": [
+   [
+    "h",
+    "convection coefficient",
+    "W/(m^{2}·K)"
+   ],
+   [
+    "P",
+    "perimeter",
+    "m"
+   ],
+   [
+    "k",
+    "fin conductivity",
+    "W/(m·K)"
+   ],
+   [
+    "A_{c}",
+    "cross-section area",
+    "m^{2}"
+   ]
+  ],
+  "example": {
+   "problem": "Aluminium pin (k = 200), 5 mm diameter, h = 25.",
+   "steps": [
+    "P/A_c = 4/D = 800 1/m",
+    "m = √(25 × 800/200)"
+   ],
+   "answer": "m = 10 1/m"
+  }
+ },
+ "Q̇ = √(h P k A_{c}) (T_{b} − T_{∞}) tanh(m L)": {
+  "title": "Heat rate of a fin, insulated tip",
+  "about": "Heat leaving a straight fin of uniform section whose tip loses little heat. tanh(mL) → 1 for a long fin. Use L + A_c/P to account for tip convection.",
+  "vars": [
+   [
+    "T_{b}",
+    "base temperature",
+    "K"
+   ],
+   [
+    "L",
+    "fin length",
+    "m"
+   ]
+  ],
+  "example": {
+   "problem": "An aluminium pin fin (k = 200 W/(m·K)), 5 mm across and 5 cm long, stands in air with h = 25 W/(m^{2}·K), its base 60 K above the air. Find its heat rate.",
+   "steps": [
+    "P = π d = 0.0157 m, A_{c} = π d^{2}/4 = 1.963 × 10^{−5} m^{2}",
+    "m = √(h P/(k A_{c})) = 10 m^{−1}, so m L = 0.5",
+    "√(h P k A_{c}) = 0.0393 W/K",
+    "Q̇ = 0.0393 × 60 × tanh(0.5)"
+   ],
+   "answer": "Q̇ ≈ 1.09 W"
+  },
+  "try": "sqrt(25 * pi * 0.005 * 200 * pi * 0.005^2 / 4) * 60 * tanh(0.5)"
+ },
+ "η_{f} = tanh(m L)/(m L)": {
+  "title": "Fin efficiency",
+  "about": "Actual fin heat over the heat if the whole fin were at the base temperature. Long fins have low efficiency because their tips are cold.",
+  "vars": [
+   [
+    "m",
+    "fin parameter",
+    "1/m"
+   ],
+   [
+    "L",
+    "length",
+    "m"
+   ]
+  ],
+  "example": {
+   "problem": "m L = 0.5.",
+   "steps": [
+    "tanh(0.5)/0.5"
+   ],
+   "answer": "≈ 0.92"
+  }
+ },
+ "Gr = g β (T_{s} − T_{∞}) L^{3}/ν^{2}": {
+  "title": "Grashof number",
+  "about": "Buoyancy over viscous forces in natural convection, the free-convection counterpart of Re². Flow turns turbulent near Ra = Gr Pr ≈ 10⁹ on a vertical plate.",
+  "vars": [
+   [
+    "β",
+    "expansion coefficient, 1/T for a gas",
+    "1/K"
+   ],
+   [
+    "ν",
+    "kinematic viscosity",
+    "m^{2}/s"
+   ],
+   [
+    "L",
+    "length",
+    "m"
+   ]
+  ],
+  "example": {
+   "problem": "Find Gr for a 0.5 m tall vertical plate 40 K above 300 K air (ν = 1.6 × 10^{−5} m^{2}/s).",
+   "steps": [
+    "β = 1/300 K^{−1} for a gas",
+    "Gr = 9.81 × (1/300) × 40 × 0.5^{3}/(1.6 × 10^{−5})^{2}"
+   ],
+   "answer": "Gr ≈ 6.4 × 10^{8}"
+  },
+  "try": "9.81 * (1/300) * 40 * 0.5^3 / (1.6e-5)^2"
+ },
+ "Ra = Gr Pr": {
+  "title": "Rayleigh number",
+  "about": "The natural-convection number that correlations use, Nu = C Ra^{n}.",
+  "vars": [
+   [
+    "Gr",
+    "Grashof number",
+    ""
+   ],
+   [
+    "Pr",
+    "Prandtl number",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Gr = 6.4 × 10⁸ and Pr = 0.71.",
+   "steps": [
+    "6.4 × 10^{8} × 0.71"
+   ],
+   "answer": "≈ 4.5 × 10^{8} (laminar)"
+  }
+ },
+ "Nu = 3.66": {
+  "title": "Laminar pipe flow, constant wall temperature",
+  "about": "Fully developed laminar flow in a round tube with the wall at one temperature has Nu = hD/k = 3.66 whatever the speed.",
+  "assumptions": [
+   "Re < 2300, fully developed, circular tube"
+  ],
+  "vars": [
+   [
+    "Nu",
+    "hD/k",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Water (k = 0.6) in a 1 cm tube.",
+   "steps": [
+    "h = 3.66 × 0.6/0.01"
+   ],
+   "answer": "h ≈ 220 W/(m²·K)"
+  }
+ },
+ "Nu = 4.36": {
+  "title": "Laminar pipe flow, constant heat flux",
+  "about": "With a uniform heat flux at the wall (electric heating), fully developed laminar flow has Nu = 4.36.",
+  "assumptions": [
+   "Re < 2300, fully developed, circular tube"
+  ],
+  "vars": [
+   [
+    "Nu",
+    "hD/k",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Oil (k = 0.14) in a 2 cm tube.",
+   "steps": [
+    "4.36 × 0.14/0.02"
+   ],
+   "answer": "h ≈ 30.5 W/(m²·K)"
+  }
+ },
+ "Nu = 0.664 Re^{1/2} Pr^{1/3}": {
+  "title": "Laminar flat plate, average Nusselt number",
+  "about": "Average heat transfer over a plate of length L with a laminar boundary layer.",
+  "assumptions": [
+   "Re_L < 5 × 10⁵, Pr ≥ 0.6"
+  ],
+  "vars": [
+   [
+    "Re",
+    "ρvL/μ",
+    ""
+   ],
+   [
+    "Pr",
+    "Prandtl",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Re = 10⁵, Pr = 0.71.",
+   "steps": [
+    "0.664 × 316.2 × 0.892"
+   ],
+   "answer": "Nu ≈ 187"
+  }
+ },
+ "Nu = 0.037 Re^{4/5} Pr^{1/3}": {
+  "title": "Turbulent flat plate, average Nusselt number",
+  "about": "Average heat transfer when the boundary layer is turbulent from the leading edge.",
+  "assumptions": [
+   "Re_L from 5 × 10⁵ to 10⁷, 0.6 ≤ Pr ≤ 60"
+  ],
+  "vars": [
+   [
+    "Re",
+    "ρvL/μ",
+    ""
+   ],
+   [
+    "Pr",
+    "Prandtl",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Re = 10⁶, Pr = 0.71.",
+   "steps": [
+    "0.037 × 63,096 × 0.892"
+   ],
+   "answer": "Nu ≈ 2080"
+  }
+ },
+ "Q̇ = ṁ c_{p} (T_{out} − T_{in})": {
+  "title": "Energy balance on a stream",
+  "about": "Heat a fluid stream gains or loses from its flow rate and temperature change. In an exchanger the hot stream's loss equals the cold stream's gain.",
+  "vars": [
+   [
+    "ṁ",
+    "mass flow",
+    "kg/s"
+   ],
+   [
+    "c_{p}",
+    "specific heat",
+    "J/(kg·K)"
+   ]
+  ],
+  "example": {
+   "problem": "0.5 kg/s of water heated from 20 to 60 °C.",
+   "steps": [
+    "0.5 × 4180 × 40"
+   ],
+   "answer": "83.6 kW"
+  }
+ },
+ "NTU = U A/C_{min}": {
+  "title": "Number of transfer units",
+  "about": "A heat exchanger's size measured against the smaller stream's heat capacity rate. With the ratio c it fixes the effectiveness.",
+  "vars": [
+   [
+    "U A",
+    "overall conductance",
+    "W/K"
+   ],
+   [
+    "C_{min}",
+    "smaller of ṁ c_p",
+    "W/K"
+   ]
+  ],
+  "example": {
+   "problem": "UA = 4000 W/K, C_min = 2000 W/K.",
+   "steps": [
+    "4000/2000"
+   ],
+   "answer": "NTU = 2"
+  }
+ },
+ "Q̇_{max} = C_{min} (T_{h,in} − T_{c,in})": {
+  "title": "Maximum possible heat transfer",
+  "about": "Heat transferred if the stream with the smaller C changed by the whole inlet temperature difference, which an infinitely long counterflow exchanger would do.",
+  "vars": [
+   [
+    "C_{min}",
+    "smaller heat capacity rate",
+    "W/K"
+   ]
+  ],
+  "example": {
+   "problem": "C_min = 2000 W/K, inlets 150 °C and 30 °C.",
+   "steps": [
+    "2000 × 120"
+   ],
+   "answer": "240 kW"
+  }
+ },
+ "ε = Q̇/Q̇_{max}": {
+  "title": "Heat exchanger effectiveness",
+  "about": "Actual heat over the most possible. Know ε from NTU and you get the heat and outlet temperatures without the LMTD's trial and error.",
+  "vars": [
+   [
+    "ε",
+    "effectiveness, 0 to 1",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "ε = 0.7 with Q̇_max = 240 kW.",
+   "steps": [
+    "0.7 × 240"
+   ],
+   "answer": "168 kW"
+  }
+ },
+ "ε = (1 − e^{−NTU(1 − c)})/(1 − c e^{−NTU(1 − c)})": {
+  "title": "Effectiveness of a counterflow exchanger",
+  "about": "Effectiveness from NTU and the capacity ratio c = C_min/C_max. For c = 1 it becomes NTU/(1 + NTU); for c = 0 (a boiling or condensing stream) 1 − e^{−NTU}.",
+  "vars": [
+   [
+    "NTU",
+    "number of transfer units",
+    ""
+   ],
+   [
+    "c",
+    "C_min/C_max",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "A counterflow exchanger has NTU = 2 and c = 0.5. Find its effectiveness.",
+   "steps": [
+    "NTU(1 − c) = 1, e^{−1} = 0.368",
+    "ε = (1 − 0.368)/(1 − 0.5 × 0.368)"
+   ],
+   "answer": "ε ≈ 0.775"
+  },
+  "try": "(1 - e^-1) / (1 - 0.5 e^-1)"
+ },
+ "E_{b} = σ T^{4}": {
+  "title": "Blackbody emissive power",
+  "about": "A perfect emitter radiates σT⁴ per unit area; a real surface emits ε times that.",
+  "vars": [
+   [
+    "σ",
+    "Stefan-Boltzmann constant 5.67 × 10⁻⁸",
+    "W/(m^{2}·K^{4})"
+   ],
+   [
+    "T",
+    "absolute temperature",
+    "K"
+   ]
+  ],
+  "example": {
+   "problem": "A blackbody at 1000 K.",
+   "steps": [
+    "5.67 × 10^{−8} × 10^{12}"
+   ],
+   "answer": "56.7 kW/m²"
+  }
+ },
+ "α + ρ + τ = 1": {
+  "title": "Absorbed, reflected and transmitted radiation",
+  "about": "Radiation striking a surface is absorbed, reflected or passes through. Opaque surfaces have τ = 0, so α = 1 − ρ; for a gray surface α = ε (Kirchhoff).",
+  "vars": [
+   [
+    "α",
+    "absorptivity",
+    ""
+   ],
+   [
+    "ρ",
+    "reflectivity",
+    ""
+   ],
+   [
+    "τ",
+    "transmissivity",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "An opaque surface reflects 30%. Absorptivity?",
+   "steps": [
+    "1 − 0.3 − 0"
+   ],
+   "answer": "α = 0.7"
+  }
+ },
+ "ε = α": {
+  "title": "Kirchhoff's law of thermal radiation",
+  "about": "A surface emits as well as it absorbs: its emissivity equals its absorptivity at the same temperature and wavelength. For a gray, diffuse surface the totals are equal too, so one number ε serves for both.",
+  "assumptions": [
+   "Gray, diffuse surface for the total values",
+   "Surface and incoming radiation at about the same temperature"
+  ],
+  "vars": [
+   [
+    "ε",
+    "emissivity",
+    ""
+   ],
+   [
+    "α",
+    "absorptivity",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "α + ρ + τ = 1",
+    "absorbed, reflected and transmitted"
+   ],
+   [
+    "Q̇ = ε σ A (T_{1}^{4} − T_{2}^{4})",
+    "net radiation, small gray body in large surroundings"
+   ]
+  ],
+  "example": {
+   "problem": "An opaque gray plate reflects 20% of the radiation on it. What is its emissivity?",
+   "steps": [
+    "Opaque: τ = 0, so α = 1 − 0.2 = 0.8",
+    "Kirchhoff: ε = α"
+   ],
+   "answer": "ε = 0.8"
+  }
+ },
+ "A_{1} F_{12} = A_{2} F_{21}": {
+  "title": "View factor reciprocity",
+  "about": "The view factor F₁₂ is the share of radiation leaving surface 1 that reaches 2. Reciprocity gives one view factor from the other.",
+  "vars": [
+   [
+    "A_{i}",
+    "surface areas",
+    "m^{2}"
+   ],
+   [
+    "F_{ij}",
+    "view factors",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "A sphere of area 1 m² inside a box of 6 m²: F₁₂ = 1. Find F₂₁.",
+   "steps": [
+    "F₂₁ = 1 × 1/6"
+   ],
+   "answer": "≈ 0.167"
+  }
+ },
+ "Σ_{j} F_{ij} = 1": {
+  "title": "View factor summation rule",
+  "about": "All radiation leaving a surface lands somewhere in an enclosure, so its view factors add to 1, including F_ii for a concave surface.",
+  "vars": [
+   [
+    "F_{ij}",
+    "view factor from i to j",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "The box above: F₂₁ = 0.167. What is F₂₂?",
+   "steps": [
+    "1 − 0.167"
+   ],
+   "answer": "≈ 0.833"
+  }
+ },
+ "w = 100 × m_{part}/m_{total}": {
+  "title": "Mass percent (percent composition)",
+  "about": "The share of a mixture's or compound's mass that one part makes up. For a compound, use each element's mass in one mole over the molar mass.",
+  "vars": [
+   [
+    "m_{part}",
+    "mass of the part",
+    "g"
+   ],
+   [
+    "m_{total}",
+    "total mass",
+    "g"
+   ]
+  ],
+  "example": {
+   "problem": "Percent oxygen in water (H₂O, 18.02 g/mol)?",
+   "steps": [
+    "100 × 16.00/18.02"
+   ],
+   "answer": "≈ 88.8% O"
+  }
+ },
+ "x_{i} = n_{i}/n_{tot}": {
+  "title": "Mole fraction",
+  "about": "Moles of one component over all the moles. The fractions add to 1; they give partial pressures (Dalton) and vapour pressures (Raoult).",
+  "vars": [
+   [
+    "n_{i}",
+    "moles of component i",
+    "mol"
+   ],
+   [
+    "n_{tot}",
+    "total moles",
+    "mol"
+   ]
+  ],
+  "example": {
+   "problem": "2 mol N₂ and 0.5 mol O₂.",
+   "steps": [
+    "2/2.5"
+   ],
+   "answer": "x(N₂) = 0.8"
+  }
+ },
+ "ρ = P M/(R T)": {
+  "title": "Density of an ideal gas",
+  "about": "The ideal gas law with n = m/M. Measure a gas's density and this gives its molar mass.",
+  "vars": [
+   [
+    "P",
+    "pressure",
+    "Pa"
+   ],
+   [
+    "M",
+    "molar mass",
+    "kg/mol"
+   ],
+   [
+    "T",
+    "temperature",
+    "K"
+   ]
+  ],
+  "example": {
+   "problem": "Density of CO₂ (M = 0.044 kg/mol) at 1 atm and 298 K.",
+   "steps": [
+    "101325 × 0.044/(8.314 × 298)"
+   ],
+   "answer": "≈ 1.80 kg/m³"
+  }
+ },
+ "ΔH = Σ BE(broken) − Σ BE(formed)": {
+  "title": "Enthalpy change from bond energies",
+  "about": "Breaking bonds costs energy and forming them releases it. Average bond energies give an estimate; formation enthalpies are more accurate.",
+  "vars": [
+   [
+    "BE",
+    "bond energy",
+    "kJ/mol"
+   ]
+  ],
+  "example": {
+   "problem": "H₂ + Cl₂ → 2HCl with H–H 436, Cl–Cl 243, H–Cl 431 kJ/mol.",
+   "steps": [
+    "(436 + 243) − 2 × 431"
+   ],
+   "answer": "ΔH ≈ −183 kJ"
+  }
+ },
+ "ΔS° = Σ S°(products) − Σ S°(reactants)": {
+  "title": "Standard entropy change of a reaction",
+  "about": "From tabulated standard molar entropies, each times its coefficient. Unlike enthalpies of formation, elements have nonzero S°.",
+  "vars": [
+   [
+    "S°",
+    "standard molar entropy",
+    "J/(mol·K)"
+   ]
+  ],
+  "example": {
+   "problem": "N₂ + 3H₂ → 2NH₃ with S° 191.6, 130.7 and 192.5 J/(mol·K).",
+   "steps": [
+    "2 × 192.5 − (191.6 + 3 × 130.7)"
+   ],
+   "answer": "ΔS° ≈ −198.7 J/K"
+  }
+ },
+ "ln(K_{2}/K_{1}) = −(ΔH°/R)(1/T_{2} − 1/T_{1})": {
+  "title": "Van 't Hoff equation",
+  "about": "How an equilibrium constant changes with temperature. Endothermic reactions (ΔH° > 0) shift toward products when heated.",
+  "assumptions": [
+   "ΔH° about constant over the range"
+  ],
+  "vars": [
+   [
+    "K_{1}, K_{2}",
+    "equilibrium constants at T₁, T₂",
+    ""
+   ],
+   [
+    "ΔH°",
+    "standard reaction enthalpy",
+    "J/mol"
+   ]
+  ],
+  "example": {
+   "problem": "K = 10 at 300 K, ΔH° = +50 kJ/mol. K at 350 K?",
+   "steps": [
+    "ln(K₂/10) = −(50000/8.314)(1/350 − 1/300) = 2.864"
+   ],
+   "answer": "K₂ ≈ 175"
+  }
+ },
+ "c = k_{H} P": {
+  "title": "Henry's law",
+  "about": "A gas's solubility in a liquid is proportional to its partial pressure above it: why soda fizzes when opened.",
+  "vars": [
+   [
+    "c",
+    "dissolved concentration",
+    "mol/L"
+   ],
+   [
+    "k_{H}",
+    "Henry's constant",
+    "mol/(L·atm)"
+   ],
+   [
+    "P",
+    "partial pressure",
+    "atm"
+   ]
+  ],
+  "example": {
+   "problem": "CO₂ in water, k_H = 0.034 mol/(L·atm), at 2.5 atm.",
+   "steps": [
+    "0.034 × 2.5"
+   ],
+   "answer": "0.085 mol/L"
+  }
+ },
+ "K_{a} = [H^{+}][A^{−}]/[HA]": {
+  "title": "Acid dissociation constant",
+  "about": "The equilibrium constant for HA ⇌ H⁺ + A⁻. Larger Ka (smaller pKa = −log₁₀ Ka) means a stronger acid.",
+  "vars": [
+   [
+    "[HA]",
+    "undissociated acid",
+    "mol/L"
+   ],
+   [
+    "[A^{−}]",
+    "conjugate base",
+    "mol/L"
+   ]
+  ],
+  "example": {
+   "problem": "0.10 M acetic acid has [H⁺] = 1.33 × 10⁻³ M. Find Ka.",
+   "steps": [
+    "(1.33 × 10^{−3})^{2}/(0.10 − 0.00133)"
+   ],
+   "answer": "Ka ≈ 1.8 × 10⁻⁵"
+  }
+ },
+ "[H^{+}] ≈ √(K_{a} c)": {
+  "title": "Weak acid pH shortcut",
+  "about": "When an acid dissociates only slightly, [H⁺] ≈ √(Ka c). Check that the answer is under 5% of c.",
+  "assumptions": [
+   "Weak acid, x ≪ c; water's own H⁺ ignored"
+  ],
+  "vars": [
+   [
+    "K_{a}",
+    "acid constant",
+    ""
+   ],
+   [
+    "c",
+    "acid concentration",
+    "mol/L"
+   ]
+  ],
+  "example": {
+   "problem": "pH of 0.10 M acetic acid (Ka = 1.8 × 10⁻⁵).",
+   "steps": [
+    "[H⁺] = √(1.8 × 10^{−6}) = 1.34 × 10^{−3}"
+   ],
+   "answer": "pH ≈ 2.87"
+  }
+ },
+ "ln(k) = ln(A) − E_{a}/(R T)": {
+  "title": "Arrhenius plot",
+  "about": "Taking logs of the Arrhenius equation gives a straight line in 1/T. Plot ln k against 1/T: the slope is −Ea/R and the intercept ln A.",
+  "vars": [
+   [
+    "k",
+    "rate constant",
+    ""
+   ],
+   [
+    "E_{a}",
+    "activation energy",
+    "J/mol"
+   ],
+   [
+    "A",
+    "pre-exponential factor",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "The slope of ln k against 1/T is −6000 K.",
+   "steps": [
+    "Ea = 6000 × 8.314"
+   ],
+   "answer": "Ea ≈ 49.9 kJ/mol"
+  }
+ },
+ "E° = (RT/(nF)) ln(K)": {
+  "title": "Standard cell potential and the equilibrium constant",
+  "about": "From ΔG° = −nFE° = −RT ln K. A positive E° means K > 1. At 25 °C, E° = (0.0592/n) log₁₀ K.",
+  "vars": [
+   [
+    "n",
+    "electrons transferred",
+    ""
+   ],
+   [
+    "F",
+    "Faraday constant 96485",
+    "C/mol"
+   ],
+   [
+    "K",
+    "equilibrium constant",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "E° = 1.10 V, n = 2 (Daniell cell), 25 °C. Find K.",
+   "steps": [
+    "log₁₀ K = 2 × 1.10/0.0592 = 37.2"
+   ],
+   "answer": "K ≈ 10^{37}"
+  }
+ },
+ "c = λ ν": {
+  "title": "Speed, wavelength and frequency of light",
+  "about": "All light travels at c in vacuum, so wavelength and frequency are inversely related.",
+  "vars": [
+   [
+    "λ",
+    "wavelength",
+    "m"
+   ],
+   [
+    "ν",
+    "frequency",
+    "Hz"
+   ]
+  ],
+  "example": {
+   "problem": "Frequency of 500 nm light?",
+   "steps": [
+    "3.00 × 10^{8}/5.00 × 10^{−7}"
+   ],
+   "answer": "6.0 × 10^{14} Hz"
+  }
+ },
+ "FC = V − N − B/2": {
+  "title": "Formal charge",
+  "about": "Bookkeeping charge on an atom in a Lewis structure. The best structure keeps formal charges near zero, with negatives on the more electronegative atoms.",
+  "vars": [
+   [
+    "V",
+    "valence electrons of the free atom",
+    ""
+   ],
+   [
+    "N",
+    "nonbonding (lone pair) electrons",
+    ""
+   ],
+   [
+    "B",
+    "bonding electrons",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "N in NH₄⁺ (4 bonds, no lone pairs).",
+   "steps": [
+    "5 − 0 − 8/2"
+   ],
+   "answer": "+1"
+  }
+ },
+ "N_{t} = N_{0} λ^{t}": {
+  "title": "Geometric (discrete) population growth",
+  "about": "For populations breeding in seasons, the size is multiplied by λ each step. λ > 1 grows, λ < 1 declines; λ = e^{r} links it to continuous growth.",
+  "vars": [
+   [
+    "λ",
+    "finite rate of increase N_{t+1}/N_{t}",
+    ""
+   ],
+   [
+    "t",
+    "generations or years",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "200 animals with λ = 1.1. Size after 5 years?",
+   "steps": [
+    "200 × 1.1^{5}"
+   ],
+   "answer": "≈ 322"
+  }
+ },
+ "N = M C/R": {
+  "title": "Mark-recapture (Lincoln-Petersen)",
+  "about": "Mark M animals, release them, later catch C, of which R are marked. The marked share of the catch estimates the marked share of the population.",
+  "assumptions": [
+   "Closed population; marks not lost; marked and unmarked equally catchable"
+  ],
+  "vars": [
+   [
+    "M",
+    "marked first time",
+    ""
+   ],
+   [
+    "C",
+    "caught second time",
+    ""
+   ],
+   [
+    "R",
+    "marked among the recaptured",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "50 fish marked; later 40 caught, 8 of them marked.",
+   "steps": [
+    "50 × 40/8"
+   ],
+   "answer": "≈ 250 fish"
+  }
+ },
+ "dN/dt = r N − a N P": {
+  "title": "Lotka-Volterra: prey",
+  "about": "Prey grow exponentially without predators and are eaten at a rate proportional to encounters N P. With the predator equation it gives cycles, the predators lagging a quarter cycle.",
+  "vars": [
+   [
+    "N",
+    "prey",
+    ""
+   ],
+   [
+    "P",
+    "predators",
+    ""
+   ],
+   [
+    "r",
+    "prey growth rate",
+    "1/yr"
+   ],
+   [
+    "a",
+    "attack rate",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "dP/dt = b N P − m P",
+    "predators"
+   ]
+  ],
+  "example": {
+   "problem": "r = 0.5, a = 0.01. How many predators hold the prey steady?",
+   "steps": [
+    "r = a P"
+   ],
+   "answer": "P = 50"
+  }
+ },
+ "dP/dt = b N P − m P": {
+  "title": "Lotka-Volterra: predators",
+  "about": "Predators grow from prey eaten (b N P) and die at rate m. They hold steady when N = m/b.",
+  "vars": [
+   [
+    "b",
+    "conversion of prey eaten into predators",
+    ""
+   ],
+   [
+    "m",
+    "predator death rate",
+    "1/yr"
+   ]
+  ],
+  "example": {
+   "problem": "b = 0.002, m = 0.4. Prey level where predators hold steady?",
+   "steps": [
+    "N = m/b"
+   ],
+   "answer": "200"
+  }
+ },
+ "NPP = GPP − R": {
+  "title": "Net primary productivity",
+  "about": "Energy fixed by producers (gross) less what they use in their own respiration: what is left for growth and for consumers.",
+  "vars": [
+   [
+    "GPP",
+    "gross primary productivity",
+    ""
+   ],
+   [
+    "R",
+    "producers' respiration",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "GPP = 20,000 kJ/m²/yr, R = 12,000.",
+   "steps": [
+    "20000 − 12000"
+   ],
+   "answer": "8000 kJ/m²/yr"
+  }
+ },
+ "E = P_{n+1}/P_{n}": {
+  "title": "Trophic (ecological) efficiency",
+  "about": "The share of one level's production that becomes the next level's. Typically about 10%, which is why food chains are short.",
+  "vars": [
+   [
+    "P_{n}",
+    "production at trophic level n",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Producers make 10,000 kJ; herbivores 1,000 kJ.",
+   "steps": [
+    "1000/10000"
+   ],
+   "answer": "10%"
+  }
+ },
+ "G = 2^{n}": {
+  "title": "Number of gamete types",
+  "about": "Independent assortment: each heterozygous gene gives two choices, so n of them give 2ⁿ gamete types. Squaring gives the offspring combinations.",
+  "assumptions": [
+   "Genes unlinked"
+  ],
+  "vars": [
+   [
+    "n",
+    "heterozygous gene pairs",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Kinds of gametes from AaBbCc?",
+   "steps": [
+    "2^{3}"
+   ],
+   "answer": "8"
+  }
+ },
+ "V_{max,app} = V_{max}/(1 + [I]/K_{i})": {
+  "title": "Noncompetitive inhibition",
+  "about": "A noncompetitive inhibitor binds away from the active site, lowering Vmax while Km stays the same. More substrate cannot overcome it.",
+  "vars": [
+   [
+    "[I]",
+    "inhibitor concentration",
+    "mol/L"
+   ],
+   [
+    "K_{i}",
+    "inhibitor dissociation constant",
+    "mol/L"
+   ]
+  ],
+  "related": [
+   [
+    "K_{m,app} = K_{m} (1 + [I]/K_{i})",
+    "competitive inhibition"
+   ]
+  ],
+  "example": {
+   "problem": "Vmax = 100 μmol/min, [I] = Kᵢ.",
+   "steps": [
+    "100/2"
+   ],
+   "answer": "50 μmol/min"
+  }
+ },
+ "V_{m} = (RT/F) ln((P_{K}[K^{+}]_{o} + P_{Na}[Na^{+}]_{o} + P_{Cl}[Cl^{−}]_{i})/(P_{K}[K^{+}]_{i} + P_{Na}[Na^{+}]_{i} + P_{Cl}[Cl^{−}]_{o}))": {
+  "title": "Goldman (GHK) equation",
+  "about": "The resting membrane potential with several ions, each weighted by its permeability. Chloride's in and out are swapped because it is negative. With one ion it reduces to the Nernst equation.",
+  "vars": [
+   [
+    "P_{X}",
+    "permeability to ion X",
+    "m/s"
+   ],
+   [
+    "[X]_{o}, [X]_{i}",
+    "outside and inside concentrations",
+    "mol/L"
+   ]
+  ],
+  "example": {
+   "problem": "Squid axon at 20 °C: P_K : P_Na : P_Cl = 1 : 0.04 : 0.45; K 20/400, Na 440/50, Cl 560/52 mM (out/in).",
+   "steps": [
+    "Top: 20 + 17.6 + 23.4 = 61.0",
+    "Bottom: 400 + 2 + 252 = 654",
+    "25.3 mV × ln(61.0/654)"
+   ],
+   "answer": "≈ −60 mV"
+  }
+ },
+ "SA/V = 3/r": {
+  "title": "Surface area to volume ratio",
+  "about": "A sphere's surface 4πr² over its volume (4/3)πr³. Smaller cells have more surface per volume for exchange, which limits cell size.",
+  "vars": [
+   [
+    "r",
+    "radius",
+    "m"
+   ]
+  ],
+  "example": {
+   "problem": "A cell of radius 10 μm.",
+   "steps": [
+    "3/10"
+   ],
+   "answer": "0.3 per μm"
+  }
+ },
+ "RQ = V_{CO_{2}}/V_{O_{2}}": {
+  "title": "Respiratory quotient",
+  "about": "CO₂ produced over O₂ used: about 1.0 burning carbohydrate, 0.7 fat and 0.8 protein.",
+  "vars": [
+   [
+    "V_{CO_{2}}",
+    "CO₂ released",
+    "L"
+   ],
+   [
+    "V_{O_{2}}",
+    "O₂ consumed",
+    "L"
+   ]
+  ],
+  "example": {
+   "problem": "200 mL CO₂ released for 250 mL O₂ used.",
+   "steps": [
+    "200/250"
+   ],
+   "answer": "0.8"
+  }
+ },
+ "SV = EDV − ESV": {
+  "title": "Stroke volume",
+  "about": "Blood pumped per beat: the ventricle's volume when full minus what is left after it contracts.",
+  "vars": [
+   [
+    "EDV",
+    "end-diastolic volume",
+    "mL"
+   ],
+   [
+    "ESV",
+    "end-systolic volume",
+    "mL"
+   ]
+  ],
+  "example": {
+   "problem": "EDV = 120 mL, ESV = 50 mL.",
+   "steps": [
+    "120 − 50"
+   ],
+   "answer": "70 mL"
+  }
+ },
+ "EF = SV/EDV": {
+  "title": "Ejection fraction",
+  "about": "The share of the filled ventricle ejected each beat. Normal is about 55-70%; low values signal heart failure.",
+  "vars": [
+   [
+    "SV",
+    "stroke volume",
+    "mL"
+   ],
+   [
+    "EDV",
+    "end-diastolic volume",
+    "mL"
+   ]
+  ],
+  "example": {
+   "problem": "SV = 70 mL, EDV = 120 mL.",
+   "steps": [
+    "70/120"
+   ],
+   "answer": "≈ 58%"
+  }
+ },
+ "MAP ≈ DBP + (SBP − DBP)/3": {
+  "title": "Mean arterial pressure from a blood pressure reading",
+  "about": "The heart spends about two thirds of each beat in diastole, so the time-averaged pressure sits a third of the way from diastolic to systolic.",
+  "vars": [
+   [
+    "SBP",
+    "systolic pressure",
+    "mmHg"
+   ],
+   [
+    "DBP",
+    "diastolic pressure",
+    "mmHg"
+   ]
+  ],
+  "example": {
+   "problem": "120/80 mmHg.",
+   "steps": [
+    "80 + 40/3"
+   ],
+   "answer": "≈ 93 mmHg"
+  }
+ },
+ "CL = k V_{d}": {
+  "title": "Drug clearance",
+  "about": "The volume of plasma cleared of drug per unit time. With first-order elimination it is the rate constant times the volume of distribution; at steady state, dose rate = CL × C.",
+  "vars": [
+   [
+    "k",
+    "elimination rate constant",
+    "1/h"
+   ],
+   [
+    "V_{d}",
+    "volume of distribution",
+    "L"
+   ]
+  ],
+  "example": {
+   "problem": "k = 0.1 /h, Vd = 40 L.",
+   "steps": [
+    "0.1 × 40"
+   ],
+   "answer": "4 L/h"
+  }
+ },
+ "LD = C_{target} V_{d}": {
+  "title": "Loading dose",
+  "about": "A first dose that brings the plasma concentration straight to its target instead of building up over several half-lives.",
+  "assumptions": [
+   "Full bioavailability; divide by F otherwise"
+  ],
+  "vars": [
+   [
+    "C_{target}",
+    "target plasma concentration",
+    "mg/L"
+   ],
+   [
+    "V_{d}",
+    "volume of distribution",
+    "L"
+   ]
+  ],
+  "example": {
+   "problem": "Target 15 mg/L, Vd = 35 L.",
+   "steps": [
+    "15 × 35"
+   ],
+   "answer": "525 mg"
+  }
+ },
+ "M = I/A": {
+  "title": "Magnification",
+  "about": "How many times bigger the image is than the real object. Keep both sizes in the same unit.",
+  "vars": [
+   [
+    "I",
+    "image size",
+    "m"
+   ],
+   [
+    "A",
+    "actual size",
+    "m"
+   ]
+  ],
+  "example": {
+   "problem": "A 5 mm drawing of a 20 μm cell.",
+   "steps": [
+    "5000 μm/20 μm"
+   ],
+   "answer": "×250"
+  }
+ },
+ "C = (σ_{x} + σ_{y})/2": {
+  "title": "Mohr's circle: centre",
+  "about": "Plot (σ, τ) for every orientation and the points form a circle centred at the average normal stress, with radius R = √(((σx − σy)/2)² + τxy²). The principal stresses are C ± R and the largest in-plane shear is R.",
+  "vars": [
+   [
+    "σ_{x}, σ_{y}",
+    "normal stresses",
+    "Pa"
+   ],
+   [
+    "τ_{xy}",
+    "shear stress",
+    "Pa"
+   ]
+  ],
+  "related": [
+   [
+    "σ_{1,2} = (σ_{x} + σ_{y})/2 ± √(((σ_{x} − σ_{y})/2)^{2} + τ_{xy}^{2})",
+    "principal stresses, C ± R"
+   ]
+  ],
+  "example": {
+   "problem": "σx = 80 MPa, σy = −20 MPa, τxy = 40 MPa.",
+   "steps": [
+    "C = 30 MPa",
+    "R = √(50^{2} + 40^{2}) = 64 MPa"
+   ],
+   "answer": "σ₁ = 94 MPa, σ₂ = −34 MPa, τ_max = 64 MPa"
+  }
+ },
+ "n = σ_{Y}/σ_{v}": {
+  "title": "Factor of safety against yield",
+  "about": "How many times the load could rise before the part yields, comparing the yield strength with the von Mises stress (or with σ₁ − σ₃ for Tresca).",
+  "vars": [
+   [
+    "σ_{Y}",
+    "yield strength",
+    "Pa"
+   ],
+   [
+    "σ_{v}",
+    "von Mises stress",
+    "Pa"
+   ]
+  ],
+  "example": {
+   "problem": "Steel with σ_Y = 250 MPa sees σ_v = 100 MPa.",
+   "steps": [
+    "250/100"
+   ],
+   "answer": "n = 2.5"
+  }
+ },
+ "K_{t} = σ_{max}/σ_{nom}": {
+  "title": "Stress concentration factor",
+  "about": "Holes, notches and fillets raise the local peak stress above the nominal P/A or Mc/I. Kt comes from charts; a small hole in a wide plate gives 3.",
+  "vars": [
+   [
+    "σ_{max}",
+    "peak stress",
+    "Pa"
+   ],
+   [
+    "σ_{nom}",
+    "nominal stress",
+    "Pa"
+   ]
+  ],
+  "example": {
+   "problem": "A plate with a small hole carries a nominal 50 MPa.",
+   "steps": [
+    "Kt ≈ 3"
+   ],
+   "answer": "σ_max ≈ 150 MPa"
+  }
+ },
+ "U = P^{2}L/(2AE)": {
+  "title": "Strain energy in an axial bar",
+  "about": "Elastic energy stored in a bar under axial load, the area under its load-deflection line. Castigliano: ∂U/∂P gives the deflection.",
+  "vars": [
+   [
+    "P",
+    "axial load",
+    "N"
+   ],
+   [
+    "L",
+    "length",
+    "m"
+   ],
+   [
+    "A",
+    "area",
+    "m^{2}"
+   ],
+   [
+    "E",
+    "Young's modulus",
+    "Pa"
+   ]
+  ],
+  "example": {
+   "problem": "10 kN on a 1 m steel bar of 100 mm² (E = 200 GPa).",
+   "steps": [
+    "10^{8} × 1/(2 × 10^{−4} × 2 × 10^{11})"
+   ],
+   "answer": "2.5 J"
+  }
+ },
+ "q = VQ/I": {
+  "title": "Shear flow",
+  "about": "Shear force per unit length along a beam, which the welds, nails or bolts joining built-up parts must carry. Spacing s = F/q for fasteners of capacity F.",
+  "vars": [
+   [
+    "V",
+    "shear force",
+    "N"
+   ],
+   [
+    "Q",
+    "first moment of the joined part about the neutral axis",
+    "m^{3}"
+   ],
+   [
+    "I",
+    "second moment of area",
+    "m^{4}"
+   ]
+  ],
+  "example": {
+   "problem": "V = 10 kN, Q = 2 × 10⁻⁴ m³, I = 4 × 10⁻⁵ m⁴.",
+   "steps": [
+    "q = 10^{4} × 2 × 10^{−4}/(4 × 10^{−5})"
+   ],
+   "answer": "q = 50 kN/m"
+  },
+  "try": "10 kN * 2e-4 m^3 / 4e-5 m^4 to kN/m"
+ },
+ "σ_{cr} = π^{2}E/(KL/r)^{2}": {
+  "title": "Critical buckling stress",
+  "about": "Euler's buckling load divided by the area. Valid only while σ_cr is below the proportional limit, that is for slender columns.",
+  "vars": [
+   [
+    "KL/r",
+    "slenderness ratio",
+    ""
+   ],
+   [
+    "E",
+    "Young's modulus",
+    "Pa"
+   ]
+  ],
+  "related": [
+   [
+    "P_{cr} = π^{2}EI/(KL)^{2}",
+    "the load"
+   ]
+  ],
+  "example": {
+   "problem": "Steel column (E = 200 GPa), KL/r = 150.",
+   "steps": [
+    "π^{2} × 200,000/22,500"
+   ],
+   "answer": "≈ 87.7 MPa"
+  }
+ },
+ "r = √(I/A)": {
+  "title": "Radius of gyration of a section",
+  "about": "Spreads a section's area as if it all sat at distance r from the axis. Buckling uses the smallest r, about the weakest axis.",
+  "vars": [
+   [
+    "I",
+    "second moment of area",
+    "m^{4}"
+   ],
+   [
+    "A",
+    "area",
+    "m^{2}"
+   ]
+  ],
+  "example": {
+   "problem": "A 50 mm by 50 mm square bar.",
+   "steps": [
+    "I = 50^{4}/12 = 520,833 mm^{4}; A = 2500 mm²"
+   ],
+   "answer": "r ≈ 14.4 mm"
+  }
+ },
+ "A_{1} v_{1} = A_{2} v_{2}": {
+  "title": "Continuity for incompressible flow",
+  "about": "What flows into a pipe must flow out, so the speed rises where the pipe narrows. The flow rate Q = A v is the same at every section.",
+  "vars": [
+   [
+    "A",
+    "cross-section area",
+    "m^{2}"
+   ],
+   [
+    "v",
+    "mean speed",
+    "m/s"
+   ]
+  ],
+  "example": {
+   "problem": "Water at 2 m/s in a 10 cm pipe into a 5 cm pipe.",
+   "steps": [
+    "Area ratio 4"
+   ],
+   "answer": "8 m/s"
+  }
+ },
+ "v = √(2gh)": {
+  "title": "Torricelli's law",
+  "about": "Liquid leaves a hole a depth h below the free surface at the speed of a free fall from h. Real orifices give a little less: multiply by a discharge coefficient about 0.6 for the flow.",
+  "assumptions": [
+   "Large tank, no losses (Bernoulli)"
+  ],
+  "vars": [
+   [
+    "h",
+    "depth of the hole below the surface",
+    "m"
+   ]
+  ],
+  "example": {
+   "problem": "A hole 2 m below the water surface.",
+   "steps": [
+    "√(2 × 9.81 × 2)"
+   ],
+   "answer": "≈ 6.26 m/s"
+  }
+ },
+ "F_{D} = (1/2) C_{D} ρ v^{2} A": {
+  "title": "Drag force",
+  "about": "Aerodynamic or hydrodynamic drag grows with the square of speed. C_D depends on shape and Re: about 1.0 to 1.2 for a flat plate face on, 0.47 for a sphere, 0.3 for a car.",
+  "vars": [
+   [
+    "C_{D}",
+    "drag coefficient",
+    ""
+   ],
+   [
+    "ρ",
+    "fluid density",
+    "kg/m^{3}"
+   ],
+   [
+    "A",
+    "frontal area",
+    "m^{2}"
+   ]
+  ],
+  "example": {
+   "problem": "A car, C_D = 0.3, A = 2.2 m², at 30 m/s in air (1.2 kg/m³).",
+   "steps": [
+    "0.5 × 0.3 × 1.2 × 900 × 2.2"
+   ],
+   "answer": "≈ 356 N"
+  }
+ },
+ "F_{L} = (1/2) C_{L} ρ v^{2} A": {
+  "title": "Lift force",
+  "about": "Lift on a wing grows with dynamic pressure and the planform area; C_L rises with angle of attack until stall.",
+  "vars": [
+   [
+    "C_{L}",
+    "lift coefficient",
+    ""
+   ],
+   [
+    "A",
+    "wing planform area",
+    "m^{2}"
+   ]
+  ],
+  "example": {
+   "problem": "C_L = 1.2, A = 16 m², 40 m/s in air (1.2 kg/m³).",
+   "steps": [
+    "0.5 × 1.2 × 1.2 × 1600 × 16"
+   ],
+   "answer": "≈ 18.4 kN"
+  }
+ },
+ "f = 64/Re": {
+  "title": "Laminar friction factor",
+  "about": "For laminar flow in a round pipe the Darcy friction factor follows from Poiseuille flow, independent of roughness. Turbulent flow needs the Moody chart or Colebrook.",
+  "assumptions": [
+   "Re below about 2300"
+  ],
+  "vars": [
+   [
+    "Re",
+    "Reynolds number",
+    ""
+   ]
+  ],
+  "example": {
+   "problem": "Laminar flow in a round pipe has Re = 1000. Find the Darcy friction factor.",
+   "steps": [
+    "64/1000"
+   ],
+   "answer": "f = 0.064"
+  }
+ },
+ "h_{m} = K v^{2}/(2g)": {
+  "title": "Minor losses",
+  "about": "Head lost at fittings, valves, bends and entrances, as K velocity heads. Typical K: 90° elbow 0.3 to 0.9, open globe valve about 10, sharp entrance 0.5, exit 1.",
+  "vars": [
+   [
+    "K",
+    "loss coefficient",
+    ""
+   ],
+   [
+    "v",
+    "mean speed",
+    "m/s"
+   ]
+  ],
+  "example": {
+   "problem": "An elbow with K = 0.9 at 3 m/s.",
+   "steps": [
+    "0.9 × 9/19.62"
+   ],
+   "answer": "≈ 0.41 m"
+  }
+ },
+ "D_{h} = 4A/P_{w}": {
+  "title": "Hydraulic diameter",
+  "about": "Lets round-pipe results (Re, friction factor) serve ducts of other shapes. For a circle it is just D.",
+  "vars": [
+   [
+    "A",
+    "flow area",
+    "m^{2}"
+   ],
+   [
+    "P_{w}",
+    "wetted perimeter",
+    "m"
+   ]
+  ],
+  "example": {
+   "problem": "Find the hydraulic diameter of a 0.2 m by 0.1 m rectangular duct.",
+   "steps": [
+    "A = 0.02 m^{2}, P_{w} = 2(0.2 + 0.1) = 0.6 m",
+    "D_{h} = 4 × 0.02/0.6"
+   ],
+   "answer": "D_{h} ≈ 0.133 m"
+  }
+ },
+ "P = ρ g Q h": {
+  "title": "Pump (hydraulic) power",
+  "about": "Power given to the fluid to raise its head by h. Divide by the pump efficiency for shaft power.",
+  "vars": [
+   [
+    "Q",
+    "flow rate",
+    "m^{3}/s"
+   ],
+   [
+    "h",
+    "head added",
+    "m"
+   ]
+  ],
+  "example": {
+   "problem": "0.05 m³/s of water lifted 20 m with 75% efficiency.",
+   "steps": [
+    "ρgQh = 1000 × 9.81 × 0.05 × 20 = 9810 W"
+   ],
+   "answer": "9.81 kW to the water, ≈ 13.1 kW shaft"
+  }
+ }
+}

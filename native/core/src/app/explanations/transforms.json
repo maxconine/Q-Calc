@@ -987,32 +987,32 @@
     },
     "try": "e^2/(e^2 + e^1 + e^0.1)"
   },
-  "f(x) = max(0, x)": {
+  "ReLU(z) = max(0, z)": {
     "title": "ReLU (rectified linear unit)",
     "about": "ReLU passes positive inputs unchanged and zeroes negative ones. It is the default activation in deep networks because it is cheap and its gradient doesn't vanish for positive inputs.",
     "assumptions": [
       "Not differentiable at 0; the gradient there is taken as 0 (or 1)",
-      "A unit whose input stays negative gets zero gradient and stops learning ('dying ReLU'); Leaky ReLU max(αx, x) keeps a small slope"
+      "A unit whose input stays negative gets zero gradient and stops learning ('dying ReLU'); Leaky ReLU max(αz, z) keeps a small slope"
     ],
     "vars": [
       [
-        "f(x)",
+        "ReLU(z)",
         "activation output",
         ""
       ],
       [
-        "x",
+        "z",
         "input (pre-activation)",
         ""
       ]
     ],
     "related": [
       [
-        "f′(x) = 1 for x > 0, 0 for x < 0",
+        "ReLU′(z) = 1 for z > 0, 0 for z < 0",
         "derivative"
       ],
       [
-        "max(αx, x)",
+        "max(αz, z)",
         "Leaky ReLU, small α such as 0.01"
       ]
     ],
@@ -4454,5 +4454,488 @@
       ],
       "answer": "y = {1, 3, 3, 1}"
     }
+  },
+  "δ(t − a), a ≥ 0 ‖ e^{−as}": {
+    "title": "Laplace pair: delayed impulse",
+    "about": "An impulse at t = a transforms to the pure delay factor e^{−as}. It models a sudden kick or hammer blow at a known time.",
+    "assumptions": [],
+    "vars": [
+      [
+        "a",
+        "delay, ≥ 0",
+        "s"
+      ],
+      [
+        "s",
+        "complex frequency",
+        "1/s"
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Find the transform of 5δ(t − 2).",
+      "steps": [
+        "5 · e^{−2s}"
+      ],
+      "answer": "5e^{−2s}"
+    }
+  },
+  "u(t − a), a ≥ 0 ‖ e^{−as}/s": {
+    "title": "Laplace pair: delayed unit step (Heaviside)",
+    "about": "A step switched on at t = a. Use it to write piecewise inputs: a pulse from a to b is u(t − a) − u(t − b).",
+    "assumptions": [],
+    "vars": [
+      [
+        "a",
+        "switch-on time, ≥ 0",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "f(t − a) u(t − a), a ≥ 0 ‖ e^{−as} F(s)",
+        "time-shift property"
+      ]
+    ],
+    "example": {
+      "problem": "Transform a pulse of height 3 from t = 1 to t = 4.",
+      "steps": [
+        "3[u(t − 1) − u(t − 4)]",
+        "3(e^{−s} − e^{−4s})/s"
+      ],
+      "answer": "3(e^{−s} − e^{−4s})/s"
+    }
+  },
+  "1 − e^{−at} ‖ a/(s(s + a))": {
+    "title": "Laplace pair: first-order rise to 1",
+    "about": "The step response of a first-order system with time constant 1/a, such as an RC circuit charging.",
+    "assumptions": [],
+    "vars": [
+      [
+        "a",
+        "rate, 1/τ",
+        "1/s"
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Invert 5/(s(s + 5)).",
+      "steps": [
+        "a = 5"
+      ],
+      "answer": "1 − e^{−5t}"
+    }
+  },
+  "(e^{−at} − e^{−bt})/(b − a) ‖ 1/((s + a)(s + b))": {
+    "title": "Laplace pair: two distinct real poles",
+    "about": "Inverts a product of two first-order factors without a full partial-fraction expansion.",
+    "assumptions": [
+      "a ≠ b; for a = b use t e^{−at}"
+    ],
+    "vars": [
+      [
+        "a, b",
+        "pole locations, −a and −b, with a ≠ b",
+        "1/s"
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Invert 1/((s + 1)(s + 3)).",
+      "steps": [
+        "a = 1, b = 3",
+        "(e^{−t} − e^{−3t})/2"
+      ],
+      "answer": "(e^{−t} − e^{−3t})/2"
+    }
+  },
+  "t sin(ωt) ‖ 2ωs/(s^{2} + ω^{2})^{2}": {
+    "title": "Laplace pair: t times a sine",
+    "about": "A sine whose envelope grows linearly: the response of an undamped oscillator driven at resonance. Comes from −d/ds of the sine pair.",
+    "assumptions": [],
+    "vars": [
+      [
+        "ω",
+        "angular frequency",
+        "rad/s"
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Invert s/(s^{2} + 4)^{2}.",
+      "steps": [
+        "ω = 2: 2ωs = 4s",
+        "so s/(s² + 4)² is (1/4) t sin(2t)"
+      ],
+      "answer": "(t/4) sin(2t)"
+    }
+  },
+  "t cos(ωt) ‖ (s^{2} − ω^{2})/(s^{2} + ω^{2})^{2}": {
+    "title": "Laplace pair: t times a cosine",
+    "about": "Comes from the multiply-by-t rule: −d/ds of s/(s^{2} + ω^{2}). A double pole pair on the jω axis, so it shows up when an undamped system is driven at its own resonance.",
+    "assumptions": [
+      "One-sided: stands for t cos(ωt) u(t)",
+      "Region of convergence Re(s) > 0"
+    ],
+    "vars": [
+      [
+        "ω",
+        "angular frequency",
+        "rad/s"
+      ]
+    ],
+    "related": [
+      [
+        "t sin(ωt) ↔ 2ωs/(s^{2} + ω^{2})^{2}",
+        "the sine version"
+      ],
+      [
+        "t f(t) ↔ −dF/ds",
+        "the rule behind it"
+      ]
+    ],
+    "example": {
+      "problem": "Transform t cos(3t) and evaluate it at s = 1.",
+      "steps": [
+        "ω = 3: (s^{2} − 9)/(s^{2} + 9)^{2}",
+        "At s = 1: −8/100"
+      ],
+      "answer": "(s^{2} − 9)/(s^{2} + 9)^{2}; −0.08 at s = 1"
+    },
+    "try": "(1 - 9)/(1 + 9)^2"
+  },
+  "a f(t) + b g(t) ‖ a F(s) + b G(s)": {
+    "title": "Laplace property: linearity",
+    "about": "The transform of a weighted sum is the weighted sum of the transforms; use it to transform term by term.",
+    "assumptions": [],
+    "vars": [
+      [
+        "a, b",
+        "constants",
+        ""
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Transform 3 + 2e^{−t}.",
+      "steps": [
+        "3/s + 2/(s + 1)"
+      ],
+      "answer": "3/s + 2/(s + 1)"
+    }
+  },
+  "d^{n}f/dt^{n} ‖ s^{n} F(s) − Σ_{k=1}^{n} s^{n−k} f^{(k−1)}(0)": {
+    "title": "Laplace property: nth derivative",
+    "about": "Each derivative multiplies by s and subtracts the initial conditions, which is how an ODE becomes algebra.",
+    "assumptions": [],
+    "vars": [
+      [
+        "n",
+        "order of the derivative",
+        ""
+      ],
+      [
+        "f^{(k)}(0)",
+        "kth derivative at t = 0",
+        ""
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Transform y′′′ with y(0) = 1 and y′(0) = y′′(0) = 0.",
+      "steps": [
+        "s^{3}Y − s^{2} · 1 − s · 0 − 0"
+      ],
+      "answer": "s^{3}Y(s) − s^{2}"
+    }
+  },
+  "z = e^{jω}": {
+    "title": "The unit circle in the z-plane is the DTFT",
+    "about": "On |z| = 1 the z transform becomes the DTFT: X(e^{jω}) = X(z) at z = e^{jω}. So the DTFT exists when the ROC includes the unit circle.",
+    "assumptions": [],
+    "vars": [
+      [
+        "ω",
+        "frequency",
+        "rad/sample"
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Get the DTFT of a^{n}u[n] (|a| < 1) from its z transform.",
+      "steps": [
+        "X(z) = 1/(1 − az^{−1})",
+        "put z = e^{jω}"
+      ],
+      "answer": "1/(1 − ae^{−jω})"
+    }
+  },
+  "z = e^{sT}": {
+    "title": "Mapping the s-plane to the z-plane",
+    "about": "Sampling every T seconds maps a pole at s to one at z = e^{sT}. The left half-plane goes inside the unit circle, so stable stays stable.",
+    "assumptions": [],
+    "vars": [
+      [
+        "s",
+        "complex frequency",
+        "1/s"
+      ],
+      [
+        "T",
+        "sampling period",
+        "s"
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "A pole at s = −10 is sampled at T = 0.01 s. Where is it in z?",
+      "steps": [
+        "z = e^{−10 · 0.01} = e^{−0.1}"
+      ],
+      "answer": "z ≈ 0.905"
+    },
+    "try": "e^(-0.1)"
+  },
+  "δ[n − m] ‖ z^{−m}": {
+    "title": "z-transform pair: delayed unit sample",
+    "about": "A sample at n = m is m delays: z^{−m}. Every FIR filter is a sum of these.",
+    "assumptions": [],
+    "vars": [
+      [
+        "m",
+        "delay in samples",
+        ""
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Transform h[n] = δ[n] + 2δ[n − 1] + δ[n − 2].",
+      "steps": [
+        "1 + 2z^{−1} + z^{−2}"
+      ],
+      "answer": "(1 + z^{−1})^{2}"
+    }
+  },
+  "n u[n] ‖ z^{−1}/(1 − z^{−1})^{2}": {
+    "title": "z-transform pair: unit ramp",
+    "about": "The sampled ramp 0, 1, 2, …; a double pole at z = 1.",
+    "assumptions": [],
+    "vars": [
+      [
+        "n",
+        "sample index",
+        ""
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Write the ramp transform with positive powers of z.",
+      "steps": [
+        "multiply top and bottom by z²"
+      ],
+      "answer": "z/(z − 1)^{2}"
+    }
+  },
+  "r^{n} cos(ω_{o}n) u[n] ‖ (1 − r cos(ω_{o}) z^{−1})/(1 − 2r cos(ω_{o}) z^{−1} + r^{2} z^{−2})": {
+    "title": "z-transform pair: damped cosine",
+    "about": "A cosine decaying by r each sample; its poles are at z = re^{±jω_{o}}. The response of a resonant digital filter.",
+    "assumptions": [],
+    "vars": [
+      [
+        "r",
+        "decay per sample, > 0",
+        ""
+      ],
+      [
+        "ω_{o}",
+        "frequency",
+        "rad/sample"
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Where are the poles for r = 0.9, ω_{o} = π/4?",
+      "steps": [
+        "z = 0.9e^{±jπ/4}"
+      ],
+      "answer": "0.636 ± 0.636j"
+    }
+  },
+  "r^{n} sin(ω_{o}n) u[n] ‖ r sin(ω_{o}) z^{−1}/(1 − 2r cos(ω_{o}) z^{−1} + r^{2} z^{−2})": {
+    "title": "z-transform pair: damped sine",
+    "about": "A sine decaying by r each sample; same poles as the damped cosine.",
+    "assumptions": [],
+    "vars": [
+      [
+        "r",
+        "decay per sample, > 0",
+        ""
+      ],
+      [
+        "ω_{o}",
+        "frequency",
+        "rad/sample"
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Find the denominator for r = 0.5, ω_{o} = π/2.",
+      "steps": [
+        "cos(π/2) = 0",
+        "1 + 0.25z^{−2}"
+      ],
+      "answer": "1 + 0.25z^{−2}"
+    }
+  },
+  "a x[n] + b y[n] ‖ a X(z) + b Y(z)": {
+    "title": "z-transform property: linearity",
+    "about": "The transform of a weighted sum is the weighted sum of the transforms; the ROC is at least the overlap of the two.",
+    "assumptions": [],
+    "vars": [
+      [
+        "a, b",
+        "constants",
+        ""
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Transform 2u[n] − δ[n].",
+      "steps": [
+        "2/(1 − z^{−1}) − 1"
+      ],
+      "answer": "(1 + z^{−1})/(1 − z^{−1})"
+    }
+  },
+  "x[n] − x[n − 1] ‖ (1 − z^{−1}) X(z)": {
+    "title": "z-transform property: first difference",
+    "about": "The discrete derivative multiplies by (1 − z^{−1}), a zero at z = 1 that blocks DC.",
+    "assumptions": [],
+    "vars": [
+      [
+        "X(z)",
+        "transform of x",
+        ""
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Find the first difference of u[n] from transforms.",
+      "steps": [
+        "(1 − z^{−1}) · 1/(1 − z^{−1}) = 1"
+      ],
+      "answer": "δ[n]"
+    }
+  },
+  "Σ_{k=−∞}^{n} x[k] ‖ X(z)/(1 − z^{−1})": {
+    "title": "z-transform property: accumulation",
+    "about": "A running sum divides by (1 − z^{−1}): a pole at z = 1, the discrete integrator.",
+    "assumptions": [],
+    "vars": [
+      [
+        "X(z)",
+        "transform of x",
+        ""
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Find the running sum of δ[n].",
+      "steps": [
+        "1/(1 − z^{−1})"
+      ],
+      "answer": "u[n]"
+    }
+  },
+  "x[0] = lim_{z→∞} X(z)": {
+    "title": "Initial value theorem (z transform)",
+    "about": "For a causal sequence, letting z grow kills every z^{−n} term but the first, leaving x[0].",
+    "assumptions": [
+      "x[n] = 0 for n < 0"
+    ],
+    "vars": [
+      [
+        "X(z)",
+        "transform of a causal x",
+        ""
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "Find x[0] for X(z) = (2 − z^{−1})/(1 − 0.5z^{−1}).",
+      "steps": [
+        "z → ∞: z^{−1} → 0"
+      ],
+      "answer": "x[0] = 2"
+    }
+  },
+  "x[∞] = lim_{z→1} (z − 1) X(z)": {
+    "title": "Final value theorem (z transform)",
+    "about": "Gives where a causal sequence settles, without inverting. Only valid if it settles: every pole of (z − 1)X(z) inside the unit circle.",
+    "assumptions": [
+      "x[n] causal",
+      "poles of (z − 1)X(z) inside |z| = 1"
+    ],
+    "vars": [
+      [
+        "X(z)",
+        "transform of a causal x",
+        ""
+      ]
+    ],
+    "related": [],
+    "example": {
+      "problem": "A system with H(z) = 0.2/(1 − 0.8z^{−1}) gets a unit step. Where does the output settle?",
+      "steps": [
+        "Y(z) = H(z) · z/(z − 1)",
+        "(z − 1)Y(z) at z = 1 is H(1) · 1 = 0.2/0.2"
+      ],
+      "answer": "1"
+    }
+  },
+  "f(t) = (1/2πj) ∫_{σ−j∞}^{σ+j∞} F(s) e^{st} ds": {
+    "title": "Inverse Laplace transform (Bromwich integral)",
+    "about": "Recovers f(t) from F(s) by integrating up a vertical line in the s-plane to the right of every pole. In practice you rarely evaluate it: split F(s) into partial fractions and read each term off the table.",
+    "assumptions": [
+      "σ lies in the region of convergence, to the right of every pole of F(s)",
+      "Gives f(t) for t > 0 (the one-sided transform says nothing about t < 0)"
+    ],
+    "vars": [
+      [
+        "F(s)",
+        "Laplace transform",
+        ""
+      ],
+      [
+        "σ",
+        "real part of the integration line",
+        "s^{−1}"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "F(s) = ∫_{0}^{∞} f(t) e^{−st} dt",
+        "forward transform"
+      ],
+      [
+        "f(t) = Σ residues of F(s) e^{st}",
+        "closing the contour: one term per pole"
+      ]
+    ],
+    "example": {
+      "problem": "Invert F(s) = 1/((s + 1)(s + 2)) and evaluate f(1).",
+      "steps": [
+        "Partial fractions: 1/(s + 1) − 1/(s + 2)",
+        "f(t) = e^{−t} − e^{−2t}",
+        "f(1) = 0.3679 − 0.1353"
+      ],
+      "answer": "f(1) ≈ 0.2325"
+    },
+    "try": "e^-1 - e^-2"
   }
 }

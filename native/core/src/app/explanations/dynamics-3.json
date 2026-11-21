@@ -671,7 +671,7 @@
   },
   "try": "10 N * 3 m/s * cos(60 deg)"
  },
- "^{N}P^{S} = Σ_{i=1}^{ν} F⃗^{Q_{i}} · ^{N}v⃗^{Q_{i}}": {
+ "^{N}P^{S} = Σ_{i=1}^{n} F⃗^{Q_{i}} · ^{N}v⃗^{Q_{i}}": {
   "title": "Power of a set of forces",
   "about": "The power of a set of forces is the sum of each force dotted with the velocity of its own point. It equals the rate of change of kinetic energy for the system.",
   "assumptions": [

@@ -49,6 +49,9 @@ pub struct Identity {
     /// `native_identity_sheet_by_id`, so the web's `identitySheetFor` stays as it was.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub explain: Option<Explanation>,
+    /// Native only: words a sheet's search finds the row by that it doesn't show (`ke kinetic`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tags: Option<String>,
 }
 
 /// A row's explanation: what it says, when it holds, what each letter is, and a worked example. Text may raise
@@ -81,7 +84,7 @@ pub struct Example {
 }
 
 /// The files of explanations, each a map from `explain_key` to its `Explanation`.
-pub const EXPLANATION_FILES: [(&str, &str); 13] = [
+pub const EXPLANATION_FILES: [(&str, &str); 15] = [
     ("identities", include_str!("explanations/identities.json")),
     ("calculus", include_str!("explanations/calculus.json")),
     ("analysis", include_str!("explanations/analysis.json")),
@@ -95,6 +98,8 @@ pub const EXPLANATION_FILES: [(&str, &str); 13] = [
     ("dynamics-1", include_str!("explanations/dynamics-1.json")),
     ("dynamics-2", include_str!("explanations/dynamics-2.json")),
     ("dynamics-3", include_str!("explanations/dynamics-3.json")),
+    ("applied-math", include_str!("explanations/applied-math.json")),
+    ("applied-science", include_str!("explanations/applied-science.json")),
 ];
 
 /// Every explanation, by key; a key in two files takes the later one.

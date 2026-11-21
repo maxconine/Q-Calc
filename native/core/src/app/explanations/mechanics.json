@@ -3741,7 +3741,7 @@
     },
     "try": "1.2 kN/m * (2 m)^4 / (8 * 70 GPa * 8e6 mm^4) to mm"
   },
-  "Cantilever, end moment M ‖ M_{0} ‖ M_{0}L^{2}/(2EI)": {
+  "Cantilever, end moment M₀ ‖ M_{0} ‖ M_{0}L^{2}/(2EI)": {
     "title": "Cantilever with an end couple: moment and deflection",
     "about": "A pure couple M_{0} at the free end bends a cantilever into a circular arc. The moment is M_{0} everywhere and the tip deflects M_{0}L^{2}/(2EI).",
     "assumptions": [
@@ -4433,7 +4433,7 @@
         "laminar pipe friction factor"
       ],
       [
-        "D_{h} = 4A/P",
+        "D_{h} = 4A/P_{w}",
         "hydraulic diameter"
       ]
     ],

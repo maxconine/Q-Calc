@@ -184,6 +184,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // sheetexplain:<file>: the explanation popover's title and the text selected in it (a Related link Tab went to)
         case "sheetexplain": DevSnapshot.sheetExplain(to: arg)
         case "sheetfilter": IdentityWindowController.front()?.setFilter(arg)
+        // sheetbench:<queries file>|<out file>: each query (a line) typed into the front sheet's filter a character at
+        // a time, each keystroke timed to the sheet laid out and drawn (native/mac/scripts/test-sheet-search.sh)
+        case "sheetbench":
+            let files = arg.split(separator: "|", maxSplits: 1).map(String.init)
+            if files.count == 2, let text = try? String(contentsOfFile: files[0], encoding: .utf8),
+               let result = IdentityWindowController.front()?.bench(text.split(separator: "\n").map(String.init).filter { !$0.isEmpty }),
+               let data = try? JSONSerialization.data(withJSONObject: result) {
+                try? data.write(to: URL(fileURLWithPath: files[1]))
+            }
         // ↵ in the front sheet's filter: its first row, as if clicked
         case "sheetpick": IdentityWindowController.front()?.pickFirst()
         case "sheetback": IdentityWindowController.front()?.go(-1)

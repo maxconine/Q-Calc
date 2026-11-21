@@ -403,7 +403,7 @@
   ],
   "related": [
    [
-    "τ = ρ V c/(h A)",
+    "τ = ρ V c_{p}/(h A)",
     "the time constant"
    ],
    [
@@ -426,9 +426,9 @@
   },
   "try": "25 + 275 exp(-60/(7800*470*0.01/(6*50)))"
  },
- "τ = ρ V c/(h A)": {
+ "τ = ρ V c_{p}/(h A)": {
   "title": "Thermal time constant of a lumped body",
-  "about": "The ratio of the heat a body stores per degree (ρVc) to the rate it sheds heat per degree (hA). Small, thin or well-cooled objects have short time constants; this is why a thermocouple bead responds fast.",
+  "about": "The ratio of the heat a body stores per degree (ρVc_{p}) to the rate it sheds heat per degree (hA). Small, thin or well-cooled objects have short time constants; this is why a thermocouple bead responds fast.",
   "assumptions": [
    "Lumped body: Bi < 0.1",
    "Constant properties and h"
@@ -450,7 +450,7 @@
     "m^{3}"
    ],
    [
-    "c",
+    "c_{p}",
     "specific heat",
     "J/(kg·K)"
    ],
@@ -480,7 +480,7 @@
    ]
   ],
   "example": {
-   "problem": "Find the time constant of a 10 mm steel ball (ρ = 7800 kg/m^{3}, c = 470 J/(kg·K)) in air with h = 50 W/(m^{2}·K).",
+   "problem": "Find the time constant of a 10 mm steel ball (ρ = 7800 kg/m^{3}, c_{p} = 470 J/(kg·K)) in air with h = 50 W/(m^{2}·K).",
    "steps": [
     "V/A = D/6 = 0.01/6 m",
     "τ = 7800 × 470 × (0.01/6)/50 = 122 s"
@@ -520,7 +520,7 @@
   ],
   "related": [
    [
-    "τ = ρ V c/(h A)",
+    "τ = ρ V c_{p}/(h A)",
     "time constant when Bi < 0.1"
    ],
    [
@@ -1223,7 +1223,7 @@
     "ideal gas law"
    ],
    [
-    "P_{1}V_{1} = P_{2}V_{2}",
+    "P_{1} V_{1} = P_{2} V_{2}",
     "Boyle, constant T"
    ],
    [
@@ -1240,6 +1240,123 @@
    "answer": "V_{2} ≈ 0.667 L"
   },
   "try": "1 L * 100/200 * 400/300"
+ },
+ "P_{1} V_{1} = P_{2} V_{2}": {
+  "title": "Boyle's law: pressure and volume at constant temperature",
+  "about": "Squeeze a fixed amount of gas at constant temperature and its pressure rises in proportion: P V stays the same. Halve the volume and the pressure doubles.",
+  "assumptions": [
+   "Fixed amount of gas at constant temperature (slow enough to stay isothermal)",
+   "Ideal gas behaviour; fails at high pressure or near condensation",
+   "P and V units must match on both sides"
+  ],
+  "vars": [
+   [
+    "P_{1}, P_{2}",
+    "pressure before and after",
+    "Pa"
+   ],
+   [
+    "V_{1}, V_{2}",
+    "volume before and after",
+    "m^{3}"
+   ]
+  ],
+  "related": [
+   [
+    "P_{1} V_{1}/T_{1} = P_{2} V_{2}/T_{2}",
+    "combined gas law"
+   ],
+   [
+    "P V = n R T",
+    "ideal gas law"
+   ]
+  ],
+  "example": {
+   "problem": "2.0 L of air at 100 kPa is slowly compressed at constant temperature to 250 kPa. Find its new volume.",
+   "steps": [
+    "V_{2} = P_{1} V_{1}/P_{2} = 100 × 2.0/250"
+   ],
+   "answer": "V_{2} = 0.8 L"
+  },
+  "try": "100 kPa * 2 L / 250 kPa to L"
+ },
+ "V_{1}/T_{1} = V_{2}/T_{2}": {
+  "title": "Charles's law: volume and temperature at constant pressure",
+  "about": "At constant pressure a fixed amount of gas expands in proportion to its absolute temperature: V/T stays the same. Temperatures must be in kelvin.",
+  "assumptions": [
+   "Fixed amount of gas at constant pressure",
+   "Ideal gas behaviour",
+   "Absolute temperature (K), never °C"
+  ],
+  "vars": [
+   [
+    "V_{1}, V_{2}",
+    "volume before and after",
+    "m^{3}"
+   ],
+   [
+    "T_{1}, T_{2}",
+    "absolute temperature before and after",
+    "K"
+   ]
+  ],
+  "related": [
+   [
+    "P_{1} V_{1}/T_{1} = P_{2} V_{2}/T_{2}",
+    "combined gas law"
+   ],
+   [
+    "P_{1}/T_{1} = P_{2}/T_{2}",
+    "Gay-Lussac, constant V"
+   ]
+  ],
+  "example": {
+   "problem": "A balloon holds 3.0 L at 300 K. It is warmed to 400 K at constant pressure. Find its new volume.",
+   "steps": [
+    "V_{2} = V_{1} T_{2}/T_{1} = 3.0 × 400/300"
+   ],
+   "answer": "V_{2} = 4.0 L"
+  },
+  "try": "3 L * 400 K / 300 K"
+ },
+ "P_{1}/T_{1} = P_{2}/T_{2}": {
+  "title": "Gay-Lussac's law: pressure and temperature at constant volume",
+  "about": "In a rigid container a fixed amount of gas pushes harder in proportion to its absolute temperature: P/T stays the same. It is why a tyre's pressure rises on a hot day.",
+  "assumptions": [
+   "Fixed amount of gas in a constant volume",
+   "Ideal gas behaviour",
+   "Absolute temperature (K) and absolute pressure"
+  ],
+  "vars": [
+   [
+    "P_{1}, P_{2}",
+    "absolute pressure before and after",
+    "Pa"
+   ],
+   [
+    "T_{1}, T_{2}",
+    "absolute temperature before and after",
+    "K"
+   ]
+  ],
+  "related": [
+   [
+    "P_{1} V_{1}/T_{1} = P_{2} V_{2}/T_{2}",
+    "combined gas law"
+   ],
+   [
+    "V_{1}/T_{1} = V_{2}/T_{2}",
+    "Charles, constant P"
+   ]
+  ],
+  "example": {
+   "problem": "A tyre is at 220 kPa (absolute) at 288 K. Driving warms it to 318 K. Find the new pressure, the volume unchanged.",
+   "steps": [
+    "P_{2} = P_{1} T_{2}/T_{1} = 220 × 318/288"
+   ],
+   "answer": "P_{2} ≈ 243 kPa"
+  },
+  "try": "220 kPa * 318 K / 288 K"
  },
  "P_{tot} = Σ P_{i}": {
   "title": "Dalton's law of partial pressures",
@@ -3688,7 +3805,7 @@
   },
   "try": "4.0e-5/2.0e-8"
  },
- "K_{app} = K_{m} (1 + [I]/K_{i})": {
+ "K_{m,app} = K_{m} (1 + [I]/K_{i})": {
   "title": "Apparent K_{m} with a competitive inhibitor",
   "about": "A competitive inhibitor competes for the active site, so more substrate is needed for half-maximal rate: K_{m} appears larger by the factor (1 + [I]/K_{i}). V_{max} is unchanged, since enough substrate outcompetes it.",
   "assumptions": [
@@ -3697,7 +3814,7 @@
   ],
   "vars": [
    [
-    "K_{app}",
+    "K_{m,app}",
     "apparent Michaelis constant",
     "mol/L"
    ],
@@ -3719,7 +3836,7 @@
   ],
   "related": [
    [
-    "v = V_{max} [S]/(K_{app} + [S])",
+    "v = V_{max} [S]/(K_{m,app} + [S])",
     "rate with the inhibitor"
    ]
   ],
@@ -3727,15 +3844,15 @@
    "problem": "An enzyme with K_{m} = 2.0 mM is exposed to 10 µM of a competitive inhibitor with K_{i} = 5 µM. Find the apparent K_{m}.",
    "steps": [
     "1 + [I]/K_{i} = 1 + 10/5 = 3",
-    "K_{app} = 2.0 × 3 = 6.0 mM"
+    "K_{m,app} = 2.0 × 3 = 6.0 mM"
    ],
-   "answer": "K_{app} = 6.0 mM"
+   "answer": "K_{m,app} = 6.0 mM"
   },
   "try": "2.0 * (1 + 10/5)"
  },
- "θ = [L]^{n}/(K_{d} + [L]^{n})": {
+ "θ = [L]^{n}/(K_{A}^{n} + [L]^{n})": {
   "title": "Hill equation: cooperative binding",
-  "about": "The fraction of binding sites occupied by a ligand. The Hill coefficient n measures cooperativity: n > 1 gives the S-shaped curve of hemoglobin, n = 1 reduces to simple binding. Here K_{d} = (L_{50})^{n}, the ligand level at half saturation raised to n.",
+  "about": "The fraction of binding sites occupied by a ligand. The Hill coefficient n measures cooperativity: n > 1 gives the S-shaped curve of hemoglobin, n = 1 reduces to simple binding. K_{A} is the ligand level at half occupancy; older texts write K_{d} = K_{A}^{n} in its place.",
   "assumptions": [
    "n is an empirical measure of cooperativity, not the number of sites",
    "Equilibrium binding"
@@ -3752,9 +3869,9 @@
     "mol/L"
    ],
    [
-    "K_{d}",
-    "apparent dissociation constant, (L_{50})^{n}",
-    "(mol/L)^{n}"
+    "K_{A}",
+    "ligand level at half occupancy (P_{50} for oxygen)",
+    "mol/L"
    ],
    [
     "n",
@@ -3764,18 +3881,18 @@
   ],
   "related": [
    [
-    "θ = [L]^{n}/(L_{50}^{n} + [L]^{n})",
-    "with the half-saturation level"
+    "θ = [L]^{n}/(K_{d} + [L]^{n})",
+    "the same, with K_{d} = K_{A}^{n}"
    ],
    [
-    "log(θ/(1 − θ)) = n log[L] − log K_{d}",
+    "log(θ/(1 − θ)) = n log[L] − n log K_{A}",
     "Hill plot"
    ]
   ],
   "example": {
    "problem": "Hemoglobin has n = 2.8 and P_{50} = 26 mmHg. Find its saturation in the lungs (100 mmHg) and in tissue (40 mmHg).",
    "steps": [
-    "K_{d} = 26^{2.8} = 9161",
+    "K_{A} = P_{50} = 26 mmHg, so K_{A}^{n} = 26^{2.8} = 9161",
     "Lungs: θ = 100^{2.8}/(26^{2.8} + 100^{2.8}) = 0.978",
     "Tissue: θ = 40^{2.8}/(26^{2.8} + 40^{2.8}) = 0.770, so about 21 % of the O_{2} is unloaded"
    ],
