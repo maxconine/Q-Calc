@@ -271,6 +271,10 @@ fn the_preview_draws_ans_as_a_chip_holding_its_number() {
         ("ans^2", "3 km", "anschip(3 \"km\") ^ 2"),
         ("ans", "3,000 m", "anschip(3000 \"m\")"),
         ("√ans", "4", "sqrt(anschip(4))"),
+        // a unit answer's unit stays whole in the chip, as the answer side draws it: `ft²` read `"ft" ²`, set apart,
+        // and `m/s²` a fraction with its ² left over
+        ("sqrt(ans)(12)", "43.0556 ft²", "sqrt(anschip(43.0556 \"ft²\")) (12)"),
+        ("ans*2", "9.8 m/s²", "anschip(9.8 \"m/s²\") dot 2"),
     ] {
         let chipped = ans_chipped(line, plain);
         assert!(typst_preview_useful(&chipped), "{line}");
@@ -960,4 +964,17 @@ fn a_minus_before_a_bracket_of_units() {
     assert_eq!(show("-(5 kg) / -(2 s)"), "2.5 kg/s");
     assert_eq!(show("3 m - (1 m)"), "2 m");
     assert_eq!(show("-(2*3)"), "-6");
+}
+
+#[test]
+fn a_call_on_a_unit_quantity_times_a_bracket() {
+    let o = EvaluateOptions::default();
+    let after = |first: &str, line: &str| {
+        let lines = [first.to_string(), line.to_string()];
+        qcalc_core::evaluate_sheet(&lines, &o).pop().unwrap().display
+    };
+    assert_eq!(show("sqrt(4 m^2)(12)"), show("sqrt(4 m^2)*12"));
+    assert_eq!(show("abs(-2 m)(3)"), show("abs(-2 m)*3"));
+    assert_eq!(after("4 m^2", "sqrt(ans)(12)"), after("4 m^2", "sqrt(ans)*12"));
+    assert_eq!(after("4 m^2", "√ans(12)"), after("4 m^2", "sqrt(ans)*12"));
 }

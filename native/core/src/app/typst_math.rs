@@ -230,15 +230,19 @@ fn opt<'t>(c: &jsre::Caps<'t>, i: usize) -> Option<&'t str> {
 
 // an answer's unit is upright text like the units typed (`69.8 L`, not an italic variable L)
 fn answer_math(answer: &str) -> String {
+    quantity_math(answer).unwrap_or_else(|| to_typst_math(answer))
+}
+
+// a number and its unit (`43.0556 ft²`, `9.8 m/s²`) with the unit as upright text, as the answer side draws it
+fn quantity_math(answer: &str) -> Option<String> {
     let r = lazy!(r"^([+\-−]?[\d.,]+(?:e[+\-−]?\d+)?(?:\s*±\s*[\d.,]+)?)\s+([A-Za-z°µμΩÅ][^\s]*)$");
-    match caps(r, jsstr::trim(answer)) {
-        Some(m) => format!(
+    caps(r, jsstr::trim(answer)).map(|m| {
+        format!(
             "{} {}",
             to_typst_math(jsre::group(&m, 1)),
             serde_json::to_string(jsre::group(&m, 2)).unwrap_or_default()
-        ),
-        None => to_typst_math(answer),
-    }
+        )
+    })
 }
 
 /// The preview document. Glyphs are black, and the renderer swaps black for currentColor, so the page's own text
@@ -1189,7 +1193,10 @@ fn call_fn(word: &str, inner: &str) -> String {
         // native only: `ans` as the number it stands for, in its chip (chain::ans_chipped)
         "anschip" if unary => {
             // a negative answer's minus sits against it (`-3`): `- 3` is spaced as a subtraction in the chip
-            let v = slot(0);
+            // a unit answer's unit is drawn as the answer side draws it (`ft²` whole, not `ft ²` or a fraction);
+            // the preview has marked its unit names by now (mark_units)
+            let plain: String = inner.chars().filter(|&c| c != UNIT_OPEN && c != UNIT_CLOSE).collect();
+            let v = quantity_math(&plain).unwrap_or_else(|| slot(0));
             return format!(
                 "anschip({})",
                 v.strip_prefix("- ").map_or(v.clone(), |r| format!("-{r}"))
