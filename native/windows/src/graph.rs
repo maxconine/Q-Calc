@@ -83,16 +83,35 @@ pub fn command(text: &str) -> Option<String> {
     (!body.is_empty()).then_some(body)
 }
 
-/// `graph a; b; c` (splitGraphs): the first equation and the rest, split at the `;`s outside brackets; empty ones
-/// after the first are dropped.
+/// `graph a; b; c` (splitGraphs): the first equation and the rest, split at the `;`s outside brackets, and at a
+/// spaced `and` (any case) outside brackets after something, so `graph sin(x) and cos(x)` draws both while
+/// `{0 < x and x < 3}` and `sand(x)` stay whole; empty ones after the first are dropped.
 pub fn split_graphs(body: &str) -> Vec<String> {
     let (mut parts, mut depth, mut cur) = (Vec::new(), 0usize, String::new());
-    for ch in body.chars() {
+    let chars: Vec<char> = body.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        let ch = chars[i];
         match ch {
             '(' | '[' | '{' => depth += 1,
             ')' | ']' | '}' => depth = depth.saturating_sub(1),
             _ => {}
         }
+        if depth == 0
+            && ch.is_whitespace()
+            && i + 4 < chars.len()
+            && chars[i + 4].is_whitespace()
+            && chars[i + 1..=i + 3]
+                .iter()
+                .collect::<String>()
+                .eq_ignore_ascii_case("and")
+            && !cur.trim().is_empty()
+        {
+            parts.push(std::mem::take(&mut cur));
+            i += 5;
+            continue;
+        }
+        i += 1;
         if ch == ';' && depth == 0 {
             parts.push(std::mem::take(&mut cur));
         } else {
@@ -567,6 +586,11 @@ impl Plot {
     pub fn ok(&self) -> bool {
         self.error.is_none()
     }
+
+    /// An implicit surface (`x^2 + y^2 + z^2 = 1`): a mesh in 3D, with no level curves to switch to.
+    pub fn mesh(&self) -> bool {
+        self.surface.as_ref().is_some_and(|s| !s.mesh.is_empty())
+    }
 }
 
 /// What the engine made for one window.
@@ -655,6 +679,9 @@ pub struct GraphState {
     /// the y a plot of x and y centres on, from `graph_home`
     pub y_center: Option<f64>,
     pub home_y_center: Option<f64>,
+    /// the fitted y window a curve had at home when a zoom from there held it, so zooming back to home (out then
+    /// in) is home again
+    pub held_home_y: Option<(f64, f64)>,
     /// the 2D plot's y window when set (the settings, Zoom Square); None fits y to the curves
     pub fixed_y: Option<(f64, f64)>,
     /// the 3D cube's z when set
@@ -686,6 +713,8 @@ pub struct GraphState {
     /// the pointer over the plot, viewBox units
     pub pointer: Option<(f32, f32)>,
     pub drag: Option<Drag>,
+    /// the hover label showing (HoverTip): what's under the pointer (panel DIPs) and its text
+    pub tip: Option<(crate::render::Rect, &'static str)>,
     pub reading: Option<Reading>,
     /// the calculator's angle mode is radians (the settings' angles follow it until set)
     pub radians: bool,
@@ -706,6 +735,7 @@ impl GraphState {
             home: None,
             y_center: None,
             home_y_center: None,
+            held_home_y: None,
             fixed_y: None,
             fixed_z: None,
             x_label: String::new(),
@@ -728,6 +758,7 @@ impl GraphState {
             hover: None,
             pointer: None,
             drag: None,
+            tip: None,
             reading: None,
             radians: false,
             generation: 0,
@@ -774,6 +805,16 @@ impl GraphState {
 
     pub fn kind(&self) -> Kind {
         self.main().map_or(Kind::Curve, |p| p.kind)
+    }
+
+    /// The bar's equation is an implicit surface (implicitSurface).
+    pub fn implicit_surface(&self) -> bool {
+        self.main().is_some_and(Plot::mesh)
+    }
+
+    /// An implicit surface alone has no critical points to list ("None in this domain" read as a fault).
+    pub fn lists_points(&self) -> bool {
+        !(self.implicit_surface() && self.layers.iter().all(Layer::blank))
     }
 
     pub fn shows_3d(&self) -> bool {
@@ -1416,40 +1457,87 @@ pub fn pan(m: &mut BarModel, engine: &EngineThread, dx: f64, dy: f64, move3d: bo
 }
 
 /// zoomAt: the x window about `at` (a fraction across), kept within 1e-6 … 1e6 wide; a y or z window that's set
-/// (or a plot of x and y's) scales with it.
-pub fn zoom(m: &mut BarModel, engine: &EngineThread, factor: f64, at: f64) {
+/// (or a plot of x and y's) scales with it, a 2D y window about `at_y` (a fraction up), so the point under the
+/// pointer stays put both ways, as Desmos zooms. Zoomed back to where it opened, it is home again.
+pub fn zoom(m: &mut BarModel, engine: &EngineThread, factor: f64, at: f64, at_y: f64) {
     if !factor.is_finite() || factor <= 0.0 {
         return;
     }
     let Some(g) = &mut m.graph else { return };
+    if !zoom_window(g, factor, at, at_y) {
+        return;
+    }
+    g.reading = None;
+    g.bump();
+    m.touch();
+    sample(m, engine, false);
+}
+
+/// zoom's window maths, pure (tested); false when the x window would leave 1e-6 … 1e6 and nothing moved.
+pub fn zoom_window(g: &mut GraphState, factor: f64, at: f64, at_y: f64) -> bool {
+    let at_y = if g.shows_3d() {
+        0.5
+    } else {
+        at_y.clamp(0.0, 1.0)
+    };
+    if g.at_home() {
+        g.held_home_y = (g.kind() == Kind::Curve && !g.shows_3d() && g.y_max > g.y_min)
+            .then_some((g.y_min, g.y_max));
+    }
     let (lo, hi) = scaled(g.x_min, g.x_max, factor, at.clamp(0.0, 1.0), g.log_x());
     if hi - lo < MIN_SPAN
         || (hi - lo > MAX_SPAN && !g.log_x())
         || !lo.is_finite()
         || !hi.is_finite()
     {
-        return;
+        return false;
     }
     (g.x_min, g.x_max) = (lo, hi);
     if !g.shows_3d() && g.kind() == Kind::Curve {
         g.hold_y();
     }
     if let Some((a, b)) = g.fixed_y {
-        let y = scaled(a, b, factor, 0.5, g.log_y());
+        let y = scaled(a, b, factor, at_y, g.log_y());
         g.fixed_y = Some(y);
         if !g.shows_3d() {
             (g.y_min, g.y_max) = y;
         }
-    } else if g.kind() != Kind::Curve && !g.shows_3d() {
-        (g.y_min, g.y_max) = scaled(g.y_min, g.y_max, factor, 0.5, false);
+    } else if g.kind() != Kind::Curve && !g.shows_3d() && g.y_max > g.y_min {
+        // a plot of x and y (one scale for both) centres on y_center: it moves so the pointer's y stays put
+        let pivot = g.y_min + (g.y_max - g.y_min) * at_y;
+        let c = g.y_center.unwrap_or((g.y_min + g.y_max) / 2.0);
+        g.y_center = Some(pivot + (c - pivot) * factor);
+        (g.y_min, g.y_max) = scaled(g.y_min, g.y_max, factor, at_y, false);
     }
     if let Some((a, b)) = g.fixed_z {
         g.fixed_z = Some(scaled(a, b, factor, 0.5, false));
     }
-    g.reading = None;
-    g.bump();
-    m.touch();
-    sample(m, engine, false);
+    // zoomed back to where it opened (out then in with the head's buttons, a pinch out and back), it is home
+    // again, so "reset" greys: the window drifts a few ulps from home
+    if let Some((home_lo, home_hi)) = g.home
+        && g.fixed_z.is_none()
+    {
+        let w = home_hi - home_lo;
+        let near = |a: f64, b: f64| (a - b).abs() <= w.abs() * 1e-9;
+        let x_home = near(g.x_min, home_lo) && near(g.x_max, home_hi);
+        let y_home = g.fixed_y.is_none_or(|(a, b)| {
+            g.held_home_y
+                .is_some_and(|(ha, hb)| near(a, ha) && near(b, hb))
+        });
+        // no y centre is the engine's 0, so a plot of x and y opened without one is home again too
+        let c_home = near(g.y_center.unwrap_or(0.0), g.home_y_center.unwrap_or(0.0));
+        if x_home && y_home && c_home {
+            (g.x_min, g.x_max) = (home_lo, home_hi);
+            g.y_center = g.home_y_center;
+            if let Some(held) = g.held_home_y
+                && g.fixed_y.is_some()
+            {
+                (g.y_min, g.y_max) = held;
+            }
+            g.fixed_y = None;
+        }
+    }
+    true
 }
 
 /// Reset: the home window, its y centre, no set y or z, the home turn.
@@ -1690,7 +1778,7 @@ pub fn key_down(m: &mut BarModel, vk: u32, mods: Mods, engine: &EngineThread) ->
             _ => None,
         };
         if let Some(f) = factor {
-            zoom(m, engine, f, 0.5);
+            zoom(m, engine, f, 0.5, 0.5);
             return Some(Outcome::Handled);
         }
     }
@@ -1803,7 +1891,7 @@ pub fn debug(m: &BarModel) -> serde_json::Value {
             "label": p.label, "error": p.error, "points": p.points.len(), "roots": p.roots,
             "kind": format!("{:?}", p.kind), "contours": p.contours.len(),
             "contourSegments": p.contours.iter().map(|c| c.segments.len() / 4).sum::<usize>(),
-            "surface": p.surface.as_ref().map(|s| serde_json::json!({ "nx": s.nx, "ny": s.ny, "z": [s.z_lo, s.z_hi] })),
+            "surface": p.surface.as_ref().map(|s| serde_json::json!({ "nx": s.nx, "ny": s.ny, "z": [s.z_lo, s.z_hi], "triangles": s.mesh.len() / 9 })),
         })
     };
     let critical: Vec<_> = g
@@ -1826,6 +1914,7 @@ pub fn debug(m: &BarModel) -> serde_json::Value {
             "plot": g.sample.as_ref().and_then(|s| s.layer(l.id)).map(plot),
         })).collect::<Vec<_>>(),
         "main": main.map(plot), "atHome": g.at_home(), "settingsOpen": g.settings_open,
+        "tip": g.tip.map(|t| t.1), "listsPoints": g.lists_points(),
         "focus": g.focus.map(|f| format!("{f:?}")), "edit": g.edit.text(),
         "labels": [g.x_label, g.y_label], "steps": [g.x_step, g.y_step], "log": [g.x_log, g.y_log],
         "prefs": serde_json::to_value(gs::prefs()).unwrap_or_default(),
@@ -1865,6 +1954,17 @@ mod tests {
         assert_eq!(split_graphs("; y"), ["", "y"]);
         // a stray closing bracket doesn't go below the top
         assert_eq!(split_graphs("x); y"), ["x)", "y"]);
+        // a spaced `and` outside brackets splits as `;` does, in any case
+        assert_eq!(split_graphs("sin(x) and cos(x)"), ["sin(x)", "cos(x)"]);
+        assert_eq!(split_graphs("x AND y And x+1"), ["x", "y", "x+1"]);
+        assert_eq!(
+            split_graphs("x^2 {0 < x and x < 3}"),
+            ["x^2 {0 < x and x < 3}"]
+        );
+        assert_eq!(split_graphs("sand(x)"), ["sand(x)"]);
+        assert_eq!(split_graphs("x band y"), ["x band y"]);
+        // not before anything
+        assert_eq!(split_graphs(" and x"), ["and x"]);
     }
 
     #[test]
@@ -2226,5 +2326,54 @@ mod tests {
         assert!(g.at_home());
         g.fixed_z = Some((0.0, 1.0));
         assert!(!g.at_home());
+    }
+
+    #[test]
+    fn a_zoom_keeps_the_point_under_the_pointer_both_ways_and_back_is_home() {
+        // a curve: x about `at`, its fitted y held and scaled about `at_y`
+        let mut g = state_with(plot(Kind::Curve, vec![], vec![]), vec![]);
+        g.home = Some((-10.0, 10.0));
+        (g.y_min, g.y_max) = (-4.0, 12.0);
+        let (px, py) = (-10.0 + 20.0 * 0.2, -4.0 + 16.0 * 0.9);
+        assert!(zoom_window(&mut g, 0.5, 0.2, 0.9));
+        let fx = (px - g.x_min) / (g.x_max - g.x_min);
+        let fy = (py - g.y_min) / (g.y_max - g.y_min);
+        assert!((fx - 0.2).abs() < 1e-12 && (fy - 0.9).abs() < 1e-12);
+        assert!(!g.at_home());
+        // out and back in with the head's buttons (about the middle) is home again: reset greys
+        let mut g = state_with(plot(Kind::Curve, vec![], vec![]), vec![]);
+        g.home = Some((-10.0, 10.0));
+        (g.y_min, g.y_max) = (-4.0, 12.0);
+        for f in [1.25, 1.25, 0.8, 0.8] {
+            zoom_window(&mut g, f, 0.5, 0.5);
+        }
+        assert!(g.at_home());
+        assert_eq!(
+            (g.x_min, g.x_max, g.y_min, g.y_max),
+            (-10.0, 10.0, -4.0, 12.0)
+        );
+        // a plot of x and y moves its y centre so the pointer's y stays put
+        let mut g = state_with(plot(Kind::Implicit, vec![], vec![]), vec![]);
+        g.home = Some((-10.0, 10.0));
+        (g.y_center, g.home_y_center) = (Some(0.0), Some(0.0));
+        (g.y_min, g.y_max) = (-5.0, 5.0);
+        zoom_window(&mut g, 0.5, 0.5, 1.0);
+        assert_eq!((g.y_min, g.y_max, g.y_center), (0.0, 5.0, Some(2.5)));
+        zoom_window(&mut g, 2.0, 0.5, 1.0);
+        assert!(g.at_home());
+        // opened with no y centre (the engine's 0): back is home too
+        (g.y_center, g.home_y_center) = (None, None);
+        zoom_window(&mut g, 0.5, 0.15, 0.85);
+        assert!(g.y_center.is_some() && !g.at_home());
+        zoom_window(&mut g, 2.0, 0.15, 0.85);
+        assert!(g.at_home() && g.y_center.is_none());
+        // in 3D y and z scale about the middle
+        let mut g = state_with(plot(Kind::Surface, vec![], vec![]), vec![]);
+        g.view3d = Some(true);
+        g.fixed_z = Some((0.0, 4.0));
+        zoom_window(&mut g, 0.5, 0.5, 0.0);
+        assert_eq!(g.fixed_z, Some((1.0, 3.0)));
+        // past 1e6 wide nothing moves
+        assert!(!zoom_window(&mut g, 1e6, 0.5, 0.5));
     }
 }
