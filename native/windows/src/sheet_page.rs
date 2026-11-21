@@ -738,6 +738,7 @@ mod tests {
             parts: None,
             spots: None,
             explain: None,
+            tags: None,
         }
     }
 
