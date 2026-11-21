@@ -10,6 +10,7 @@ mod autostart;
 mod card_rules;
 mod commands;
 mod edge;
+mod exact_text;
 mod exponent;
 mod hotkey;
 mod keys;

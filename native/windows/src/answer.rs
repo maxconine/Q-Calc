@@ -81,17 +81,38 @@ pub struct AnswerState {
     /// a closed form the engine's search found after the answer, shown in place of `live.exact`
     pub upgraded_exact: Option<String>,
     closed: Option<Closed>,
+    /// the search job (`closed_form_job`) `upgraded_exact` or the search under way belongs to: an answer again for
+    /// the same text (a mode toggled, a d/dt chip) keeps them only for the same job (BarModel.swift `upgradeJob`)
+    upgrade_job: Option<String>,
     /// the "✓ copied" flash is up
     pub copied: bool,
 }
 
 impl AnswerState {
+    /// The closed form found, or being searched for, goes (`dropUpgrade`): the line changed, or was answered
+    /// outside the live lane.
+    pub fn drop_upgrade(&mut self) {
+        self.upgraded_exact = None;
+        self.closed = None;
+        self.upgrade_job = None;
+    }
+
+    /// A live answer with search job `job` landed for the line as it is: true when a new search starts (the old
+    /// one and its form dropped), false when the job is the one already searched or under way, kept as it is.
+    fn new_upgrade(&mut self, job: Option<&String>) -> bool {
+        if job.is_some() && job == self.upgrade_job.as_ref() {
+            return false;
+        }
+        self.drop_upgrade();
+        self.upgrade_job = job.cloned();
+        job.is_some()
+    }
+
     /// The line changed: what belonged to the old text goes (forms, the closed form, the flash).
     pub fn text_changed(&mut self, text: &str) {
         self.forms.clear();
         self.form_index = 0;
-        self.upgraded_exact = None;
-        self.closed = None;
+        self.drop_upgrade();
         if self.copied {
             self.copied = false;
             timer::stop(timer::COPIED);
@@ -151,6 +172,10 @@ fn pretty(m: &BarModel, s: &str) -> String {
     if let Some(p) = crate::matrices::pretty(m, s) {
         return p;
     }
+    // native only: an exact form with `pi` as maths (`π²/6`, QA item 105)
+    if let Some(t) = crate::exact_text::exact_answer(s) {
+        return t;
+    }
     match &m.live {
         Some(a) if s == a.display && !a.pretty.is_empty() => {
             roots_beside_words(radicals_if_math(&a.pretty))
@@ -166,11 +191,17 @@ pub fn pretty_text(s: &str) -> String {
     if s.starts_with('[') || s.starts_with('λ') || s.starts_with("span{") {
         return crate::matrix_text::pretty(&radicals(s));
     }
+    // native only: a typed target unit's powers raised (`1e+18 m2` → `1e+18 m²`, QA item 104), display only
+    let s = &*crate::exact_text::unit_powers(s);
     // a solve's `±2sqrt(2)`: the sign kept the rest from reading as maths, so the root stayed plain text
     if let Some(sign) = s.chars().next().filter(|c| matches!(c, '±' | '∓'))
         && s.len() > sign.len_utf8()
     {
         return format!("{sign}{}", pretty_text(&s[sign.len_utf8()..]));
+    }
+    // native only: an exact form with `pi` as maths (`pi^2/6` → `π²/6`, QA item 105)
+    if let Some(t) = crate::exact_text::exact_answer(s) {
+        return t;
     }
     roots_beside_words(radicals_if_math(&pretty_answer(s)))
 }
@@ -835,7 +866,7 @@ fn ink(c: &Canvas, ink: Ink, copied: bool) -> Color {
         Ink::Answer if copied => t.answer_hover,
         Ink::Answer => t.answer,
         Ink::Muted => t.muted,
-        Ink::Steady => with_alpha(t.muted, 0.5),
+        Ink::Steady => crate::contrast::faded(t.muted, 0.5),
     }
 }
 
@@ -912,8 +943,13 @@ pub fn landed(
     if !is_blank(&answer) {
         m.answer.last_live_text = typed.clone();
     }
+    // a closed form found under the old mode never stays beside the new decimal, and the same search isn't run
+    // twice (the new job's future is dropped unpolled)
+    let fresh = m.answer.new_upgrade(answer.closed_form_job.as_ref());
     m.set_live(&typed, answer, chained);
-    m.answer.closed = closed.map(|job| Closed { text: typed, job });
+    if fresh {
+        m.answer.closed = closed.map(|job| Closed { text: typed, job });
+    }
     poll(app);
     crate::typst_row::refresh(&mut app.model, &app.engine);
     crate::matrices::refresh_steps(&mut app.model, &app.engine);

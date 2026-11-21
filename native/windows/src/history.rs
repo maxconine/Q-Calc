@@ -203,6 +203,10 @@ pub fn text_changed(m: &mut BarModel) {
         m.field.set_text(&next);
     }
     m.tape.help = qcalc_core::app::onboarding::is_help_command(&next);
+    // a deleted row is let go once the line changes, so Ctrl+Z then undoes the typing (QuickCalc's tapeUndoRef)
+    if next != m.tape.last_text {
+        m.tape.deleted = None;
+    }
     m.tape.last_text = next;
 }
 
@@ -1923,10 +1927,13 @@ mod tests {
         m.key_down(0x08, crate::keys::Mods::default(), &engine, || None);
         assert_eq!(m.field.text(), "1");
         assert_eq!(m.rows.rows.len(), 2);
-        // Ctrl+Z (here, straight to the tape's undo) brings the row back without picking it
-        m.field.reset("");
+        // the typing let the deleted row go, so Ctrl+Z is the line's (the Mac's recordEdit, QuickCalc's tapeUndoRef)
+        assert!(!undo_delete(&mut m, &engine));
+        assert_eq!(m.rows.rows.len(), 2);
+        // straight after a menu Delete, Ctrl+Z brings the row back without picking it
+        delete_row(&mut m, &engine, 0);
         assert!(undo_delete(&mut m, &engine));
-        assert_eq!((m.rows.rows.len(), m.selected), (3, None));
+        assert_eq!((m.rows.rows.len(), m.selected), (2, None));
         engine.shutdown();
     }
 

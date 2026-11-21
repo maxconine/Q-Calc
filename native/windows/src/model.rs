@@ -221,9 +221,11 @@ impl BarModel {
         crate::systems::follow(self, engine);
         crate::graph::follow(self, engine);
         if crate::matrices::follow(self, engine) {
+            self.answer.drop_upgrade();
             return;
         }
         if crate::commands::live(self, engine) {
+            self.answer.drop_upgrade();
             return;
         }
         let typed = self.field.text().to_string();
