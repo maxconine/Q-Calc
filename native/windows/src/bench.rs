@@ -456,8 +456,8 @@ pub fn force_mods(names: Option<&str>) {
         shift: has("shift"),
         win: has("win"),
     };
-    // asked for twice in one key-down (commands.rs, then the model)
-    FORCED.with(|f| f.set(Some((mods, 2))));
+    // asked for three times in one key-down (sheets.rs, commands.rs, then the model)
+    FORCED.with(|f| f.set(Some((mods, 3))));
 }
 
 /// The forced modifiers for the key-down being handled, if the pipe pressed it.

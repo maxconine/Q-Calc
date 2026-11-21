@@ -136,6 +136,14 @@ pub fn spot_for(line: &str, caret16: usize) -> GridSpot {
         })
 }
 
+/// The steps card's one scale for every matrix (StepRow.scale): the tallest (`tallest` pt) fits `most` pt and the
+/// widest (`widest` pt) its `room`, never past full size.
+pub fn steps_scale(tallest: f32, widest: f32, most: f32, room: f32) -> f32 {
+    1f32.min(most / tallest.max(1.0))
+        .min(room / widest.max(1.0))
+        .max(0.01)
+}
+
 /// Where an arrow key goes from a cell.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Step {
@@ -319,6 +327,27 @@ pub const GRID_LINES_KEPT: usize = 200;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ctrl_g_on_an_index_is_no_grid_of_it() {
+        // `A[1, 2]` indexes A: Ctrl+G opens a new 2×2 at the caret, not the index as a 1×2 grid
+        let s = spot_for("A[1, 2]", 4);
+        assert_eq!((s.start, s.end), (4, 4));
+        assert_eq!(s.cells, vec![vec![String::new(); 2]; 2]);
+        // a matrix is still one
+        let s = spot_for("[1 2; 3 4]", 2);
+        assert_eq!(s.cells.len(), 2);
+        assert_eq!(s.cells[0], vec!["1".to_string(), "2".to_string()]);
+    }
+
+    #[test]
+    fn the_steps_share_one_scale() {
+        // the tallest fits 96 pt; a shorter step is drawn at the same scale, not blown up to its own
+        assert_eq!(steps_scale(192.0, 100.0, 96.0, 400.0), 0.5);
+        assert_eq!(steps_scale(60.0, 100.0, 96.0, 400.0), 1.0);
+        // too wide for the card: the width decides
+        assert_eq!(steps_scale(60.0, 800.0, 96.0, 400.0), 0.5);
+    }
 
     #[test]
     fn the_matrix_word_and_a_stored_mat() {

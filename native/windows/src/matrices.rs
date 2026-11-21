@@ -53,7 +53,8 @@ const CHIP_OPEN_H: f32 = 17.0;
 const CHIP_W: f32 = 150.0;
 const OP_W: f32 = 168.0;
 const STEP_GAP: f32 = 6.0;
-const STEP_MAX_H: f32 = 72.0;
+/// the tallest step matrix fits this; every step is drawn at its scale (StepRow.scale)
+const STEP_MAX_H: f32 = 96.0;
 const TEXT_ROW_H: f32 = 22.0;
 const STEPS_MOST: f32 = 320.0;
 
@@ -160,6 +161,13 @@ pub fn trim() {
 fn view(m: &BarModel) -> Option<&MatrixView> {
     let a = m.live.as_ref().filter(|_| m.live_for == m.field.text())?;
     a.matrix.as_ref().filter(|v| !v.message)
+}
+
+/// The answer whose steps the chip and card show: a message too, since a singular `inv` and a system with no or
+/// many solutions keep their steps, ending in why (`no inverse: the left side can't become I`).
+fn steps_view(m: &BarModel) -> Option<&MatrixView> {
+    let a = m.live.as_ref().filter(|_| m.live_for == m.field.text())?;
+    a.matrix.as_ref()
 }
 
 // ---- the slot ----
@@ -430,7 +438,7 @@ fn resize(m: &mut BarModel, engine: &EngineThread, dr: isize, dc: isize) {
 
 /// Ctrl+R or the chip: the row operations behind the answer, or put them away.
 fn toggle_steps(m: &mut BarModel, engine: &EngineThread) {
-    if view(m).is_none_or(|v| v.steps.is_empty()) {
+    if steps_view(m).is_none_or(|v| v.steps.is_empty()) {
         m.matrix.steps_shown = false;
         return;
     }
@@ -446,7 +454,7 @@ pub fn refresh_steps(m: &mut BarModel, engine: &EngineThread) {
     if m.field.text().is_empty() {
         m.matrix.steps_shown = false;
     }
-    let steps = view(m)
+    let steps = steps_view(m)
         .filter(|_| m.matrix.steps_shown)
         .map(|v| v.steps.clone())
         .filter(|s| !s.is_empty());
@@ -532,7 +540,7 @@ fn chip_shown(m: &BarModel) -> Option<usize> {
     if m.matrix.grid.is_some() {
         return None;
     }
-    view(m).map(|v| v.steps.len()).filter(|&n| n > 0)
+    steps_view(m).map(|v| v.steps.len()).filter(|&n| n > 0)
 }
 
 // ---- keys ----
@@ -769,23 +777,33 @@ fn grid_height(g: &GridView) -> f32 {
     2.0 * PAD + n * CELL_H + (n - 1.0).max(0.0) * CELL_GAP + SIZER_GAP + SIZER_H + MARGIN
 }
 
-/// A step's height in a card `inner` wide, and the scale its matrix is drawn at.
-fn step_size(row: &StepRow, inner: f32) -> (f32, f32) {
-    let Some(t) = &row.paths else {
-        return (TEXT_ROW_H, 1.0);
-    };
+/// One scale for every matrix in a card `inner` wide (StepRow.scale): the tallest fits 96 pt and the widest its
+/// room. Each had been cut to 72 pt on its own, so a step with fractions in two rows drew its numbers smaller than
+/// the step before it.
+fn steps_scale(rows: &[StepRow], inner: f32) -> f32 {
     let room = (inner - OP_W - 10.0).max(40.0);
-    let s = 1f32
-        .min(STEP_MAX_H / t.paths.height_pt.max(1.0))
-        .min(room / t.paths.width_pt.max(1.0))
-        .max(0.01);
-    ((t.paths.height_pt * s).max(TEXT_ROW_H), s)
+    let (tallest, widest) = rows
+        .iter()
+        .filter_map(|r| r.paths.as_ref())
+        .fold((0f32, 0f32), |(h, w), t| {
+            (h.max(t.paths.height_pt), w.max(t.paths.width_pt))
+        });
+    matrix_text::steps_scale(tallest, widest, STEP_MAX_H, room)
+}
+
+/// A step's height at the card's scale `s`.
+fn step_height(row: &StepRow, s: f32) -> f32 {
+    match &row.paths {
+        Some(t) => (t.paths.height_pt * s).max(TEXT_ROW_H),
+        None => TEXT_ROW_H,
+    }
 }
 
 fn steps_total(m: &BarModel, width: f32) -> f32 {
     let inner = width - 2.0 * (MARGIN + PAD);
     let rows = &m.matrix.rows;
-    rows.iter().map(|r| step_size(r, inner).0).sum::<f32>()
+    let s = steps_scale(rows, inner);
+    rows.iter().map(|r| step_height(r, s)).sum::<f32>()
         + (rows.len().saturating_sub(1)) as f32 * STEP_GAP
         + 4.0
 }
@@ -839,17 +857,7 @@ fn buttons(card: Rect, g: &GridView) -> [Rect; 4] {
 // ---- drawing ----
 
 fn card(c: &Canvas, r: Rect) {
-    let t = c.theme;
-    c.fill_round(r, size::RADIUS_CARD, t.bg_tape);
-    let edge = crate::contrast::or(
-        if t.dark {
-            crate::render::rgb(0xffffff, 0.08)
-        } else {
-            crate::render::rgb(0, 0.1)
-        },
-        t.line,
-    );
-    stroke_round(c, r.inset(0.25, 0.25), size::RADIUS_CARD, edge, 0.5);
+    crate::surfaces::card(c, r, size::RADIUS_CARD);
 }
 
 fn stroke_round(c: &Canvas, r: Rect, radius: f32, color: crate::render::Color, width: f32) {
@@ -906,11 +914,12 @@ pub fn paint(c: &Canvas, m: &BarModel, r: Rect, window_focused: bool) {
     let inner = card_r.inset(PAD, PAD);
     c.push_clip(inner);
     let mut y = inner.y + 2.0 - m.matrix.scroll;
+    let s = steps_scale(&m.matrix.rows, inner.w);
     PICTURES.with(|p| {
         let mut pics = p.borrow_mut();
         pics.resize_with(m.matrix.rows.len(), || None);
         for (row, pic) in m.matrix.rows.iter().zip(pics.iter_mut()) {
-            let (h, s) = step_size(row, inner.w);
+            let h = step_height(row, s);
             if y + h >= inner.y && y <= inner.bottom() {
                 let op = matrix_text::pretty(&crate::answer::radicals(&row.op));
                 if row.remark {
@@ -1028,6 +1037,28 @@ fn paint_grid(c: &Canvas, g: &GridView, card_r: Rect, window_focused: bool) {
     c.pop_clip();
 }
 
+/// Where a cell's text starts: centred when it fits, else scrolled to show the caret at `caret`.
+fn cell_x0(r: Rect, w: f32, caret: f32) -> f32 {
+    if w <= r.w {
+        r.x + (r.w - w) / 2.0
+    } else {
+        r.x - (caret - r.w + 4.0).clamp(0.0, w - r.w + 4.0)
+    }
+}
+
+/// The UTF-16 place in a cell's text under the pointer at `x` (the cell's text area `r`).
+fn cell_hit(gfx: &crate::render::Gfx, f: &Field, r: Rect, x: f32) -> u32 {
+    if f.text().is_empty() {
+        return 0;
+    }
+    let Some(l) = gfx.layout(f.text(), &gfx.fonts.row, 0.0, r.h) else {
+        return f.to_utf16(f.text().len());
+    };
+    let (w, h) = measure(&l);
+    let x0 = cell_x0(r, w, caret_x(&l, f.to_utf16(f.caret())));
+    crate::render::hit(&l, x - x0, h / 2.0)
+}
+
 /// One cell: its text centred (scrolled to the caret when it's longer), `0` muted when empty.
 fn paint_cell(c: &Canvas, f: &Field, r: Rect, caret_on: bool) {
     let t = c.theme;
@@ -1037,11 +1068,7 @@ fn paint_cell(c: &Canvas, f: &Field, r: Rect, caret_on: bool) {
     if let Some(l) = c.gfx.layout(text, font, 0.0, r.h) {
         let (w, _) = measure(&l);
         let caret = caret_x(&l, f.to_utf16(f.caret()));
-        let x0 = if w <= r.w {
-            r.x + (r.w - w) / 2.0
-        } else {
-            r.x - (caret - r.w + 4.0).clamp(0.0, w - r.w + 4.0)
-        };
+        let x0 = cell_x0(r, w, caret);
         if f.text().is_empty() {
             c.text_plain(&l, x0, r.y, with_alpha(t.muted, 0.5));
         } else {
@@ -1083,19 +1110,29 @@ pub fn click(app: &mut App, x: f32, y: f32, double: bool) -> bool {
         return false;
     };
     let engine = &app.engine;
+    let gfx = &app.gfx;
     let m = &mut app.model;
     if let Some(g) = &mut m.matrix.grid {
         let card_r = card_of(r, r.y);
         let (rows, cols) = (g.grid.rows(), g.grid.cols());
         for i in 0..rows {
             for k in 0..cols {
-                if cell_rect(card_r, i, k).contains(x, y) {
+                let cr = cell_rect(card_r, i, k);
+                if cr.contains(x, y) {
+                    let had = g.focus == Some((i, k));
                     g.focus = Some((i, k));
                     if let Some(f) = g.field((i, k)) {
                         if double {
                             f.select_all();
                         } else {
-                            f.end(false);
+                            // the caret under the pointer (the cell drawn as it is now: a cell that just took
+                            // the keys is drawn from its end)
+                            if !had {
+                                f.end(false);
+                            }
+                            let pos = cell_hit(gfx, f, cr.inset(6.0, 0.0), x);
+                            f.set_caret_utf16(pos, false);
+                            f.break_run();
                         }
                     }
                     m.touch();
@@ -1163,6 +1200,7 @@ pub fn debug(m: &BarModel) -> serde_json::Value {
             "focus": g.focus,
         })),
         "hint": m.matrix.hint,
+        "chip": chip_shown(m),
         "steps": m.matrix.steps_shown.then(|| m.matrix.rows.iter().map(|r| r.op.clone()).collect::<Vec<_>>()),
     })
 }

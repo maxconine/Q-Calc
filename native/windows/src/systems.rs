@@ -68,6 +68,13 @@ pub fn count(text: &str) -> Option<Result<usize, &'static str>> {
     }
 }
 
+/// SysCommand.onTheWay: a line that may still become `sys N` (empty, or a start of `system`); equations a stray
+/// edit closed are kept while the line is one.
+pub fn on_the_way(text: &str) -> bool {
+    let t = text.trim().to_lowercase();
+    "system".starts_with(t.as_str())
+}
+
 /// The rows as saved: trimmed, the empty ones left out of what's written.
 fn written(lines: &[String]) -> String {
     lines
@@ -117,6 +124,12 @@ fn row_for(
 }
 
 // ---- state ----
+
+thread_local! {
+    /// the equations an edit of the `sys N` line closed (a stray Backspace), back when the count comes back
+    /// (Ctrl+Z on the line); kept while the line is empty or still on its way to `sys` (the Mac's `sysClosed`)
+    static CLOSED: RefCell<Option<Vec<String>>> = const { RefCell::new(None) };
+}
 
 /// The engine's answer for the rows (`SystemAnswer`).
 #[derive(Clone, Debug, PartialEq)]
@@ -206,11 +219,16 @@ pub fn follow(m: &mut BarModel, engine: &EngineThread) {
     if let Some(Ok(n)) = count(m.field.text())
         && m.systems.as_ref().is_none_or(|s| s.rows.len() != n)
     {
+        let closed = CLOSED.with(|c| c.borrow_mut().take());
         let kept: Vec<String> = m
             .systems
             .as_ref()
-            .map(|s| s.lines().into_iter().take(n).collect())
-            .unwrap_or_default();
+            .map(|s| s.lines())
+            .or(closed)
+            .unwrap_or_default()
+            .into_iter()
+            .take(n)
+            .collect();
         let mut lines = kept;
         lines.resize(n, String::new());
         engine.cancel(Lane::System);
@@ -218,9 +236,19 @@ pub fn follow(m: &mut BarModel, engine: &EngineThread) {
         m.hint = None;
         m.touch();
     }
-    let Some(s) = &m.systems else { return };
+    let Some(s) = &m.systems else {
+        if count(m.field.text()).is_none() && !on_the_way(m.field.text()) {
+            CLOSED.with(|c| c.borrow_mut().take());
+        }
+        return;
+    };
     if count(m.field.text()) != Some(Ok(s.rows.len())) {
+        let lines = s.lines();
+        CLOSED.with(|c| *c.borrow_mut() = Some(lines));
         close(m, engine);
+        if count(m.field.text()).is_none() && !on_the_way(m.field.text()) {
+            CLOSED.with(|c| c.borrow_mut().take());
+        }
         return;
     }
     if s.unsolved || s.solved_with != (m.settings.fraction_mode, m.settings.sig_figs) {
@@ -358,6 +386,7 @@ fn commit(m: &mut BarModel, engine: &EngineThread) {
 
 /// Back to calculating: the panel closed, the line empty and focused (resetToCalculate).
 fn reset(m: &mut BarModel, engine: &EngineThread) {
+    CLOSED.with(|c| c.borrow_mut().take());
     m.systems = None;
     engine.cancel(Lane::System);
     m.field.set_text("");
@@ -701,30 +730,7 @@ fn row_at(app: &App, x: f32, y: f32) -> Option<usize> {
 pub fn paint(c: &Canvas, s: &SysState, r: Rect, window_focused: bool) {
     let t = c.theme;
     let card = Rect::new(r.x + MARGIN, r.y, r.w - 2.0 * MARGIN, r.h - MARGIN);
-    c.fill_round(card, size::RADIUS_CARD, t.bg_tape);
-    // SAFETY: inside the frame; the rect is a local
-    unsafe {
-        let rr = windows::Win32::Graphics::Direct2D::D2D1_ROUNDED_RECT {
-            rect: windows::Win32::Graphics::Direct2D::Common::D2D_RECT_F {
-                left: card.x + 0.25,
-                top: card.y + 0.25,
-                right: card.right() - 0.25,
-                bottom: card.bottom() - 0.25,
-            },
-            radiusX: size::RADIUS_CARD,
-            radiusY: size::RADIUS_CARD,
-        };
-        let edge = crate::contrast::or(
-            if t.dark {
-                crate::render::rgb(0xffffff, 0.08)
-            } else {
-                crate::render::rgb(0, 0.1)
-            },
-            t.line,
-        );
-        c.target()
-            .DrawRoundedRectangle(&rr, c.brush(edge), 0.5, None);
-    }
+    crate::surfaces::card(c, card, size::RADIUS_CARD);
     let mut views = s.views.borrow_mut();
     views.resize_with(s.rows.len(), RowView::default);
     for (i, (f, view)) in s.rows.iter().zip(views.iter_mut()).enumerate() {
@@ -952,6 +958,16 @@ pub fn debug(m: &BarModel) -> serde_json::Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn closed_equations_wait_while_the_line_is_on_its_way() {
+        for t in ["", "  ", "s", "sy", "SYS", "syst", "system"] {
+            assert!(on_the_way(t), "{t:?}");
+        }
+        for t in ["sys 2", "2+2", "systems", "x"] {
+            assert!(!on_the_way(t), "{t:?}");
+        }
+    }
 
     #[test]
     fn sys_commands() {

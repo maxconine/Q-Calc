@@ -81,6 +81,8 @@ enum Event {
 enum Sent {
     /// from the bar's `message` line (what was said)
     Line(String),
+    /// a `message <name> words` line's words sent with a drop (what was said, the whole line): put back unsent
+    Dropped(String, String),
     /// a card's reply (the card, what was said)
     Reply(String, String),
     /// a thread's reply (what was said)
@@ -517,6 +519,12 @@ fn on_event_now(app: &mut App, ev: Event) {
             }
             line_sent(app, &name, &status)
         }
+        Event::Sent(Sent::Dropped(text, typed), name, status) => {
+            if status == "delivered" {
+                crate::threads::record_text(&name, true, &text);
+            }
+            dropped_line_sent(app, &name, &status, &typed)
+        }
         Event::Sent(Sent::Reply(id, text), name, status) => {
             if status == "delivered" {
                 crate::threads::record_text(&name, true, &text);
@@ -662,7 +670,7 @@ pub fn will_show(app: &mut App) {
 fn show_cards(app: &mut App, incoming: Vec<BannerCard>) {
     let m = &mut app.model;
     let now: Vec<BannerCard> = m.cards.list.iter().map(|c| c.card.clone()).collect();
-    let next = banner::add_cards(&now, incoming, banner::BANNER_SHOWN);
+    let next = banner::add_cards(&now, incoming, usize::MAX);
     let mut list = Vec::new();
     for card in next {
         match m.cards.list.iter().position(|c| c.card.id == card.id) {
@@ -670,7 +678,18 @@ fn show_cards(app: &mut App, incoming: Vec<BannerCard>) {
             None => list.push(Card::new(card)),
         }
     }
-    m.cards.list = list;
+    // three at most; a card being answered stays and an older one goes (CardRules.kept)
+    let focus = m.cards.focus.clone();
+    m.cards.list = crate::card_rules::kept(list, banner::BANNER_SHOWN, |c| {
+        focus.as_deref() == Some(c.card.id.as_str())
+            || !c.draft.text().is_empty()
+            || c.reply == Reply::Sending
+    });
+    if let Some(id) = &focus
+        && !m.cards.list.iter().any(|c| &c.card.id == id)
+    {
+        m.cards.focus = None;
+    }
     m.touch();
     expire_later();
 }
@@ -846,10 +865,12 @@ pub fn line_hint(to: &str, name: &str, text: &str) -> String {
         text: text.into(),
     };
     crate::share_drop::ensure_soon();
-    with(|s| {
+    let hint = with(|s| {
         let found = recipient_found(s, name);
         core::message_hint(&line, &s.m, true, found)
-    })
+    });
+    // files put back on the line go with the words: the hint counts them
+    crate::card_rules::message_hint(hint, name, &crate::share::waiting_label())
 }
 
 /// Whether the name is anyone's: None until the relay has said, and whenever it can't (no name of your own, the
@@ -921,6 +942,24 @@ pub fn send_line(app: &mut App, name: String, text: String) {
     let body = with(|s| send_body(s, &name, &text));
     post_later("/send", body, move |status| {
         Event::Sent(Sent::Line(text), name, status)
+    });
+}
+
+/// The words of a `message <name> words` line a drop went from (share.rs `drop_files`, the line cleared already):
+/// sent as the line would send them, but when they don't go the whole line comes back (`typed`) with any files
+/// that didn't go either waiting on it, as a plain `message` line keeps its words.
+pub fn send_dropped_line(app: &mut App, name: String, text: String, typed: String) {
+    let text = core::clean_message_text(&Value::String(text))
+        .trim()
+        .to_string();
+    if text.is_empty() {
+        return;
+    }
+    app.model.hint = Some(format!("sending to {name}…"));
+    app.model.touch();
+    let body = with(|s| send_body(s, &name, &text));
+    post_later("/send", body, move |status| {
+        Event::Sent(Sent::Dropped(text, typed), name, status)
     });
 }
 
@@ -1033,6 +1072,25 @@ fn line_sent(app: &mut App, name: &str, status: &str) {
         crate::commands::clear_line(app, false);
     }
     app.model.hint = Some(said);
+    app.model.touch();
+}
+
+/// `send_dropped_line`'s answer: as `line_sent`, but the line (cleared at the drop, maybe holding files put back
+/// since) is left as it is when they went, and comes back when they didn't.
+fn dropped_line_sent(app: &mut App, name: &str, status: &str, typed: &str) {
+    let st = status_of(status);
+    with(|s| {
+        s.names.note_send(name, st, now_ms());
+        if st == SendStatus::Delivered {
+            s.m = core::sent_to(&s.m, name);
+            save(&s.m);
+        }
+    });
+    qlog!("messaging: sent to {name} with a drop: {st:?}");
+    if st != SendStatus::Delivered {
+        crate::share::put_back(app, Vec::new(), name, typed, true);
+    }
+    app.model.hint = Some(core::send_status_text(st, name));
     app.model.touch();
 }
 
@@ -1612,13 +1670,7 @@ pub fn paint(c: &Canvas, m: &BarModel, r: Rect) {
         let f = Rect::new(p.field.x, p.field.y + y0, p.field.w, p.field.h);
         let focused = m.cards.focus.as_deref() == Some(card.card.id.as_str());
         // the border (accent 2 when it has the keys, a faint 0.5 otherwise), then the control's fill
-        if focused {
-            c.fill_round(f, size::RADIUS_S, t.accent);
-            c.fill_round(f.inset(2.0, 2.0), size::RADIUS_S - 2.0, control);
-        } else {
-            c.fill_round(f, size::RADIUS_S, crate::contrast::or(rgb(0, 0.12), t.line));
-            c.fill_round(f.inset(0.5, 0.5), size::RADIUS_S - 0.5, control);
-        }
+        crate::surfaces::control(c, f, size::RADIUS_S, focused, control);
         paint_draft(c, card, f, focused);
         if let Some((l, sr)) = &p.status {
             let ink = if card.reply == Reply::Sent {
@@ -1893,6 +1945,10 @@ pub fn char16(app: &mut App, unit: u16) -> bool {
     if let Some(card) = app.model.cards.list.iter_mut().find(|c| c.card.id == id) {
         if card.reply != Reply::Sent && card.draft.text().encode_utf16().count() < core::TEXT_MAX {
             card.draft.char16(unit);
+            // editing after a failure takes the failure note away, as the thread's reply line does
+            if matches!(card.reply, Reply::Failed(_)) {
+                card.reply = Reply::Idle;
+            }
         }
         app.model.touch();
         return true;
