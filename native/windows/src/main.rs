@@ -18,6 +18,7 @@ mod perf;
 mod place;
 mod stacked;
 mod store;
+mod tape_rules;
 mod text_rules;
 mod tour;
 

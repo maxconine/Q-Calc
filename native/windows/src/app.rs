@@ -318,6 +318,8 @@ pub fn run() -> i32 {
     }
     let app = APP.with(|cell| cell.borrow_mut().take());
     if let Some(app) = app {
+        // a history save still queued is written before the app goes
+        history::flush(&app.engine);
         app.engine.shutdown();
         drop(app);
     }
@@ -664,7 +666,10 @@ impl App {
                     settings_window::refresh(self);
                 }
             }
-            WM_ENDSESSION => self.save_store(),
+            WM_ENDSESSION => {
+                self.save_store();
+                history::flush(&self.engine);
+            }
             WM_DESTROY => {
                 // SAFETY: ends the loop
                 unsafe { PostQuitMessage(0) };
@@ -851,7 +856,12 @@ impl App {
             windows::Win32::UI::WindowsAndMessaging::WM_RBUTTONUP
             | windows::Win32::UI::WindowsAndMessaging::WM_MBUTTONUP => {
                 let (x, y) = self.dips(lp);
-                crate::graph::mouse_up(self, x, y);
+                // a right click on a tape row: its menu (history.rs)
+                if !crate::graph::mouse_up(self, x, y)
+                    && msg == windows::Win32::UI::WindowsAndMessaging::WM_RBUTTONUP
+                {
+                    history::menu(self, x, y);
+                }
             }
             WM_LBUTTONUP => {
                 let (x, y) = self.dips(lp);

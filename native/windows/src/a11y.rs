@@ -244,7 +244,7 @@ pub fn bar_tree(app: &App) -> crate::uia::Tree {
             nodes.push(Node {
                 id: 100 + i as i32,
                 role: Role::ListItem,
-                name: name(&r.expr, &r.display),
+                name: crate::history::spoken(r),
                 rect: at(crate::history::row_rect(l.width, &l.tape, i)),
                 focusable: true,
                 focused: selected && app.bar.focused,
