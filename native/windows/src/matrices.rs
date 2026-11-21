@@ -162,6 +162,13 @@ fn view(m: &BarModel) -> Option<&MatrixView> {
     a.matrix.as_ref().filter(|v| !v.message)
 }
 
+/// The answer's matrix view for its steps, a message included: a singular `inv` or a system with no answer keeps
+/// the steps that say why (`no inverse: the left side can't become I`), as the Mac's `live.matrix?.steps`.
+fn steps_view(m: &BarModel) -> Option<&MatrixView> {
+    let a = m.live.as_ref().filter(|_| m.live_for == m.field.text())?;
+    a.matrix.as_ref()
+}
+
 // ---- the slot ----
 
 /// What the slot says while the line asks for a grid that isn't open.
@@ -430,7 +437,7 @@ fn resize(m: &mut BarModel, engine: &EngineThread, dr: isize, dc: isize) {
 
 /// Ctrl+R or the chip: the row operations behind the answer, or put them away.
 fn toggle_steps(m: &mut BarModel, engine: &EngineThread) {
-    if view(m).is_none_or(|v| v.steps.is_empty()) {
+    if steps_view(m).is_none_or(|v| v.steps.is_empty()) {
         m.matrix.steps_shown = false;
         return;
     }
@@ -446,7 +453,7 @@ pub fn refresh_steps(m: &mut BarModel, engine: &EngineThread) {
     if m.field.text().is_empty() {
         m.matrix.steps_shown = false;
     }
-    let steps = view(m)
+    let steps = steps_view(m)
         .filter(|_| m.matrix.steps_shown)
         .map(|v| v.steps.clone())
         .filter(|s| !s.is_empty());
@@ -532,7 +539,7 @@ fn chip_shown(m: &BarModel) -> Option<usize> {
     if m.matrix.grid.is_some() {
         return None;
     }
-    view(m).map(|v| v.steps.len()).filter(|&n| n > 0)
+    steps_view(m).map(|v| v.steps.len()).filter(|&n| n > 0)
 }
 
 // ---- keys ----
