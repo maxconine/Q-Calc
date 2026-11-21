@@ -7,6 +7,8 @@
 //! WM_SIZING keeps the height and clamps the width, WM_EXITSIZEMOVE remembers the result.
 
 use windows::Win32::Foundation::{LPARAM, RECT, WPARAM};
+/// the host's message for `displays_changed` (app.rs matches on it here, so its import list stays as it was)
+pub use windows::Win32::UI::WindowsAndMessaging::WM_DISPLAYCHANGE;
 use windows::Win32::UI::WindowsAndMessaging::{HTCAPTION, HTCLIENT, HTLEFT, HTRIGHT, WMSZ_LEFT};
 
 use crate::app::App;
@@ -160,6 +162,93 @@ pub fn put_back(app: &mut App) {
     }
     app.save_store();
     app.ops.push(crate::app::Op::Show);
+}
+
+/// WM_DISPLAYCHANGE, or the work area changed (WM_SETTINGCHANGE's SPI_SETWORKAREA: the taskbar moved or grew): with
+/// the bar up, it's pulled onto the monitor it is mostly on and narrowed to fit, or opens at the usual spot on the
+/// pointer's monitor when its own is gone (OverlayController.swift `keepOnScreen`). Monitors settle a moment after
+/// the message, so it looks 300 ms on. A hidden bar is placed afresh at its next showing anyway.
+pub fn displays_changed(app: &App, why: &'static str) {
+    if !app.bar.visible {
+        return;
+    }
+    crate::later::after("displays-changed", 300, move |app| keep_on_screen(app, why));
+}
+
+fn area_of(r: RECT) -> place::Area {
+    place::Area {
+        x: f64::from(r.left),
+        y: f64::from(r.top),
+        width: f64::from(r.right - r.left),
+        height: f64::from(r.bottom - r.top),
+    }
+}
+
+/// Every monitor: its whole rect (px) and what window.rs knows of it (work area, scale, key).
+fn monitors() -> Vec<(place::Area, window::Monitor)> {
+    use windows::Win32::Foundation::{LPARAM as LP, POINT};
+    use windows::Win32::Graphics::Gdi::{EnumDisplayMonitors, HDC, HMONITOR};
+    use windows::core::BOOL;
+    unsafe extern "system" fn each(_: HMONITOR, _: HDC, r: *mut RECT, lp: LP) -> BOOL {
+        // SAFETY: lp is the Vec below, alive for the enumeration; r is the monitor's rect
+        unsafe { (*(lp.0 as *mut Vec<RECT>)).push(*r) };
+        BOOL(1)
+    }
+    let mut rects: Vec<RECT> = Vec::new();
+    // SAFETY: the callback only pushes into `rects`, which outlives the call
+    let _ =
+        unsafe { EnumDisplayMonitors(None, None, Some(each), LP(&mut rects as *mut _ as isize)) };
+    rects
+        .into_iter()
+        .map(|r| {
+            let mid = POINT {
+                x: (r.left + r.right) / 2,
+                y: (r.top + r.bottom) / 2,
+            };
+            (area_of(r), window::monitor_at(mid))
+        })
+        .collect()
+}
+
+fn keep_on_screen(app: &mut App, why: &str) {
+    if !app.bar.visible {
+        return;
+    }
+    let frame = area_of(app.bar.frame());
+    let all = monitors();
+    let screens: Vec<place::Area> = all.iter().map(|(s, _)| *s).collect();
+    let Some(i) = place::mostly_on(frame, &screens) else {
+        // on no monitor at all (its display unplugged): the usual spot on the pointer's
+        crate::qlog!("{why}: the bar's display is gone, shown on the pointer's");
+        app.ops.push(crate::app::Op::Show);
+        return;
+    };
+    let monitor = all[i].1.clone();
+    let works: Vec<place::Area> = all.iter().map(|(_, m)| m.area).collect();
+    let width = place::fitted_width(
+        f64::from(app.bar.width),
+        monitor.area.width / monitor.scale(),
+    ) as f32;
+    let off = !place::inside_any(frame, &works);
+    let narrower = (width - app.bar.width).abs() > 0.5;
+    app.bar.monitor = Some(monitor.clone());
+    if !off && !narrower {
+        return;
+    }
+    // the composer's new spot: the frame at the fitted width, moved in from any edge it hangs over
+    let scale = monitor.scale();
+    let w = (f64::from(width) * scale).round();
+    let (x, y) = place::fit(monitor.area, frame.x, frame.y, w, frame.height);
+    let anchor = (f64::from(app.bar.layout.anchor) * scale).round();
+    app.bar.width = width;
+    app.bar.composer_at = (x as i32, (y + anchor) as i32);
+    crate::qlog!(
+        "{why}: the bar pulled onto {} ({:.0} px wide)",
+        monitor.key,
+        w
+    );
+    app.model.touch();
+    app.ops.push(crate::app::Op::Reframe);
 }
 
 #[cfg(test)]

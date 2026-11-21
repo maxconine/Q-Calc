@@ -648,7 +648,12 @@ impl App {
             }
             WM_BENCH_NEXT => self.bench_next(),
             WM_WARM => self.warm(),
+            crate::drag::WM_DISPLAYCHANGE => crate::drag::displays_changed(self, "display change"),
             WM_SETTINGCHANGE => {
+                // SPI_SETWORKAREA: the taskbar moved or grew
+                if wp.0 == 0x2F {
+                    crate::drag::displays_changed(self, "work area");
+                }
                 let what = if lp.0 == 0 {
                     String::new()
                 } else {
@@ -1008,6 +1013,8 @@ impl App {
 
     /// After every message: lay out and repaint if the model changed; save settings; write the clipboard.
     pub(crate) fn after(&mut self) {
+        // before the layout: a copy or `?` can move the walkthrough (its hint shows in this frame)
+        crate::tour::after(self);
         if self.model.take_changed() {
             crate::effects::after(self);
             let layout = Bar::layout(&self.gfx, &self.model, self.bar.width, now_ms());
@@ -1027,6 +1034,8 @@ impl App {
             self.save_store();
             settings_window::refresh(self);
         }
+        self.tray
+            .set_no_shortcut(self.hotkey.gave_up && self.hotkey.active.is_none());
         crate::line::after(self);
         if let Some(text) = self.model.to_clipboard.take()
             && !clip::set(self.bar.hwnd, &text)
@@ -1149,6 +1158,7 @@ impl App {
         self.model.hint = None;
         crate::commands::will_hide(&mut self.model);
         crate::working::will_hide(&mut self.model);
+        crate::effects::will_hide(self);
         self.model.touch();
         self.hidden_at = Some(Instant::now());
         if self.store.moved_or_widened() {

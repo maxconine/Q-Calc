@@ -92,6 +92,26 @@ pub struct Eggs {
     /// the line a black hole, π's digits or the roll is playing for
     effect_line: Option<String>,
     playing: Option<Playing>,
+    /// the Konami code under way: whether the tape was open at its first ↑, and the line as its B came
+    konami_start: Option<(bool, String)>,
+    /// the code finished: that, and the line as its A went down (its `a` comes in the WM_CHAR after)
+    konami_end: Option<(bool, String, String)>,
+    /// the code's leftovers to take back out, on the next turn (`konami_tidy`)
+    konami_tidy: Option<(bool, String)>,
+}
+
+/// The Konami code's B and A go on into the line (the field still gets every key), so a finished code left `ba`
+/// in it (EggRules.swift `konamiLeftover`). `before` is the line as the B came, `after` the line once the A landed:
+/// when `after` is `before` with `ba` (any case) put in at one spot, the line to put back and its caret (bytes);
+/// none when anything else changed.
+pub fn konami_leftover(before: &str, after: &str) -> Option<(String, usize)> {
+    let (b, a) = (before.as_bytes(), after.as_bytes());
+    if a.len() != b.len() + 2 {
+        return None;
+    }
+    let p = b.iter().zip(a).take_while(|(x, y)| x == y).count();
+    let typed = &a[p..p + 2];
+    (typed.eq_ignore_ascii_case(b"ba") && a[p + 2..] == b[p..]).then(|| (before.to_string(), p))
 }
 
 impl std::fmt::Debug for Eggs {
@@ -107,6 +127,17 @@ impl std::fmt::Debug for Eggs {
 pub fn after(app: &mut App) {
     let host = app.host;
     let bar = app.bar.hwnd;
+    let m = &mut app.model;
+    // the code's A has landed in the line: its `ba` comes back out on the next turn
+    if let Some((open, before, at_a)) = m.eggs.konami_end.take() {
+        if m.field.text() == at_a {
+            m.eggs.konami_end = Some((open, before, at_a));
+        } else {
+            m.eggs.konami_tidy = Some((open, before));
+            app.ops
+                .push(crate::app::Op::Run(crate::bg::Later(konami_tidy)));
+        }
+    }
     let m = &mut app.model;
     if let Some(line) = &m.eggs.effect_line
         && m.field.text() != line
@@ -375,8 +406,23 @@ pub fn key_down(app: &mut App, vk: u32, lp: isize) -> bool {
             0x41 if !chord => KonamiKey::A,
             _ => KonamiKey::Other,
         };
+        let text = app.model.field.text().to_string();
+        let eggs = &mut app.model.eggs;
+        let before = eggs.konami.progress();
+        if before == 0 && key == KonamiKey::Up {
+            eggs.konami_start = Some((app.model.tape_open, text.clone()));
+        }
+        if key == KonamiKey::B
+            && before == 8
+            && let Some(start) = &mut eggs.konami_start
+        {
+            start.1.clone_from(&text);
+        }
         if app.model.eggs.konami.push(key) {
             let eggs = &mut app.model.eggs;
+            if let Some((open, at_b)) = eggs.konami_start.take() {
+                eggs.konami_end = Some((open, at_b, text));
+            }
             eggs.crt = !eggs.crt;
             app.bar.set_dark(eggs.crt || app.theme.dark);
             app.model.touch();
@@ -411,6 +457,35 @@ pub fn key_down(app: &mut App, vk: u32, lp: isize) -> bool {
         return true;
     }
     false
+}
+
+/// After the Konami code's A landed (an `Op::Run`, outside the message's borrow): the line as it was at the B when
+/// only the code's `ba` went in since, caret where it was, and a tape that was closed at the first ↑ closed again.
+fn konami_tidy() {
+    crate::app::poke(|app| {
+        let Some((open, before)) = app.model.eggs.konami_tidy.take() else {
+            return;
+        };
+        if let Some((text, caret)) = konami_leftover(&before, app.model.field.text()) {
+            app.model.field.set_text_at(&text, caret);
+            app.model.field.break_run();
+            app.text_changed();
+        }
+        if !open && app.model.selected.is_none() && app.model.tape_open {
+            app.model.tape_open = false;
+        }
+        app.model.touch();
+    });
+}
+
+/// The bar hid (app.rs `after_hide`): an effect over it goes with it. The barrel roll holds the bar cloaked under
+/// its spinning picture, which the hotkey's hide left turning on screen.
+pub fn will_hide(app: &mut App) {
+    let bar = app.bar.hwnd;
+    let eggs = &mut app.model.eggs;
+    eggs.effect_line = None;
+    eggs.konami_start = None;
+    stop(eggs, bar);
 }
 
 /// Ends the effect on screen, if any.
@@ -554,6 +629,22 @@ fn play(app: &mut App, kind: Kind) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // test-eggs.sh's leftover checks
+    #[test]
+    fn the_konami_codes_ba_comes_back_out() {
+        assert_eq!(konami_leftover("2+2", "2+2ba"), Some(("2+2".into(), 3)));
+        assert_eq!(konami_leftover("2+2", "2+2BA"), Some(("2+2".into(), 3)));
+        // typed mid-line, the caret where the B went in
+        assert_eq!(konami_leftover("2+2", "2+ba2"), Some(("2+2".into(), 2)));
+        assert_eq!(konami_leftover("", "ba"), Some((String::new(), 0)));
+        assert_eq!(konami_leftover("π", "πba"), Some(("π".into(), 2)));
+        // anything else changed: left alone
+        assert_eq!(konami_leftover("2+2", "2+2ab"), None);
+        assert_eq!(konami_leftover("2+2", "2+3ba"), None);
+        assert_eq!(konami_leftover("2+2", "2+2b"), None);
+        assert_eq!(konami_leftover("2+2", "2+2bax"), None);
+    }
 
     #[test]
     fn crt_theme_is_green_on_black() {

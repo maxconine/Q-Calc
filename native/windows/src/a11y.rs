@@ -99,6 +99,64 @@ pub fn name(text: &str, answer: &str) -> String {
     }
 }
 
+/// What a reader hears of the live answer once typing rests (TapeRules.swift `liveSpoken`): `equals` and the
+/// answer, but nothing for an empty line, a blank answer, an answer that only repeats the line (`5`), or the answer
+/// read last time.
+pub fn live_spoken(answer: &str, text: &str, last: &str) -> Option<String> {
+    let (a, t) = (answer.trim(), text.trim());
+    (!a.is_empty() && !t.is_empty() && a != t && a != last).then(|| format!("equals {a}"))
+}
+
+/// How long typing rests before the answer is read out (SpokenAnswer.swift)
+const SPEAK_MS: u32 = 700;
+
+thread_local! {
+    /// (the line and answer last seen, the answer last read out)
+    static ANSWER: RefCell<(String, String)> = const { RefCell::new((String::new(), String::new())) };
+}
+
+/// The live answer read out 0.7 s after typing stops (SpokenAnswer.swift), as a notification at the normal
+/// priority; on Windows before 1709, which has none, the answer part stays a live region instead.
+fn speak_later(app: &App) {
+    let text = app.model.field.text();
+    let answer = app.model.answer_text();
+    let seen = format!("{text}\u{0}{answer}");
+    let fresh = ANSWER.with(|a| {
+        let mut a = a.borrow_mut();
+        if text.trim().is_empty() {
+            a.1.clear();
+        }
+        let fresh = a.0 != seen;
+        if fresh {
+            a.0 = seen;
+        }
+        fresh
+    });
+    if !fresh {
+        return;
+    }
+    if text.trim().is_empty() {
+        crate::later::cancel("a11y-answer");
+        return;
+    }
+    crate::later::after("a11y-answer", SPEAK_MS, |app| {
+        // a row picked from the tape is heard as the focus moves to it
+        if !app.bar.visible || app.model.selected.is_some() {
+            return;
+        }
+        let answer = app.model.answer_text();
+        let last = ANSWER.with(|a| a.borrow().1.clone());
+        let Some(line) = live_spoken(&answer, app.model.field.text(), &last) else {
+            return;
+        };
+        ANSWER.with(|a| a.borrow_mut().1 = answer.trim().to_string());
+        let h = app.bar.hwnd.0 as usize;
+        crate::later::free("a11y-spoken", 0, move || {
+            crate::uia::notify_as(windows::Win32::Foundation::HWND(h as *mut _), &line, true);
+        });
+    });
+}
+
 /// After every message (line.rs's `after`): with UI Automation's provider handed out (uia.rs), the bar's parts'
 /// events and the news as a notification; else the bar's name follows the line and the answer.
 pub fn after(app: &App) {
@@ -109,6 +167,9 @@ pub fn after(app: &App) {
         return;
     }
     if crate::uia::provided(hwnd) {
+        if crate::uia::notifies() {
+            speak_later(app);
+        }
         let tree = bar_tree(app);
         // a row picked from the tape is heard as the focus moves to it, not again as news
         let focused = tree
@@ -222,7 +283,9 @@ pub fn bar_tree(app: &App) -> crate::uia::Tree {
                 name: answer.trim().to_string(),
                 help: "The answer; Ctrl+C copies it".into(),
                 rect: at(l.answer),
-                live: true,
+                // read out once typing rests (`speak_later`), not on every key; a live region only where Windows
+                // has no notifications
+                live: !crate::uia::notifies(),
                 ..Node::default()
             });
         }
@@ -267,7 +330,24 @@ unsafe extern "system" {
 
 #[cfg(test)]
 mod tests {
-    use super::name;
+    use super::{live_spoken, name};
+
+    // test-tape.sh's liveSpoken checks
+    #[test]
+    fn the_live_answer_is_read_once_it_says_something_new() {
+        assert_eq!(
+            live_spoken("1024", "2^10", "").as_deref(),
+            Some("equals 1024")
+        );
+        assert_eq!(
+            live_spoken(" 1,024 ", "2^10", "").as_deref(),
+            Some("equals 1,024")
+        );
+        assert_eq!(live_spoken("", "2^", ""), None);
+        assert_eq!(live_spoken("4", "", ""), None);
+        assert_eq!(live_spoken("5", "5", ""), None);
+        assert_eq!(live_spoken("1024", "2^10", "1024"), None);
+    }
 
     #[test]
     fn what_a_reader_hears() {

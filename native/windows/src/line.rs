@@ -619,20 +619,7 @@ fn refresh_example(m: &mut BarModel, engine: &EngineThread) {
             .evaluate(vec![typed], options)
             .into_iter()
             .next()?;
-        if line.display.is_empty() {
-            return None;
-        }
-        let mut answer = line.display.clone();
-        if let Some(e) = &line.exact
-            && e.trim() != line.display.trim()
-        {
-            answer = format!("{e} ≈ {}", line.display);
-        }
-        if line.kind == qcalc_ffi::AnswerKind::Solve
-            && let Some(v) = &line.variable
-        {
-            answer = format!("{v} = {answer}");
-        }
+        let answer = crate::tour::answer_of_example(&line)?;
         done(move |app| {
             if let Some((i, e, a)) = &mut app.model.line.example
                 && *i == id
