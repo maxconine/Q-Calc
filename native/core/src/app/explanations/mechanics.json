@@ -6,7 +6,8 @@
       "The force acts along the member's centroidal axis, so the stress is uniform across the section (no bending)",
       "The section is far from holes, notches, fillets and the point of load application (Saint-Venant); near them use a stress concentration factor K_{t}",
       "A is the original area for engineering stress; true stress uses the current, necked area",
-      "Slender members in compression may buckle long before σ reaches the yield strength"
+      "Slender members in compression may buckle long before σ reaches the yield strength",
+      "A is the area perpendicular to the force, not a side face; use the net area through a hole"
     ],
     "vars": [
       [
@@ -934,7 +935,8 @@
     "about": "In the elastic range, shear stress is proportional to shear strain, with the shear modulus G as the constant. Used for shafts in torsion, rubber mounts and adhesive layers.",
     "assumptions": [
       "Linear elastic, isotropic material",
-      "γ is the engineering shear strain in radians, small"
+      "γ is the engineering shear strain in radians (the change in a right angle), small",
+      "γ_{eng} = 2ε_{xy}; using the tensor strain halves τ"
     ],
     "vars": [
       [
@@ -1203,9 +1205,10 @@
   },
   "G = E/(2(1 + ν))": {
     "title": "Shear modulus from Young's modulus and Poisson's ratio",
-    "about": "For an isotropic material only two elastic constants are independent. Given E and ν, this gives the shear modulus G (also called μ) used in torsion and shear problems.",
+    "about": "For an isotropic material only two elastic constants are independent. Pure shear is equivalent to tension and compression at 45°, and working that through Hooke's law ties G to E and ν. Given E and ν, this gives the shear modulus G (also called μ) used in torsion and shear problems. Since 0 < ν < 0.5, G lies between E/3 and E/2.",
     "assumptions": [
-      "Isotropic, linear elastic material; not valid for wood, composites or single crystals"
+      "Isotropic, linear elastic material; not valid for wood, composites or single crystals",
+      "A G outside E/3 to E/2 means a data or unit error"
     ],
     "vars": [
       [
@@ -1297,10 +1300,11 @@
   },
   "λ = Eν/((1 + ν)(1 − 2ν))": {
     "title": "Lamé's first constant from E and ν",
-    "about": "Converts the engineering constants E and ν into λ, the constant multiplying volumetric strain in the Lamé form of Hooke's law. Together with μ = G it fully describes an isotropic elastic material.",
+    "about": "Converts the engineering constants E and ν into λ, the constant multiplying volumetric strain in the Lamé form of Hooke's law. Together with μ = G it fully describes an isotropic elastic material. The (1 − 2ν) factor blows up as ν → 0.5, the incompressible limit.",
     "assumptions": [
       "Isotropic, linear elastic material",
-      "ν < 0.5 (λ → ∞ for an incompressible material)"
+      "ν < 0.5 (λ → ∞ for an incompressible material)",
+      "λ is not the same as the plane-stress constant; for plane stress use λ* = 2λμ/(λ + 2μ)"
     ],
     "vars": [
       [
@@ -1457,7 +1461,8 @@
     "about": "In index notation a repeated index is summed over 1, 2, 3, so a_{i}b_{i} = a_{1}b_{1} + a_{2}b_{2} + a_{3}b_{3}. This short-hand (Einstein's) makes tensor equations compact.",
     "assumptions": [
       "Cartesian coordinates with orthonormal basis vectors",
-      "An index may appear at most twice in a term; a repeated (dummy) index is summed, a single (free) index means one equation per value"
+      "An index may appear at most twice in a term: a_{i}b_{i}c_{i} is meaningless",
+      "A repeated (dummy) index is summed, a single (free) index means one equation per value"
     ],
     "vars": [
       [
@@ -1496,7 +1501,7 @@
   },
   "δ_{ij} a_{j} = a_{i}": {
     "title": "Kronecker delta: the substitution rule",
-    "about": "δ_{ij} is 1 when i = j and 0 otherwise; it is the identity matrix in index form. Multiplying by δ_{ij} and summing over j simply renames j to i.",
+    "about": "δ_{ij} is 1 when i = j and 0 otherwise; it is the identity matrix in index form. In the sum over j only the j = i term survives, so multiplying by δ_{ij} and summing simply renames j to i.",
     "assumptions": [
       "Cartesian coordinates",
       "δ_{ii} = 3 in three dimensions (the trace of the identity)"
@@ -1775,9 +1780,10 @@
   },
   "I_{1} = σ_{kk}": {
     "title": "First stress invariant",
-    "about": "The trace of the stress tensor, σ_{x} + σ_{y} + σ_{z}. It is the same in every coordinate system and equals σ_{1} + σ_{2} + σ_{3}; minus a third of it is the mean pressure.",
+    "about": "The trace of the stress tensor, σ_{x} + σ_{y} + σ_{z}. A rotation of axes only mixes normal and shear components, never changes their sum, so I_{1} is the same in every coordinate system and equals σ_{1} + σ_{2} + σ_{3}. Minus a third of it is the mean pressure, which drives volume change.",
     "assumptions": [
-      "Summation over k = 1, 2, 3"
+      "Summation over k = 1, 2, 3",
+      "Shear components never enter; only the diagonal counts"
     ],
     "vars": [
       [
@@ -1803,6 +1809,10 @@
       [
         "I_{3} = det(σ)",
         "third invariant"
+      ],
+      [
+        "λ^{3} − I_{1}λ^{2} + I_{2}λ − I_{3} = 0",
+        "where the invariants appear"
       ]
     ],
     "example": {
@@ -1816,9 +1826,10 @@
   },
   "I_{2} = (σ_{ii} σ_{jj} − σ_{ij} σ_{ij})/2": {
     "title": "Second stress invariant",
-    "about": "The coefficient of λ in the characteristic cubic. Written out, I_{2} = σ_{x}σ_{y} + σ_{y}σ_{z} + σ_{z}σ_{x} − τ_{xy}^{2} − τ_{yz}^{2} − τ_{zx}^{2}, and in principal stresses σ_{1}σ_{2} + σ_{2}σ_{3} + σ_{3}σ_{1}.",
+    "about": "The coefficient of λ in the characteristic cubic, so like I_{1} it is unchanged by rotating the axes. Written out, I_{2} = σ_{x}σ_{y} + σ_{y}σ_{z} + σ_{z}σ_{x} − τ_{xy}^{2} − τ_{yz}^{2} − τ_{zx}^{2}, and in principal stresses σ_{1}σ_{2} + σ_{2}σ_{3} + σ_{3}σ_{1}. Its deviatoric cousin J_{2} drives yielding in the von Mises criterion.",
     "assumptions": [
-      "σ symmetric; summation over repeated indices"
+      "σ symmetric; summation over repeated indices",
+      "Subtract the shear squares: they are where most hand errors come from"
     ],
     "vars": [
       [
@@ -1855,9 +1866,10 @@
   },
   "I_{3} = det(σ)": {
     "title": "Third stress invariant",
-    "about": "The determinant of the stress tensor, equal to σ_{1}σ_{2}σ_{3}. It is the constant term in the characteristic cubic for the principal stresses.",
+    "about": "The determinant of the stress tensor, equal to σ_{1}σ_{2}σ_{3}. A determinant doesn't change under a rotation of axes, so like I_{1} and I_{2} it is the same in every frame. It is the constant term in the characteristic cubic whose roots are the principal stresses.",
     "assumptions": [
-      "Same in every coordinate system, like I_{1} and I_{2}"
+      "Same in every coordinate system, like I_{1} and I_{2}",
+      "Its sign tells you whether an odd number of principal stresses are compressive"
     ],
     "vars": [
       [
@@ -2063,7 +2075,8 @@
     "about": "A bar free to move grows by αΔT per unit length when heated. With no restraint there is no stress; restrain it and the blocked expansion becomes stress.",
     "assumptions": [
       "Bar is free to expand (no restraint)",
-      "α constant over the temperature range; uniform temperature along L"
+      "α constant over the temperature range; uniform temperature along L",
+      "ΔT is the same in K and °C; never use absolute temperatures here"
     ],
     "vars": [
       [
@@ -2255,7 +2268,8 @@
     "assumptions": [
       "Thin wall: r/t ≥ 10 (stress roughly uniform through the wall); thicker walls need Lamé's thick-wall solution",
       "r is the inner (or mean) radius; p is gauge pressure",
-      "Away from end caps, nozzles and supports"
+      "Away from end caps, nozzles and supports",
+      "Hoop stress is twice the axial stress, which is why pipes split lengthwise"
     ],
     "vars": [
       [
@@ -2309,7 +2323,8 @@
     "assumptions": [
       "Closed ends (open pipes with sliding seals carry no axial pressure stress)",
       "Thin wall, r/t ≥ 10",
-      "Away from end caps and discontinuities"
+      "Away from end caps and discontinuities",
+      "p is gauge pressure; use MPa with mm and get MPa"
     ],
     "vars": [
       [
@@ -2533,7 +2548,8 @@
     "assumptions": [
       "Circular shaft, linear elastic material",
       "T, G and J constant along L; otherwise sum segments: φ = Σ T_{i}L_{i}/(G_{i}J_{i})",
-      "Result is in radians"
+      "Result is in radians",
+      "Use J (polar, πd^{4}/32), not I (πd^{4}/64), or the twist comes out twice as large"
     ],
     "vars": [
       [
@@ -2589,10 +2605,11 @@
   },
   "k_{t} = GJ/L": {
     "title": "Torsional stiffness of a shaft",
-    "about": "Torque needed per radian of twist. A shaft acts as a torsional spring; use k_{t} for torsional vibration (ω_{n} = √(k_{t}/I_{rot})) and for indeterminate shafts.",
+    "about": "Torque needed per radian of twist, from φ = TL/(GJ). A shaft acts as a torsional spring: stiffer with a stiffer material (G), a fatter section (J ∝ d^{4}) and a shorter length. Use k_{t} for torsional vibration (ω_{n} = √(k_{t}/I_{rot})) and for indeterminate shafts.",
     "assumptions": [
       "Circular, uniform shaft of linear elastic material",
-      "Shafts in series: 1/k = Σ 1/k_{i}; side by side (same twist): k = Σ k_{i}"
+      "Shafts in series: 1/k = Σ 1/k_{i}; side by side (same twist): k = Σ k_{i}",
+      "Per radian, not per degree"
     ],
     "vars": [
       [
@@ -2644,8 +2661,9 @@
     "title": "Power transmitted by a rotating shaft",
     "about": "Power is torque times angular speed. Use it to get the torque on a motor or gearbox shaft from its rated power and speed, then size the shaft.",
     "assumptions": [
-      "ω in rad/s: ω = 2πn/60 for n in rpm",
-      "Steady rotation; T is the torque carried at that section"
+      "ω in rad/s: ω = 2πn/60 for n in rpm; using rpm directly is a factor of 9.55 out",
+      "Steady rotation; T is the torque carried at that section",
+      "Through a gearbox P is (nearly) constant, so a slower shaft carries more torque"
     ],
     "vars": [
       [
@@ -2735,7 +2753,8 @@
     "about": "Subtract the bore's J from the outer circle's. Because the material near the centre carries little stress, a hollow shaft saves a lot of weight for a small loss of strength.",
     "assumptions": [
       "Concentric circular bore",
-      "For a thin tube of mean radius r and wall t, J ≈ 2πr^{3}t"
+      "For a thin tube of mean radius r and wall t, J ≈ 2πr^{3}t",
+      "Subtract the fourth powers, not the diameters; /32 for J, /64 for I"
     ],
     "vars": [
       [
@@ -2955,7 +2974,8 @@
     "about": "The largest bending stress, at the fibre farthest from the neutral axis. The section modulus S = I/c bundles the geometry into one number; steel tables list it, and sizing is just S ≥ M/σ_{allow}.",
     "assumptions": [
       "Same as the flexure formula: linear elastic, plane sections, symmetric section",
-      "For unsymmetric sections (T-beams), c differs top and bottom, so check both"
+      "For unsymmetric sections (T-beams), c differs top and bottom, so check both",
+      "Units: N·mm over mm^{3} gives MPa; mixing kN·m with mm^{3} is a factor of 10^{6} out"
     ],
     "vars": [
       [
@@ -3490,9 +3510,11 @@
   },
   "I = πd^{4}/64": {
     "title": "Second moment of area of a solid circle",
-    "about": "Bending stiffness of a round bar about any diameter. It is half the polar moment J, since I_{x} + I_{y} = J.",
+    "about": "Bending stiffness of a round bar about any diameter. It grows with d^{4} because both the area and its distance from the axis grow with d: doubling the diameter makes a bar 16 times stiffer. It is half the polar moment J, since I_{x} + I_{y} = J.",
     "assumptions": [
-      "Axis through the centre (any diameter)"
+      "Axis through the centre (any diameter); use the parallel-axis theorem for any other axis",
+      "Use the diameter, not the radius: with r it is πr^{4}/4",
+      "Don't confuse I (bending, /64) with J (torsion, /32)"
     ],
     "vars": [
       [
@@ -3521,7 +3543,7 @@
       ]
     ],
     "example": {
-      "problem": "Find I for a 25 mm round bar.",
+      "problem": "Find I for a 25 mm round steel bar used as a short cantilever pin.",
       "steps": [
         "I = π(25 mm)^{4}/64 = π(390 625)/64 mm^{4}"
       ],
@@ -3534,6 +3556,7 @@
     "about": "Bending stiffness of a round tube: the outer circle minus the bore. Tubes give high stiffness per weight because material sits far from the axis.",
     "assumptions": [
       "Concentric bore; axis through the centre",
+      "Subtract the fourth powers, not the diameters: (d_{o} − d_{i})^{4} is wrong",
       "Thin tube of mean radius r and wall t: I ≈ πr^{3}t"
     ],
     "vars": [
@@ -3746,7 +3769,8 @@
     "about": "A pure couple M_{0} at the free end bends a cantilever into a circular arc. The moment is M_{0} everywhere and the tip deflects M_{0}L^{2}/(2EI).",
     "assumptions": [
       "Euler–Bernoulli beam, linear elastic, constant EI",
-      "Small deflections (the exact shape is a circular arc of radius EI/M_{0})"
+      "Small deflections (the exact shape is a circular arc of radius EI/M_{0})",
+      "Unlike a tip force, the moment does not grow toward the wall: it is M_{0} everywhere"
     ],
     "vars": [
       [
@@ -3953,10 +3977,11 @@
   },
   "Cantilever, uniform w ‖ wL^{3}/(6EI)": {
     "title": "End slope of a cantilever with a uniform load",
-    "about": "The rotation at the free end of a cantilever carrying a uniform load along its length.",
+    "about": "The rotation at the free end of a cantilever carrying a uniform load. The wall holds the root level, and the slope builds up along the beam, so the tip turns the most.",
     "assumptions": [
-      "Euler–Bernoulli beam, linear elastic, constant EI, fixed support",
-      "Uniform load over the full length; small slopes"
+      "Euler–Bernoulli beam, linear elastic, constant EI, fully fixed support",
+      "Uniform load over the full length; small slopes",
+      "Use consistent units: w in N/m with L in m, I in m^{4}"
     ],
     "vars": [
       [
@@ -3996,9 +4021,10 @@
       ]
     ],
     "example": {
-      "problem": "The 2 m aluminium cantilever (E = 70 GPa, I = 8 × 10^{6} mm^{4}) carries 1.2 kN/m. Find the end slope.",
+      "problem": "A 2 m aluminium balcony bracket (E = 70 GPa, I = 8 × 10^{6} mm^{4}) carries 1.2 kN/m. Find the end slope.",
       "steps": [
-        "θ = (1200)(2)^{3}/(6 × 70 × 10^{9} × 8 × 10^{−6}) = 9600/3.36 × 10^{6}"
+        "EI = 70 × 10^{9} × 8 × 10^{−6} = 5.6 × 10^{5} N·m^{2}",
+        "θ = (1200)(2)^{3}/(6 × 5.6 × 10^{5}) = 9600/3.36 × 10^{6}"
       ],
       "answer": "θ ≈ 0.00286 rad (0.164°)"
     },
@@ -4006,7 +4032,7 @@
   },
   "Simply supported, centre load P ‖ PL^{2}/(16EI)": {
     "title": "End slope of a simply supported beam with a centre load",
-    "about": "How far each end of a simply supported beam rotates under a midspan point load. Check it where the beam sits on bearings or fits into other parts.",
+    "about": "How far each end of a simply supported beam rotates under a midspan point load. By symmetry the centre stays level and the ends turn equal and opposite. Check it where the beam sits on bearings or fits into other parts.",
     "assumptions": [
       "Pin and roller supports, Euler–Bernoulli beam, constant EI",
       "Load at midspan; both ends rotate by the same amount in opposite senses"
@@ -4059,10 +4085,11 @@
   },
   "Simply supported, uniform w ‖ wL^{3}/(24EI)": {
     "title": "End slope of a simply supported beam with a uniform load",
-    "about": "The rotation at each support of a simply supported beam under a uniform load.",
+    "about": "The rotation at each support of a simply supported beam under a uniform load. The ends are free to turn, so they rotate most there while the midspan stays flat by symmetry. It matters at bearings and where a floor joist meets a finished wall.",
     "assumptions": [
       "Pin and roller supports, Euler–Bernoulli beam, constant EI",
-      "Uniform load over the full span; small slopes"
+      "Uniform load over the full span; small slopes",
+      "Slope in radians; keep w in N/m and L in m (or N/mm and mm), not a mix"
     ],
     "vars": [
       [
@@ -4102,9 +4129,10 @@
       ]
     ],
     "example": {
-      "problem": "The timber joist (E = 11 GPa, I = 3.333 × 10^{7} mm^{4}) spans 4 m under 2 kN/m. Find the end slope.",
+      "problem": "A timber joist (E = 11 GPa, I = 3.333 × 10^{7} mm^{4}, a 100 × 200 mm section) spans 4 m under 2 kN/m. Find the end slope.",
       "steps": [
-        "θ = (2000)(4)^{3}/(24 × 11 × 10^{9} × 3.333 × 10^{−5}) = 128 000/8.8 × 10^{6}"
+        "EI = 11 × 10^{9} × 3.333 × 10^{−5} = 3.67 × 10^{5} N·m^{2}",
+        "θ = (2000)(4)^{3}/(24 × 3.67 × 10^{5}) = 128 000/8.8 × 10^{6}"
       ],
       "answer": "θ ≈ 0.0145 rad (0.83°)"
     },
@@ -4749,10 +4777,11 @@
   },
   "Σ τ = d/dt ∫_{CV} ρ(r × v) dV + ∫_{CS} ρ(r × v)(v · n) dA": {
     "title": "Angular momentum equation for a control volume",
-    "about": "The net torque on a control volume equals the rate of change of angular momentum inside plus its net outflow. It gives the torque on pumps, turbines, sprinklers and lawn sprinklers (Euler's turbomachine equation).",
+    "about": "The net torque on a control volume equals the rate of change of angular momentum inside plus its net outflow: Newton's second law for rotation applied to a fixed region that fluid passes through. It gives the torque on pumps, turbines and lawn sprinklers (Euler's turbomachine equation).",
     "assumptions": [
       "Inertial control volume; r measured from a fixed point",
-      "Torques from surface forces, body forces and shafts all count in Σ τ"
+      "Torques from surface forces, body forces and shafts all count in Σ τ",
+      "Only the tangential velocity v_{θ} contributes to the axial torque; the radial part does not"
     ],
     "vars": [
       [
@@ -5152,5 +5181,157 @@
       "answer": "u_{max} = 0.02 m/s (20 mm/s)"
     },
     "try": "2 kPa/m * (1 mm)^2 / (2 * 0.05 Pa s) to mm/s"
+  },
+  "R = √(((σ_{x} − σ_{y})/2)^{2} + τ_{xy}^{2})": {
+    "title": "Mohr's circle radius",
+    "about": "Mohr's circle for plane stress is centred at C = (σ_{x} + σ_{y})/2 on the σ axis with this radius. The principal stresses are C ± R and the largest in-plane shear stress equals R. Plot the points (σ_{x}, τ_{xy}) and (σ_{y}, −τ_{xy}); they lie at the ends of a diameter.",
+    "assumptions": [
+      "Plane stress (σ_{z} = τ_{xz} = τ_{yz} = 0)"
+    ],
+    "vars": [
+      [
+        "R",
+        "radius of Mohr's circle",
+        "Pa"
+      ],
+      [
+        "σ_{x}, σ_{y}",
+        "normal stresses",
+        "Pa"
+      ],
+      [
+        "τ_{xy}",
+        "shear stress",
+        "Pa"
+      ]
+    ],
+    "related": [
+      [
+        "C = (σ_{x} + σ_{y})/2",
+        "centre"
+      ],
+      [
+        "σ_{1,2} = (σ_{x} + σ_{y})/2 ± √(((σ_{x} − σ_{y})/2)^{2} + τ_{xy}^{2})",
+        "principal stresses"
+      ],
+      [
+        "tan(2θ_{p}) = 2τ_{xy}/(σ_{x} − σ_{y})",
+        "principal angle"
+      ]
+    ],
+    "example": {
+      "problem": "A point has σ_{x} = 80 MPa, σ_{y} = −20 MPa, τ_{xy} = 30 MPa. Find Mohr's circle and the principal stresses.",
+      "steps": [
+        "C = (80 − 20)/2 = 30 MPa",
+        "R = √(50^{2} + 30^{2}) = 58.3 MPa",
+        "σ_{1} = 30 + 58.3 = 88.3 MPa; σ_{2} = 30 − 58.3 = −28.3 MPa; τ_{max} = 58.3 MPa"
+      ],
+      "answer": "R ≈ 58.3 MPa"
+    },
+    "try": "sqrt(((80 MPa - (-20 MPa))/2)^2 + (30 MPa)^2)"
+  },
+  "σ = P/A ± Mc/I": {
+    "title": "Combined loading: axial plus bending stress",
+    "about": "A member that carries an axial force and a bending moment at once has the two normal stresses added by superposition: the uniform P/A plus the bending stress, which is tensile on one face and compressive on the other. An eccentric load P at offset e is the same with M = P e.",
+    "assumptions": [
+      "Linear elastic, small deflections, so stresses superpose",
+      "c is the distance from the neutral axis to the face; take the sign that matches each face"
+    ],
+    "vars": [
+      [
+        "σ",
+        "normal stress at a face",
+        "Pa"
+      ],
+      [
+        "P",
+        "axial force, tension positive",
+        "N"
+      ],
+      [
+        "A",
+        "cross-section area",
+        "m^{2}"
+      ],
+      [
+        "M",
+        "bending moment",
+        "N·m"
+      ],
+      [
+        "c",
+        "distance from neutral axis to the face",
+        "m"
+      ],
+      [
+        "I",
+        "second moment of area",
+        "m^{4}"
+      ]
+    ],
+    "related": [
+      [
+        "σ = −My/I",
+        "flexure formula"
+      ],
+      [
+        "σ = F/A",
+        "normal stress"
+      ]
+    ],
+    "example": {
+      "problem": "A 50 mm wide, 100 mm deep bar carries 20 kN of tension and a 3 kN·m bending moment. Find the largest and smallest stress.",
+      "steps": [
+        "P/A = 20 000/(50 × 100) = 4 MPa",
+        "I = 50 × 100^{3}/12 = 4.17×10^{6} mm^{4}; Mc/I = 3×10^{6} × 50/4.17×10^{6} = 36 MPa",
+        "σ = 4 ± 36"
+      ],
+      "answer": "σ_{max} = 40 MPa (tension), σ_{min} = −32 MPa"
+    },
+    "try": "20 kN/(50 mm * 100 mm) + 3 kN m * 50 mm/(50 mm * (100 mm)^3/12) to MPa"
+  },
+  "ȳ = (Σ A_{i} y_{i})/(Σ A_{i})": {
+    "title": "Neutral axis: centroid of a composite section",
+    "about": "In bending, the neutral axis passes through the centroid of the cross-section. For a T, I or built-up section split it into rectangles, take each area times its own centroid height, and divide by the total area. Then find I about that axis with the parallel-axis theorem.",
+    "assumptions": [
+      "Homogeneous material",
+      "y_{i} measured from one reference line, often the bottom"
+    ],
+    "vars": [
+      [
+        "ȳ",
+        "height of the centroid (neutral axis)",
+        "m"
+      ],
+      [
+        "A_{i}",
+        "area of part i",
+        "m^{2}"
+      ],
+      [
+        "y_{i}",
+        "centroid height of part i",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "I = Ī + Ad^{2}",
+        "parallel axis"
+      ],
+      [
+        "I = bh^{3}/12",
+        "rectangle"
+      ]
+    ],
+    "example": {
+      "problem": "A T-section has a 100 × 20 mm flange on top of a 20 mm wide, 80 mm tall web. Where is the neutral axis, from the bottom?",
+      "steps": [
+        "web: A = 1600 mm^{2}, y = 40 mm; flange: A = 2000 mm^{2}, y = 90 mm",
+        "ȳ = (1600 × 40 + 2000 × 90)/3600"
+      ],
+      "answer": "ȳ ≈ 67.8 mm"
+    },
+    "try": "(1600*40 + 2000*90)/(1600 + 2000)"
   }
 }

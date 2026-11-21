@@ -33,16 +33,12 @@ var sheetOf: [String] = []
 let started = Date()
 for sheet in sheets {
     let title = sheet["title"] as? String ?? ""
-    // a sheet with a picture shows only the picture in the native app (SheetData.raw), so none of its rows are searched
-    let pictured = (sheet["sections"] as? [[String: Any]] ?? []).contains { section in
-        (section["groups"] as? [[String: Any]] ?? []).contains { ($0["items"] as? [[String: Any]] ?? []).contains { $0["figure"] != nil } }
-    }
-    if pictured { continue }
+    // a picture isn't searched (its copy is empty); the rows beside it are (IdentityWindow.unindexed)
     for section in sheet["sections"] as? [[String: Any]] ?? [] {
         let groups = section["groups"] as? [[String: Any]] ?? []
         for group in groups {
             for item in group["items"] as? [[String: Any]] ?? [] {
-                guard let copy = item["copy"] as? String, !copy.isEmpty, let show = item["show"] as? String else { continue }
+                guard let copy = item["copy"] as? String, !copy.isEmpty, item["figure"] == nil, let show = item["show"] as? String else { continue }
                 let lead = item["lead"] as? [String] ?? []
                 var r = SheetSearch.RowText()
                 r.lead = lead.map(plain)

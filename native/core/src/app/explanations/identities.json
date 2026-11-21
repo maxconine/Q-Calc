@@ -1,16 +1,17 @@
 {
   "sin^{2}x + cos^{2}x = 1": {
     "title": "Pythagorean identity",
-    "about": "On the unit circle the point at angle x is (cos x, sin x), and its distance from the origin is 1, so the squares add to 1. Use it to get cos x from sin x (or back), and to swap sin^{2} for 1 − cos^{2} when simplifying.",
+    "about": "The unit-circle point at angle x is (cos x, sin x), 1 from the origin, so x^{2} + y^{2} = 1 becomes sin^{2}x + cos^{2}x = 1. Use it to get one function from another (\"sin x = 3/5 in quadrant II, find cos x\"), and to swap sin^{2} for 1 − cos^{2} when simplifying or integrating.",
     "assumptions": [
       "Holds for every real (or complex) x",
-      "Solving for one function gives a ± sign; pick it from the quadrant of x"
+      "Taking a square root gives ±: choose the sign from the quadrant of x (All, Sin, Tan, Cos)",
+      "sin^{2}x means (sin x)^{2}, not sin(x^{2})"
     ],
     "vars": [
       [
         "x",
-        "angle (any real number, in radians or degrees)",
-        ""
+        "angle (in radians, or degrees with °)",
+        "rad"
       ]
     ],
     "related": [
@@ -21,15 +22,20 @@
       [
         "1 + cot^{2}x = csc^{2}x",
         "divide through by sin^{2}x"
+      ],
+      [
+        "(x, y) = (cos θ, sin θ)",
+        "where it comes from"
       ]
     ],
     "example": {
-      "problem": "x is in the second quadrant with sin x = 3/5. Find cos x.",
+      "problem": "x is in quadrant II with sin x = 3/5. Find cos x and tan x.",
       "steps": [
-        "cos^{2}x = 1 − sin^{2}x = 1 − 9/25 = 16/25",
-        "cos x = ±4/5; cosine is negative in quadrant II"
+        "cos^{2}x = 1 − 9/25 = 16/25, so cos x = ±4/5",
+        "cosine is negative in quadrant II: cos x = −4/5",
+        "tan x = (3/5)/(−4/5) = −3/4"
       ],
-      "answer": "cos x = −4/5 = −0.8"
+      "answer": "cos x = −4/5 = −0.8, tan x = −0.75"
     },
     "try": "-sqrt(1 - (3/5)^2)"
   },
@@ -102,15 +108,16 @@
   },
   "csc x = 1/sin x": {
     "title": "Cosecant, the reciprocal of sine",
-    "about": "Cosecant is defined as one over sine. Calculators rarely have a csc key, so you evaluate it as 1/sin.",
+    "about": "csc x = 1/sin x = hypotenuse/opposite. Calculators have no csc key: take the sine and invert it. Its sign follows the sine (positive in quadrants I and II), and it is undefined where sin x = 0. Do not confuse it with sin⁻¹x, the inverse function arcsin.",
     "assumptions": [
-      "sin x ≠ 0, so x ≠ kπ"
+      "sin x ≠ 0, so x ≠ kπ (0°, 180°, 360°)",
+      "|csc x| ≥ 1 always"
     ],
     "vars": [
       [
         "x",
-        "angle (any real number, in radians or degrees)",
-        ""
+        "angle (in radians, or degrees with °)",
+        "rad"
       ]
     ],
     "related": [
@@ -119,31 +126,36 @@
         "reciprocal of cosine"
       ],
       [
-        "cot x = 1/tan x",
-        "reciprocal of tangent"
+        "1 + cot^{2}x = csc^{2}x",
+        "its Pythagorean identity"
+      ],
+      [
+        "arcsin x ∈ [−π/2, π/2]",
+        "sin⁻¹, a different thing"
       ]
     ],
     "example": {
-      "problem": "Find csc 30°.",
+      "problem": "Find csc 225° exactly.",
       "steps": [
-        "sin 30° = 1/2",
-        "csc 30° = 1/(1/2) = 2"
+        "sin 225° = −√2/2 (quadrant III, reference 45°)",
+        "csc 225° = 1/(−√2/2) = −2/√2 = −√2"
       ],
-      "answer": "csc 30° = 2"
+      "answer": "csc 225° = −√2 ≈ −1.4142"
     },
-    "try": "1/sin(30)"
+    "try": "1/sin(225)"
   },
   "sec x = 1/cos x": {
     "title": "Secant, the reciprocal of cosine",
-    "about": "Secant is defined as one over cosine. It shows up in derivatives (d/dx tan x = sec^{2}x) and in the length of a slanted line.",
+    "about": "sec x = 1/cos x = hypotenuse/adjacent. Its sign follows the cosine (positive in quadrants I and IV), and it is undefined at 90° and 270°, where cos x = 0. It shows up in d/dx tan x = sec^{2}x and in 1 + tan^{2}x = sec^{2}x.",
     "assumptions": [
-      "cos x ≠ 0, so x ≠ π/2 + kπ"
+      "cos x ≠ 0, so x ≠ π/2 + kπ",
+      "|sec x| ≥ 1 always"
     ],
     "vars": [
       [
         "x",
-        "angle (any real number, in radians or degrees)",
-        ""
+        "angle (in radians, or degrees with °)",
+        "rad"
       ]
     ],
     "related": [
@@ -157,59 +169,65 @@
       ]
     ],
     "example": {
-      "problem": "Find sec 60°.",
+      "problem": "Find sec(2π/3) exactly.",
       "steps": [
-        "cos 60° = 1/2",
-        "sec 60° = 1/(1/2) = 2"
+        "2π/3 = 120°, quadrant II: cos 120° = −1/2",
+        "sec 120° = 1/(−1/2)"
       ],
-      "answer": "sec 60° = 2"
+      "answer": "sec(2π/3) = −2"
     },
-    "try": "1/cos(60)"
+    "try": "1/cos(120)"
   },
   "cot x = 1/tan x": {
     "title": "Cotangent, the reciprocal of tangent",
-    "about": "Cotangent is one over tangent, or equivalently cos x/sin x. Use the quotient form where tan x is undefined (cot 90° = 0).",
+    "about": "cot x = 1/tan x = cos x/sin x = adjacent/opposite. Use the quotient form where tan is undefined: cot 90° = 0/1 = 0. cot is undefined where sin x = 0 (0°, 180°). Its sign follows tan (positive in quadrants I and III).",
     "assumptions": [
-      "tan x ≠ 0 and defined; at x = π/2 + kπ use cot x = cos x/sin x = 0 instead"
+      "sin x ≠ 0, so x ≠ kπ",
+      "At x = π/2 + kπ use cos x/sin x, which is 0"
     ],
     "vars": [
       [
         "x",
-        "angle (any real number, in radians or degrees)",
-        ""
+        "angle (in radians, or degrees with °)",
+        "rad"
       ]
     ],
     "related": [
       [
         "cot x = cos x / sin x",
-        "quotient form, defined wherever sin x ≠ 0"
+        "quotient form"
       ],
       [
         "tan x = sin x / cos x",
         "tangent"
+      ],
+      [
+        "1 + cot^{2}x = csc^{2}x",
+        "its Pythagorean identity"
       ]
     ],
     "example": {
-      "problem": "Find cot 60°.",
+      "problem": "Find cot 300° exactly.",
       "steps": [
-        "tan 60° = √3",
-        "cot 60° = 1/√3 = √3/3"
+        "300° is in quadrant IV, reference 60°: tan 300° = −√3",
+        "cot 300° = −1/√3 = −√3/3"
       ],
-      "answer": "cot 60° = √3/3 ≈ 0.5774"
+      "answer": "cot 300° = −√3/3 ≈ −0.5774"
     },
-    "try": "1/tan(60)"
+    "try": "1/tan(300)"
   },
   "tan x = sin x / cos x": {
     "title": "Tangent as a quotient",
-    "about": "Tangent is the ratio of the unit-circle point's y to its x, which is the slope of the ray at angle x. Rewriting tan in sines and cosines is the usual first step in proving an identity.",
+    "about": "tan x is the unit-circle point's y over its x, the slope of the ray at angle x (opposite/adjacent in a right triangle). Divide the sin column by the cos column to get any tan value; it is undefined where cos x = 0 (90°, 270°), positive in quadrants I and III. Rewriting tan in sines and cosines is the usual first step in proving an identity.",
     "assumptions": [
-      "cos x ≠ 0 (x ≠ π/2 + kπ)"
+      "cos x ≠ 0 (x ≠ π/2 + kπ)",
+      "tan repeats every π (180°)"
     ],
     "vars": [
       [
         "x",
-        "angle (any real number, in radians or degrees)",
-        ""
+        "angle (in radians, or degrees with °)",
+        "rad"
       ]
     ],
     "related": [
@@ -220,16 +238,21 @@
       [
         "1 + tan^{2}x = sec^{2}x",
         "Pythagorean form"
+      ],
+      [
+        "arctan x ∈ (−π/2, π/2)",
+        "going back to the angle"
       ]
     ],
     "example": {
-      "problem": "sin x = 0.6 and cos x = 0.8. Find tan x.",
+      "problem": "Find tan 150° exactly from the table.",
       "steps": [
-        "tan x = 0.6/0.8"
+        "sin 150° = 1/2, cos 150° = −√3/2",
+        "tan 150° = (1/2)/(−√3/2) = −1/√3 = −√3/3"
       ],
-      "answer": "tan x = 0.75"
+      "answer": "tan 150° = −√3/3 ≈ −0.5774"
     },
-    "try": "0.6/0.8"
+    "try": "tan(150)"
   },
   "cot x = cos x / sin x": {
     "title": "Cotangent as a quotient",
@@ -1948,7 +1971,8 @@
     "about": "Raising a power to a power multiplies the exponents: n copies of m factors.",
     "assumptions": [
       "Integer exponents: any a",
-      "Real exponents: a > 0 (e.g. ((−1)^{2})^{1/2} = 1 but (−1)^{1} = −1)"
+      "Real exponents: a > 0 (e.g. ((−1)^{2})^{1/2} = 1 but (−1)^{1} = −1)",
+      "Common slip: (a^{m})^{n} = a^{mn}, but a^{m^{n}} means a^{(m^{n})}: 2^{3^{2}} = 512, not 64"
     ],
     "vars": [
       [
@@ -2291,7 +2315,8 @@
     "title": "Sum of cubes",
     "about": "Factors a sum of two cubes. The quadratic factor has no real roots, so a + b is the only real linear factor.",
     "assumptions": [
-      "Holds for all real (or complex) a and b"
+      "Holds for all real (or complex) a and b",
+      "Memory aid SOAP: Same sign, Opposite sign, Always Plus"
     ],
     "vars": [
       [
@@ -2325,7 +2350,9 @@
     "title": "Difference of cubes",
     "about": "Factors a difference of two cubes. a − b is the only real linear factor.",
     "assumptions": [
-      "Holds for all real (or complex) a and b"
+      "Holds for all real (or complex) a and b",
+      "Memory aid SOAP: Same sign, Opposite sign, Always Plus",
+      "Common slip: (a − b)^{3} is not a^{3} − b^{3}"
     ],
     "vars": [
       [
@@ -3429,5 +3456,101 @@
       "answer": "64"
     },
     "try": "sum(nCr(6, k), k, 0, 6)"
+  },
+  "sin(π − x) = sin x": {
+    "title": "Supplementary angles have the same sine",
+    "about": "Reflecting across the y axis keeps the height of the unit-circle point, so θ and 180° − θ share a sine. That is why sin θ = c has two solutions per turn, and why the law of sines can give two triangles.",
+    "assumptions": [
+      "any x; in degrees sin(180° − x) = sin x"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "cos(π − x) = −cos x",
+        "the cosine flips"
+      ],
+      [
+        "arcsin x ∈ [−π/2, π/2]",
+        "the calculator gives only one"
+      ]
+    ],
+    "example": {
+      "problem": "Find sin 150° from sin 30°.",
+      "steps": [
+        "sin 150° = sin(180° − 30°) = sin 30°"
+      ],
+      "answer": "sin 150° = 1/2 = 0.5"
+    },
+    "try": "sin(150)"
+  },
+  "cos(π − x) = −cos x": {
+    "title": "Supplementary angles have opposite cosines",
+    "about": "Reflecting across the y axis flips the x coordinate of the unit-circle point, so cos(180° − θ) = −cos θ (and tan flips too).",
+    "assumptions": [
+      "any x; in degrees cos(180° − x) = −cos x"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "sin(π − x) = sin x",
+        "the sine stays"
+      ],
+      [
+        "θ_{ref} = 180° − θ,  θ − 180°,  360° − θ",
+        "reference angles"
+      ]
+    ],
+    "example": {
+      "problem": "Find cos 120° from cos 60°.",
+      "steps": [
+        "cos 120° = cos(180° − 60°) = −cos 60°"
+      ],
+      "answer": "cos 120° = −1/2 = −0.5"
+    },
+    "try": "cos(120)"
+  },
+  "sin(x + 2π) = sin x": {
+    "title": "Periodicity of sine and cosine",
+    "about": "A full turn returns to the same unit-circle point, so sin and cos repeat every 2π (360°); tan and cot repeat every π (180°). Subtract whole turns before using the table, and add 2πk to list every solution.",
+    "assumptions": [
+      "k any integer: sin(x + 2πk) = sin x"
+    ],
+    "vars": [
+      [
+        "x",
+        "angle",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "cos(−x) = cos x",
+        "even"
+      ],
+      [
+        "sin(−x) = −sin x",
+        "odd"
+      ]
+    ],
+    "example": {
+      "problem": "Find sin 390°.",
+      "steps": [
+        "390° − 360° = 30°"
+      ],
+      "answer": "sin 390° = 0.5"
+    },
+    "try": "sin(390)"
   }
 }

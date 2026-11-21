@@ -2185,8 +2185,8 @@
     "about": "The area of a triangle from its three side lengths alone, with no angles or heights. Useful for surveying and for a truss panel where only the member lengths are known.",
     "assumptions": [
       "s = (a + b + c)/2 is half the perimeter",
-      "The sides must satisfy the triangle inequality, or s − a etc. goes negative",
-      "For a very thin (needle-like) triangle it loses accuracy to rounding; sort a ≥ b ≥ c and use the stable form"
+      "The sides must satisfy the triangle inequality, or a factor s − a goes negative",
+      "For a very thin (needle-like) triangle it loses accuracy to rounding; sort a ≥ b ≥ c and use A = (1/4)√((a + (b + c))(c − (a − b))(c + (a − b))(a + (b − c)))"
     ],
     "vars": [
       [
@@ -2930,7 +2930,7 @@
   },
   "((x_{1} + x_{2})/2, (y_{1} + y_{2})/2)": {
     "title": "Midpoint of a segment",
-    "about": "The point half-way between two points: the average of their coordinates. It is also the centroid of a uniform rod, where its weight acts.",
+    "about": "The point half-way between two points: each coordinate is the average of the two ends, since going half the distance means going half of Δx and half of Δy. It is also the centroid of a uniform rod, where its weight acts.",
     "assumptions": [
       "Cartesian coordinates; works the same in 3-D with z",
       "A weighted average gives the point dividing a segment in another ratio: ((1 − t)x_{1} + t x_{2}, …)"
@@ -2968,7 +2968,8 @@
         "y = (2 + 6)/2 = 4"
       ],
       "answer": "(2.5, 4) m"
-    }
+    },
+    "try": "([1, 2] + [4, 6])/2"
   },
   "m = (y_{2} − y_{1})/(x_{2} − x_{1})": {
     "title": "Slope of a line",
@@ -3173,7 +3174,7 @@
   },
   "z = (x − μ)/σ": {
     "title": "z-score (standardized value)",
-    "about": "How many standard deviations a value lies from the mean. It turns any normal variable into the standard normal so one table (or Φ) gives probabilities, and it flags unusual values (|z| > 3 is rare).",
+    "about": "How many standard deviations a value lies from the mean. It turns any normal variable into the standard normal, so one table (or Φ) gives probabilities, and it flags unusual values (|z| > 3 is rare). In machine learning the same formula standardizes a feature to mean 0 and standard deviation 1, using the training set's μ and σ, so features on different scales weigh equally.",
     "assumptions": [
       "μ and σ are the population values; with sample estimates and small n use the t distribution",
       "Probabilities from z assume the data are normal"
@@ -5002,9 +5003,17 @@
   },
   "A = l w": {
     "title": "Area of a rectangle",
-    "about": "Length times width.",
-    "assumptions": [],
+    "about": "Length times width: the area of any rectangle, and of anything built from rectangles (floor plans, plates, rectangular cross-sections of beams).",
+    "assumptions": [
+      "Both sides in the same unit; the area comes out in that unit squared",
+      "Every corner is a right angle; a slanted (sheared) shape is a parallelogram, A = b h"
+    ],
     "vars": [
+      [
+        "A",
+        "area",
+        "m^{2}"
+      ],
       [
         "l",
         "length",
@@ -5016,21 +5025,41 @@
         "m"
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "P = 2(l + w)",
+        "perimeter"
+      ],
+      [
+        "I = bh^{3}/12",
+        "second moment of area of a rectangular section"
+      ],
+      [
+        "A = b h",
+        "parallelogram"
+      ]
+    ],
     "example": {
       "problem": "A room is 4.2 m by 3.5 m. Find its floor area.",
       "steps": [
-        "4.2 × 3.5"
+        "A = 4.2 m × 3.5 m"
       ],
-      "answer": "14.7 m²"
+      "answer": "A = 14.7 m^{2}"
     },
     "try": "4.2 m * 3.5 m"
   },
   "P = 2(l + w)": {
     "title": "Perimeter of a rectangle",
-    "about": "Twice the length plus twice the width: the distance around.",
-    "assumptions": [],
+    "about": "The distance around a rectangle: two lengths plus two widths. Use it for fencing, edging, weld length around a plate or the wetted perimeter of a rectangular duct.",
+    "assumptions": [
+      "Both sides in the same unit"
+    ],
     "vars": [
+      [
+        "P",
+        "perimeter",
+        "m"
+      ],
       [
         "l",
         "length",
@@ -5042,42 +5071,79 @@
         "m"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Fence a 12 m by 8 m yard.",
-      "steps": [
-        "2(12 + 8)"
+    "related": [
+      [
+        "A = l w",
+        "area"
       ],
-      "answer": "40 m"
+      [
+        "C = 2πr",
+        "circle circumference"
+      ]
+    ],
+    "example": {
+      "problem": "How much fence surrounds a 12 m by 8 m yard?",
+      "steps": [
+        "P = 2(12 m + 8 m) = 2 × 20 m"
+      ],
+      "answer": "P = 40 m"
     },
     "try": "2(12 m + 8 m)"
   },
   "A = (√3/4) a^{2}": {
     "title": "Area of an equilateral triangle",
-    "about": "Half base times height with height (√3/2)a.",
-    "assumptions": [],
+    "about": "The area of a triangle with three equal sides a. It is half base times height, with the height (√3/2)a from Pythagoras on half the triangle.",
+    "assumptions": [
+      "All three sides equal (all angles 60°); otherwise use (1/2) b h or Heron"
+    ],
     "vars": [
+      [
+        "A",
+        "area",
+        "m^{2}"
+      ],
       [
         "a",
         "side length",
         "m"
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "h = (√3/2) a",
+        "height"
+      ],
+      [
+        "A = (1/2) b h",
+        "any triangle"
+      ],
+      [
+        "A = (1/4) n s^{2} cot(π/n)",
+        "any regular polygon (n = 3 gives this)"
+      ]
+    ],
     "example": {
       "problem": "Find the area of an equilateral triangle of side 6 cm.",
       "steps": [
-        "(√3/4) · 36"
+        "A = (√3/4)(6 cm)^{2} = (√3/4) × 36 cm^{2} = 9√3 cm^{2}"
       ],
-      "answer": "≈ 15.59 cm²"
+      "answer": "A ≈ 15.59 cm^{2}"
     },
     "try": "sqrt(3)/4 * (6 cm)^2"
   },
   "A = (1/4) n s^{2} cot(π/n)": {
     "title": "Area of a regular polygon",
-    "about": "A regular n-gon is n identical isosceles triangles meeting at the centre.",
-    "assumptions": [],
+    "about": "The area of a regular polygon with n equal sides of length s. It splits into n identical isosceles triangles meeting at the centre, each of base s and height (s/2) cot(π/n), the apothem.",
+    "assumptions": [
+      "Regular: all sides and all angles equal",
+      "π/n in radians (or 180°/n in degrees)"
+    ],
     "vars": [
+      [
+        "A",
+        "area",
+        "m^{2}"
+      ],
       [
         "n",
         "number of sides",
@@ -5089,62 +5155,119 @@
         "m"
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "a = (s/2) cot(π/n)",
+        "apothem (centre to the middle of a side)"
+      ],
+      [
+        "A = (1/2) P a",
+        "half the perimeter times the apothem"
+      ],
+      [
+        "(n − 2) 180°",
+        "sum of the interior angles"
+      ]
+    ],
     "example": {
       "problem": "Find the area of a regular hexagon of side 2 m.",
       "steps": [
-        "(1/4) · 6 · 4 · cot(π/6) = 6√3"
+        "n = 6, cot(π/6) = √3",
+        "A = (1/4)(6)(2 m)^{2}√3 = 6√3 m^{2}"
       ],
-      "answer": "≈ 10.39 m²"
+      "answer": "A ≈ 10.39 m^{2}"
     },
     "try": "1/4 * 6 * (2 m)^2 * cot(pi/6 rad)"
   },
   "V = l w h": {
     "title": "Volume of a box (rectangular prism)",
-    "about": "Length times width times height.",
-    "assumptions": [],
+    "about": "Length times width times height: the volume of a rectangular block, tank or room. 1 m^{3} = 1000 L.",
+    "assumptions": [
+      "All faces rectangular, every corner a right angle",
+      "All three edges in the same unit"
+    ],
     "vars": [
       [
+        "V",
+        "volume",
+        "m^{3}"
+      ],
+      [
         "l, w, h",
-        "edge lengths",
+        "length, width and height",
         "m"
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "S = 2(l w + l h + w h)",
+        "surface area"
+      ],
+      [
+        "V = B h",
+        "any prism"
+      ],
+      [
+        "m = ρV",
+        "mass"
+      ]
+    ],
     "example": {
       "problem": "A tank is 2 m × 1.5 m × 1 m. How many litres does it hold?",
       "steps": [
-        "2 × 1.5 × 1 = 3 m³"
+        "V = 2 × 1.5 × 1 = 3 m^{3}",
+        "1 m^{3} = 1000 L"
       ],
-      "answer": "3000 L"
+      "answer": "V = 3000 L"
     },
     "try": "2 m * 1.5 m * 1 m to L"
   },
   "S = 2(l w + l h + w h)": {
     "title": "Surface area of a box",
-    "about": "Three pairs of rectangular faces.",
-    "assumptions": [],
+    "about": "The total area of a box's six rectangular faces, which come in three equal pairs. Use it for sheet metal, paint, insulation and heat loss from a rectangular enclosure.",
+    "assumptions": [
+      "A closed box; drop one l w term for an open top",
+      "All three edges in the same unit"
+    ],
     "vars": [
       [
+        "S",
+        "surface area",
+        "m^{2}"
+      ],
+      [
         "l, w, h",
-        "edge lengths",
+        "length, width and height",
         "m"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Find the surface area of a 3 × 4 × 5 cm box.",
-      "steps": [
-        "2(12 + 15 + 20)"
+    "related": [
+      [
+        "V = l w h",
+        "volume"
       ],
-      "answer": "94 cm²"
+      [
+        "S = 6a^{2}",
+        "cube of side a"
+      ]
+    ],
+    "example": {
+      "problem": "Find the surface area of a 3 cm × 4 cm × 5 cm box.",
+      "steps": [
+        "Faces: 3 × 4 = 12, 3 × 5 = 15, 4 × 5 = 20 cm^{2}",
+        "S = 2(12 + 15 + 20)"
+      ],
+      "answer": "S = 94 cm^{2}"
     },
     "try": "2(3*4 + 3*5 + 4*5)"
   },
   "A + B + C = 180°": {
     "title": "Angle sum of a triangle",
-    "about": "The interior angles of any flat triangle add to 180° (π rad).",
-    "assumptions": [],
+    "about": "The three interior angles of any flat triangle add to 180° (π rad). Use it to find the third angle before applying the law of sines, or to check a force triangle.",
+    "assumptions": [
+      "A flat (Euclidean) triangle; on a sphere the sum exceeds 180°",
+      "The angles are interior angles"
+    ],
     "vars": [
       [
         "A, B, C",
@@ -5152,31 +5275,65 @@
         "°"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Two angles are 50° and 65°. Find the third.",
-      "steps": [
-        "180 − 50 − 65"
+    "related": [
+      [
+        "(n − 2) 180°",
+        "any polygon"
       ],
-      "answer": "65°"
-    }
+      [
+        "a/sin(A) = b/sin(B) = c/sin(C)",
+        "law of sines"
+      ],
+      [
+        "exterior angle = sum of the two opposite interior angles",
+        "exterior angle theorem"
+      ]
+    ],
+    "example": {
+      "problem": "Two angles of a triangle are 50° and 65°. Find the third.",
+      "steps": [
+        "C = 180° − 50° − 65°"
+      ],
+      "answer": "C = 65°"
+    },
+    "try": "180 deg - 50 deg - 65 deg"
   },
   "1 : 1 : √2": {
     "title": "45-45-90 triangle",
-    "about": "An isosceles right triangle: the legs are equal and the hypotenuse is √2 times a leg.",
-    "assumptions": [],
+    "about": "The side ratio of an isosceles right triangle: two equal legs and a hypotenuse √2 times a leg. It is half a square cut along its diagonal, and gives sin 45° = cos 45° = 1/√2 exactly.",
+    "assumptions": [
+      "Angles 45°, 45° and 90°"
+    ],
     "vars": [
       [
         "leg",
-        "each short side",
+        "each of the two equal sides",
+        "m"
+      ],
+      [
+        "hypotenuse",
+        "leg × √2",
         "m"
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "1 : √3 : 2",
+        "30-60-90 triangle"
+      ],
+      [
+        "a^{2} + b^{2} = c^{2}",
+        "Pythagoras, where it comes from"
+      ],
+      [
+        "d = s√2",
+        "diagonal of a square of side s"
+      ]
+    ],
     "example": {
-      "problem": "The legs are 5 cm. Find the hypotenuse.",
+      "problem": "The legs of a right isosceles triangle are 5 cm. Find the hypotenuse.",
       "steps": [
-        "5√2"
+        "hypotenuse = 5√2 cm"
       ],
       "answer": "≈ 7.07 cm"
     },
@@ -5184,102 +5341,202 @@
   },
   "1 : √3 : 2": {
     "title": "30-60-90 triangle",
-    "about": "Half an equilateral triangle: short leg (opposite 30°), long leg √3 times it, hypotenuse twice it.",
-    "assumptions": [],
+    "about": "The side ratio of a right triangle with angles 30° and 60°: short leg (opposite 30°), long leg √3 times it, hypotenuse twice it. It is half an equilateral triangle, and gives the exact sin and cos of 30° and 60°.",
+    "assumptions": [
+      "Angles 30°, 60° and 90°",
+      "The short leg is opposite the 30° angle"
+    ],
     "vars": [
       [
         "short leg",
         "side opposite 30°",
         "m"
+      ],
+      [
+        "long leg",
+        "side opposite 60°, short leg × √3",
+        "m"
+      ],
+      [
+        "hypotenuse",
+        "short leg × 2",
+        "m"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "The hypotenuse is 10. Find both legs.",
-      "steps": [
-        "short = 10/2 = 5",
-        "long = 5√3"
+    "related": [
+      [
+        "1 : 1 : √2",
+        "45-45-90 triangle"
       ],
-      "answer": "5 and ≈ 8.66"
-    }
+      [
+        "sin 30° = 1/2, cos 30° = √3/2",
+        "exact values"
+      ]
+    ],
+    "example": {
+      "problem": "The hypotenuse of a 30-60-90 triangle is 10 cm. Find both legs.",
+      "steps": [
+        "short leg = 10/2 = 5 cm",
+        "long leg = 5√3 cm"
+      ],
+      "answer": "5 cm and ≈ 8.66 cm"
+    },
+    "try": "5 sqrt(3)"
   },
   "(n − 2) 180°": {
     "title": "Sum of the interior angles of a polygon",
-    "about": "Any n-sided polygon splits into n − 2 triangles from one vertex.",
-    "assumptions": [],
+    "about": "The interior angles of any simple n-sided polygon add to (n − 2) × 180°, because diagonals from one vertex split it into n − 2 triangles. For a regular polygon each angle is that sum divided by n.",
+    "assumptions": [
+      "A simple polygon (sides don't cross); it may be convex or not",
+      "n ≥ 3"
+    ],
     "vars": [
       [
         "n",
         "number of sides",
         ""
+      ],
+      [
+        "(n − 2) 180°",
+        "sum of the interior angles",
+        "°"
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "(n − 2) 180°/n",
+        "each angle of a regular n-gon"
+      ],
+      [
+        "360°",
+        "sum of the exterior angles, any n"
+      ],
+      [
+        "A + B + C = 180°",
+        "triangle, n = 3"
+      ]
+    ],
     "example": {
       "problem": "Find each interior angle of a regular octagon.",
       "steps": [
-        "(8 − 2) · 180° = 1080°",
-        "1080°/8"
+        "Sum = (8 − 2) × 180° = 1080°",
+        "Each = 1080°/8"
       ],
       "answer": "135°"
-    }
+    },
+    "try": "(8 - 2)*180/8"
   },
   "d = √((x_{2} − x_{1})^{2} + (y_{2} − y_{1})^{2} + (z_{2} − z_{1})^{2})": {
     "title": "Distance between two points in 3D",
-    "about": "Pythagoras applied twice.",
-    "assumptions": [],
+    "about": "The straight-line distance between two points in space: Pythagoras applied twice. Use it for the length of a space-truss member, a cable between two anchors, or the size of a position vector.",
+    "assumptions": [
+      "Cartesian coordinates, all in the same unit"
+    ],
     "vars": [
+      [
+        "d",
+        "distance",
+        "m"
+      ],
       [
         "(x_{1}, y_{1}, z_{1})",
         "first point",
-        ""
+        "m"
       ],
       [
         "(x_{2}, y_{2}, z_{2})",
         "second point",
-        ""
+        "m"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Find the distance from (1, 2, 3) to (4, 6, 15).",
-      "steps": [
-        "√(9 + 16 + 144)"
+    "related": [
+      [
+        "d = √((x_{2} − x_{1})^{2} + (y_{2} − y_{1})^{2})",
+        "in the plane"
       ],
-      "answer": "13"
+      [
+        "|r| = √(x^{2} + y^{2} + z^{2})",
+        "length of a vector"
+      ],
+      [
+        "u = (Δx, Δy, Δz)/d",
+        "unit vector along the line"
+      ]
+    ],
+    "example": {
+      "problem": "A cable runs from (1, 2, 3) m to (4, 6, 15) m. How long is it?",
+      "steps": [
+        "Δx = 3, Δy = 4, Δz = 12",
+        "d = √(9 + 16 + 144) = √169"
+      ],
+      "answer": "d = 13 m"
     },
     "try": "sqrt(3^2 + 4^2 + 12^2)"
   },
   "d = (|a x_{0} + b y_{0} + c|)/√(a^{2} + b^{2})": {
     "title": "Distance from a point to a line",
-    "about": "The shortest (perpendicular) distance from (x₀, y₀) to the line ax + by + c = 0.",
-    "assumptions": [],
+    "about": "The shortest (perpendicular) distance from the point (x_{0}, y_{0}) to the line ax + by + c = 0. Use it for clearances, the moment arm of a force about a point, or the error of a point from a fitted line.",
+    "assumptions": [
+      "The line must be written as ax + by + c = 0 first (y = mx + k becomes mx − y + k = 0)",
+      "a and b not both zero",
+      "Without the absolute value the sign tells which side of the line the point is on"
+    ],
     "vars": [
       [
+        "d",
+        "perpendicular distance",
+        "m"
+      ],
+      [
         "a, b, c",
-        "line coefficients",
+        "coefficients of the line ax + by + c = 0",
         ""
       ],
       [
         "(x_{0}, y_{0})",
         "the point",
-        ""
+        "m"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Distance from (1, 2) to 3x + 4y − 1 = 0.",
-      "steps": [
-        "|3 + 8 − 1|/5"
+    "related": [
+      [
+        "M = F d",
+        "moment of a force with arm d"
       ],
-      "answer": "2"
-    }
+      [
+        "d = |ax_{0} + by_{0} + cz_{0} + e|/√(a^{2} + b^{2} + c^{2})",
+        "point to a plane in 3-D"
+      ]
+    ],
+    "example": {
+      "problem": "Find the distance from (1, 2) to the line 3x + 4y − 1 = 0.",
+      "steps": [
+        "|3(1) + 4(2) − 1| = 10",
+        "√(3^{2} + 4^{2}) = 5",
+        "d = 10/5"
+      ],
+      "answer": "d = 2"
+    },
+    "try": "abs(3*1 + 4*2 - 1)/sqrt(3^2 + 4^2)"
   },
   "σ^{2} = Σ (x_{i} − μ)^{2}/N": {
     "title": "Population variance",
-    "about": "The mean squared distance from the mean when you have every member of the population: divide by N, not n − 1.",
-    "assumptions": [],
+    "about": "The mean squared distance from the mean when you have every member of the population (or a theoretical distribution). Divide by N, not n − 1: no correction is needed because μ is the true mean, not one estimated from the same data.",
+    "assumptions": [
+      "The data are the whole population; for a sample use s^{2} with n − 1",
+      "Units are the data's units squared; σ = √(σ^{2})"
+    ],
     "vars": [
+      [
+        "σ^{2}",
+        "population variance",
+        ""
+      ],
+      [
+        "x_{i}",
+        "each value",
+        ""
+      ],
       [
         "μ",
         "population mean",
@@ -5291,24 +5548,48 @@
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Find σ² for 2, 4, 6.",
-      "steps": [
-        "μ = 4",
-        "(4 + 0 + 4)/3"
+    "related": [
+      [
+        "s^{2} = Σ (x_{i} − x̄)^{2} / (n − 1)",
+        "sample variance"
       ],
-      "answer": "8/3 ≈ 2.67"
-    }
+      [
+        "σ^{2} = (Σ x_{i}^{2})/N − μ^{2}",
+        "shortcut form"
+      ],
+      [
+        "Var(X) = E[X^{2}] − E[X]^{2}",
+        "for a random variable"
+      ]
+    ],
+    "example": {
+      "problem": "A population is 2, 4, 6. Find its variance.",
+      "steps": [
+        "μ = (2 + 4 + 6)/3 = 4",
+        "squared deviations: 4, 0, 4",
+        "σ^{2} = (4 + 0 + 4)/3"
+      ],
+      "answer": "σ^{2} = 8/3 ≈ 2.667"
+    },
+    "try": "((2 - 4)^2 + (4 - 4)^2 + (6 - 4)^2)/3"
   },
   "σ_{x̄} = σ/√n": {
     "title": "Standard error of the mean",
-    "about": "How much a sample mean varies from sample to sample. Quadrupling n halves it.",
-    "assumptions": [],
+    "about": "How much the mean of n independent readings varies from sample to sample: the standard deviation of x̄. Averaging more readings narrows it as 1/√n, so quadrupling n halves it. It is the scale for confidence intervals and z or t tests on a mean.",
+    "assumptions": [
+      "Readings independent and from the same distribution",
+      "With σ unknown use s in its place (then intervals use t)",
+      "It shrinks random error only, not a systematic bias"
+    ],
     "vars": [
       [
+        "σ_{x̄}",
+        "standard error of the mean",
+        ""
+      ],
+      [
         "σ",
-        "standard deviation (s if σ unknown)",
+        "standard deviation of a single reading (s if σ is unknown)",
         ""
       ],
       [
@@ -5317,41 +5598,91 @@
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "σ = 12 and n = 36. Find the standard error.",
-      "steps": [
-        "12/√36"
+    "related": [
+      [
+        "x̄ ± z σ/√n",
+        "confidence interval"
       ],
-      "answer": "2"
+      [
+        "z = (x̄ − μ_{0})/(σ/√n)",
+        "z test"
+      ],
+      [
+        "n = (z σ/E)^{2}",
+        "sample size for a margin E"
+      ]
+    ],
+    "example": {
+      "problem": "Single readings scatter with σ = 12. What is the standard error of the mean of 36 readings?",
+      "steps": [
+        "σ_{x̄} = 12/√36 = 12/6"
+      ],
+      "answer": "σ_{x̄} = 2"
     },
     "try": "12/sqrt(36)"
   },
   "σ_{XY} = E[XY] − E[X] E[Y]": {
     "title": "Covariance",
-    "about": "How two variables move together: positive when they rise together, zero when independent.",
-    "assumptions": [],
+    "about": "How two variables move together: positive when they tend to rise together, negative when one rises as the other falls, zero when independent. It is the term that makes the variance of a sum differ from the sum of the variances.",
+    "assumptions": [
+      "Independent X and Y have σ_{XY} = 0, but zero covariance does not prove independence (only no linear relation)",
+      "Its size depends on the units; for a unit-free measure use r = σ_{XY}/(σ_{X} σ_{Y})",
+      "From a sample: s_{xy} = Σ (x_{i} − x̄)(y_{i} − ȳ)/(n − 1)"
+    ],
     "vars": [
       [
-        "X, Y",
-        "random variables",
+        "σ_{XY}",
+        "covariance, Cov(X, Y)",
+        ""
+      ],
+      [
+        "E[XY]",
+        "mean of the product",
+        ""
+      ],
+      [
+        "E[X], E[Y]",
+        "means of X and Y",
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "E[XY] = 10, E[X] = 2, E[Y] = 3. Find Cov(X, Y).",
-      "steps": [
-        "10 − 2 · 3"
+    "related": [
+      [
+        "σ_{XY} = E[(X − μ_{X})(Y − μ_{Y})]",
+        "definition"
       ],
-      "answer": "4"
-    }
+      [
+        "r = σ_{XY}/(σ_{X} σ_{Y})",
+        "correlation"
+      ],
+      [
+        "Var(X + Y) = Var(X) + Var(Y) + 2σ_{XY}",
+        "variance of a sum"
+      ]
+    ],
+    "example": {
+      "problem": "E[XY] = 10, E[X] = 2 and E[Y] = 3. Find Cov(X, Y).",
+      "steps": [
+        "σ_{XY} = 10 − 2 × 3"
+      ],
+      "answer": "σ_{XY} = 4"
+    },
+    "try": "10 - 2*3"
   },
   "r = σ_{XY}/(σ_{X} σ_{Y})": {
     "title": "Correlation coefficient (Pearson r)",
-    "about": "Covariance scaled to −1 … 1: the strength and direction of a straight-line relationship.",
-    "assumptions": [],
+    "about": "Covariance scaled to between −1 and 1: the strength and direction of a straight-line relationship. r = ±1 means the points lie exactly on a line; r = 0 means no linear trend. r^{2} is the share of the variance in y explained by a line in x.",
+    "assumptions": [
+      "Measures linear association only: a perfect curve (y = x^{2} on symmetric x) can give r = 0",
+      "Sensitive to outliers",
+      "Correlation is not causation"
+    ],
     "vars": [
+      [
+        "r",
+        "correlation coefficient, −1 to 1",
+        ""
+      ],
       [
         "σ_{XY}",
         "covariance",
@@ -5359,26 +5690,47 @@
       ],
       [
         "σ_{X}, σ_{Y}",
-        "standard deviations",
+        "standard deviations of X and Y",
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Cov = 4, σ_X = 2, σ_Y = 5. Find r.",
-      "steps": [
-        "4/(2 · 5)"
+    "related": [
+      [
+        "b_{1} = r s_{y}/s_{x}",
+        "regression slope"
       ],
-      "answer": "0.4"
-    }
+      [
+        "R^{2} = r^{2}",
+        "simple linear regression"
+      ],
+      [
+        "σ_{XY} = E[XY] − E[X] E[Y]",
+        "covariance"
+      ]
+    ],
+    "example": {
+      "problem": "Cov(X, Y) = 4, σ_{X} = 2 and σ_{Y} = 5. Find r.",
+      "steps": [
+        "r = 4/(2 × 5)"
+      ],
+      "answer": "r = 0.4 (a weak positive trend; r^{2} = 0.16)"
+    },
+    "try": "4/(2*5)"
   },
   "b_{1} = r s_{y}/s_{x}": {
     "title": "Least-squares regression slope",
-    "about": "The slope of the least-squares line ŷ = b_{0} + b_{1}x: the correlation rescaled from standard units into y-units per x-unit.",
+    "about": "The slope of the least-squares line ŷ = b_{0} + b_{1}x. A point one standard deviation above x̄ is predicted only r standard deviations above ȳ; the factor s_{y}/s_{x} turns those standard units into y-units per x-unit. Since |r| ≤ 1, predictions ‘regress toward the mean’.",
     "assumptions": [
-      "Minimises the vertical squared errors; swapping x and y gives a different line"
+      "Minimises the vertical squared errors; regressing x on y gives a different line, not this one inverted",
+      "Fits a straight-line trend only: check the residuals for a curve",
+      "Don’t extrapolate far beyond the range of x in the data"
     ],
     "vars": [
+      [
+        "b_{1}",
+        "slope of the fitted line",
+        "units of y per unit of x"
+      ],
       [
         "r",
         "correlation",
@@ -5387,7 +5739,7 @@
       [
         "s_{x}, s_{y}",
         "standard deviations of x and y",
-        ""
+        "units of x, y"
       ]
     ],
     "related": [
@@ -5398,22 +5750,34 @@
       [
         "r = σ_{XY}/(σ_{X} σ_{Y})",
         "correlation"
+      ],
+      [
+        "R^{2} = 1 − SS_{res}/SS_{tot}",
+        "variance explained, r^{2} for one feature"
       ]
     ],
     "example": {
-      "problem": "r = 0.8, s_{x} = 2, s_{y} = 5. Find the slope.",
+      "problem": "Hours studied (s_{x} = 2 h) and exam score (s_{y} = 5 points) have r = 0.8. Find the regression slope.",
       "steps": [
-        "0.8 × 5/2"
+        "b_{1} = 0.8 × 5/2"
       ],
-      "answer": "b_{1} = 2"
+      "answer": "b_{1} = 2 points per hour"
     },
     "try": "0.8*5/2"
   },
   "b_{0} = ȳ − b_{1} x̄": {
     "title": "Least-squares regression intercept",
-    "about": "The best-fit line passes through (x̄, ȳ), which fixes the intercept.",
-    "assumptions": [],
+    "about": "The intercept of the least-squares line ŷ = b_{0} + b_{1}x. The best-fit line always passes through the point of means (x̄, ȳ), which fixes b_{0} once the slope is known.",
+    "assumptions": [
+      "Find the slope b_{1} first (b_{1} = r s_{y}/s_{x})",
+      "The intercept may be meaningless if x = 0 lies far outside the data"
+    ],
     "vars": [
+      [
+        "b_{0}",
+        "intercept (ŷ at x = 0)",
+        "units of y"
+      ],
       [
         "x̄, ȳ",
         "means of x and y",
@@ -5422,75 +5786,161 @@
       [
         "b_{1}",
         "slope",
-        ""
+        "y per x"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "x̄ = 3, ȳ = 10, b₁ = 2. Find b₀.",
-      "steps": [
-        "10 − 2 · 3"
+    "related": [
+      [
+        "b_{1} = r s_{y}/s_{x}",
+        "slope"
       ],
-      "answer": "4, so ŷ = 4 + 2x"
-    }
+      [
+        "ŷ = b_{0} + b_{1}x",
+        "the fitted line"
+      ]
+    ],
+    "example": {
+      "problem": "Data have x̄ = 3 and ȳ = 10, and the fitted slope is b_{1} = 2. Find the intercept.",
+      "steps": [
+        "b_{0} = 10 − 2 × 3"
+      ],
+      "answer": "b_{0} = 4, so ŷ = 4 + 2x"
+    },
+    "try": "10 - 2*3"
   },
   "E[X] = ∫ x f(x) dx": {
     "title": "Expected value of a continuous random variable",
-    "about": "The probability-weighted average, with the density f in place of p.",
-    "assumptions": [],
+    "about": "The probability-weighted average of a continuous variable: the mean, with the density f(x) in place of the discrete probabilities. It is the balance point of the density curve.",
+    "assumptions": [
+      "f(x) ≥ 0 and ∫ f(x) dx = 1 over the whole range",
+      "Integrate over every x where f is non-zero",
+      "Some heavy-tailed densities (Cauchy) have no mean"
+    ],
     "vars": [
+      [
+        "E[X]",
+        "expected value (mean μ)",
+        "units of x"
+      ],
+      [
+        "x",
+        "value of the variable",
+        ""
+      ],
       [
         "f(x)",
         "probability density",
-        ""
+        "1/units of x"
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "E[X] = Σ x p(x)",
+        "discrete case"
+      ],
+      [
+        "E[g(X)] = ∫ g(x) f(x) dx",
+        "mean of a function"
+      ],
+      [
+        "Var(X) = E[X^{2}] − E[X]^{2}",
+        "variance"
+      ]
+    ],
     "example": {
       "problem": "X is uniform on [0, 4]. Find E[X].",
       "steps": [
-        "f = 1/4",
-        "∫₀⁴ x/4 dx = 16/8"
+        "f(x) = 1/4 on [0, 4]",
+        "E[X] = ∫_{0}^{4} x/4 dx = (1/4)(16/2)"
       ],
-      "answer": "2"
-    }
+      "answer": "E[X] = 2"
+    },
+    "try": "integral(x/4, x, 0, 4)"
   },
   "Var(X + Y) = Var(X) + Var(Y) + 2σ_{XY}": {
     "title": "Variance of a sum",
-    "about": "Variances add for independent variables; correlation adds twice the covariance.",
-    "assumptions": [],
+    "about": "The spread of a sum of two random quantities, such as stacked tolerances or two noise sources. For independent variables the variances add (standard deviations add in quadrature); correlation adds twice the covariance.",
+    "assumptions": [
+      "Holds for any X and Y; σ_{XY} = 0 when they are independent",
+      "For a difference: Var(X − Y) = Var(X) + Var(Y) − 2σ_{XY}",
+      "Add variances, never standard deviations"
+    ],
     "vars": [
+      [
+        "Var(X), Var(Y)",
+        "variances",
+        ""
+      ],
       [
         "σ_{XY}",
         "covariance of X and Y",
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Independent X, Y with Var 4 and 9. Find the SD of X + Y.",
-      "steps": [
-        "Var = 13"
+    "related": [
+      [
+        "σ_{X+Y} = √(σ_{X}^{2} + σ_{Y}^{2})",
+        "independent: root sum of squares"
       ],
-      "answer": "√13 ≈ 3.61"
-    }
+      [
+        "Var(aX + bY) = a^{2}Var(X) + b^{2}Var(Y) + 2ab σ_{XY}",
+        "weighted sum"
+      ],
+      [
+        "σ_{XY} = E[XY] − E[X] E[Y]",
+        "covariance"
+      ]
+    ],
+    "example": {
+      "problem": "Two independent parts stack end to end; their lengths have variances 4 mm^{2} and 9 mm^{2}. Find the standard deviation of the total length.",
+      "steps": [
+        "Independent, so σ_{XY} = 0",
+        "Var = 4 + 9 = 13 mm^{2}",
+        "σ = √13"
+      ],
+      "answer": "σ ≈ 3.606 mm"
+    },
+    "try": "sqrt(4 + 9)"
   },
   "P(A^{c}) = 1 − P(A)": {
     "title": "Complement rule",
-    "about": "The chance something does not happen. Often easiest for \"at least one\".",
-    "assumptions": [],
+    "about": "A and ‘not A’ cover every outcome without overlapping, so their probabilities add to 1. It turns a hard ‘at least one’ question into an easy ‘none at all’ one: P(at least one) = 1 − P(none).",
+    "assumptions": [
+      "A^{c} is every outcome not in A",
+      "For n independent trials P(none) = (1 − p)^{n}; adding the single-trial chances instead is a classic mistake (4 × 1/6 = 0.667 is wrong)"
+    ],
     "vars": [
       [
-        "A^{c}",
-        "not A",
+        "P(A)",
+        "probability that A happens",
+        ""
+      ],
+      [
+        "P(A^{c})",
+        "probability that A does not happen",
         ""
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "P(A ∩ B) = P(A) P(B)",
+        "independent events, for P(none)"
+      ],
+      [
+        "P(A ∪ B) = P(A) + P(B) − P(A ∩ B)",
+        "addition rule"
+      ],
+      [
+        "1 − (1 − p)^{n}",
+        "at least one success in n trials"
+      ]
+    ],
     "example": {
-      "problem": "Chance of at least one six in 4 rolls.",
+      "problem": "A die is rolled 4 times. What is the chance of at least one six?",
       "steps": [
-        "1 − (5/6)^{4}"
+        "P(no six in one roll) = 5/6",
+        "P(no six in 4 rolls) = (5/6)^{4} = 0.482",
+        "P(at least one six) = 1 − 0.482"
       ],
       "answer": "≈ 0.518"
     },
@@ -5498,60 +5948,118 @@
   },
   "P(A ∩ B) = P(A) P(B)": {
     "title": "Multiplication rule for independent events",
-    "about": "When one event tells nothing about the other, the chance of both is the product.",
+    "about": "When knowing one event tells you nothing about the other, the chance that both happen is the product. It gives the reliability of components in series and the chance of repeated independent outcomes.",
     "assumptions": [
-      "A and B independent; otherwise P(A ∩ B) = P(A | B) P(B)"
+      "A and B independent; otherwise P(A ∩ B) = P(A | B) P(B)",
+      "Not the same as mutually exclusive: exclusive events with non-zero probability are never independent"
     ],
     "vars": [
       [
-        "A, B",
-        "independent events",
+        "P(A ∩ B)",
+        "probability that both happen",
+        ""
+      ],
+      [
+        "P(A), P(B)",
+        "probabilities of each event",
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Two fair coins: chance of two heads.",
-      "steps": [
-        "0.5 · 0.5"
+    "related": [
+      [
+        "P(A ∩ B) = P(A | B) P(B)",
+        "general multiplication rule"
       ],
-      "answer": "0.25"
-    }
+      [
+        "R = R_{1} R_{2} ⋯ R_{n}",
+        "reliability of independent parts in series"
+      ],
+      [
+        "P(A^{c}) = 1 − P(A)",
+        "complement"
+      ]
+    ],
+    "example": {
+      "problem": "Two independent pumps are each available 95% of the time. What is the chance both are available?",
+      "steps": [
+        "P = 0.95 × 0.95"
+      ],
+      "answer": "P = 0.9025"
+    },
+    "try": "0.95*0.95"
   },
   "P(B) = Σ P(B | A_{i}) P(A_{i})": {
     "title": "Law of total probability",
-    "about": "Split by cases A_i that cover everything without overlap and add. It is the denominator of Bayes.",
-    "assumptions": [],
+    "about": "To get the overall chance of B, split the outcomes into cases A_{i}, find B’s chance within each case, and average those chances weighted by how likely each case is. It is the denominator of Bayes’ theorem.",
+    "assumptions": [
+      "The A_{i} don’t overlap and together cover everything (Σ P(A_{i}) = 1); the two-case form uses A and A^{c}",
+      "Leaving out a case, such as the healthy people who test positive, is the usual mistake"
+    ],
     "vars": [
+      [
+        "P(B)",
+        "overall probability of B",
+        ""
+      ],
       [
         "A_{i}",
         "disjoint cases covering all outcomes",
         ""
+      ],
+      [
+        "P(B | A_{i})",
+        "probability of B within case i",
+        ""
+      ],
+      [
+        "P(A_{i})",
+        "probability of case i",
+        ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "1% have a disease; a test detects 99% and false-alarms 5%. P(positive)?",
-      "steps": [
-        "0.99 · 0.01 + 0.05 · 0.99"
+    "related": [
+      [
+        "P(A | B) = P(B | A) P(A)/P(B)",
+        "Bayes’ theorem, which divides by it"
       ],
-      "answer": "0.0594"
+      [
+        "P(A | B) = P(A ∩ B)/P(B)",
+        "conditional probability"
+      ]
+    ],
+    "example": {
+      "problem": "1% of people have a disease. A test detects 99% of cases and false-alarms on 5% of healthy people. What fraction of all tests are positive?",
+      "steps": [
+        "Sick and positive: 0.99 × 0.01 = 0.0099",
+        "Healthy and positive: 0.05 × 0.99 = 0.0495",
+        "P(positive) = 0.0099 + 0.0495"
+      ],
+      "answer": "P(positive) = 0.0594"
     },
     "try": "0.99*0.01 + 0.05*0.99"
   },
   "x̄ ± t s/√n": {
     "title": "Confidence interval for a mean (t interval)",
-    "about": "When σ is unknown, use s and a t value with n − 1 degrees of freedom.",
-    "assumptions": [],
+    "about": "The interval for a mean when σ is unknown and estimated by the sample s. The t value, with n − 1 degrees of freedom, is larger than z to allow for the extra uncertainty in s; it approaches z as n grows.",
+    "assumptions": [
+      "Data roughly normal, or n large enough (about 30+) for the central limit theorem",
+      "Observations independent",
+      "Read t from a table for n − 1 degrees of freedom and the confidence level (two-sided)"
+    ],
     "vars": [
       [
+        "x̄",
+        "sample mean",
+        ""
+      ],
+      [
         "t",
-        "critical t, n − 1 df",
+        "critical t value, n − 1 degrees of freedom",
         ""
       ],
       [
         "s",
-        "sample SD",
+        "sample standard deviation",
         ""
       ],
       [
@@ -5560,25 +6068,47 @@
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "n = 16, x̄ = 50, s = 8, 95% (t = 2.131).",
-      "steps": [
-        "2.131 · 8/4 = 4.26"
+    "related": [
+      [
+        "x̄ ± z σ/√n",
+        "σ known"
       ],
-      "answer": "50 ± 4.26"
-    }
+      [
+        "t = (x̄ − μ_{0})/(s/√n)",
+        "the matching t test"
+      ],
+      [
+        "t_{0.975} = 2.776, 2.262, 2.131, 2.045",
+        "95%, df 4, 9, 15, 29"
+      ]
+    ],
+    "example": {
+      "problem": "16 measurements have mean 50 and s = 8. Find the 95% confidence interval (t = 2.131 for 15 df).",
+      "steps": [
+        "Margin = 2.131 × 8/√16 = 2.131 × 2 = 4.262",
+        "Interval 50 ± 4.262"
+      ],
+      "answer": "margin ≈ 4.262: 45.74 to 54.26"
+    },
+    "try": "2.131 * 8/sqrt(16)"
   },
   "p̂ ± z √(p̂(1 − p̂)/n)": {
     "title": "Confidence interval for a proportion",
-    "about": "A sample proportion plus or minus its margin of error.",
+    "about": "The range likely to hold the true population proportion p, from a sample proportion p̂ = x/n. A yes/no answer has standard deviation √(p(1 − p)), so p̂ has standard error √(p̂(1 − p̂)/n), and the margin is z of those. It is the ‘± 3%’ quoted with polls.",
     "assumptions": [
-      "n p̂ and n(1 − p̂) both at least about 10"
+      "n p̂ and n(1 − p̂) both at least about 10, so p̂ is close to normal; otherwise use the Wilson interval",
+      "A random sample with independent responses",
+      "The margin is widest at p̂ = 0.5, so plans assume p̂ = 0.5 when nothing is known"
     ],
     "vars": [
       [
         "p̂",
-        "sample proportion",
+        "sample proportion x/n",
+        ""
+      ],
+      [
+        "z",
+        "critical value (1.96 for 95%)",
         ""
       ],
       [
@@ -5587,47 +6117,104 @@
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "420 of 1000 say yes. 95% interval?",
-      "steps": [
-        "1.96 √(0.42 · 0.58/1000) ≈ 0.031"
+    "related": [
+      [
+        "x̄ ± z σ/√n",
+        "the interval for a mean"
       ],
-      "answer": "margin ≈ 0.031, so 0.42 ± 0.031"
+      [
+        "n = (z σ/E)^{2}",
+        "sample size, with σ^{2} = p(1 − p)"
+      ],
+      [
+        "z = 1.960",
+        "95%"
+      ]
+    ],
+    "example": {
+      "problem": "In a survey, 420 of 1000 people say yes. Find the 95% confidence interval for the true proportion.",
+      "steps": [
+        "p̂ = 420/1000 = 0.42",
+        "standard error √(0.42 × 0.58/1000) = 0.0156",
+        "margin 1.96 × 0.0156 = 0.031"
+      ],
+      "answer": "0.42 ± 0.031: 0.389 to 0.451"
     },
     "try": "1.96 sqrt(0.42*0.58/1000)"
   },
   "n = (z σ/E)^{2}": {
     "title": "Sample size for a margin of error",
-    "about": "How many samples give a mean within ±E. Round up.",
-    "assumptions": [],
+    "about": "How many samples make a confidence interval for a mean ±E wide: the margin E = zσ/√n solved for n. Because n goes as 1/E^{2}, halving the margin takes four times the samples.",
+    "assumptions": [
+      "Always round up to the next whole sample, even 96.04 → 97",
+      "σ must be known or estimated beforehand (a pilot run or past data)",
+      "For a proportion use σ^{2} = p(1 − p), with p = 0.5 when unknown"
+    ],
     "vars": [
       [
-        "E",
-        "margin of error",
+        "n",
+        "samples needed",
+        ""
+      ],
+      [
+        "z",
+        "critical value (1.96 for 95%)",
         ""
       ],
       [
         "σ",
-        "standard deviation",
-        ""
+        "population standard deviation",
+        "units of x"
+      ],
+      [
+        "E",
+        "margin of error wanted",
+        "units of x"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "σ = 15, ±3 at 95%.",
-      "steps": [
-        "(1.96 · 15/3)^{2} = 96.04"
+    "related": [
+      [
+        "x̄ ± z σ/√n",
+        "the interval it sizes"
       ],
-      "answer": "96.04, so round up to 97"
+      [
+        "σ_{x̄} = σ/√n",
+        "standard error of the mean"
+      ],
+      [
+        "z = 1.960",
+        "95%"
+      ]
+    ],
+    "example": {
+      "problem": "Part lengths scatter with σ = 15 mm. How many parts must be measured to know the mean within ±3 mm at 95% confidence?",
+      "steps": [
+        "n = (1.96 × 15/3)^{2} = 9.8^{2} = 96.04",
+        "round up"
+      ],
+      "answer": "n = 97 (96.04 rounded up)"
     },
     "try": "(1.96*15/3)^2"
   },
   "z = (x̄ − μ_{0})/(σ/√n)": {
     "title": "z test statistic for a mean",
-    "about": "How many standard errors the sample mean lies from the hypothesised μ₀.",
-    "assumptions": [],
+    "about": "How many standard errors the sample mean lies from a hypothesised mean μ_{0}. Compare |z| with the critical value (1.96 for a two-sided test at 5%); larger means the difference is unlikely to be chance.",
+    "assumptions": [
+      "σ known (or n large); with s and small n use the t statistic",
+      "Observations independent, data normal or n large",
+      "A one-sided test uses 1.645 at 5%"
+    ],
     "vars": [
+      [
+        "z",
+        "test statistic",
+        ""
+      ],
+      [
+        "x̄",
+        "sample mean",
+        ""
+      ],
       [
         "μ_{0}",
         "hypothesised mean",
@@ -5635,25 +6222,48 @@
       ],
       [
         "σ",
-        "known SD",
+        "known population standard deviation",
+        ""
+      ],
+      [
+        "n",
+        "sample size",
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "μ₀ = 100, σ = 15, n = 25, x̄ = 106.",
-      "steps": [
-        "6/(15/5)"
+    "related": [
+      [
+        "t = (x̄ − μ_{0})/(s/√n)",
+        "σ unknown"
       ],
-      "answer": "z = 2 (significant at 5%, two-sided)"
-    }
+      [
+        "x̄ ± z σ/√n",
+        "confidence interval"
+      ],
+      [
+        "p = 2(1 − Φ(|z|))",
+        "two-sided p-value"
+      ]
+    ],
+    "example": {
+      "problem": "A process should average μ_{0} = 100 with σ = 15. A sample of 25 averages 106. Is that a significant shift at 5% (two-sided)?",
+      "steps": [
+        "σ/√n = 15/5 = 3",
+        "z = (106 − 100)/3 = 2",
+        "2 > 1.96"
+      ],
+      "answer": "z = 2: significant at 5%, two-sided"
+    },
+    "try": "(106 - 100)/(15/sqrt(25))"
   },
   "t = (x̄ − μ_{0})/(s/√n)": {
     "title": "One-sample t statistic",
-    "about": "How many standard errors the sample mean lies from the hypothesised mean, using the sample's own s. Compare with the t distribution with n − 1 degrees of freedom.",
+    "about": "How many standard errors the sample mean lies from the hypothesised mean μ_{0}, using the sample’s own s in place of σ. Because s is itself uncertain, compare with the t distribution with n − 1 degrees of freedom, whose critical values exceed z’s for small n.",
     "assumptions": [
-      "Roughly normal data or large n",
-      "σ unknown (if known, use z)"
+      "Roughly normal data, or n large (about 30+)",
+      "Independent observations",
+      "σ unknown; if it is known, use z",
+      "Choose one- or two-sided before seeing the data: the critical values differ"
     ],
     "vars": [
       [
@@ -5675,6 +6285,10 @@
       [
         "z = (x̄ − μ_{0})/(σ/√n)",
         "σ known"
+      ],
+      [
+        "s = √(Σ (x_{i} − x̄)^{2}/(n − 1))",
+        "the s it uses"
       ]
     ],
     "example": {
@@ -5690,9 +6304,17 @@
   },
   "(AB)_{ij} = Σ_{k} a_{ik} b_{kj}": {
     "title": "Matrix multiplication",
-    "about": "Entry (i, j) is row i of A dotted with column j of B. A must have as many columns as B has rows.",
-    "assumptions": [],
+    "about": "Entry (i, j) is row i of A dotted with column j of B. A must have as many columns as B has rows. A common mistake is assuming AB = BA.",
+    "assumptions": [
+      "A is m × n and B is n × p; AB is m × p",
+      "Not commutative: AB ≠ BA in general"
+    ],
     "vars": [
+      [
+        "A, B",
+        "matrices",
+        ""
+      ],
       [
         "a_{ik}",
         "entries of A",
@@ -5704,7 +6326,16 @@
         ""
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "(AB)^{T} = B^{T} A^{T}",
+        "transpose of a product"
+      ],
+      [
+        "det(AB) = det(A) det(B)",
+        "determinant of a product"
+      ]
+    ],
     "example": {
       "problem": "Multiply [1 2; 3 4] by [5; 6].",
       "steps": [
@@ -5717,21 +6348,47 @@
   },
   "A A^{−1} = A^{−1} A = I": {
     "title": "Matrix inverse",
-    "about": "The inverse undoes A. It exists only for a square A with det A ≠ 0.",
-    "assumptions": [],
+    "about": "The inverse undoes A, from either side. It exists only for a square A with det A ≠ 0; a zero determinant means A squashes some direction to zero, which can't be undone. A common mistake is inverting entry by entry; that works only for a diagonal matrix.",
+    "assumptions": [
+      "A is square",
+      "det A ≠ 0; otherwise A is singular and has no inverse"
+    ],
     "vars": [
+      [
+        "A",
+        "square matrix",
+        ""
+      ],
+      [
+        "A^{−1}",
+        "its inverse",
+        ""
+      ],
       [
         "I",
         "identity matrix",
         ""
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "A^{−1} = (1/det A) [d −b; −c a]",
+        "2 × 2 formula"
+      ],
+      [
+        "(AB)^{−1} = B^{−1} A^{−1}",
+        "order reverses"
+      ],
+      [
+        "det(A^{−1}) = 1/det(A)",
+        "why det A ≠ 0 is needed"
+      ]
+    ],
     "example": {
-      "problem": "Check [2 0; 0 4]⁻¹.",
+      "problem": "Find and check [2 0; 0 4]^{−1}.",
       "steps": [
-        "[1/2 0; 0 1/4]",
-        "product is I"
+        "A diagonal matrix inverts entry by entry: [1/2 0; 0 1/4]",
+        "[2 0; 0 4][0.5 0; 0 0.25] = I ✓"
       ],
       "answer": "[0.5 0; 0 0.25]"
     },
@@ -5739,12 +6396,20 @@
   },
   "x = A^{−1} b": {
     "title": "Solving a linear system with the inverse",
-    "about": "For square invertible A, A x = b has exactly one solution.",
-    "assumptions": [],
+    "about": "Multiply both sides of A x = b on the left by A^{−1}: A^{−1}A = I leaves x. For square, invertible A there is exactly one solution. A common mistake is b A^{−1}; the inverse must go on the left, as matrix products don't commute.",
+    "assumptions": [
+      "A square with det A ≠ 0",
+      "For large systems, elimination (LU) is faster and more accurate than forming A^{−1}"
+    ],
     "vars": [
       [
         "A",
-        "square matrix",
+        "square coefficient matrix",
+        ""
+      ],
+      [
+        "x",
+        "vector of unknowns",
         ""
       ],
       [
@@ -5753,11 +6418,22 @@
         ""
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "A^{−1} = (1/det A) [d −b; −c a]",
+        "the 2 × 2 inverse"
+      ],
+      [
+        "x_{i} = det(A_{i})/det(A)",
+        "Cramer's rule, the same answer"
+      ]
+    ],
     "example": {
       "problem": "Solve 2x + y = 5, x + 3y = 10.",
       "steps": [
-        "A = [2 1; 1 3], b = [5; 10]"
+        "A = [2 1; 1 3], b = [5; 10], det A = 5",
+        "A^{−1} = (1/5)[3 −1; −1 2]",
+        "x = (1/5)[15 − 10; −5 + 20] = [1; 3]"
       ],
       "answer": "x = 1, y = 3"
     },
@@ -5765,49 +6441,90 @@
   },
   "x_{i} = det(A_{i})/det(A)": {
     "title": "Cramer's rule",
-    "about": "Each unknown is a ratio of determinants; handy for 2 × 2 and 3 × 3 by hand.",
-    "assumptions": [],
+    "about": "Each unknown is a ratio of determinants; handy for 2 × 2 and 3 × 3 by hand. A common mistake is replacing a row of A with b; it is column i.",
+    "assumptions": [
+      "A square with det A ≠ 0",
+      "Practical by hand for 2 × 2 and 3 × 3 only"
+    ],
     "vars": [
+      [
+        "x_{i}",
+        "ith unknown",
+        ""
+      ],
+      [
+        "A",
+        "coefficient matrix",
+        ""
+      ],
       [
         "A_{i}",
         "A with column i replaced by b",
         ""
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "x = A^{−1} b",
+        "the same solution by the inverse"
+      ],
+      [
+        "det A = ad − bc",
+        "the 2 × 2 determinants"
+      ]
+    ],
     "example": {
       "problem": "Solve 2x + y = 5, x + 3y = 10 for x.",
       "steps": [
-        "det A = 5",
-        "det A₁ = det[5 1; 10 3] = 5"
+        "det A = 2·3 − 1·1 = 5",
+        "det A_{1} = det[5 1; 10 3] = 15 − 10 = 5",
+        "x = 5/5"
       ],
       "answer": "x = 1"
-    }
+    },
+    "try": "det([5 1; 10 3])/det([2 1; 1 3])"
   },
   "det(cA) = c^{n} det(A)": {
     "title": "Determinant of a scaled matrix",
-    "about": "Scaling multiplies every row by c, and each row scales det by c.",
-    "assumptions": [],
+    "about": "Scaling multiplies every row by c, and each row scales det by c. A common mistake is c det(A); each of the n rows carries a factor c.",
+    "assumptions": [
+      "A is square, n × n",
+      "c multiplies each of the n rows, and each row scales det by c"
+    ],
     "vars": [
+      [
+        "c",
+        "scalar",
+        ""
+      ],
       [
         "n",
         "size of A",
         ""
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "det(AB) = det(A) det(B)",
+        "cA = (cI)A and det(cI) = c^{n}"
+      ]
+    ],
     "example": {
       "problem": "det A = 3 for a 3 × 3 A. Find det(2A).",
       "steps": [
-        "2³ · 3"
+        "2^{3} · 3 = 8 · 3"
       ],
       "answer": "24"
-    }
+    },
+    "try": "2^3 * 3"
   },
   "A^{T} = A": {
     "title": "Symmetric matrix",
-    "about": "Equal to its own transpose. Real symmetric matrices have real eigenvalues and orthogonal eigenvectors.",
-    "assumptions": [],
+    "about": "Equal to its own transpose. Real symmetric matrices have real eigenvalues and orthogonal eigenvectors. A common mistake is expecting a non-symmetric matrix to have real eigenvalues; it may not.",
+    "assumptions": [
+      "A square",
+      "Stiffness, mass and inertia matrices, and every A^{T}A, are symmetric"
+    ],
     "vars": [
       [
         "A",
@@ -5815,19 +6532,33 @@
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Is [1 2; 2 5] symmetric?",
-      "steps": [
-        "its transpose is itself"
+    "related": [
+      [
+        "Q^{T} Q = I",
+        "its eigenvectors form an orthogonal Q"
       ],
-      "answer": "yes"
-    }
+      [
+        "A^{T} A x = A^{T} b",
+        "A^{T}A is always symmetric"
+      ]
+    ],
+    "example": {
+      "problem": "Is [1 2; 2 5] symmetric, and are its eigenvalues real?",
+      "steps": [
+        "Its transpose is itself, so yes",
+        "λ^{2} − 6λ + 1 = 0: λ = 3 ± 2√2 ≈ 5.83, 0.17, both real"
+      ],
+      "answer": "yes; λ ≈ 5.83 and 0.17"
+    },
+    "try": "eig([1 2; 2 5])"
   },
   "Q^{T} Q = I": {
     "title": "Orthogonal matrix",
-    "about": "Columns are orthonormal, so the inverse is the transpose. Rotations and reflections; lengths are preserved.",
-    "assumptions": [],
+    "about": "Q^{T}Q lists every dot product of Q's columns; it is I exactly when the columns are orthonormal, so the inverse is just the transpose. Rotations and reflections are orthogonal and keep lengths and angles. A common mistake is thinking orthogonal columns are enough; they must also have length 1.",
+    "assumptions": [
+      "Q square with orthonormal columns",
+      "det Q = ±1: +1 a rotation, −1 a reflection"
+    ],
     "vars": [
       [
         "Q",
@@ -5835,19 +6566,33 @@
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Inverse of the rotation [cos θ −sin θ; sin θ cos θ]?",
-      "steps": [
-        "Q⁻¹ = Qᵀ"
+    "related": [
+      [
+        "A^{T} = A",
+        "a symmetric A is diagonalized by an orthogonal Q"
       ],
-      "answer": "[cos θ sin θ; −sin θ cos θ]"
-    }
+      [
+        "(AB)^{T} = B^{T} A^{T}",
+        "transpose rules"
+      ]
+    ],
+    "example": {
+      "problem": "Check that Q = [0.6 −0.8; 0.8 0.6] is orthogonal, and write its inverse.",
+      "steps": [
+        "Columns (0.6, 0.8) and (−0.8, 0.6): lengths 1, dot product 0",
+        "Q^{T}Q = I, so Q^{−1} = Q^{T}"
+      ],
+      "answer": "Q^{−1} = [0.6 0.8; −0.8 0.6]"
+    },
+    "try": "inv([0.6 -0.8; 0.8 0.6])"
   },
   "a · (b × c) = det[a; b; c]": {
     "title": "Scalar triple product",
-    "about": "The signed volume of the parallelepiped on a, b, c; zero means coplanar.",
-    "assumptions": [],
+    "about": "The signed volume of the parallelepiped on a, b, c; zero means coplanar. b × c is the base's area times its normal; dotting with a takes the height. A common mistake is forgetting the absolute value for a volume.",
+    "assumptions": [
+      "3-D vectors",
+      "Signed: swapping two vectors flips the sign; its absolute value is the volume"
+    ],
     "vars": [
       [
         "a, b, c",
@@ -5855,11 +6600,20 @@
         ""
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "|a × b| = |a| |b| sin(θ)",
+        "the base area"
+      ],
+      [
+        "det A = a(ei − fh) − b(di − fg) + c(dh − eg)",
+        "the 3 × 3 determinant"
+      ]
+    ],
     "example": {
-      "problem": "Volume on (1,0,0), (0,2,0), (0,0,3).",
+      "problem": "Find the volume of the box on (1, 0, 0), (0, 2, 0) and (0, 0, 3).",
       "steps": [
-        "det = 6"
+        "det[1 0 0; 0 2 0; 0 0 3] = 1 · 2 · 3"
       ],
       "answer": "6"
     },
@@ -5867,23 +6621,41 @@
   },
   "u = a/|a|": {
     "title": "Unit vector",
-    "about": "Divide a vector by its length to keep only its direction.",
-    "assumptions": [],
+    "about": "Dividing a vector by its length keeps its direction and makes its length 1. Use it to give a direction to a force or to project onto an axis. A common mistake is dividing by the sum of the components instead of the length.",
+    "assumptions": [
+      "a ≠ 0"
+    ],
     "vars": [
       [
         "a",
         "nonzero vector",
         ""
+      ],
+      [
+        "u",
+        "unit vector, length 1",
+        ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Unit vector along (3, 4).",
-      "steps": [
-        "|a| = 5"
+    "related": [
+      [
+        "|a| = √(a · a)",
+        "the length"
       ],
-      "answer": "(0.6, 0.8)"
-    }
+      [
+        "proj_{b} a = ((a · b)/(b · b)) b",
+        "projection uses the direction of b"
+      ]
+    ],
+    "example": {
+      "problem": "Find the unit vector along (1, 2, 2).",
+      "steps": [
+        "|a| = √(1 + 4 + 4) = 3",
+        "u = (1, 2, 2)/3"
+      ],
+      "answer": "(1/3, 2/3, 2/3) ≈ (0.333, 0.667, 0.667)"
+    },
+    "try": "[1, 2, 2]/3"
   },
   "λ = T/2 ± √(T^{2}/4 − D)": {
     "title": "Eigenvalues of a 2 × 2 matrix",
@@ -5926,8 +6698,11 @@
   },
   "A = P D P^{−1}": {
     "title": "Diagonalization",
-    "about": "With n independent eigenvectors, A is a diagonal matrix in that basis; powers become easy: A^k = P D^k P⁻¹.",
-    "assumptions": [],
+    "about": "With n independent eigenvectors, A is a diagonal matrix in that basis, so powers become easy: A^{k} = P D^{k} P^{−1}. It uncouples x′ = A x into one equation per mode. A common mistake is putting eigenvectors in P's rows; they are its columns.",
+    "assumptions": [
+      "A has n independent eigenvectors (always so for n distinct eigenvalues, or a real symmetric A)",
+      "P's columns are in the same order as D's eigenvalues"
+    ],
     "vars": [
       [
         "P",
@@ -5940,14 +6715,26 @@
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "[2 1; 1 2] has λ = 3, 1 with v = (1, 1), (1, −1).",
-      "steps": [
-        "P = [1 1; 1 −1], D = [3 0; 0 1]"
+    "related": [
+      [
+        "A v = λ v",
+        "the columns of P and entries of D"
       ],
-      "answer": "A = P D P⁻¹"
-    }
+      [
+        "det(A − λI) = 0",
+        "finding D"
+      ]
+    ],
+    "example": {
+      "problem": "[2 1; 1 2] has λ = 3, 1 with v = (1, 1), (1, −1). Diagonalize it, and check by multiplying back.",
+      "steps": [
+        "P = [1 1; 1 −1] (eigenvectors as columns), D = [3 0; 0 1]",
+        "P D P^{−1} = [2 1; 1 2] ✓",
+        "So A^{k} = P [3^{k} 0; 0 1] P^{−1}"
+      ],
+      "answer": "P = [1 1; 1 −1], D = [3 0; 0 1]; P D P^{−1} = [2 1; 1 2]"
+    },
+    "try": "[1 1; 1 -1] * [3 0; 0 1] * inv([1 1; 1 -1])"
   },
   "rank(A) + nullity(A) = n": {
     "title": "Rank–nullity theorem",
@@ -5956,6 +6743,16 @@
       "n is the number of columns, not rows"
     ],
     "vars": [
+      [
+        "rank(A)",
+        "number of pivot (independent) columns",
+        ""
+      ],
+      [
+        "nullity(A)",
+        "dimension of the null space",
+        ""
+      ],
       [
         "n",
         "columns of A",
@@ -6019,5 +6816,1000 @@
       "answer": "m = 1.2"
     },
     "try": "6/5"
+  },
+  "R_{i} ← R_{i} − (a_{ik}/a_{kk}) R_{k}": {
+    "title": "Gaussian elimination (row reduction)",
+    "about": "The row operation that solves A x = b by hand: subtract a multiple of pivot row k from each row i below it to zero the entries under the pivot a_{kk}. Column by column on [A | b] it leaves an upper-triangular system, solved by back substitution from the last row up. It also finds rank, determinants and inverses (reduce [A | I]).",
+    "assumptions": [
+      "the pivot a_{kk} is not zero; if it is, swap in a lower row with a nonzero entry (partial pivoting picks the largest, which also limits round-off)",
+      "apply each operation to the whole row, right-hand side b included",
+      "a row of zeros with a nonzero right side means no solution; a row of all zeros means a free variable (infinitely many)"
+    ],
+    "vars": [
+      [
+        "R_{i}",
+        "row i of the augmented matrix [A | b], the row being cleared",
+        ""
+      ],
+      [
+        "R_{k}",
+        "the pivot row",
+        ""
+      ],
+      [
+        "a_{kk}",
+        "the pivot: the diagonal entry of column k",
+        ""
+      ],
+      [
+        "a_{ik}",
+        "the entry in row i under the pivot, to be zeroed",
+        ""
+      ],
+      [
+        "a_{ik}/a_{kk}",
+        "the multiplier m_{ik}",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "A = L U",
+        "the multipliers m_{ik} fill L, the reduced rows are U"
+      ],
+      [
+        "x = A^{−1} b",
+        "the same answer by the inverse"
+      ],
+      [
+        "rank(A) + nullity(A) = n",
+        "rank: the pivots left after elimination"
+      ]
+    ],
+    "example": {
+      "problem": "Solve 2x + y = 5 and 4x + 3y = 13 by elimination.",
+      "steps": [
+        "augmented matrix: [2 1 | 5; 4 3 | 13], pivot a_{11} = 2",
+        "multiplier m_{21} = 4/2 = 2: R_{2} ← R_{2} − 2R_{1} = [0 1 | 3]",
+        "back substitute: y = 3/1 = 3",
+        "then 2x + 3 = 5, so x = 1"
+      ],
+      "answer": "y = 3, x = 1"
+    },
+    "try": "(13 - (4/2)*5)/(3 - (4/2)*1)"
+  },
+  "f(x) = p(x)/q(x)": {
+    "title": "Rational function and its asymptotes",
+    "about": "A rational function is one polynomial over another. Its graph has a vertical asymptote where the denominator is zero (and the numerator isn't), and its end behaviour, the horizontal or slant asymptote, comes from the leading terms. Reach for it to sketch a graph or find a domain.",
+    "assumptions": [
+      "Cancel common factors first: a zero shared by p and q is a hole, not an asymptote",
+      "deg p < deg q: horizontal asymptote y = 0",
+      "deg p = deg q: horizontal asymptote y = (leading coefficient of p)/(leading coefficient of q)",
+      "deg p = deg q + 1: a slant asymptote, the quotient from long division; deg p > deg q + 1: none"
+    ],
+    "vars": [
+      [
+        "p(x)",
+        "numerator polynomial",
+        ""
+      ],
+      [
+        "q(x)",
+        "denominator polynomial, q ≠ 0 on the domain",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "x = −b/(2a)",
+        "vertex of a quadratic, for sketching"
+      ],
+      [
+        "(f ∘ g)(x) = f(g(x))",
+        "composition"
+      ]
+    ],
+    "example": {
+      "problem": "Find the asymptotes of f(x) = (2x^{2} + 3)/(x^{2} − 4).",
+      "steps": [
+        "Vertical: x^{2} − 4 = 0 at x = ±2, and the numerator isn't zero there",
+        "Degrees equal (2 and 2): horizontal asymptote y = 2/1 = 2"
+      ],
+      "answer": "x = ±2 vertical, y = 2 horizontal"
+    }
+  },
+  "|x − a| < b ⇔ a − b < x < a + b": {
+    "title": "Absolute value inequality",
+    "about": "|x − a| is the distance from x to a, so |x − a| < b holds for the points within b of a: one interval. The opposite, |x − a| > b, holds outside it: x < a − b or x > a + b, two pieces.",
+    "assumptions": [
+      "b > 0; if b ≤ 0, |x − a| < b has no solution",
+      "≤ gives a closed interval; > or ≥ gives two rays, joined by 'or'",
+      "Isolate the absolute value first: 2|x − 1| + 3 < 9 becomes |x − 1| < 3"
+    ],
+    "vars": [
+      [
+        "x",
+        "the unknown",
+        ""
+      ],
+      [
+        "a",
+        "centre of the interval",
+        ""
+      ],
+      [
+        "b",
+        "half-width, the largest distance allowed",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "d = √((x_{2} − x_{1})^{2} + (y_{2} − y_{1})^{2})",
+        "distance in the plane"
+      ]
+    ],
+    "example": {
+      "problem": "Solve |x − 3| < 5, and |x − 3| > 5.",
+      "steps": [
+        "Within 5 of 3: 3 − 5 < x < 3 + 5",
+        "Outside: x < −2 or x > 8"
+      ],
+      "answer": "−2 < x < 8; and x < −2 or x > 8"
+    }
+  },
+  "sin θ = opp/hyp,  cos θ = adj/hyp,  tan θ = opp/adj": {
+    "title": "SOH CAH TOA: trig ratios in a right triangle",
+    "about": "In a right triangle, the sine, cosine and tangent of an acute angle θ are ratios of the sides: opposite over hypotenuse, adjacent over hypotenuse, opposite over adjacent. Use them to find a side from an angle, or an angle from two sides with the inverse functions.",
+    "assumptions": [
+      "The triangle has a right angle; for any triangle use the laws of sines and cosines",
+      "Opposite and adjacent are relative to θ; the hypotenuse is always the side across from the right angle",
+      "θ = sin^{−1}(opp/hyp) etc. gives the angle; set the calculator to degrees or radians to match"
+    ],
+    "vars": [
+      [
+        "θ",
+        "an acute angle of the triangle",
+        "rad or °"
+      ],
+      [
+        "opp",
+        "side opposite θ",
+        "m"
+      ],
+      [
+        "adj",
+        "side next to θ, not the hypotenuse",
+        "m"
+      ],
+      [
+        "hyp",
+        "hypotenuse",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "sin^{2}x + cos^{2}x = 1",
+        "Pythagorean identity"
+      ],
+      [
+        "c^{2} = a^{2} + b^{2} − 2ab cos(C)",
+        "law of cosines, any triangle"
+      ]
+    ],
+    "example": {
+      "problem": "A 5 m ladder leans against a wall at 60° to the ground. How high up the wall does it reach?",
+      "steps": [
+        "The height is opposite the 60° angle and the ladder is the hypotenuse",
+        "opp = hyp sin θ = 5 m × sin 60° = 5 × 0.8660"
+      ],
+      "answer": "≈ 4.33 m"
+    },
+    "try": "5 m * sin(60°)"
+  },
+  "y = A sin(B(x − C)) + D": {
+    "title": "Graph of a sinusoid: amplitude, period, phase shift",
+    "about": "Every sine or cosine graph is the basic one stretched and shifted. |A| is the amplitude (half the peak-to-peak height), 2π/B the period, C the horizontal (phase) shift and D the midline. Read these off to sketch the graph or write its equation.",
+    "assumptions": [
+      "B > 0; factor B out first: sin(2x − π/2) = sin(2(x − π/4)), so the shift is π/4, not π/2",
+      "x in radians for period 2π/B; in degrees the period is 360°/B",
+      "A < 0 flips the graph about its midline; the range is D − |A| to D + |A|",
+      "The same reading works for cos"
+    ],
+    "vars": [
+      [
+        "A",
+        "amplitude (with sign)",
+        ""
+      ],
+      [
+        "B",
+        "angular frequency: cycles per 2π",
+        "rad⁻¹"
+      ],
+      [
+        "C",
+        "phase shift, right if positive",
+        "rad"
+      ],
+      [
+        "D",
+        "midline (vertical shift)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "y = a f(b(x − h)) + k",
+        "transformations of any graph"
+      ],
+      [
+        "a cos(θ) + b sin(θ) = R cos(θ − φ)",
+        "a sum of sinusoids as one"
+      ]
+    ],
+    "example": {
+      "problem": "Give the amplitude, period, phase shift and range of y = 3 sin(2(x − π/4)) + 1.",
+      "steps": [
+        "Amplitude |A| = 3, midline y = 1",
+        "Period 2π/B = 2π/2 = π ≈ 3.1416",
+        "Phase shift π/4 to the right",
+        "Range 1 − 3 to 1 + 3"
+      ],
+      "answer": "amplitude 3, period π ≈ 3.1416, shift π/4 right, range [−2, 4]"
+    },
+    "try": "2 pi / 2"
+  },
+  "dQ/dt = c_{in} r_{in} − (Q/V) r_{out}": {
+    "title": "Mixing tank: rate in minus rate out",
+    "about": "The amount of dissolved stuff Q in a well-stirred tank changes at the rate it flows in (inflow concentration times inflow rate) minus the rate it flows out (the tank's concentration Q/V times the outflow rate). It is a first-order linear equation; with equal flows it is also separable.",
+    "assumptions": [
+      "The tank is perfectly mixed: the outflow has the tank's concentration Q/V",
+      "If r_{in} ≠ r_{out}, the volume changes: V = V_{0} + (r_{in} − r_{out}) t, and the equation is linear, not separable",
+      "Equal flows: Q → c_{in} V with time constant V/r"
+    ],
+    "vars": [
+      [
+        "Q",
+        "amount of solute in the tank",
+        "kg"
+      ],
+      [
+        "c_{in}",
+        "concentration flowing in",
+        "kg/L"
+      ],
+      [
+        "r_{in}, r_{out}",
+        "flow rates in and out",
+        "L/min"
+      ],
+      [
+        "V",
+        "volume in the tank",
+        "L"
+      ],
+      [
+        "t",
+        "time",
+        "min"
+      ]
+    ],
+    "related": [
+      [
+        "dy/dt + p y = q",
+        "the linear form it takes"
+      ],
+      [
+        "y = y_{0} e^{kt}",
+        "the decaying transient"
+      ]
+    ],
+    "example": {
+      "problem": "A 100 L tank of pure water takes in brine at 0.2 kg/L and 5 L/min, and drains at 5 L/min. How much salt is in it after 20 min?",
+      "steps": [
+        "dQ/dt = 0.2 × 5 − (Q/100) × 5 = 1 − Q/20, Q(0) = 0",
+        "Final value 20 kg, time constant 20 min: Q = 20(1 − e^{−t/20})",
+        "Q(20) = 20(1 − e^{−1})"
+      ],
+      "answer": "≈ 12.64 kg"
+    },
+    "try": "20(1 - e^-1)"
+  },
+  "y_{2} = y_{1} ∫ e^{−∫ p dt}/y_{1}^{2} dt": {
+    "title": "Reduction of order: a second solution from one",
+    "about": "When you know one solution y₁ of a second-order linear homogeneous equation, this gives a second, independent one. It is how the repeated-root solution t e^{rt} arises, and it works for variable coefficients too.",
+    "assumptions": [
+      "Put the equation in standard form y′′ + p y′ + q y = 0 first (divide by the y′′ coefficient)",
+      "y₁ must not be zero on the interval",
+      "Any constant from the integrals can be dropped: it only adds a multiple of y₁"
+    ],
+    "vars": [
+      [
+        "y_{1}",
+        "a known solution",
+        ""
+      ],
+      [
+        "y_{2}",
+        "the second, independent solution",
+        ""
+      ],
+      [
+        "p(t)",
+        "coefficient of y′ in standard form",
+        "1/s"
+      ]
+    ],
+    "related": [
+      [
+        "W = y_{1} y′_{2} − y_{2} y′_{1}",
+        "Wronskian, to check independence"
+      ],
+      [
+        "a y′′ + b y′ + c y = 0",
+        "constant coefficients"
+      ]
+    ],
+    "example": {
+      "problem": "y′′ − 4y′ + 4y = 0 has the solution y₁ = e^{2t}. Find a second.",
+      "steps": [
+        "p = −4, so e^{−∫ p dt} = e^{4t}",
+        "y₁^{2} = e^{4t}, so the integrand is 1 and its integral is t",
+        "y₂ = e^{2t} × t"
+      ],
+      "answer": "y₂ = t e^{2t}"
+    }
+  },
+  "ℒ{y′} = s Y − y(0)": {
+    "title": "Laplace transform of a derivative",
+    "about": "Taking the Laplace transform turns a derivative into multiplication by s, with the initial value folded in. So a linear ODE with constant coefficients becomes algebra in Y(s): solve for Y, then invert with the table and partial fractions.",
+    "assumptions": [
+      "y and y′ are piecewise continuous and of exponential order",
+      "y(0) is the value just before t = 0 (y(0⁻)) when there is a jump"
+    ],
+    "vars": [
+      [
+        "Y",
+        "Y(s) = ℒ{y(t)}, the transform of the unknown",
+        ""
+      ],
+      [
+        "s",
+        "Laplace variable",
+        "1/s"
+      ],
+      [
+        "y(0)",
+        "initial value",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "ℒ{y′′} = s^{2} Y − s y(0) − y′(0)",
+        "second derivative"
+      ],
+      [
+        "y = y_{h} + y_{p}",
+        "the solution the inverse transform gives"
+      ]
+    ],
+    "example": {
+      "problem": "Solve y′ + 3y = 0, y(0) = 2, and find y(0.5).",
+      "steps": [
+        "Transform: sY − 2 + 3Y = 0",
+        "Y = 2/(s + 3)",
+        "Invert: y = 2e^{−3t}",
+        "y(0.5) = 2e^{−1.5}"
+      ],
+      "answer": "≈ 0.4463"
+    },
+    "try": "2 e^(-1.5)"
+  },
+  "ℒ{y′′} = s^{2} Y − s y(0) − y′(0)": {
+    "title": "Laplace transform of a second derivative",
+    "about": "The second derivative transforms to s² times Y less the two initial conditions. This is how a second-order initial value problem, a spring-mass or RLC circuit, becomes one algebraic equation for Y(s).",
+    "assumptions": [
+      "Constant coefficients; y, y′ and y′′ of exponential order",
+      "Both initial values y(0) and y′(0) enter, so no constants are left to fit at the end"
+    ],
+    "vars": [
+      [
+        "Y",
+        "Y(s) = ℒ{y(t)}",
+        ""
+      ],
+      [
+        "s",
+        "Laplace variable",
+        "1/s"
+      ],
+      [
+        "y(0), y′(0)",
+        "initial position and velocity",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "ℒ{y′} = s Y − y(0)",
+        "first derivative"
+      ],
+      [
+        "a r^{2} + b r + c = 0",
+        "its denominator is the characteristic polynomial"
+      ]
+    ],
+    "example": {
+      "problem": "Solve y′′ + 4y = 0, y(0) = 1, y′(0) = 0, and find y(1).",
+      "steps": [
+        "s^{2}Y − s + 4Y = 0",
+        "Y = s/(s^{2} + 4)",
+        "Invert: y = cos(2t)",
+        "y(1) = cos 2"
+      ],
+      "answer": "≈ −0.4161"
+    },
+    "try": "cos(2 rad)"
+  },
+  "ℒ{u(t − a) f(t − a)} = e^{−as} F(s)": {
+    "title": "Step forcing: the second shifting theorem",
+    "about": "A forcing switched on at t = a is written with the unit step u(t − a). Its transform is the unshifted transform times e^{−as}; going back, a factor e^{−as} in Y(s) means delay the inverse by a and switch it on at a.",
+    "assumptions": [
+      "a ≥ 0",
+      "Write the forcing as a function of (t − a) first: u(t − 1) t = u(t − 1)((t − 1) + 1)"
+    ],
+    "vars": [
+      [
+        "u(t − a)",
+        "unit (Heaviside) step: 0 before a, 1 after",
+        ""
+      ],
+      [
+        "a",
+        "switch-on time",
+        "s"
+      ],
+      [
+        "F(s)",
+        "transform of f(t)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "ℒ{δ(t − a)} = e^{−as}",
+        "an impulse at a"
+      ],
+      [
+        "ℒ{y′} = s Y − y(0)",
+        "first derivative"
+      ]
+    ],
+    "example": {
+      "problem": "Solve y′ + y = u(t − 1), y(0) = 0, and find y(3).",
+      "steps": [
+        "sY + Y = e^{−s}/s, so Y = e^{−s}/(s(s + 1)) = e^{−s}(1/s − 1/(s + 1))",
+        "y = u(t − 1)(1 − e^{−(t − 1)})",
+        "y(3) = 1 − e^{−2}"
+      ],
+      "answer": "≈ 0.8647"
+    },
+    "try": "1 - e^(-2)"
+  },
+  "ℒ{δ(t − a)} = e^{−as}": {
+    "title": "Impulse forcing: transform of the Dirac delta",
+    "about": "A sudden blow at t = a, a hammer strike or a charge dumped at once, is modelled by the delta δ(t − a), whose transform is just e^{−as}. The response to it is the impulse response, delayed to a.",
+    "assumptions": [
+      "a ≥ 0; δ has unit area: ∫ δ(t − a) dt = 1",
+      "An impulse of size P is P δ(t − a)",
+      "It jumps y′ (for a second-order equation), not y"
+    ],
+    "vars": [
+      [
+        "δ(t − a)",
+        "unit impulse at t = a",
+        "1/s"
+      ],
+      [
+        "a",
+        "time of the impulse",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "ℒ{u(t − a) f(t − a)} = e^{−as} F(s)",
+        "step forcing"
+      ],
+      [
+        "ℒ{y′′} = s^{2} Y − s y(0) − y′(0)",
+        "second derivative"
+      ]
+    ],
+    "example": {
+      "problem": "Solve y′′ + y = δ(t − π) from rest, and find y at t = 3π/2.",
+      "steps": [
+        "s^{2}Y + Y = e^{−πs}",
+        "Y = e^{−πs}/(s^{2} + 1)",
+        "y = u(t − π) sin(t − π)",
+        "y(3π/2) = sin(π/2)"
+      ],
+      "answer": "= 1"
+    },
+    "try": "sin(pi/2 rad)"
+  },
+  "(A − λI) v = 0": {
+    "title": "Finding eigenvectors",
+    "about": "For each eigenvalue λ, row reduce A − λI and solve for its null space: every nonzero v there is an eigenvector. A repeated λ may give fewer independent vectors than its multiplicity (then A is not diagonalizable).",
+    "assumptions": [
+      "λ a root of det(A − λI) = 0",
+      "v ≠ 0; any multiple is also an eigenvector"
+    ],
+    "vars": [
+      [
+        "A",
+        "square matrix",
+        ""
+      ],
+      [
+        "λ",
+        "eigenvalue",
+        ""
+      ],
+      [
+        "v",
+        "eigenvector",
+        ""
+      ],
+      [
+        "I",
+        "identity matrix",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "det(A − λI) = 0",
+        "finding λ first"
+      ],
+      [
+        "A = P D P^{−1}",
+        "the eigenvectors are P's columns"
+      ]
+    ],
+    "example": {
+      "problem": "A = [2 1; 1 2], λ = 3. Find a unit eigenvector.",
+      "steps": [
+        "A − 3I = [−1 1; 1 −1]: the rows say v₁ = v₂",
+        "v = (1, 1)/√2"
+      ],
+      "answer": "v = (0.7071, 0.7071)"
+    },
+    "try": "1/sqrt(2)"
+  },
+  "λ^{3} − tr(A) λ^{2} + (M_{11} + M_{22} + M_{33}) λ − det A = 0": {
+    "title": "Characteristic polynomial of a 3 × 3 matrix",
+    "about": "Expanding det(A − λI) for a 3 × 3 always gives this: the trace, the sum of the three principal 2 × 2 minors (delete row i and column i), and the determinant. Find one root by trying factors of det A, then divide down to a quadratic.",
+    "assumptions": [
+      "A is 3 × 3",
+      "M_{ii}: determinant of A with row i and column i removed"
+    ],
+    "vars": [
+      [
+        "A",
+        "square matrix",
+        ""
+      ],
+      [
+        "λ",
+        "eigenvalue",
+        ""
+      ],
+      [
+        "M_{ii}",
+        "principal minor",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "tr(A) = Σ λ_{i}",
+        "check"
+      ],
+      [
+        "det(A) = Π λ_{i}",
+        "check"
+      ],
+      [
+        "det A = a(ei − fh) − b(di − fg) + c(dh − eg)",
+        "the 3 × 3 determinant"
+      ]
+    ],
+    "example": {
+      "problem": "A = [2 0 0; 0 3 4; 0 4 9]. Find the eigenvalues.",
+      "steps": [
+        "tr = 14; minors 3·9 − 16 = 11, 2·9 = 18, 2·3 = 6, sum 35; det = 2(27 − 16) = 22",
+        "λ^{3} − 14λ^{2} + 35λ − 22 = 0",
+        "λ = 1 is a root; the rest give λ = 2 and 11"
+      ],
+      "answer": "λ = 1, 2, 11 (product 22 = det A)"
+    },
+    "try": "2*(3*9 - 4*4)"
+  },
+  "λ_{i} = a_{ii}": {
+    "title": "Eigenvalues of a triangular matrix",
+    "about": "For an upper or lower triangular (or diagonal) matrix, det(A − λI) is the product of (a_{ii} − λ), so the eigenvalues are read straight off the diagonal. Row reduction changes eigenvalues, so this only applies to A itself.",
+    "assumptions": [
+      "A triangular or diagonal"
+    ],
+    "vars": [
+      [
+        "A",
+        "square matrix",
+        ""
+      ],
+      [
+        "a_{ii}",
+        "diagonal entries",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "det(A) = Π λ_{i}",
+        "det is the diagonal product"
+      ]
+    ],
+    "example": {
+      "problem": "A = [3 5 1; 0 −2 4; 0 0 7]. Eigenvalues and det A?",
+      "steps": [
+        "λ = 3, −2, 7",
+        "det = 3(−2)(7)"
+      ],
+      "answer": "λ = 3, −2, 7; det A = −42"
+    },
+    "try": "3*(-2)*7"
+  },
+  "A^{k} = P D^{k} P^{−1}": {
+    "title": "Matrix powers by diagonalization",
+    "about": "If A = PDP^{−1}, the inner P^{−1}P pairs cancel, so A^{k} needs only the k-th powers of the eigenvalues. Used for Markov chains, recurrences (Fibonacci) and discrete systems x_{k+1} = Ax_{k}.",
+    "assumptions": [
+      "A diagonalizable: n independent eigenvectors"
+    ],
+    "vars": [
+      [
+        "A",
+        "square matrix",
+        ""
+      ],
+      [
+        "P",
+        "eigenvectors as columns",
+        ""
+      ],
+      [
+        "D",
+        "diagonal of eigenvalues",
+        ""
+      ],
+      [
+        "k",
+        "power",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "A = P D P^{−1}",
+        "the diagonalization"
+      ],
+      [
+        "e^{At} = P e^{Dt} P^{−1}",
+        "the continuous version"
+      ]
+    ],
+    "example": {
+      "problem": "A = [2 1; 1 2] (λ = 1, 3 with v = (1, −1), (1, 1)). Find A^{5}.",
+      "steps": [
+        "A^{5} = P diag(1, 243) P^{−1}",
+        "diagonal (243 + 1)/2, off-diagonal (243 − 1)/2"
+      ],
+      "answer": "A^{5} = [122 121; 121 122]"
+    },
+    "try": "(3^5 + 1)/2"
+  },
+  "e^{At} = P e^{Dt} P^{−1}": {
+    "title": "Matrix exponential by diagonalization",
+    "about": "The system x′ = Ax has solution x(t) = e^{At}x(0). With A = PDP^{−1}, e^{At} = P diag(e^{λ_{i}t}) P^{−1}, so each mode decays or grows at its eigenvalue.",
+    "assumptions": [
+      "A diagonalizable; otherwise use the Jordan form or the Laplace transform (sI − A)^{−1}"
+    ],
+    "vars": [
+      [
+        "A",
+        "square matrix",
+        ""
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "D",
+        "diagonal of eigenvalues",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "x = c_{1} v_{1} e^{λ_{1}t} + c_{2} v_{2} e^{λ_{2}t}",
+        "the same solution, mode by mode"
+      ],
+      [
+        "A^{k} = P D^{k} P^{−1}",
+        "the discrete version"
+      ]
+    ],
+    "example": {
+      "problem": "x′ = [−2 1; 1 −2] x with x(0) = (1, 0). Find x₁(1).",
+      "steps": [
+        "λ = −1, −3 with v = (1, 1), (1, −1)",
+        "x₁(t) = (e^{−t} + e^{−3t})/2"
+      ],
+      "answer": "x₁(1) ≈ 0.2088"
+    },
+    "try": "(e^-1 + e^-3)/2"
+  },
+  "A = U Σ V^{T}": {
+    "title": "Singular value decomposition (SVD)",
+    "about": "Any m × n matrix factors as an orthogonal U, a diagonal Σ of singular values σ_{1} ≥ σ_{2} ≥ … ≥ 0, and an orthogonal V^{T}. The σ_{i} are √(eigenvalues of A^{T}A); V holds those eigenvectors. Used for rank, the 2-norm (σ_{1}), the condition number σ_{1}/σ_{n} and low-rank approximation.",
+    "assumptions": [
+      "Exists for every real matrix",
+      "Rank = number of nonzero σ_{i}"
+    ],
+    "vars": [
+      [
+        "U",
+        "left singular vectors (m × m)",
+        ""
+      ],
+      [
+        "Σ",
+        "singular values on the diagonal",
+        ""
+      ],
+      [
+        "V",
+        "right singular vectors (n × n)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "A v = λ v",
+        "eigenvalues of AᵀA"
+      ],
+      [
+        "Q^{T} Q = I",
+        "U and V are orthogonal"
+      ]
+    ],
+    "example": {
+      "problem": "Find the singular values of A = [3 0; 4 5].",
+      "steps": [
+        "A^{T}A = [25 20; 20 25]: eigenvalues 45 and 5",
+        "σ = √45, √5"
+      ],
+      "answer": "σ₁ ≈ 6.708, σ₂ ≈ 2.236"
+    },
+    "try": "sqrt(45)"
+  },
+  "A^{−1} = C^{T}/det(A)": {
+    "title": "Inverse by the adjugate (cofactors)",
+    "about": "Each entry of the inverse is a cofactor over the determinant, transposed: (A^{−1})_{ij} = C_{ji}/det A, with C_{ij} = (−1)^{i+j} M_{ij}. Handy for one entry of a 3 × 3 inverse; row reduction of [A | I] is faster for the whole thing.",
+    "assumptions": [
+      "det A ≠ 0",
+      "Mind the transpose: row i of the inverse uses column i of cofactors"
+    ],
+    "vars": [
+      [
+        "A",
+        "square matrix",
+        ""
+      ],
+      [
+        "C_{ij}",
+        "cofactor (−1)^{i+j} M_{ij}",
+        ""
+      ],
+      [
+        "M_{ij}",
+        "minor: det with row i, column j removed",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "A^{−1} = (1/det A) [d −b; −c a]",
+        "the 2 × 2 case"
+      ],
+      [
+        "x_{i} = det(A_{i})/det(A)",
+        "Cramer's rule"
+      ]
+    ],
+    "example": {
+      "problem": "A = [1 2 0; 0 1 3; 4 0 1]. Find (A^{−1})_{11}.",
+      "steps": [
+        "det A = 1(1 − 0) − 2(0 − 12) + 0 = 25",
+        "C_{11} = 1·1 − 3·0 = 1",
+        "(A^{−1})_{11} = 1/25"
+      ],
+      "answer": "0.04"
+    },
+    "try": "1/25"
+  },
+  "rank(A) = rank([A | b])": {
+    "title": "When A x = b has a solution",
+    "about": "Row reduce the augmented matrix [A | b]. If b adds a pivot (a row 0 … 0 | c with c ≠ 0) the system is inconsistent. Otherwise it is solvable: one solution if rank = n (no free variables), infinitely many if rank < n.",
+    "assumptions": [
+      "A is m × n"
+    ],
+    "vars": [
+      [
+        "A",
+        "coefficient matrix, m × n",
+        ""
+      ],
+      [
+        "b",
+        "right-hand side",
+        ""
+      ],
+      [
+        "n",
+        "number of unknowns",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "rank(A) + nullity(A) = n",
+        "the number of free variables"
+      ],
+      [
+        "A^{T} A x = A^{T} b",
+        "the best answer when there is none"
+      ]
+    ],
+    "example": {
+      "problem": "x + y = 2 and 2x + 2y = 5. How many solutions?",
+      "steps": [
+        "rank A = 1, but [A | b] reduces to a row 0 0 | 1: rank 2"
+      ],
+      "answer": "no solution (inconsistent)"
+    }
+  },
+  "P = A(A^{T} A)^{−1} A^{T}": {
+    "title": "Projection onto the column space",
+    "about": "P b is the point in the column space of A closest to b, p = A x̂ from least squares; b − p is orthogonal to every column. P is symmetric and P^{2} = P. For one column a it is aa^{T}/(a^{T}a).",
+    "assumptions": [
+      "A has independent columns"
+    ],
+    "vars": [
+      [
+        "P",
+        "projection matrix",
+        ""
+      ],
+      [
+        "A",
+        "matrix whose columns span the subspace",
+        ""
+      ],
+      [
+        "b",
+        "vector to project",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "x = (A^{T} A)^{−1} A^{T} b",
+        "the least squares coefficients"
+      ],
+      [
+        "proj_{b} a = ((a · b)/(b · b)) b",
+        "onto one vector"
+      ]
+    ],
+    "example": {
+      "problem": "Project b = (1, 2, 2) onto the line through a = (1, 1, 1).",
+      "steps": [
+        "P = aa^{T}/3, so p = ((1 + 2 + 2)/3)(1, 1, 1)"
+      ],
+      "answer": "p ≈ (1.6667, 1.6667, 1.6667)"
+    },
+    "try": "(1 + 2 + 2)/3"
+  },
+  "u_{k} = v_{k} − Σ_{j<k} ((v_{k} · u_{j})/(u_{j} · u_{j})) u_{j}": {
+    "title": "Gram–Schmidt orthogonalization",
+    "about": "Turn independent vectors v_{1}, v_{2}, … into an orthogonal set: from each v_{k} subtract its projections onto the u's already found, then divide each u by its length for an orthonormal basis. It builds the Q of A = QR.",
+    "assumptions": [
+      "v's linearly independent; a zero u means v_{k} was dependent"
+    ],
+    "vars": [
+      [
+        "v_{k}",
+        "input vectors",
+        ""
+      ],
+      [
+        "u_{k}",
+        "orthogonal vectors",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "proj_{b} a = ((a · b)/(b · b)) b",
+        "each subtraction"
+      ],
+      [
+        "A = Q R",
+        "the factorization it gives"
+      ]
+    ],
+    "example": {
+      "problem": "Orthogonalize v₁ = (1, 1, 0), v₂ = (1, 0, 1). How long is u₂?",
+      "steps": [
+        "u₁ = v₁; v₂ · u₁ = 1, u₁ · u₁ = 2",
+        "u₂ = (1, 0, 1) − ½(1, 1, 0) = (0.5, −0.5, 1)",
+        "|u₂| = √1.5"
+      ],
+      "answer": "|u₂| ≈ 1.2247"
+    },
+    "try": "sqrt(0.25 + 0.25 + 1)"
+  },
+  "A = Q R": {
+    "title": "QR factorization",
+    "about": "A with independent columns factors into Q (orthonormal columns, from Gram–Schmidt) and upper triangular R = Q^{T}A. Least squares then becomes R x = Q^{T}b, solved by back substitution, which is better conditioned than the normal equations.",
+    "assumptions": [
+      "A m × n with independent columns"
+    ],
+    "vars": [
+      [
+        "Q",
+        "orthonormal columns, QᵀQ = I",
+        ""
+      ],
+      [
+        "R",
+        "upper triangular, r_{ii} > 0",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "u_{k} = v_{k} − Σ_{j<k} ((v_{k} · u_{j})/(u_{j} · u_{j})) u_{j}",
+        "building Q"
+      ],
+      [
+        "A^{T} A x = A^{T} b",
+        "the normal equations it replaces"
+      ]
+    ],
+    "example": {
+      "problem": "A has columns (1, 1, 0) and (1, 0, 1). Find r₁₁.",
+      "steps": [
+        "r₁₁ = |v₁| = √2; r₁₂ = q₁ · v₂ = 1/√2, r₂₂ = |u₂| = √1.5"
+      ],
+      "answer": "r₁₁ = √2 ≈ 1.4142"
+    },
+    "try": "sqrt(2)"
   }
 }

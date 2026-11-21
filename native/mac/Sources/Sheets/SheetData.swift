@@ -45,12 +45,9 @@ final class SheetData {
         if let cached = sheetCache[id] { return cached }
         guard let sheet = logic.call("lib/identities", "identitySheetById", [id]) as? [String: Any] else { return nil }
         let runs: (String) -> Any = { [logic] show in logic.call("lib/identities", "identityRuns", [show]) ?? [] }
-        // a sheet with a picture shows only the picture here (the table's still there by its own name)
-        let allSections = sheet["sections"] as? [[String: Any]] ?? []
-        let pictured = allSections.filter { s in
-            (s["groups"] as? [[String: Any]] ?? []).contains { ($0["items"] as? [[String: Any]] ?? []).contains { $0["figure"] != nil } }
-        }
-        let sections = (pictured.isEmpty ? allSections : pictured).map { s -> [String: Any] in
+        // every section: a sheet with a picture shows only the picture (IdentityWindow's layout), but a search finds
+        // its other rows (the unit circle's exact values)
+        let sections = (sheet["sections"] as? [[String: Any]] ?? []).map { s -> [String: Any] in
             let groups = (s["groups"] as? [[String: Any]] ?? []).map { g -> [String: Any] in
                 let items = (g["items"] as? [[String: Any]] ?? []).map { i -> [String: Any] in
                     var item: [String: Any] = ["runs": runs(i["show"] as? String ?? ""), "copy": i["copy"] as? String ?? "", "note": i["note"] as? String ?? "",

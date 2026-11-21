@@ -310,7 +310,7 @@
   },
   "A_{0} = (1/T) ∫_{T} x(t) dt": {
     "title": "DC term of the trig Fourier series",
-    "about": "The constant term is the signal's average over one period. It equals a_{0} in the exponential form.",
+    "about": "The constant term is the signal's average over one period. It equals a_{0} in the exponential form. A common mistake is using 2/T as for A_{k} and B_{k}, which doubles the DC.",
     "assumptions": [
       "x(t) periodic with period T",
       "Integrate over any one full period"
@@ -341,6 +341,10 @@
       [
         "a_{0} = A_{0}",
         "same number in the exponential form"
+      ],
+      [
+        "A_{k} = (2/T) ∫_{T} x(t) cos(kω_{o}t) dt",
+        "the other cosine terms, with 2/T"
       ]
     ],
     "example": {
@@ -619,7 +623,7 @@
   },
   "x(−t) ‖ a_{−k}": {
     "title": "Time reversal (Fourier series property)",
-    "about": "Flipping a periodic signal in time swaps its coefficients at k and −k.",
+    "about": "Reversing time turns each e^{jkω_{o}t} into e^{−jkω_{o}t}, so the coefficient at k moves to −k. A common mistake is negating the coefficients instead of swapping them; only an odd x gives a_{−k} = −a_{k}.",
     "assumptions": [
       "x(t) periodic with coefficients a_{k}",
       "For real x, a_{−k} = a_{k}^{*}, so reversal conjugates the coefficients",
@@ -646,6 +650,10 @@
       [
         "x(−t) ↔ X(−jω)",
         "Fourier transform version"
+      ],
+      [
+        "x^{*}(t) ↔ a_{−k}^{*}",
+        "conjugation: for real x, reversal conjugates"
       ]
     ],
     "example": {
@@ -708,7 +716,7 @@
   },
   "x(t) y(t) ‖ Σ_{l} a_{l} b_{k−l}": {
     "title": "Multiplication (Fourier series property)",
-    "about": "The product of two signals with the same period has coefficients equal to the discrete convolution of their coefficient sequences.",
+    "about": "Multiplying the two series pairs harmonic l of x with harmonic k − l of y; their frequencies add to kω_{o}, so collecting terms gives this discrete convolution. A common mistake is multiplying coefficients a_{k}b_{k}; that is periodic convolution in time.",
     "assumptions": [
       "x and y periodic with the same period T",
       "a_{k} are x's coefficients and b_{k} are y's"
@@ -739,6 +747,10 @@
       [
         "x(t) p(t) ↔ (1/2π) X(jω) ∗ P(jω)",
         "Fourier transform version"
+      ],
+      [
+        "∫_{T} x(τ) y(t − τ) dτ ↔ T a_{k} b_{k}",
+        "the dual: convolution multiplies"
       ]
     ],
     "example": {
@@ -750,7 +762,8 @@
         "So cos^{2} = 1/2 + (1/2)cos(2ω_{o}t)"
       ],
       "answer": "c_{0} = 1/2, c_{±2} = 1/4"
-    }
+    },
+    "try": "1/2 * 1/2 + 1/2 * 1/2"
   },
   "(1/T) ∫_{T} |x(t)|^{2} dt ‖ Σ_{k} |a_{k}|^{2}": {
     "title": "Parseval's relation for Fourier series",
@@ -802,7 +815,9 @@
     "title": "Euler's formula",
     "about": "Links the complex exponential to cosine and sine: e^{jθ} is the point at angle θ on the unit circle. Every polar-form and phasor calculation rests on it.",
     "assumptions": [
-      "θ real (it also holds for complex θ)"
+      "θ real (it also holds for complex θ)",
+      "θ in radians: the series proof needs it",
+      "Why: put jθ into e^{x} = Σ x^{n}/n!; the even powers give the cos series and the odd powers give j times the sin series"
     ],
     "vars": [
       [
@@ -848,6 +863,11 @@
         "θ",
         "angle",
         "rad"
+      ],
+      [
+        "j",
+        "imaginary unit, j^{2} = −1",
+        ""
       ]
     ],
     "related": [
@@ -868,21 +888,31 @@
   },
   "e^{jθ} − e^{−jθ} = 2j sin(θ)": {
     "title": "Difference of conjugate exponentials",
-    "about": "Subtracting cancels the real parts and leaves 2j times the sine.",
+    "about": "e^{jθ} and e^{−jθ} are mirror-image phasors on the unit circle. Subtracting cancels their real parts (cos θ) and doubles the imaginary parts, leaving 2j sin θ. Divide by 2j to get sin θ.",
     "assumptions": [
-      "θ real"
+      "θ real (holds for complex θ too)",
+      "Common slip: dividing by 2 instead of 2j when solving for sin θ"
     ],
     "vars": [
       [
         "θ",
         "angle",
         "rad"
+      ],
+      [
+        "j",
+        "imaginary unit, j^{2} = −1",
+        ""
       ]
     ],
     "related": [
       [
-        "sin(θ) = (e^{jθ} − e^{−jθ})/(2j)",
-        ""
+        "sin(θ) = (1/2j) e^{jθ} − (1/2j) e^{−jθ}",
+        "solved for sin θ"
+      ],
+      [
+        "e^{jθ} + e^{−jθ} = 2 cos(θ)",
+        "the sum, which keeps the real parts"
       ]
     ],
     "example": {
@@ -927,9 +957,10 @@
   },
   "sin(θ) = (1/2j) e^{jθ} − (1/2j) e^{−jθ}": {
     "title": "Sine as complex exponentials",
-    "about": "Splits a sine into two phasors with coefficients ±1/(2j) = ∓j/2.",
+    "about": "Solve e^{jθ} − e^{−jθ} = 2j sin θ for sin θ. A sine is two counter-rotating phasors with coefficients ±1/(2j) = ∓j/2, which is why a sine has a −j/2 at +ω and +j/2 at −ω in its spectrum.",
     "assumptions": [
-      "θ real (holds for complex θ too)"
+      "θ real (holds for complex θ too)",
+      "Common slip: 1/(2j) = −j/2, not j/2"
     ],
     "vars": [
       [
@@ -940,8 +971,12 @@
     ],
     "related": [
       [
-        "1/(2j) = −j/2",
-        ""
+        "cos(θ) = (1/2) e^{jθ} + (1/2) e^{−jθ}",
+        "the cosine version"
+      ],
+      [
+        "1/j = −j",
+        "turns 1/(2j) into −j/2"
       ]
     ],
     "example": {
@@ -993,7 +1028,8 @@
     "title": "Cosine squared (power reduction)",
     "about": "Turns a squared cosine into a constant plus a cosine at twice the frequency. Useful for average power and for squaring a sinusoid.",
     "assumptions": [
-      "Any angle A"
+      "Any angle A",
+      "Why: solve cos(2A) = 2cos^{2}(A) − 1 for cos^{2}(A)"
     ],
     "vars": [
       [
@@ -1026,7 +1062,9 @@
     "title": "Sine squared (power reduction)",
     "about": "Turns a squared sine into a constant minus a cosine at twice the frequency; its average over a period is 1/2.",
     "assumptions": [
-      "Any angle A"
+      "Any angle A",
+      "Why: solve cos(2A) = 1 − 2sin^{2}(A) for sin^{2}(A)",
+      "Main use: ∫ sin^{2} x dx = x/2 − sin(2x)/4"
     ],
     "vars": [
       [
@@ -1055,7 +1093,9 @@
     "title": "Product of cosines",
     "about": "Multiplying two sinusoids gives the difference and sum frequencies. This is the heart of mixing and AM modulation.",
     "assumptions": [
-      "Any angles A, B"
+      "Any angles A, B",
+      "Why: add cos(A − B) and cos(A + B); the sin·sin terms cancel and leave 2 cos A cos B",
+      "Common slip: the 1/2 in front, and which of A − B or A + B takes the minus"
     ],
     "vars": [
       [
@@ -1089,7 +1129,9 @@
     "title": "Product of sines",
     "about": "Turns a product of sines into a difference of cosines at the difference and sum angles.",
     "assumptions": [
-      "Any angles A, B"
+      "Any angles A, B",
+      "Why: subtract cos(A + B) from cos(A − B); the cos·cos terms cancel and leave 2 sin A sin B",
+      "Common slip: the 1/2 in front, and which of A − B or A + B takes the minus"
     ],
     "vars": [
       [
@@ -1123,7 +1165,9 @@
     "title": "Product of sine and cosine",
     "about": "Turns sine times cosine into a sum of sines at the sum and difference angles.",
     "assumptions": [
-      "Any angles A, B"
+      "Any angles A, B",
+      "Why: add sin(A + B) and sin(A − B); the cos·sin terms cancel and leave 2 sin A cos B",
+      "Common slip: the 1/2 in front, and which of A − B or A + B takes the minus"
     ],
     "vars": [
       [
@@ -1157,7 +1201,9 @@
     "title": "Product of cosine and sine",
     "about": "Turns cosine times sine into a difference of sines at the sum and difference angles.",
     "assumptions": [
-      "Any angles A, B"
+      "Any angles A, B",
+      "Why: subtract sin(A − B) from sin(A + B); the sin·cos terms cancel and leave 2 cos A sin B",
+      "Common slip: the 1/2 in front, and which of A − B or A + B takes the minus"
     ],
     "vars": [
       [
@@ -1565,7 +1611,8 @@
     "title": "Reciprocal of j",
     "about": "Dividing by j is the same as multiplying by −j, a 90° clockwise rotation. Handy for capacitor impedance and sine coefficients.",
     "assumptions": [
-      "Multiply top and bottom by j: 1/j = j/j^{2} = −j"
+      "Multiply top and bottom by j: 1/j = j/j^{2} = −j",
+      "Common slip: 1/j is not j; it rotates the other way"
     ],
     "vars": [
       [
@@ -1682,7 +1729,8 @@
     "title": "Magnitude of a complex number",
     "about": "The length of z from the origin, by Pythagoras. For a phasor it is the amplitude; for a transfer function it is the gain.",
     "assumptions": [
-      "x and y real"
+      "x and y real",
+      "Common slip: including j in the square: |3 + 4j| = √(9 + 16), not √(9 − 16)"
     ],
     "vars": [
       [
@@ -1722,26 +1770,26 @@
     "try": "abs(3 - 4j)"
   },
   "θ = atan2(y, x)": {
-    "title": "Angle of a complex number",
-    "about": "The angle of z measured counter-clockwise from the positive real axis. atan2 uses the signs of both parts to pick the right quadrant, which atan(y/x) alone cannot.",
+    "title": "Angle of a point or complex number (atan2)",
+    "about": "The angle of the point (x, y), or of z = x + jy, measured counter-clockwise from the positive x (real) axis. atan2 uses the signs of both coordinates to pick the right quadrant, which atan(y/x) alone cannot.",
     "assumptions": [
       "Result in (−π, π]",
-      "Undefined at z = 0"
+      "Undefined at the origin, x = y = 0"
     ],
     "vars": [
       [
         "θ",
-        "angle (argument) of z",
+        "angle from the +x axis (argument of z)",
         "rad"
       ],
       [
         "x",
-        "real part of z",
+        "x coordinate, or the real part of z",
         ""
       ],
       [
         "y",
-        "imaginary part of z",
+        "y coordinate, or the imaginary part of z",
         ""
       ]
     ],
@@ -1762,25 +1810,26 @@
     "try": "atan2(-3, -3)"
   },
   "x = r cos(θ)": {
-    "title": "Real part from polar form",
-    "about": "Projects a phasor onto the real axis. For a phasor A∠φ, this is the value of A cos(ωt + φ) at t = 0.",
+    "title": "x coordinate (real part) from polar form",
+    "about": "Projects a point at distance r and angle θ onto the x axis. For a complex number in polar form it gives the real part; for a phasor A∠φ it is the value of A cos(ωt + φ) at t = 0. Pair it with y = r sin(θ).",
     "assumptions": [
+      "θ measured counter-clockwise from the +x axis",
       "θ in radians or degrees, consistently"
     ],
     "vars": [
       [
         "x",
-        "real part of z",
+        "x coordinate, or the real part of z",
         ""
       ],
       [
         "r",
-        "magnitude |z|",
+        "distance from the origin, |z|",
         ""
       ],
       [
         "θ",
-        "angle (argument) of z",
+        "angle from the +x axis",
         "rad"
       ]
     ],
@@ -1793,33 +1842,35 @@
     "example": {
       "problem": "Find the real part of 10∠53.13°.",
       "steps": [
+        "53.13° is the angle of 3 + 4j, atan2(4, 3)",
         "x = 10 cos(53.13°)",
         "= 6"
       ],
       "answer": "x = 6"
     },
-    "try": "10 cos(53.13 deg)"
+    "try": "10 cos(atan2(4, 3))"
   },
   "y = r sin(θ)": {
-    "title": "Imaginary part from polar form",
-    "about": "Projects a phasor onto the imaginary axis.",
+    "title": "y coordinate (imaginary part) from polar form",
+    "about": "Projects a point at distance r and angle θ onto the y axis. For a complex number in polar form it gives the imaginary part. Pair it with x = r cos(θ).",
     "assumptions": [
+      "θ measured counter-clockwise from the +x axis",
       "θ in radians or degrees, consistently"
     ],
     "vars": [
       [
         "y",
-        "imaginary part of z",
+        "y coordinate, or the imaginary part of z",
         ""
       ],
       [
         "r",
-        "magnitude |z|",
+        "distance from the origin, |z|",
         ""
       ],
       [
         "θ",
-        "angle (argument) of z",
+        "angle from the +x axis",
         "rad"
       ]
     ],
@@ -1832,18 +1883,20 @@
     "example": {
       "problem": "Find the imaginary part of 10∠53.13°.",
       "steps": [
+        "53.13° is the angle of 3 + 4j, atan2(4, 3)",
         "y = 10 sin(53.13°)",
         "= 8"
       ],
       "answer": "y = 8"
     },
-    "try": "10 sin(53.13 deg)"
+    "try": "10 sin(atan2(4, 3))"
   },
   "z_{1} z_{2} = r_{1} r_{2} e^{j(θ_{1} + θ_{2})}": {
     "title": "Multiplying in polar form",
-    "about": "Magnitudes multiply and angles add. Cascading gains in a system works the same way.",
+    "about": "Magnitudes multiply and angles add, because e^{jθ_{1}} e^{jθ_{2}} = e^{j(θ_{1} + θ_{2})}. Cascading gains in a system works the same way: gains multiply, phase shifts add.",
     "assumptions": [
-      "Any complex numbers"
+      "Any complex numbers",
+      "Common slip: adding the magnitudes; they multiply"
     ],
     "vars": [
       [
@@ -1866,6 +1919,10 @@
       [
         "z_{1} / z_{2} = (r_{1}/r_{2}) e^{j(θ_{1} − θ_{2})}",
         ""
+      ],
+      [
+        "(a + jb)(c + jd) = (ac − bd) + j(ad + bc)",
+        "the rectangular way"
       ]
     ],
     "example": {
@@ -1883,7 +1940,8 @@
     "title": "Dividing in polar form",
     "about": "Magnitudes divide and angles subtract. This is how you find a current from a voltage phasor and an impedance.",
     "assumptions": [
-      "z_{2} ≠ 0"
+      "z_{2} ≠ 0",
+      "Common slip: subtract the angles in the right order, numerator minus denominator"
     ],
     "vars": [
       [
@@ -1922,7 +1980,8 @@
     "title": "Complex conjugate",
     "about": "Flips the sign of the imaginary part, mirroring z across the real axis. The magnitude stays; the angle changes sign.",
     "assumptions": [
-      "Any complex z"
+      "Any complex z",
+      "Picture: a mirror image across the real axis, same magnitude, angle negated"
     ],
     "vars": [
       [
@@ -1975,7 +2034,9 @@
     "title": "A number times its conjugate",
     "about": "Gives the squared magnitude, a real number. Used to rationalise a complex denominator and to compute power |X|^{2}.",
     "assumptions": [
-      "Any complex z"
+      "Any complex z",
+      "Why: (x + jy)(x − jy) = x^{2} − j^{2}y^{2} = x^{2} + y^{2}, always real and ≥ 0",
+      "Common slip: z^{2} is not |z|^{2} unless z is real"
     ],
     "vars": [
       [
@@ -2009,7 +2070,8 @@
     "title": "Real part from the conjugate",
     "about": "Averaging z and its conjugate cancels the imaginary part. This is how a real signal A cos(ωt + φ) is Re{Ae^{jφ}e^{jωt}}.",
     "assumptions": [
-      "Any complex z"
+      "Any complex z",
+      "Common slip: dividing by 2j; that is the imaginary part's formula"
     ],
     "vars": [
       [
@@ -2043,7 +2105,8 @@
     "title": "Imaginary part from the conjugate",
     "about": "Subtracting the conjugate cancels the real part; dividing by 2j leaves the imaginary part as a real number.",
     "assumptions": [
-      "Any complex z"
+      "Any complex z",
+      "Im z is the real number y, not jy"
     ],
     "vars": [
       [
@@ -2278,10 +2341,11 @@
     "try": "abs(1/(3 + 4j)^2)"
   },
   "δ(t) ‖ 1": {
-    "title": "Impulse and its transform",
-    "about": "A unit impulse contains every frequency equally. That is why a system's impulse response h(t) has transform H(jω), its frequency response.",
+    "title": "Impulse and its transform (Fourier and Laplace)",
+    "about": "A unit impulse contains every frequency equally: its Fourier transform is 1 at every ω, and its Laplace transform is 1 for every s. That is why a system's impulse response h(t) transforms to its frequency response H(jω), or its transfer function H(s).",
     "assumptions": [
-      "δ(t) is a generalised function with unit area"
+      "δ(t) is a generalised function with unit area at t = 0",
+      "Laplace: the lower limit is 0⁻, so the impulse at t = 0 is included; ROC is every s"
     ],
     "vars": [
       [
@@ -2293,16 +2357,25 @@
         "ω",
         "angular frequency",
         "rad/s"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "1/s"
       ]
     ],
     "related": [
       [
         "δ(t − t_{0}) ↔ e^{−jωt_{0}}",
-        "delayed impulse"
+        "delayed impulse, Fourier"
+      ],
+      [
+        "δ(t − a) ↔ e^{−as}",
+        "delayed impulse, Laplace"
       ],
       [
         "1 ↔ 2πδ(ω)",
-        "the dual"
+        "the Fourier dual"
       ]
     ],
     "example": {
@@ -2316,7 +2389,7 @@
   },
   "δ(t − t_{0}) ‖ e^{−jωt_{0}}": {
     "title": "Delayed impulse and its transform",
-    "about": "A shifted impulse has unit magnitude at all frequencies and a phase falling linearly with ω: a pure delay.",
+    "about": "A shifted impulse has unit magnitude at all frequencies and a phase falling linearly with ω: a pure delay. A common mistake is e^{+jωt_{0}}: a delay always lags, so the phase is negative.",
     "assumptions": [
       "Any real t_{0}"
     ],
@@ -2341,6 +2414,10 @@
       [
         "x(t − t_{0}) ↔ e^{−jωt_{0}} X(jω)",
         "time-shift property"
+      ],
+      [
+        "δ(t) ↔ 1",
+        "t_{0} = 0"
       ]
     ],
     "example": {
@@ -2355,14 +2432,15 @@
   },
   "1 ‖ 2πδ(ω)": {
     "title": "Constant (DC) signal and its transform",
-    "about": "A constant has all its energy at ω = 0, so its transform is an impulse there. It is not absolutely integrable, so the transform exists only in the generalised sense.",
+    "about": "A constant has all its energy at ω = 0, so its transform is an impulse there. It is not absolutely integrable (or summable), so the transform exists only in the generalised sense. The same pair holds for the constant sequence x[n] = 1 in the DTFT table, where the impulse repeats every 2π.",
     "assumptions": [
-      "Generalised (impulse) transform"
+      "Generalised (impulse) transform",
+      "DT: X(e^{jω}) repeats every 2π; the table shows one period, and ω is in rad/sample"
     ],
     "vars": [
       [
         "ω",
-        "angular frequency",
+        "angular frequency (rad/sample for a sequence)",
         "rad/s"
       ],
       [
@@ -2689,7 +2767,7 @@
   },
   "e^{−t^{2}/(2σ^{2})} ‖ σ√(2π) e^{−σ^{2}ω^{2}/2}": {
     "title": "Gaussian and its transform",
-    "about": "A Gaussian transforms to a Gaussian. Its width in time is σ and in frequency 1/σ, the extreme of the time–bandwidth trade-off.",
+    "about": "A Gaussian transforms to a Gaussian. Its width in time is σ and in frequency 1/σ, the extreme of the time–bandwidth trade-off. A common mistake is thinking a wider pulse has a wider spectrum; the spectral width is 1/σ.",
     "assumptions": [
       "σ > 0"
     ],
@@ -3019,16 +3097,16 @@
       "problem": "e^{−t}u(t) is delayed by 1 s. Find the transform at ω = 1 rad/s.",
       "steps": [
         "X(jω) = 1/(1 + jω)",
-        "Y(j1) = e^{−j1}/(1 + j) = −0.1506 − 0.6915j",
+        "Y(j1) = e^{−j1}/(1 + j) = −0.1506 − 0.6909j",
         "|Y| = 0.707, same as before; only phase changed"
       ],
-      "answer": "−0.1506 − 0.6915j (|Y| ≈ 0.707)"
+      "answer": "−0.1506 − 0.6909j (|Y| ≈ 0.707)"
     },
     "try": "e^(-j)/(1 + j)"
   },
   "e^{jω_{o}t} x(t) ‖ X(j(ω − ω_{o}))": {
     "title": "Frequency shift (Fourier transform property)",
-    "about": "Multiplying by a complex exponential slides the whole spectrum to the right by ω_{o}. Real modulation by cos does this in both directions.",
+    "about": "e^{jω_{o}t} combines with e^{−jωt} in the analysis integral to make e^{−j(ω − ω_{o})t}, so X is read at ω − ω_{o}: the whole spectrum slides right by ω_{o}. Real modulation by cos does this both ways. A common mistake is shifting left; X(j(ω − ω_{o})) moves the spectrum to higher ω.",
     "assumptions": [
       "Any real ω_{o}"
     ],
@@ -3058,6 +3136,10 @@
       [
         "x(t)cos(ω_{o}t) ↔ (1/2)[X(j(ω − ω_{o})) + X(j(ω + ω_{o}))]",
         ""
+      ],
+      [
+        "x(t − t_{0}) ↔ e^{−jωt_{0}} X(jω)",
+        "the dual: a delay is a phase ramp"
       ]
     ],
     "example": {
@@ -3067,11 +3149,12 @@
         "Y(j10) = X(j0) = 1"
       ],
       "answer": "Y(j10) = 1, the old peak moved to ω = 10"
-    }
+    },
+    "try": "1/(1 + j(10 - 10))"
   },
   "x(at) ‖ (1/|a|) X(jω/a)": {
     "title": "Time scaling (Fourier transform property)",
-    "about": "Compressing a signal in time (|a| > 1) stretches its spectrum and lowers it. Short pulses need wide bandwidth.",
+    "about": "Compressing a signal in time (|a| > 1) stretches its spectrum and lowers it. Short pulses need wide bandwidth. A common mistake is writing X(jaω) or forgetting the 1/|a|.",
     "assumptions": [
       "a real and nonzero; a negative also reverses time"
     ],
@@ -3101,6 +3184,10 @@
       [
         "x(−t) ↔ X(−jω)",
         "a = −1"
+      ],
+      [
+        "1 for |t| < T_{1}, 0 else ↔ 2 sin(ωT_{1})/ω",
+        "a shorter pulse, a wider sinc"
       ]
     ],
     "example": {
@@ -3115,7 +3202,7 @@
   },
   "x(−t) ‖ X(−jω)": {
     "title": "Time reversal (Fourier transform property)",
-    "about": "Flipping time flips frequency. For a real signal X(−jω) = X^{*}(jω), so the magnitude stays and the phase changes sign.",
+    "about": "Flipping time flips frequency. For a real signal X(−jω) = X^{*}(jω), so the magnitude stays and the phase changes sign. A common mistake is X(−jω) = −X(jω); that holds only for an odd x.",
     "assumptions": [
       "Any x with a transform"
     ],
@@ -3140,6 +3227,10 @@
       [
         "x(at) ↔ (1/|a|)X(jω/a)",
         "general scaling"
+      ],
+      [
+        "x^{*}(t) ↔ X^{*}(−jω)",
+        "conjugation"
       ]
     ],
     "example": {
@@ -3155,7 +3246,7 @@
   },
   "t x(t) ‖ j dX(jω)/dω": {
     "title": "Multiplication by t (frequency differentiation)",
-    "about": "Multiplying by t in time differentiates the spectrum. It generates pairs like t e^{−at}u(t).",
+    "about": "Differentiating the analysis integral with respect to ω brings down −jt, so j dX/dω is the transform of t x(t). It generates pairs like t e^{−at}u(t). A common mistake is the sign: it is +j dX/dω.",
     "assumptions": [
       "X(jω) differentiable"
     ],
@@ -3192,17 +3283,19 @@
       ]
     ],
     "example": {
-      "problem": "Derive the transform of t e^{−at}u(t).",
+      "problem": "Derive the transform of t e^{−at}u(t), and evaluate it at a = 1, ω = 1 rad/s.",
       "steps": [
         "X = 1/(a + jω), dX/dω = −j/(a + jω)^{2}",
-        "j dX/dω = −j^{2}/(a + jω)^{2} = 1/(a + jω)^{2}"
+        "j dX/dω = 1/(a + jω)^{2}",
+        "At a = 1, ω = 1: 1/(1 + j)^{2} = 1/(2j)"
       ],
-      "answer": "1/(a + jω)^{2}"
-    }
+      "answer": "1/(a + jω)^{2}; −0.5j at a = 1, ω = 1"
+    },
+    "try": "1/(1 + j)^2"
   },
   "∫_{−∞}^{t} x(τ) dτ ‖ X(jω)/(jω) + πX(0)δ(ω)": {
     "title": "Integration (Fourier transform property)",
-    "about": "Integrating divides the spectrum by jω, attenuating high frequencies. The impulse accounts for the DC value the integral picks up when x has nonzero area.",
+    "about": "The running integral is x convolved with u(t), so X is multiplied by the step's transform 1/(jω) + πδ(ω); the δ picks out X(0), the DC the integral keeps. Dividing by jω attenuates high frequencies. A common mistake is dropping πX(0)δ(ω) when x has nonzero area.",
     "assumptions": [
       "The impulse term vanishes when X(0) = ∫x dt = 0"
     ],
@@ -3232,16 +3325,22 @@
       [
         "u(t) ↔ 1/(jω) + πδ(ω)",
         "x = δ, X = 1"
+      ],
+      [
+        "d^{n}x(t)/dt^{n} ↔ (jω)^{n} X(jω)",
+        "the inverse"
       ]
     ],
     "example": {
-      "problem": "Find the transform of the step u(t) as the integral of δ(t).",
+      "problem": "Find the transform of (1 − e^{−t})u(t), the running integral of e^{−t}u(t), and its value at ω = 1 rad/s.",
       "steps": [
-        "X(jω) = 1, X(0) = 1",
-        "U = 1/(jω) + πδ(ω)"
+        "X(jω) = 1/(1 + jω), X(0) = 1",
+        "Y = 1/(jω(1 + jω)) + πδ(ω)",
+        "At ω = 1: 1/(j(1 + j)) = −0.5 − 0.5j"
       ],
-      "answer": "1/(jω) + πδ(ω)"
-    }
+      "answer": "1/(jω(1 + jω)) + πδ(ω); −0.5 − 0.5j at ω = 1"
+    },
+    "try": "1/(j(1 + j))"
   },
   "X(jt) ‖ 2πx(−ω)": {
     "title": "Duality",
@@ -3293,7 +3392,7 @@
   },
   "∫ |x(t)|^{2} dt ‖ (1/2π) ∫ |X(jω)|^{2} dω": {
     "title": "Parseval's relation (CT Fourier transform)",
-    "about": "Energy is the same whether summed in time or in frequency; |X(jω)|^{2}/2π is the energy density per rad/s.",
+    "about": "Parseval: energy is the same whether summed in time or in frequency, because the transform only re-expresses x in another basis. |X(jω)|^{2}/2π is the energy density per rad/s. A common mistake is dropping the 1/2π when integrating over ω in rad/s (in hertz there is none).",
     "assumptions": [
       "x has finite energy"
     ],
@@ -3486,7 +3585,7 @@
   },
   "(n + 1) a^{n} u[n], |a| < 1 ‖ 1/(1 − ae^{−jω})^{2}": {
     "title": "Ramped geometric sequence and its DTFT",
-    "about": "The DT counterpart of t e^{−at}u(t): a double pole, the response of two identical first-order stages in cascade.",
+    "about": "The DT counterpart of t e^{−at}u(t): a double pole, the response of two identical first-order stages in cascade. A common mistake is using n a^{n}u[n]; that one has ae^{−jω} on top.",
     "assumptions": [
       "|a| < 1"
     ],
@@ -3516,6 +3615,10 @@
       [
         "a^{n}u[n] ↔ 1/(1 − ae^{−jω})",
         "its square is this pair (convolution)"
+      ],
+      [
+        "n x[n] ↔ j dX(e^{jω})/dω",
+        "how n a^{n}u[n] is found"
       ]
     ],
     "example": {
@@ -3529,10 +3632,11 @@
     "try": "1/(1 - 0.5)^2"
   },
   "δ[n] ‖ 1": {
-    "title": "Unit impulse and its transform (DTFT and z)",
-    "about": "The unit sample has a flat spectrum. A filter's impulse response h[n] therefore has DTFT H(e^{jω}), its frequency response.",
+    "title": "Unit sample and its transform (DTFT and z)",
+    "about": "The unit sample has a flat spectrum: its DTFT is 1 at every ω and its z transform is 1 for every z. A filter's impulse response h[n] therefore transforms to its frequency response H(e^{jω}), or its transfer function H(z).",
     "assumptions": [
-      "δ[n] = 1 at n = 0, else 0"
+      "δ[n] = 1 at n = 0, else 0",
+      "z transform ROC: the whole z-plane"
     ],
     "vars": [
       [
@@ -3544,12 +3648,21 @@
         "ω",
         "DT frequency",
         "rad/sample"
+      ],
+      [
+        "z",
+        "complex variable",
+        ""
       ]
     ],
     "related": [
       [
         "δ[n − n_{o}] ↔ e^{−jωn_{o}}",
-        ""
+        "delayed sample, DTFT"
+      ],
+      [
+        "δ[n − m] ↔ z^{−m}",
+        "delayed sample, z transform"
       ]
     ],
     "example": {
@@ -3562,7 +3675,7 @@
   },
   "δ[n − n_{o}] ‖ e^{−jωn_{o}}": {
     "title": "Delayed unit sample and its DTFT",
-    "about": "A delay of n_{o} samples has unit gain and a linear phase −ωn_{o}.",
+    "about": "A delay of n_{o} samples has unit gain and a linear phase −ωn_{o}. A common mistake is e^{+jωn_{o}}, which is an advance.",
     "assumptions": [
       "n_{o} an integer"
     ],
@@ -3587,6 +3700,10 @@
       [
         "x[n − n_{o}] ↔ e^{−jωn_{o}} X(e^{jω})",
         ""
+      ],
+      [
+        "δ[n] ↔ 1",
+        "n_{o} = 0"
       ]
     ],
     "example": {
@@ -3721,7 +3838,7 @@
   },
   "sin(ω_{o}n) ‖ (π/j)[δ(ω − ω_{o}) − δ(ω + ω_{o})]": {
     "title": "DT sine and its DTFT",
-    "about": "Two lines at ±ω_{o} with imaginary areas −jπ and +jπ in each period.",
+    "about": "sin(ω_{o}n) = (e^{jω_{o}n} − e^{−jω_{o}n})/(2j), and each exponential is one line of area 2π, so there are two lines at ±ω_{o} with areas −jπ and +jπ in each period. A common mistake is giving them real areas: the 1/j makes them imaginary and opposite in sign.",
     "assumptions": [
       "Generalised transform",
       "X(e^{jω}) repeats every 2π; the pair shows one period"
@@ -3747,6 +3864,10 @@
       [
         "sin(θ) = (e^{jθ} − e^{−jθ})/(2j)",
         ""
+      ],
+      [
+        "cos(ω_{o}n) ↔ πδ(ω − ω_{o}) + πδ(ω + ω_{o})",
+        "the cosine: real, equal areas"
       ]
     ],
     "example": {
@@ -3843,7 +3964,7 @@
   },
   "x[n − n_{o}] ‖ e^{−jωn_{o}} X(e^{jω})": {
     "title": "Time shift (DTFT property)",
-    "about": "Delaying by n_{o} samples adds a linear phase −ωn_{o} and leaves |X| alone.",
+    "about": "Delaying by n_{o} samples adds a linear phase −ωn_{o} and leaves |X| alone. A common mistake is e^{+jωn_{o}}: a delay lags.",
     "assumptions": [
       "n_{o} an integer"
     ],
@@ -3873,6 +3994,10 @@
       [
         "x(t − t_{0}) ↔ e^{−jωt_{0}}X(jω)",
         "CT version"
+      ],
+      [
+        "δ[n − n_{o}] ↔ e^{−jωn_{o}}",
+        "x = δ[n]"
       ]
     ],
     "example": {
@@ -3887,7 +4012,7 @@
   },
   "y[n] = x[n] ∗ h[n] ‖ Y(e^{jω}) = X(e^{jω}) H(e^{jω})": {
     "title": "Convolution property (DTFT)",
-    "about": "A DT LTI system multiplies the input spectrum by its frequency response H(e^{jω}).",
+    "about": "Each sample of h scales and delays x; the delays become e^{−jωk}, and summing them gives H(e^{jω})X(e^{jω}). So an LTI system multiplies the input spectrum by its frequency response. A common mistake is convolving the spectra: convolution in time multiplies them.",
     "assumptions": [
       "System linear and shift-invariant",
       "Transforms exist"
@@ -3923,6 +4048,14 @@
       [
         "H(e^{jω}) = H(z)|_{z=e^{jω}}",
         ""
+      ],
+      [
+        "x[n] ∗ h[n] ↔ X(z) H(z)",
+        "z transform version"
+      ],
+      [
+        "y(t) = x(t) ∗ h(t) ↔ Y(jω) = X(jω) H(jω)",
+        "CT version"
       ]
     ],
     "example": {
@@ -3981,7 +4114,7 @@
   },
   "x[−n] ‖ X(e^{−jω})": {
     "title": "Time reversal (DTFT property)",
-    "about": "Reversing a sequence reverses its spectrum; for real x it conjugates it.",
+    "about": "Reversing a sequence reverses its spectrum; for real x it conjugates it. A common mistake is X(e^{−jω}) = −X(e^{jω}); that holds only for an odd x.",
     "assumptions": [
       "Any x with a DTFT"
     ],
@@ -4006,6 +4139,10 @@
       [
         "x(−t) ↔ X(−jω)",
         "CT version"
+      ],
+      [
+        "x^{*}[n] ↔ X^{*}(e^{−jω})",
+        "conjugation"
       ]
     ],
     "example": {
@@ -4020,7 +4157,7 @@
   },
   "n x[n] ‖ j dX(e^{jω})/dω": {
     "title": "Multiplication by n (DTFT property)",
-    "about": "Multiplying a sequence by n differentiates its spectrum.",
+    "about": "Differentiating X(e^{jω}) = Σ x[n] e^{−jωn} with respect to ω brings down −jn; multiply by j to get the transform of n x[n]. A common mistake is the sign: it is +j dX/dω.",
     "assumptions": [
       "X(e^{jω}) differentiable"
     ],
@@ -4050,20 +4187,26 @@
       [
         "(n + 1)a^{n}u[n] ↔ 1/(1 − ae^{−jω})^{2}",
         "derived with it"
+      ],
+      [
+        "t x(t) ↔ j dX(jω)/dω",
+        "CT version"
       ]
     ],
     "example": {
-      "problem": "Find the DTFT of n a^{n}u[n].",
+      "problem": "Find the DTFT of n a^{n}u[n], and check it at a = 0.5, ω = 0.",
       "steps": [
         "X = 1/(1 − ae^{−jω}), dX/dω = −jae^{−jω}/(1 − ae^{−jω})^{2}",
-        "j dX/dω = ae^{−jω}/(1 − ae^{−jω})^{2}"
+        "j dX/dω = ae^{−jω}/(1 − ae^{−jω})^{2}",
+        "At a = 0.5, ω = 0: 0.5/0.25 = 2 = Σ n 0.5^{n}"
       ],
-      "answer": "ae^{−jω}/(1 − ae^{−jω})^{2}"
-    }
+      "answer": "ae^{−jω}/(1 − ae^{−jω})^{2}; 2 at a = 0.5, ω = 0"
+    },
+    "try": "sum(n*0.5^n, n, 0, 200)"
   },
   "x[n] − x[n − 1] ‖ (1 − e^{−jω}) X(e^{jω})": {
     "title": "First difference (DTFT property)",
-    "about": "The DT stand-in for a derivative: a high-pass that blocks DC and doubles the highest frequency.",
+    "about": "The delay gives e^{−jω}X, so the difference is (1 − e^{−jω})X. It is the DT stand-in for a derivative: a high-pass that blocks DC and doubles the highest frequency. A common mistake is treating it as jω exactly; that holds only for small ω.",
     "assumptions": [
       "Any x with a DTFT"
     ],
@@ -4088,6 +4231,10 @@
       [
         "dx/dt ↔ jωX(jω)",
         "CT version"
+      ],
+      [
+        "Σ_{k=−∞}^{n} x[k] ↔ X(e^{jω})/(1 − e^{−jω}) + πX(e^{j0}) δ(ω)",
+        "the inverse: accumulation"
       ]
     ],
     "example": {
@@ -4102,7 +4249,7 @@
   },
   "x[n] y[n] ‖ (1/2π) ∫_{2π} X(e^{jθ}) Y(e^{j(ω − θ)}) dθ": {
     "title": "Multiplication (DTFT property)",
-    "about": "Multiplying two sequences convolves their spectra periodically over one 2π period. Windowing a sequence smears its spectrum this way.",
+    "about": "Multiplying two sequences convolves their spectra periodically over one 2π period. Windowing a sequence smears its spectrum this way. A common mistake is multiplying the spectra; that is convolution in time.",
     "assumptions": [
       "Both DTFTs exist"
     ],
@@ -4132,6 +4279,10 @@
       [
         "x(t)p(t) ↔ (1/2π) X ∗ P",
         "CT version"
+      ],
+      [
+        "y[n] = x[n] ∗ h[n] ↔ Y(e^{jω}) = X(e^{jω}) H(e^{jω})",
+        "the dual"
       ]
     ],
     "example": {
@@ -4141,11 +4292,12 @@
         "0.1 ± π/2 → 1.671 and −1.471 rad/sample"
       ],
       "answer": "to 1.671 and −1.471 rad/sample, half height"
-    }
+    },
+    "try": "0.1 + pi/2"
   },
   "Σ_{n} |x[n]|^{2} ‖ (1/2π) ∫_{2π} |X(e^{jω})|^{2} dω": {
     "title": "Parseval's relation (DTFT)",
-    "about": "A sequence's energy equals the spectrum's energy averaged over one period.",
+    "about": "A sequence's energy equals the spectrum's energy averaged over one period. A common mistake is integrating over all ω; the DTFT repeats, so integrate over one 2π period only.",
     "assumptions": [
       "x has finite energy"
     ],
@@ -4374,12 +4526,16 @@
         "C_{1} = 2|a_{1}| = 2 · 2/π"
       ],
       "answer": "C_{1} = 4/π ≈ 1.27"
-    }
+    },
+    "try": "2 * 2/pi"
   },
   "φ_{k} = −atan2(B_{k}, A_{k})": {
     "title": "Harmonic phase of a Fourier series",
-    "about": "The phase of the kth harmonic when it is written as C_{k} cos(kω_{o}t + φ_{k}). It equals the angle of a_{k}.",
-    "assumptions": [],
+    "about": "Expanding C_{k} cos(kω_{o}t + φ_{k}) gives A_{k} = C_{k} cos φ_{k} and B_{k} = −C_{k} sin φ_{k}, so φ_{k} = −atan2(B_{k}, A_{k}). It equals the angle of a_{k} = (A_{k} − jB_{k})/2. Common mistakes: atan(B/A) loses the quadrant when A_{k} < 0, and dropping the minus sign gives the sine-phase convention.",
+    "assumptions": [
+      "φ_{k} is a cosine phase: a pure sine has φ = −π/2",
+      "Use atan2, not atan(B/A), so the quadrant is right when A_{k} < 0"
+    ],
     "vars": [
       [
         "φ_{k}",
@@ -4396,20 +4552,26 @@
       [
         "φ_{k} = ∠a_{k}",
         "same angle from the exponential form"
+      ],
+      [
+        "C_{k} = √(A_{k}^{2} + B_{k}^{2}) = 2|a_{k}|",
+        "the amplitude that goes with it"
       ]
     ],
     "example": {
-      "problem": "Find φ_{1} when A_{1} = 0 and B_{1} = 2 (a pure sine).",
+      "problem": "Write −cos(ω_{o}t) + sin(ω_{o}t) as C_{1} cos(ω_{o}t + φ_{1}).",
       "steps": [
-        "φ_{1} = −atan2(2, 0) = −π/2",
-        "so 2 sin(ω_{o}t) = 2 cos(ω_{o}t − π/2)"
+        "A_{1} = −1, B_{1} = 1, so C_{1} = √2",
+        "φ_{1} = −atan2(1, −1) = −3π/4 ≈ −2.356 rad (atan(B/A) would give −π/4, the wrong quadrant)",
+        "Check: √2 cos(ω_{o}t − 3π/4) = −cos(ω_{o}t) + sin(ω_{o}t) ✓"
       ],
-      "answer": "φ_{1} = −π/2"
-    }
+      "answer": "φ_{1} = −3π/4 ≈ −2.356 rad"
+    },
+    "try": "-atan2(1, -1) in rad"
   },
   "B_{k} = 0": {
     "title": "Even signals have only cosine terms",
-    "about": "If x(−t) = x(t), every sine coefficient vanishes, so only A_{0} and the A_{k} need computing. You can also integrate over half a period and double it.",
+    "about": "If x(−t) = x(t), every sine coefficient vanishes, so only A_{0} and the A_{k} need computing. You can also integrate over half a period and double it. A common mistake is calling a wave even when it is symmetric about some other point; shift it so the symmetry is about t = 0 first, or sine terms remain.",
     "assumptions": [
       "x even about t = 0"
     ],
@@ -4424,6 +4586,10 @@
       [
         "A_{k} = (4/T) ∫_{0}^{T/2} x(t) cos(kω_{o}t) dt",
         "half-period shortcut for even x"
+      ],
+      [
+        "A_{0} = A_{k} = 0",
+        "odd x: sines only"
       ]
     ],
     "example": {
@@ -4437,7 +4603,7 @@
   },
   "A_{0} = A_{k} = 0": {
     "title": "Odd signals have only sine terms",
-    "about": "If x(−t) = −x(t), the average and every cosine coefficient vanish, so only the B_{k} are left.",
+    "about": "If x(−t) = −x(t), the average and every cosine coefficient vanish, because the integral of an odd function over a symmetric period is zero; only the B_{k} are left. A common mistake is calling a wave with a DC offset odd: the offset brings A_{0} back.",
     "assumptions": [
       "x odd about t = 0"
     ],
@@ -4457,21 +4623,26 @@
       [
         "B_{k} = (4/T) ∫_{0}^{T/2} x(t) sin(kω_{o}t) dt",
         "half-period shortcut for odd x"
+      ],
+      [
+        "B_{k} = 0",
+        "even x: cosines only"
       ]
     ],
     "example": {
-      "problem": "A square wave is +1 for 0 < t < T/2 and −1 for −T/2 < t < 0. Which coefficients survive?",
+      "problem": "A square wave is +1 for 0 < t < T/2 and −1 for −T/2 < t < 0. Which coefficients survive, and what is B_{1}?",
       "steps": [
-        "x is odd",
-        "so A_{0} = A_{k} = 0",
-        "B_{k} = 4/(kπ) for odd k, 0 for even k"
+        "x is odd, so A_{0} = A_{k} = 0",
+        "B_{k} = (4/T) ∫_{0}^{T/2} sin(kω_{o}t) dt = 2(1 − cos kπ)/(kπ)",
+        "Even k give 0; odd k give 4/(kπ)"
       ],
-      "answer": "sine terms only, odd k"
-    }
+      "answer": "sine terms only, odd k: B_{k} = 4/(kπ), B_{1} ≈ 1.273"
+    },
+    "try": "4/pi"
   },
   "A x(t) + B y(t) ‖ A a_{k} + B b_{k}": {
     "title": "Linearity (Fourier series property)",
-    "about": "The coefficients of a weighted sum are the same weighted sum of the coefficients, for two signals with the same period.",
+    "about": "The analysis integral is linear, so it splits over a sum: the coefficients of a weighted sum are the same weighted sum of the coefficients. Build a signal from known pieces (a square wave plus a DC offset). A common mistake is adding signals of different periods; rewrite both over their common period first, which renumbers k.",
     "assumptions": [
       "x and y share the period T"
     ],
@@ -4487,18 +4658,28 @@
         ""
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "a_{k} = (1/T) ∫_{T} x(t) e^{−jkω_{o}t} dt",
+        "the integral that splits"
+      ],
+      [
+        "a x(t) + b y(t) ↔ a X(jω) + b Y(jω)",
+        "Fourier transform version"
+      ]
+    ],
     "example": {
       "problem": "x has a_{1} = 1/2 and y has b_{1} = −j. Find the k = 1 coefficient of 2x + 3y.",
       "steps": [
         "2 · 1/2 + 3 · (−j)"
       ],
       "answer": "1 − 3j"
-    }
+    },
+    "try": "2 * 1/2 + 3 * (-j)"
   },
   "e^{jMω_{o}t} x(t) ‖ a_{k−M}": {
     "title": "Frequency shift (Fourier series property)",
-    "about": "Multiplying by the harmonic e^{jMω_{o}t} slides the coefficient list M places up: the new kth coefficient is the old (k − M)th.",
+    "about": "Multiplying by e^{jMω_{o}t} adds M to every harmonic number, so each coefficient moves M places up the list: the new kth is the old (k − M)th. It is the series form of modulation. A common mistake is shifting the wrong way: a_{0} lands at k = M, not at k = −M.",
     "assumptions": [
       "M an integer, so the period is unchanged"
     ],
@@ -4514,20 +4695,32 @@
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "x(t) = 1 has a_{0} = 1 and nothing else. What are the coefficients of e^{j2ω_{o}t}?",
-      "steps": [
-        "shift by M = 2",
-        "the new coefficient at k = 2 is a_{0} = 1"
+    "related": [
+      [
+        "x(t − t_{0}) ↔ a_{k} e^{−jkω_{o}t_{0}}",
+        "the dual: a time shift is a phase ramp"
       ],
-      "answer": "c_{2} = 1, all others 0"
+      [
+        "e^{jω_{o}t} x(t) ↔ X(j(ω − ω_{o}))",
+        "Fourier transform version"
+      ]
+    ],
+    "example": {
+      "problem": "x(t) = cos(ω_{o}t) has a_{±1} = 1/2. Find the coefficients of e^{jω_{o}t} cos(ω_{o}t).",
+      "steps": [
+        "M = 1, so c_{k} = a_{k−1}",
+        "c_{2} = a_{1} = 1/2, c_{0} = a_{−1} = 1/2",
+        "Check: e^{jω_{o}t} cos(ω_{o}t) = (e^{j2ω_{o}t} + 1)/2 ✓"
+      ],
+      "answer": "c_{0} = c_{2} = 1/2, all others 0"
     }
   },
   "x^{*}(t) ‖ a_{−k}^{*}": {
     "title": "Conjugation (Fourier series property)",
-    "about": "Conjugating the signal conjugates and mirrors its coefficients. For a real signal x = x^{*}, which gives conjugate symmetry a_{−k} = a_{k}^{*}.",
-    "assumptions": [],
+    "about": "Conjugating Σ a_{k} e^{jkω_{o}t} conjugates each a_{k} and turns e^{jkω_{o}t} into e^{−jkω_{o}t}, so the coefficient at index k comes from a_{−k}^{*}. For a real x, x = x^{*} gives a_{−k} = a_{k}^{*}. A common mistake is conjugating without mirroring the index.",
+    "assumptions": [
+      "x(t) periodic with coefficients a_{k}"
+    ],
     "vars": [
       [
         "a_{k}",
@@ -4539,22 +4732,28 @@
       [
         "a_{−k} = a_{k}^{*}",
         "x real"
+      ],
+      [
+        "x(−t) ↔ a_{−k}",
+        "reversal mirrors without conjugating"
       ]
     ],
     "example": {
-      "problem": "x(t) = e^{jω_{o}t} has a_{1} = 1. Find the coefficients of x^{*}(t).",
+      "problem": "x(t) = 2 + 3j e^{jω_{o}t}, so a_{0} = 2 and a_{1} = 3j. Find the coefficients of x^{*}(t).",
       "steps": [
-        "x^{*}(t) = e^{−jω_{o}t}",
-        "new coefficient at k = −1 is a_{1}^{*} = 1"
+        "x^{*}(t) = 2 − 3j e^{−jω_{o}t}",
+        "c_{0} = a_{0}^{*} = 2, c_{−1} = a_{1}^{*} = −3j"
       ],
-      "answer": "c_{−1} = 1"
-    }
+      "answer": "c_{0} = 2, c_{−1} = −3j"
+    },
+    "try": "conj(3j)"
   },
   "∫_{−∞}^{t} x(τ) dτ ‖ a_{k}/(jkω_{o})": {
     "title": "Integration (Fourier series property)",
-    "about": "Integrating a periodic signal divides each coefficient by jkω_{o}. It only works when a_{0} = 0, or the integral grows without bound and is not periodic.",
+    "about": "Integrating e^{jkω_{o}t} gives e^{jkω_{o}t}/(jkω_{o}), so each coefficient is divided by jkω_{o}: high harmonics shrink, which is why a triangle wave (the integral of a square wave) looks smoother. It needs a_{0} = 0; otherwise the integral ramps and is not periodic. A common mistake is dividing a_{0} by zero; the new average is set by the constant of integration.",
     "assumptions": [
-      "a_{0} = 0 (zero average)"
+      "a_{0} = 0 (zero average), or the integral grows without bound",
+      "The k = 0 coefficient of the result is its average, set by the constant of integration"
     ],
     "vars": [
       [
@@ -4564,25 +4763,38 @@
       ],
       [
         "ω_{o}",
-        "fundamental frequency",
+        "fundamental frequency, 2π/T",
         "rad/s"
+      ],
+      [
+        "k",
+        "harmonic number, k ≠ 0",
+        ""
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "dx/dt ↔ jkω_{o} a_{k}",
+        "the inverse operation"
+      ]
+    ],
     "example": {
-      "problem": "x(t) = cos(ω_{o}t) has a_{±1} = 1/2. Find the coefficients of its integral.",
+      "problem": "x(t) = cos(2πt) (T = 1 s, ω_{o} = 2π rad/s) has a_{±1} = 1/2. Find the coefficients of its integral.",
       "steps": [
-        "k = 1: (1/2)/(jω_{o})",
-        "k = −1: (1/2)/(−jω_{o})"
+        "c_{1} = (1/2)/(j2π) = −j/(4π)",
+        "c_{−1} = (1/2)/(−j2π) = j/(4π)",
+        "Check: ∫ cos(2πt) dt = sin(2πt)/(2π), whose c_{1} = 1/(2π · 2j) ✓"
       ],
-      "answer": "(1/ω_{o}) sin(ω_{o}t), as expected"
-    }
+      "answer": "c_{1} = −j/(4π) ≈ −0.0796j, c_{−1} ≈ 0.0796j"
+    },
+    "try": "(1/2)/(j 2 pi)"
   },
   "∫_{T} x(τ) y(t − τ) dτ ‖ T a_{k} b_{k}": {
     "title": "Periodic convolution (Fourier series property)",
-    "about": "Convolving two signals of the same period over one period multiplies their coefficients (times T). It is how a periodic input passes through a filter.",
+    "about": "Convolving two signals of the same period over one period multiplies their coefficients (times T). It is the periodic counterpart of the convolution property, and it needs no transform with impulses. A common mistake is dropping the factor T.",
     "assumptions": [
-      "x and y share the period T"
+      "x and y share the period T",
+      "The integral runs over any one period"
     ],
     "vars": [
       [
@@ -4596,23 +4808,46 @@
         "s"
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "x(t) y(t) ↔ Σ_{l} a_{l} b_{k−l}",
+        "the dual: multiplication convolves"
+      ],
+      [
+        "y(t) = x(t) ∗ h(t) ↔ Y(jω) = X(jω) H(jω)",
+        "aperiodic version"
+      ]
+    ],
     "example": {
       "problem": "x and y both have a_{1} = b_{1} = 1/2 and T = 2 s. Find the k = 1 coefficient of their periodic convolution.",
       "steps": [
-        "T a_{1} b_{1} = 2 · 1/2 · 1/2"
+        "T a_{1} b_{1} = 2 · 1/2 · 1/2",
+        "= 0.5"
       ],
-      "answer": "1/2"
-    }
+      "answer": "c_{1} = 0.5"
+    },
+    "try": "2 * 1/2 * 1/2"
   },
   "e^{jπ} + 1 = 0": {
     "title": "Euler's identity",
-    "about": "Euler's formula at θ = π: half a turn around the unit circle lands on −1. It links e, π, j, 1 and 0 in one line.",
-    "assumptions": [],
+    "about": "Euler's formula at θ = π: walking half a turn (π radians) around the unit circle from 1 lands on −1. It links e, π, j, 1 and 0 in one line, and is the reason e^{jπk} = (−1)^{k}.",
+    "assumptions": [
+      "π is in radians; e^{j180} is not −1"
+    ],
     "vars": [
       [
         "j",
         "imaginary unit, √−1",
+        ""
+      ],
+      [
+        "e",
+        "Euler's number, 2.71828…",
+        ""
+      ],
+      [
+        "π",
+        "half a turn, in radians",
         ""
       ]
     ],
@@ -4620,6 +4855,14 @@
       [
         "e^{jθ} = cos(θ) + j sin(θ)",
         "Euler's formula"
+      ],
+      [
+        "e^{jπk} = e^{−jπk} = (−1)^{k}",
+        "whole numbers of half turns"
+      ],
+      [
+        "e^{±j2πk} = 1",
+        "whole numbers of full turns"
       ]
     ],
     "example": {
@@ -4633,8 +4876,11 @@
   },
   "cosh(x) = (e^{x} + e^{−x})/2": {
     "title": "Hyperbolic cosine from exponentials",
-    "about": "The even part of e^{x}. It is the shape of a hanging chain and solves y′′ = y with y′(0) = 0.",
-    "assumptions": [],
+    "about": "The even part of e^{x}: average e^{x} and e^{−x}. It is never below 1, behaves like 1 + x^{2}/2 near 0, and is the shape of a hanging chain or cable (a catenary, y = a cosh(x/a)). It solves y″ = y with y′(0) = 0.",
+    "assumptions": [
+      "Common slip: cosh^{2}(x) − sinh^{2}(x) = 1 has a minus",
+      "Even: cosh(−x) = cosh(x)"
+    ],
     "vars": [
       [
         "x",
@@ -4646,21 +4892,33 @@
       [
         "cosh^{2}(x) − sinh^{2}(x) = 1",
         "hyperbolic Pythagorean identity"
+      ],
+      [
+        "sinh(x) = (e^{x} − e^{−x})/2",
+        "the odd part"
+      ],
+      [
+        "cos(jx) = cosh(x)",
+        "its link to cosine"
       ]
     ],
     "example": {
-      "problem": "Find cosh(1).",
+      "problem": "A cable hangs as y = a cosh(x/a) with a = 50 m over a 40 m span. Find the sag at the middle.",
       "steps": [
-        "(e + e^{−1})/2 = (2.71828 + 0.36788)/2"
+        "Sag = a(cosh(20/50) − 1)",
+        "= 50 (1.08107 − 1)"
       ],
-      "answer": "≈ 1.5431"
+      "answer": "≈ 4.05 m"
     },
-    "try": "cosh(1)"
+    "try": "50 m * (cosh(0.4) - 1)"
   },
   "sinh(x) = (e^{x} − e^{−x})/2": {
     "title": "Hyperbolic sine from exponentials",
-    "about": "The odd part of e^{x}; with cosh it gives e^{x} = cosh(x) + sinh(x).",
-    "assumptions": [],
+    "about": "The odd part of e^{x}: any function splits into even and odd parts, and for e^{x} they are cosh and sinh, so e^{x} = cosh x + sinh x. It behaves like x for small x and like e^{x}/2 for large x. Hyperbolic sine solves y″ = y with y(0) = 0.",
+    "assumptions": [
+      "Common slip: the identity is cosh^{2}(x) − sinh^{2}(x) = 1, with a minus, not a plus",
+      "Odd: sinh(−x) = −sinh(x); unbounded, unlike sin"
+    ],
     "vars": [
       [
         "x",
@@ -4668,20 +4926,38 @@
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Find sinh(1).",
-      "steps": [
-        "(e − e^{−1})/2 = (2.71828 − 0.36788)/2"
+    "related": [
+      [
+        "cosh(x) = (e^{x} + e^{−x})/2",
+        "the even part"
       ],
-      "answer": "≈ 1.1752"
+      [
+        "sin(jx) = j sinh(x)",
+        "its link to sine"
+      ],
+      [
+        "sinh x = x + x^{3}/3! + x^{5}/5! + …",
+        "its series"
+      ]
+    ],
+    "example": {
+      "problem": "Find sinh(1) and check that cosh^{2} − sinh^{2} = 1.",
+      "steps": [
+        "sinh 1 = (2.71828 − 0.36788)/2 = 1.1752",
+        "cosh 1 = (2.71828 + 0.36788)/2 = 1.5431",
+        "1.5431^{2} − 1.1752^{2} = 2.3811 − 1.3811 = 1"
+      ],
+      "answer": "sinh(1) ≈ 1.1752"
     },
     "try": "sinh(1)"
   },
   "cos(jx) = cosh(x)": {
     "title": "Cosine of an imaginary angle",
     "about": "Putting θ = jx into cos(θ) = (e^{jθ} + e^{−jθ})/2 gives cosh. It is why hyperbolic functions turn up wherever damped or evanescent waves do.",
-    "assumptions": [],
+    "assumptions": [
+      "x real",
+      "Common slip: |cos z| ≤ 1 only for real z; cos(2j) is already 3.76"
+    ],
     "vars": [
       [
         "x",
@@ -4689,7 +4965,16 @@
         ""
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "sin(jx) = j sinh(x)",
+        "the sine partner"
+      ],
+      [
+        "cosh(x) = (e^{x} + e^{−x})/2",
+        "definition of cosh"
+      ]
+    ],
     "example": {
       "problem": "Find cos(2j).",
       "steps": [
@@ -4701,8 +4986,11 @@
   },
   "sin(jx) = j sinh(x)": {
     "title": "Sine of an imaginary angle",
-    "about": "Putting θ = jx into sin(θ) = (e^{jθ} − e^{−jθ})/(2j) gives j sinh(x).",
-    "assumptions": [],
+    "about": "Put θ = jx into sin θ = (e^{jθ} − e^{−jθ})/(2j): e^{jθ} becomes the real e^{−x}, so the oscillation turns into exponential growth and the result is j sinh(x). Unlike sin of a real angle, it is not bounded by 1.",
+    "assumptions": [
+      "x real; for a general complex angle, sin(x + jy) = sin x cosh y + j cos x sinh y",
+      "Common slip: |sin z| ≤ 1 only for real z"
+    ],
     "vars": [
       [
         "x",
@@ -4710,7 +4998,20 @@
         ""
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "cos(jx) = cosh(x)",
+        "the cosine partner"
+      ],
+      [
+        "sinh(x) = (e^{x} − e^{−x})/2",
+        "definition of sinh"
+      ],
+      [
+        "sin(θ) = (1/2j) e^{jθ} − (1/2j) e^{−jθ}",
+        "where it comes from"
+      ]
+    ],
     "example": {
       "problem": "Find sin(j).",
       "steps": [
@@ -4722,8 +5023,11 @@
   },
   "cos(A ± B) = cos(A) cos(B) ∓ sin(A) sin(B)": {
     "title": "Cosine of a sum or difference (angle addition)",
-    "about": "Expands the cosine of a sum or difference. Note the sign flips: a + inside gives a − between the terms.",
-    "assumptions": [],
+    "about": "From Euler: e^{j(A+B)} = e^{jA} e^{jB}; match the real parts and j·j = −1 supplies the minus. So the sign between the terms is opposite to the sign inside.",
+    "assumptions": [
+      "Any angles A, B",
+      "Common slip: writing + for cos(A + B); it is cos cos minus sin sin"
+    ],
     "vars": [
       [
         "A, B",
@@ -4731,7 +5035,16 @@
         "rad"
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "sin(A ± B) = sin(A) cos(B) ± cos(A) sin(B)",
+        "the imaginary parts"
+      ],
+      [
+        "cos(2A) = cos^{2}(A) − sin^{2}(A)",
+        "the case B = A"
+      ]
+    ],
     "example": {
       "problem": "Find cos(75°) exactly.",
       "steps": [
@@ -4744,8 +5057,11 @@
   },
   "sin(A ± B) = sin(A) cos(B) ± cos(A) sin(B)": {
     "title": "Sine of a sum or difference (angle addition)",
-    "about": "Expands the sine of a sum or difference; the sign between the terms matches the sign inside.",
-    "assumptions": [],
+    "about": "From Euler: e^{j(A+B)} = e^{jA} e^{jB}. Expand both sides as cos + j sin, multiply out, and match the imaginary parts. The sign between the terms matches the sign inside.",
+    "assumptions": [
+      "Any angles A, B",
+      "Common slip: sin(A + B) is not sin A + sin B"
+    ],
     "vars": [
       [
         "A, B",
@@ -4753,7 +5069,20 @@
         "rad"
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "cos(A ± B) = cos(A) cos(B) ∓ sin(A) sin(B)",
+        "the real parts; its sign flips"
+      ],
+      [
+        "sin(2A) = 2 sin(A) cos(A)",
+        "the case B = A"
+      ],
+      [
+        "a cos(θ) + b sin(θ) = R cos(θ − φ)",
+        "run backwards to combine sinusoids"
+      ]
+    ],
     "example": {
       "problem": "Find sin(15°) exactly.",
       "steps": [
@@ -4766,8 +5095,11 @@
   },
   "sin(2A) = 2 sin(A) cos(A)": {
     "title": "Double angle for sine",
-    "about": "The angle-addition formula with B = A. Read backwards it turns a product sin cos into one sine at twice the frequency.",
-    "assumptions": [],
+    "about": "Set B = A in sin(A + B). Read backwards it turns a product sin·cos into one sine at twice the angle, which is why projectile range goes as sin 2θ and peaks at 45°.",
+    "assumptions": [
+      "Any angle A",
+      "Common slip: sin 2A is not 2 sin A"
+    ],
     "vars": [
       [
         "A",
@@ -4775,19 +5107,37 @@
         "rad"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Given sin A = 3/5 and cos A = 4/5, find sin 2A.",
-      "steps": [
-        "2 · 3/5 · 4/5"
+    "related": [
+      [
+        "sin(A ± B) = sin(A) cos(B) ± cos(A) sin(B)",
+        "where it comes from"
       ],
-      "answer": "24/25 = 0.96"
-    }
+      [
+        "cos(2A) = cos^{2}(A) − sin^{2}(A)",
+        "the cosine version"
+      ],
+      [
+        "sin^{2}(A) = 1/2 − (1/2) cos(2A)",
+        "power reduction"
+      ]
+    ],
+    "example": {
+      "problem": "A ball leaves level ground at 20 m/s, 30° up. Its range is R = 2v^{2} sinθ cosθ/g = v^{2} sin(2θ)/g. Find R.",
+      "steps": [
+        "sin(60°) = 0.866",
+        "R = 400 × 0.866/9.81"
+      ],
+      "answer": "R ≈ 35.3 m"
+    },
+    "try": "(20 m/s)^2 * sin(60 deg)/(9.81 m/s^2)"
   },
   "cos(2A) = cos^{2}(A) − sin^{2}(A)": {
     "title": "Double angle for cosine",
-    "about": "The angle-addition formula with B = A. Using sin² + cos² = 1 it also reads 2cos²(A) − 1 or 1 − 2sin²(A).",
-    "assumptions": [],
+    "about": "Set B = A in cos(A + B). With sin^{2} + cos^{2} = 1 it also reads 2cos^{2}(A) − 1 or 1 − 2sin^{2}(A); pick the form that holds the function you know. Solved for cos^{2} or sin^{2}, it gives the power-reduction formulas used in integrals.",
+    "assumptions": [
+      "Any angle A",
+      "Common slip: cos 2A is not 2 cos A"
+    ],
     "vars": [
       [
         "A",
@@ -4795,19 +5145,36 @@
         "rad"
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "cos(A ± B) = cos(A) cos(B) ∓ sin(A) sin(B)",
+        "where it comes from"
+      ],
+      [
+        "sin(2A) = 2 sin(A) cos(A)",
+        "the sine version"
+      ],
+      [
+        "cos^{2}(A) = 1/2 + (1/2) cos(2A)",
+        "solved for cos²"
+      ]
+    ],
     "example": {
       "problem": "Given cos A = 4/5 and sin A = 3/5, find cos 2A.",
       "steps": [
         "(4/5)^{2} − (3/5)^{2} = 16/25 − 9/25"
       ],
       "answer": "7/25 = 0.28"
-    }
+    },
+    "try": "(4/5)^2 - (3/5)^2"
   },
   "sin^{2}(A) + cos^{2}(A) = 1": {
     "title": "Pythagorean identity",
-    "about": "The point (cos A, sin A) lies on the unit circle. Use it to get one of sin or cos from the other, or to simplify.",
-    "assumptions": [],
+    "about": "The point (cos A, sin A) is on the unit circle, so by Pythagoras its coordinates' squares add to 1. Use it to get one of sin or cos from the other, or to swap sin^{2} for 1 − cos^{2} when simplifying.",
+    "assumptions": [
+      "Any angle A",
+      "The square root loses the sign: pick it from the quadrant (cos is negative in quadrants II and III)"
+    ],
     "vars": [
       [
         "A",
@@ -4815,20 +5182,33 @@
         "rad"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "sin A = 0.6 with A in the first quadrant. Find cos A.",
-      "steps": [
-        "cos A = √(1 − 0.36)"
+    "related": [
+      [
+        "cos(2A) = cos^{2}(A) − sin^{2}(A)",
+        "uses it for its other forms"
       ],
-      "answer": "0.8"
+      [
+        "r^{2} = x^{2} + y^{2}",
+        "the same Pythagoras with radius r"
+      ]
+    ],
+    "example": {
+      "problem": "sin A = 0.6 with A in the second quadrant. Find cos A.",
+      "steps": [
+        "cos A = ±√(1 − 0.36) = ±0.8",
+        "Quadrant II: cos is negative"
+      ],
+      "answer": "cos A = −0.8"
     },
-    "try": "sqrt(1 - 0.6^2)"
+    "try": "-sqrt(1 - 0.6^2)"
   },
   "a cos(θ) + b sin(θ) = R cos(θ − φ)": {
     "title": "Combining a cosine and a sine into one sinusoid",
     "about": "Any mix of cos and sin at the same frequency is a single shifted cosine with amplitude R = √(a² + b²) and phase φ = atan2(b, a). This is phasor addition and gives the peak of the sum.",
-    "assumptions": [],
+    "assumptions": [
+      "Why: expand R cos(θ − φ) = R cos φ cos θ + R sin φ sin θ and match: a = R cos φ, b = R sin φ",
+      "Common slip: φ = tan^{−1}(b/a) is wrong in quadrants II and III; use atan2(b, a)"
+    ],
     "vars": [
       [
         "a, b",
@@ -4859,12 +5239,16 @@
         "φ = atan2(4, 3) ≈ 0.927 rad"
       ],
       "answer": "5 cos(ωt − 0.927)"
-    }
+    },
+    "try": "atan2(4, 3) to rad"
   },
   "(a + jb)(c + jd) = (ac − bd) + j(ad + bc)": {
     "title": "Multiplying complex numbers in rectangular form",
-    "about": "Expand like any binomial product and use j² = −1. Quicker than polar when the numbers are given as x + jy.",
-    "assumptions": [],
+    "about": "Multiply out like any two binomials; the jb·jd term becomes j^{2}bd = −bd and moves into the real part. Quicker than polar when the numbers are given as x + jy; use polar for powers and chains of products.",
+    "assumptions": [
+      "Any complex numbers",
+      "Common slip: +bd in the real part, from forgetting j^{2} = −1"
+    ],
     "vars": [
       [
         "a, b",
@@ -4877,21 +5261,37 @@
         ""
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "z_{1} z_{2} = r_{1} r_{2} e^{j(θ_{1} + θ_{2})}",
+        "the same product in polar form"
+      ],
+      [
+        "(a + jb)/(c + jd) = ((ac + bd) + j(bc − ad))/(c^{2} + d^{2})",
+        "division"
+      ],
+      [
+        "z z^{*} = |z|^{2}",
+        "the product with the conjugate"
+      ]
+    ],
     "example": {
-      "problem": "Find (2 + 3j)(1 − j).",
+      "problem": "A phasor current I = (2 + 3j) A flows through Z = (1 − j) Ω. Find V = I Z.",
       "steps": [
         "real: 2 · 1 − 3 · (−1) = 5",
         "imag: 2 · (−1) + 3 · 1 = 1"
       ],
-      "answer": "5 + j"
+      "answer": "V = 5 + j V"
     },
     "try": "(2 + 3i)(1 - i)"
   },
   "(a + jb)/(c + jd) = ((ac + bd) + j(bc − ad))/(c^{2} + d^{2})": {
     "title": "Dividing complex numbers in rectangular form",
-    "about": "Multiply top and bottom by the conjugate c − jd, which makes the denominator real: c² + d².",
-    "assumptions": [],
+    "about": "Multiply top and bottom by the conjugate c − jd. The bottom becomes (c + jd)(c − jd) = c^{2} + d^{2}, a real number, and you can split the result into real and imaginary parts.",
+    "assumptions": [
+      "c + jd ≠ 0",
+      "Common slip: dividing real by real and imaginary by imaginary; (a + jb)/(c + jd) is not a/c + j b/d"
+    ],
     "vars": [
       [
         "a + jb",
@@ -4904,7 +5304,16 @@
         ""
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "z z^{*} = |z|^{2}",
+        "why the bottom turns real"
+      ],
+      [
+        "z_{1} / z_{2} = (r_{1}/r_{2}) e^{j(θ_{1} − θ_{2})}",
+        "division in polar form"
+      ]
+    ],
     "example": {
       "problem": "Find (1 + 2j)/(3 + 4j).",
       "steps": [
@@ -4919,7 +5328,10 @@
   "z^{n} = r^{n} e^{jnθ}": {
     "title": "Powers of a complex number (de Moivre)",
     "about": "In polar form a power raises the magnitude to n and multiplies the angle by n. Far easier than expanding (x + jy)^{n}.",
-    "assumptions": [],
+    "assumptions": [
+      "n an integer; for fractional n see z^{1/n}, which has n roots",
+      "θ in radians; reduce nθ by multiples of 2π at the end"
+    ],
     "vars": [
       [
         "r",
@@ -4935,12 +5347,21 @@
         "n",
         "power",
         ""
+      ],
+      [
+        "z",
+        "complex number r e^{jθ}",
+        ""
       ]
     ],
     "related": [
       [
         "(cos θ + j sin θ)^{n} = cos(nθ) + j sin(nθ)",
         "de Moivre's theorem"
+      ],
+      [
+        "z^{1/n} = r^{1/n} e^{j(θ + 2πk)/n}",
+        "roots"
       ]
     ],
     "example": {
@@ -4956,7 +5377,12 @@
   "z^{1/n} = r^{1/n} e^{j(θ + 2πk)/n}": {
     "title": "nth roots of a complex number",
     "about": "A nonzero number has exactly n nth roots, equally spaced around a circle of radius r^{1/n}. Step k from 0 to n − 1.",
-    "assumptions": [],
+    "assumptions": [
+      "z ≠ 0",
+      "k = 0 gives the principal root; k = n repeats k = 0",
+      "There are n distinct roots, k = 0, 1, …, n − 1, evenly spaced 2π/n apart on a circle",
+      "Common slip: stopping at k = 0, the principal root"
+    ],
     "vars": [
       [
         "r",
@@ -4972,23 +5398,47 @@
         "k",
         "0, 1, …, n − 1",
         ""
+      ],
+      [
+        "z",
+        "the complex number",
+        ""
+      ],
+      [
+        "n",
+        "which root (2 square, 3 cube, …)",
+        ""
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "z^{n} = r^{n} e^{jnθ}",
+        "powers"
+      ],
+      [
+        "e^{±j2πk} = 1",
+        "why adding 2πk changes nothing in z but gives new roots"
+      ]
+    ],
     "example": {
       "problem": "Find the cube roots of 8.",
       "steps": [
-        "r = 8, θ = 0",
-        "8^{1/3} = 2",
-        "angles 0, 2π/3, 4π/3"
+        "r = 8, θ = 0, 8^{1/3} = 2",
+        "angles 2πk/3: 0, 2π/3, 4π/3",
+        "2e^{j2π/3} = −1 + j√3, 2e^{j4π/3} = −1 − j√3"
       ],
       "answer": "2, −1 + j√3, −1 − j√3"
-    }
+    },
+    "try": "2 e^(j 2 pi/3)"
   },
   "ln z = ln r + j(θ + 2πk)": {
     "title": "Logarithm of a complex number",
     "about": "Take the log of the magnitude for the real part; the angle becomes the imaginary part. It has many values, 2π apart; k = 0 with −π < θ ≤ π is the principal one.",
-    "assumptions": [],
+    "assumptions": [
+      "z ≠ 0",
+      "k = 0 with −π < θ ≤ π gives the principal value",
+      "Common slip: ln is many-valued; a calculator gives only the principal value, −π < θ ≤ π, k = 0"
+    ],
     "vars": [
       [
         "r",
@@ -5014,12 +5464,17 @@
         "ln 1 + jπ"
       ],
       "answer": "jπ"
-    }
+    },
+    "try": "ln(-1 + 0j)"
   },
   "|z_{1} + z_{2}| ≤ |z_{1}| + |z_{2}|": {
     "title": "Triangle inequality",
     "about": "Adding complex numbers adds arrows tip to tail, so the sum is never longer than the two lengths together. Equality holds when they point the same way.",
-    "assumptions": [],
+    "assumptions": [
+      "Any complex numbers (or 2D vectors)",
+      "Equality only when z_{1} and z_{2} point the same way",
+      "Why: the third side of a triangle is never longer than the other two together; equality when z_{1} and z_{2} point the same way"
+    ],
     "vars": [
       [
         "z_{1}, z_{2}",
@@ -5035,13 +5490,28 @@
         "|3| + |4j| = 7"
       ],
       "answer": "5 ≤ 7"
-    }
+    },
+    "try": "abs(3 + 4j)"
   },
   "sgn(t) ‖ 2/(jω)": {
     "title": "Sign function and its transform",
     "about": "sgn(t) is −1 for t < 0 and +1 for t > 0. Its transform has no DC impulse because its average is zero; u(t) = (1 + sgn(t))/2 gives the step's transform from it.",
-    "assumptions": [],
+    "assumptions": [
+      "Generalised transform: sgn(t) is not absolutely integrable",
+      "sgn(0) = 0; a value at a single instant doesn't change the transform",
+      "Purely imaginary and odd, since sgn is real and odd"
+    ],
     "vars": [
+      [
+        "sgn(t)",
+        "sign function: −1 for t < 0, +1 for t > 0",
+        ""
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ],
       [
         "ω",
         "angular frequency",
@@ -5050,22 +5520,28 @@
     ],
     "related": [
       [
-        "u(t) ‖ 1/(jω) + πδ(ω)",
+        "u(t) ↔ 1/(jω) + πδ(ω)",
         "unit step"
+      ],
+      [
+        "u(t) = (1 + sgn(t))/2",
+        "step from sign"
       ]
     ],
     "example": {
-      "problem": "Get the step's transform from this pair.",
+      "problem": "Get the step's transform from this pair, and evaluate sgn's transform at ω = 4 rad/s.",
       "steps": [
         "u(t) = 1/2 + sgn(t)/2",
-        "→ (1/2) 2πδ(ω) + (1/2)(2/(jω))"
+        "→ (1/2) 2πδ(ω) + (1/2)(2/(jω)) = 1/(jω) + πδ(ω)",
+        "At ω = 4: 2/(4j) = −0.5j"
       ],
-      "answer": "1/(jω) + πδ(ω)"
-    }
+      "answer": "u(t) ↔ 1/(jω) + πδ(ω); 2/(j4) = −0.5j"
+    },
+    "try": "2/(4j)"
   },
   "t^{n−1} e^{−at} u(t)/(n − 1)!, a > 0 ‖ 1/(a + jω)^{n}": {
     "title": "Repeated-pole exponential and its transform",
-    "about": "The time function behind a pole of order n at s = −a: used to invert repeated factors in a partial-fraction expansion.",
+    "about": "Each extra factor of t differentiates the spectrum (t x(t) ↔ j dX/dω), raising the power of (a + jω) by one; the (n − 1)! cancels the factors the derivatives bring down. Use it to invert repeated factors in a partial-fraction expansion. A common mistake is dropping the (n − 1)!, or raising t to n instead of n − 1.",
     "assumptions": [
       "a > 0 so the transform exists"
     ],
@@ -5081,24 +5557,47 @@
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Invert 1/(2 + jω)^{3}.",
-      "steps": [
-        "n = 3, a = 2",
-        "t^{2} e^{−2t} u(t)/2!"
+    "related": [
+      [
+        "e^{−at} u(t) ↔ 1/(a + jω)",
+        "n = 1"
       ],
-      "answer": "(1/2) t^{2} e^{−2t} u(t)"
-    }
+      [
+        "t e^{−at} u(t) ↔ 1/(a + jω)^{2}",
+        "n = 2"
+      ],
+      [
+        "t x(t) ↔ j dX(jω)/dω",
+        "how each step is made"
+      ]
+    ],
+    "example": {
+      "problem": "Invert 1/(2 + jω)^{3} and evaluate it at t = 1 s.",
+      "steps": [
+        "n = 3, a = 2: t^{2} e^{−2t} u(t)/2!",
+        "At t = 1: e^{−2}/2"
+      ],
+      "answer": "(1/2) t^{2} e^{−2t} u(t); ≈ 0.0677 at t = 1 s"
+    },
+    "try": "e^-2/2"
   },
   "1 − |t|/T for |t| < T, 0 else ‖ T sin^{2}(ωT/2)/(ωT/2)^{2}": {
     "title": "Triangle pulse and its transform",
     "about": "A triangle is a rectangle of width T convolved with itself (scaled), so its spectrum is a sinc squared: never negative and falling as 1/ω².",
-    "assumptions": [],
+    "assumptions": [
+      "T > 0",
+      "At ω = 0 take the limit: X(0) = T, the triangle's area",
+      "Zeros at ω = 2πk/T, k ≠ 0"
+    ],
     "vars": [
       [
         "T",
         "half-width of the triangle",
+        "s"
+      ],
+      [
+        "t",
+        "time",
         "s"
       ],
       [
@@ -5107,19 +5606,33 @@
         "rad/s"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Find X(0) for a triangle of half-width T = 2 s.",
-      "steps": [
-        "X(0) = area under the triangle = (1/2)(2T)(1)"
+    "related": [
+      [
+        "1 for |t| < T_{1} ↔ 2 sin(ωT_{1})/ω",
+        "the rectangle it is built from"
       ],
-      "answer": "2"
-    }
+      [
+        "x ∗ h ↔ X H",
+        "convolution property"
+      ]
+    ],
+    "example": {
+      "problem": "A triangle of height 1 and half-width T = 2 s. Find X(0) and X at ω = 1 rad/s.",
+      "steps": [
+        "X(0) = area = (1/2)(2T)(1) = 2",
+        "ωT/2 = 1: X = 2 sin^{2}(1)/1^{2} = 2 × 0.7081",
+        "= 1.416"
+      ],
+      "answer": "X(0) = 2; X(j1) ≈ 1.416"
+    },
+    "try": "2 sin(1 rad)^2/1^2"
   },
   "a x(t) + b y(t) ‖ a X(jω) + b Y(jω)": {
     "title": "Linearity (Fourier transform property)",
-    "about": "The transform of a weighted sum is the weighted sum of the transforms. It lets you build up a transform from table entries.",
-    "assumptions": [],
+    "about": "The analysis integral is linear, so transforms add and scale. With the table it turns a sum of known signals into a sum of known transforms. A common mistake is applying it to a product: x(t)y(t) needs the convolution of the spectra.",
+    "assumptions": [
+      "X(jω) and Y(jω) both exist"
+    ],
     "vars": [
       [
         "a, b",
@@ -5127,19 +5640,32 @@
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Find the transform of 3δ(t) + 2.",
-      "steps": [
-        "3 · 1 + 2 · 2πδ(ω)"
+    "related": [
+      [
+        "y(t) = x(t) p(t) ↔ Y(jω) = (1/2π) X(jω) ∗ P(jω)",
+        "products are not term by term"
       ],
-      "answer": "3 + 4πδ(ω)"
-    }
+      [
+        "δ(t) ↔ 1",
+        "a table entry to combine"
+      ]
+    ],
+    "example": {
+      "problem": "Find X(j2) for x(t) = 3e^{−2t}u(t) + 2δ(t).",
+      "steps": [
+        "X(jω) = 3/(2 + jω) + 2",
+        "At ω = 2: 3/(2 + 2j) + 2 = 0.75 − 0.75j + 2"
+      ],
+      "answer": "X(j2) = 2.75 − 0.75j"
+    },
+    "try": "3/(2 + 2j) + 2"
   },
   "x^{*}(t) ‖ X^{*}(−jω)": {
     "title": "Conjugation (Fourier transform property)",
-    "about": "Conjugating in time conjugates and mirrors the spectrum. For real x it gives X(−jω) = X^{*}(jω): the magnitude is even and the phase is odd.",
-    "assumptions": [],
+    "about": "Conjugate the analysis integral: e^{−jωt} becomes e^{+jωt} = e^{−j(−ω)t}, hence the mirror in ω. For a real x, x = x^{*} gives X(−jω) = X^{*}(jω): the magnitude is even and the phase odd, so a one-sided plot says everything. A common mistake is thinking a real x has a real X; only a real, even x does.",
+    "assumptions": [
+      "X(jω) exists"
+    ],
     "vars": [
       [
         "X(jω)",
@@ -5147,18 +5673,29 @@
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "x is real with X(j2) = 1 + j. Find X(−j2).",
-      "steps": [
-        "X(−j2) = X^{*}(j2)"
+    "related": [
+      [
+        "x(−t) ↔ X(−jω)",
+        "reversal: mirror without conjugating"
       ],
-      "answer": "1 − j"
-    }
+      [
+        "a_{−k} = a_{k}^{*}",
+        "the series version for real x"
+      ]
+    ],
+    "example": {
+      "problem": "x(t) = e^{−t}u(t) is real, with X(j2) = 1/(1 + 2j) = 0.2 − 0.4j. Find X(−j2).",
+      "steps": [
+        "x real, so X(−j2) = X^{*}(j2)",
+        "Directly: 1/(1 − 2j) = 0.2 + 0.4j ✓"
+      ],
+      "answer": "X(−j2) = 0.2 + 0.4j"
+    },
+    "try": "1/(1 - 2j)"
   },
   "a^{|n|}, |a| < 1 ‖ (1 − a^{2})/(1 − 2a cos(ω) + a^{2})": {
     "title": "Two-sided geometric sequence and its DTFT",
-    "about": "The discrete-time twin of e^{−a|t|}: symmetric, so its DTFT is real and even.",
+    "about": "It is a^{n}u[n] plus its mirror a^{−n}u[−n], less the δ[n] counted twice: 1/(1 − ae^{−jω}) + 1/(1 − ae^{jω}) − 1 simplifies to this. Symmetric, so its DTFT is real and even; the discrete twin of e^{−a|t|}. A common mistake is forgetting to subtract the doubled n = 0 sample.",
     "assumptions": [
       "|a| < 1 for convergence"
     ],
@@ -5169,45 +5706,86 @@
         ""
       ],
       [
+        "n",
+        "sample index, an integer",
+        ""
+      ],
+      [
         "ω",
-        "frequency",
+        "DT frequency",
         "rad/sample"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Find X(e^{j0}) for a = 0.5.",
-      "steps": [
-        "(1 − 0.25)/(1 − 1 + 0.25)"
+    "related": [
+      [
+        "a^{n} u[n] ↔ 1/(1 − ae^{−jω})",
+        "the right half"
       ],
-      "answer": "3"
-    }
+      [
+        "e^{−a|t|} ↔ 2a/(a^{2} + ω^{2})",
+        "CT twin"
+      ]
+    ],
+    "example": {
+      "problem": "Find X(e^{j0}) for a = 0.5, and check it against the sum.",
+      "steps": [
+        "(1 − 0.25)/(1 − 1 + 0.25) = 0.75/0.25 = 3",
+        "Sum: 1 + 2(0.5 + 0.25 + …) = 1 + 2 = 3"
+      ],
+      "answer": "X(e^{j0}) = 3"
+    },
+    "try": "(1 - 0.5^2)/(1 - 2*0.5 + 0.5^2)"
   },
   "Σ_{k=−∞}^{∞} δ[n − kN] ‖ (2π/N) Σ_{k=−∞}^{∞} δ(ω − 2πk/N)": {
     "title": "Discrete impulse train and its DTFT",
-    "about": "A unit sample every N samples has N equal Fourier series coefficients 1/N, so its DTFT is impulses of area 2π/N every 2π/N.",
-    "assumptions": [],
+    "about": "A unit sample every N samples has N equal Fourier series coefficients 1/N, so its DTFT is impulses of area 2π/N every 2π/N. A common mistake is giving the impulses area 1/N: that is the series coefficient, and the DTFT carries 2π times it.",
+    "assumptions": [
+      "N a positive integer",
+      "Generalised transform"
+    ],
     "vars": [
       [
         "N",
         "spacing of the samples",
         ""
+      ],
+      [
+        "n, k",
+        "integers",
+        ""
+      ],
+      [
+        "ω",
+        "DT frequency",
+        "rad/sample"
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "Σ_{n=−∞}^{∞} δ(t − nT) ↔ (2π/T) Σ_{k} δ(ω − 2πk/T)",
+        "CT version"
+      ],
+      [
+        "x[n] = Σ_{k=<N>} a_{k} e^{jkω_{o}n}",
+        "DT Fourier series, here a_{k} = 1/N"
+      ]
+    ],
     "example": {
       "problem": "How many impulses fall in −π < ω ≤ π for N = 4?",
       "steps": [
         "spacing 2π/4 = π/2",
         "ω = −π/2, 0, π/2, π"
       ],
-      "answer": "4, each of area π/2"
-    }
+      "answer": "4, each of area π/2 ≈ 1.571"
+    },
+    "try": "2 pi/4"
   },
   "a x[n] + b y[n] ‖ a X(e^{jω}) + b Y(e^{jω})": {
     "title": "Linearity (DTFT property)",
-    "about": "The DTFT of a weighted sum is the weighted sum of the DTFTs.",
-    "assumptions": [],
+    "about": "The DTFT sum is linear, so transforms add and scale term by term; build a sequence's spectrum from table entries. A common mistake is applying it to a product: x[n]y[n] needs the periodic convolution of the spectra.",
+    "assumptions": [
+      "Both DTFTs exist"
+    ],
     "vars": [
       [
         "a, b",
@@ -5215,19 +5793,32 @@
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Find the DTFT of 2δ[n] − δ[n − 1].",
-      "steps": [
-        "2 · 1 − e^{−jω}"
+    "related": [
+      [
+        "x[n] y[n] ↔ (1/2π) ∫_{2π} X(e^{jθ}) Y(e^{j(ω − θ)}) dθ",
+        "products"
       ],
-      "answer": "2 − e^{−jω}"
-    }
+      [
+        "δ[n − n_{o}] ↔ e^{−jωn_{o}}",
+        "the usual pieces"
+      ]
+    ],
+    "example": {
+      "problem": "Find the DTFT of 2δ[n] − δ[n − 1] and its value at ω = π.",
+      "steps": [
+        "2 · 1 − e^{−jω}",
+        "At ω = π: 2 − e^{−jπ} = 2 + 1"
+      ],
+      "answer": "2 − e^{−jω}; 3 at ω = π"
+    },
+    "try": "2 - e^(-j pi)"
   },
   "x^{*}[n] ‖ X^{*}(e^{−jω})": {
     "title": "Conjugation (DTFT property)",
-    "about": "Conjugating the sequence conjugates and mirrors the spectrum; for real x the magnitude is even and the phase odd.",
-    "assumptions": [],
+    "about": "Conjugating the DTFT sum turns e^{−jωn} into e^{+jωn} = e^{−j(−ω)n}, hence the mirror in ω. For a real x the magnitude is even and the phase odd, so 0 ≤ ω ≤ π says everything. A common mistake is thinking a real x has a real X; only a real, even x does.",
+    "assumptions": [
+      "X(e^{jω}) exists"
+    ],
     "vars": [
       [
         "X(e^{jω})",
@@ -5235,19 +5826,33 @@
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "x is real with X(e^{jπ/4}) = 2e^{j0.3}. Find X(e^{−jπ/4}).",
-      "steps": [
-        "= X^{*}(e^{jπ/4})"
+    "related": [
+      [
+        "x[−n] ↔ X(e^{−jω})",
+        "reversal: mirror without conjugating"
       ],
-      "answer": "2e^{−j0.3}"
-    }
+      [
+        "x^{*}(t) ↔ X^{*}(−jω)",
+        "CT version"
+      ]
+    ],
+    "example": {
+      "problem": "x[n] = 0.5^{n}u[n] is real, with X(e^{jπ/2}) = 1/(1 + 0.5j) = 0.8 − 0.4j. Find X(e^{−jπ/2}).",
+      "steps": [
+        "x real, so X(e^{−jπ/2}) = X^{*}(e^{jπ/2})",
+        "Directly: 1/(1 − 0.5j) = 0.8 + 0.4j ✓"
+      ],
+      "answer": "0.8 + 0.4j"
+    },
+    "try": "1/(1 - 0.5j)"
   },
   "Σ_{k=−∞}^{n} x[k] ‖ X(e^{jω})/(1 − e^{−jω}) + πX(e^{j0}) δ(ω)": {
     "title": "Accumulation (DTFT property)",
-    "about": "The running sum is x convolved with u[n], so its DTFT is X times the step's DTFT. The impulse carries the DC part; it repeats every 2π.",
-    "assumptions": [],
+    "about": "The running sum is x convolved with u[n], so its DTFT is X times the step's DTFT. The impulse carries the DC part; it repeats every 2π. A common mistake is dropping the impulse when Σ x[n] ≠ 0.",
+    "assumptions": [
+      "The impulse πX(e^{j0})δ(ω) repeats at every multiple of 2π; the table shows one period",
+      "It vanishes when X(e^{j0}) = Σ x[n] = 0"
+    ],
     "vars": [
       [
         "X(e^{j0})",
@@ -5255,20 +5860,34 @@
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Check it with x = δ[n].",
-      "steps": [
-        "running sum of δ[n] is u[n]",
-        "X = 1, so 1/(1 − e^{−jω}) + πδ(ω)"
+    "related": [
+      [
+        "u[n] ↔ 1/(1 − e^{−jω}) + πδ(ω)",
+        "x = δ[n]"
       ],
-      "answer": "the DTFT of u[n]"
-    }
+      [
+        "x[n] − x[n − 1] ↔ (1 − e^{−jω}) X(e^{jω})",
+        "the inverse"
+      ]
+    ],
+    "example": {
+      "problem": "Find the DTFT of the running sum of 0.5^{n}u[n] at ω = π/2 (no impulse there).",
+      "steps": [
+        "X(e^{jω}) = 1/(1 − 0.5e^{−jω})",
+        "Y = X/(1 − e^{−jω}) away from ω = 0",
+        "At ω = π/2: 1/((1 + 0.5j)(1 + j)) = 0.2 − 0.6j"
+      ],
+      "answer": "0.2 − 0.6j"
+    },
+    "try": "1/((1 + 0.5j)(1 + j))"
   },
   "Bins ‖ f_{k} = k f_{s}/N": {
     "title": "DFT bin frequencies",
-    "about": "Bin k of an N-point DFT sits at k f_{s}/N hertz, so bins are f_{s}/N apart (the resolution). Bins above N/2 are negative frequencies.",
-    "assumptions": [],
+    "about": "Bin k of an N-point DFT samples the DTFT at ω = 2πk/N rad/sample, which is k f_{s}/N hertz, so bins are f_{s}/N apart (the resolution). A common mistake is reading bins above N/2 as high frequencies: they are the negative frequencies (k − N) f_{s}/N.",
+    "assumptions": [
+      "N samples taken at f_{s}",
+      "Finer resolution needs a longer record (larger N at the same f_{s}), not zero-padding"
+    ],
     "vars": [
       [
         "f_{k}",
@@ -5291,7 +5910,16 @@
         ""
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "X[k] = Σ_{n=0}^{N−1} x[n] e^{−j2πkn/N}",
+        "the DFT itself"
+      ],
+      [
+        "X(e^{jω}) = Σ_{n=−∞}^{∞} x[n] e^{−jωn}",
+        "the DTFT the bins sample"
+      ]
+    ],
     "example": {
       "problem": "A 1024-point FFT at 48 kHz: what frequency is bin 100, and how far apart are bins?",
       "steps": [
@@ -5301,5 +5929,906 @@
       "answer": "≈ 4688 Hz; 46.9 Hz apart"
     },
     "try": "100 * 48 kHz / 1024"
+  },
+  "cos(2A) = 2 cos^{2}(A) − 1 = 1 − 2 sin^{2}(A)": {
+    "title": "Double angle for cosine, other forms",
+    "about": "Swapping sin² for 1 − cos² (or the reverse) in cos(2A) = cos²A − sin²A gives forms with one function only. Use them to get cos 2A from cos A or sin A alone, and rearranged they are the power-reduction formulas.",
+    "assumptions": [
+      "Any A, radians or degrees"
+    ],
+    "vars": [
+      [
+        "A",
+        "angle",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "cos(2A) = cos^{2}(A) − sin^{2}(A)",
+        "the first form"
+      ],
+      [
+        "cos^{2}(A) = 1/2 + (1/2) cos(2A)",
+        "power reduction"
+      ]
+    ],
+    "example": {
+      "problem": "If cos A = 0.6, find cos 2A.",
+      "steps": [
+        "cos 2A = 2(0.6)^{2} − 1 = 0.72 − 1"
+      ],
+      "answer": "= −0.28"
+    },
+    "try": "2*0.6^2 - 1"
+  },
+  "cos(A) + cos(B) = 2 cos((A + B)/2) cos((A − B)/2)": {
+    "title": "Sum to product: beats",
+    "about": "A sum of two cosines is a product: a cosine at the average frequency times one at half the difference. Two close tones therefore sound as one tone whose loudness swells and fades, beats, at the difference frequency.",
+    "assumptions": [
+      "Any A, B",
+      "Similarly cos A − cos B = −2 sin((A + B)/2) sin((A − B)/2)",
+      "The beat frequency is f₁ − f₂, twice the envelope's cosine frequency, since |cos| repeats twice per cycle"
+    ],
+    "vars": [
+      [
+        "A, B",
+        "angles, e.g. 2πf₁t and 2πf₂t",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "cos(A) cos(B) = (1/2)[cos(A − B) + cos(A + B)]",
+        "the reverse: product to sum"
+      ]
+    ],
+    "example": {
+      "problem": "Two tones at 440 Hz and 444 Hz play together. What is the beat frequency?",
+      "steps": [
+        "cos(2π·440t) + cos(2π·444t) = 2 cos(2π·442t) cos(2π·2t)",
+        "The envelope |cos(2π·2t)| peaks 4 times a second"
+      ],
+      "answer": "4 Hz"
+    },
+    "try": "444 Hz - 440 Hz"
+  },
+  "cosh^{2}(x) − sinh^{2}(x) = 1": {
+    "title": "Hyperbolic Pythagorean identity",
+    "about": "The hyperbolic version of sin² + cos² = 1, with a minus sign: (cosh x, sinh x) lies on the hyperbola X² − Y² = 1 as (cos x, sin x) lies on the circle. Use it to simplify and in substitutions like x = a sinh u.",
+    "assumptions": [
+      "All real x",
+      "Follows from cosh x = (e^{x} + e^{−x})/2, sinh x = (e^{x} − e^{−x})/2"
+    ],
+    "vars": [
+      [
+        "x",
+        "argument",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "cosh(x) = (e^{x} + e^{−x})/2",
+        "definition"
+      ],
+      [
+        "sin^{2}(A) + cos^{2}(A) = 1",
+        "the circular version"
+      ]
+    ],
+    "example": {
+      "problem": "Check it at x = 1.",
+      "steps": [
+        "cosh 1 = 1.5431, sinh 1 = 1.1752",
+        "2.3811 − 1.3811"
+      ],
+      "answer": "= 1"
+    },
+    "try": "cosh(1)^2 - sinh(1)^2"
+  },
+  "j^{3} = −j,  j^{4} = 1": {
+    "title": "Powers of j",
+    "about": "Powers of the imaginary unit cycle through j, −1, −j, 1 every four steps, since each multiplication by j turns a quarter turn. So jⁿ depends only on n mod 4.",
+    "assumptions": [
+      "n an integer; negative powers too: j^{−1} = −j",
+      "j and i are the same number"
+    ],
+    "vars": [
+      [
+        "j",
+        "imaginary unit, j^{2} = −1",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "j^{2} = −1",
+        "the definition"
+      ],
+      [
+        "e^{jπ/2} = j",
+        "j as a quarter turn"
+      ]
+    ],
+    "example": {
+      "problem": "Simplify j^{27}.",
+      "steps": [
+        "27 = 4 × 6 + 3",
+        "j^{27} = j^{3}"
+      ],
+      "answer": "= −j"
+    },
+    "try": "j^27"
+  },
+  "x(t) = (4A/π) Σ_{k=1,3,5,…} sin(kω_{o}t)/k": {
+    "title": "Fourier series of a square wave",
+    "about": "A square wave that is +A for half a period and −A for the other half is odd and has half-wave symmetry, so only odd sine harmonics appear, falling off as 1/k. Use it straight away for \"find the Fourier series of a square wave\" or the power in its harmonics. Near each jump the partial sums overshoot by about 9% (Gibbs).",
+    "assumptions": [
+      "x = +A for 0 < t < T/2 and −A for −T/2 < t < 0 (odd about t = 0)",
+      "A 0-to-A wave is A/2 plus half this series",
+      "Shifted by T/4 it becomes even: the sines turn into cosines with alternating signs"
+    ],
+    "vars": [
+      [
+        "x(t)",
+        "the square wave",
+        ""
+      ],
+      [
+        "A",
+        "peak amplitude",
+        ""
+      ],
+      [
+        "ω_{o}",
+        "fundamental frequency 2π/T",
+        "rad/s"
+      ],
+      [
+        "k",
+        "harmonic number, odd only",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "B_{k} = (2/T) ∫_{T} x(t) sin(kω_{o}t) dt",
+        "where the 4A/(kπ) comes from"
+      ],
+      [
+        "a_{k} = 2A/(jπk), k odd",
+        "the same in complex form"
+      ],
+      [
+        "A_{0} = A_{k} = 0",
+        "odd x: sine terms only"
+      ]
+    ],
+    "example": {
+      "problem": "A ±5 V square wave has period 2 ms. Find the amplitude and frequency of its third harmonic.",
+      "steps": [
+        "f_{o} = 1/T = 500 Hz, so the third harmonic is at 1500 Hz",
+        "amplitude 4A/(3π) = 20/(3π)"
+      ],
+      "answer": "≈ 2.122 V at 1.5 kHz"
+    },
+    "try": "4*5/(3 pi)"
+  },
+  "a_{k} = sin(kω_{o}T_{1})/(kπ)": {
+    "title": "Fourier coefficients of a periodic pulse train",
+    "about": "A train of unit-height rectangular pulses, each 2T_{1} wide and centred on t = 0, repeating every T. Its coefficients follow a sinc envelope; the duty cycle 2T_{1}/T sets where the zeros fall. This is the Oppenheim table entry for the \"periodic square wave\".",
+    "assumptions": [
+      "Pulse height 1; for height A multiply every a_{k} by A",
+      "k ≠ 0; a_{0} = 2T_{1}/T, the duty cycle",
+      "Centred on t = 0 (even), so a_{k} is real"
+    ],
+    "vars": [
+      [
+        "a_{k}",
+        "complex Fourier coefficient",
+        ""
+      ],
+      [
+        "T_{1}",
+        "half the pulse width",
+        "s"
+      ],
+      [
+        "T",
+        "period",
+        "s"
+      ],
+      [
+        "ω_{o}",
+        "fundamental frequency 2π/T",
+        "rad/s"
+      ]
+    ],
+    "related": [
+      [
+        "1 for |t| < T_{1}, 0 else ↔ 2 sin(ωT_{1})/ω",
+        "the single pulse: a_k is its transform sampled at kω_o, over T"
+      ],
+      [
+        "C_{k} = 2|a_{k}|",
+        "one-sided harmonic amplitude"
+      ]
+    ],
+    "example": {
+      "problem": "Unit pulses 2 µs wide repeat every 8 µs (25% duty). Find a_{0} and a_{1}.",
+      "steps": [
+        "T_{1} = 1 µs, ω_{o} = 2π/8 µs, so ω_{o}T_{1} = π/4",
+        "a_{0} = 2T_{1}/T = 0.25",
+        "a_{1} = sin(π/4)/π"
+      ],
+      "answer": "a_{0} = 0.25, a_{1} ≈ 0.2251"
+    },
+    "try": "sin(45)/pi"
+  },
+  "x(t) = (8A/π^{2}) Σ_{k=1,3,5,…} cos(kω_{o}t)/k^{2}": {
+    "title": "Fourier series of a triangle wave",
+    "about": "A triangle wave peaking at +A at t = 0 and −A at t = ±T/2 is even with half-wave symmetry: odd cosine harmonics only, falling as 1/k^{2}, so it converges much faster than a square wave (it has no jumps). It is the integral of a square wave.",
+    "assumptions": [
+      "Peak +A at t = 0 (even); shifted by T/4 it becomes odd with sines",
+      "Zero average"
+    ],
+    "vars": [
+      [
+        "x(t)",
+        "the triangle wave",
+        ""
+      ],
+      [
+        "A",
+        "peak amplitude",
+        ""
+      ],
+      [
+        "ω_{o}",
+        "fundamental frequency 2π/T",
+        "rad/s"
+      ],
+      [
+        "k",
+        "harmonic number, odd only",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "x(t) = (4A/π) Σ_{k=1,3,5,…} sin(kω_{o}t)/k",
+        "the square wave it integrates"
+      ],
+      [
+        "B_{k} = 0",
+        "even x: cosines only"
+      ]
+    ],
+    "example": {
+      "problem": "A ±2 V triangle wave. Find the amplitude of its third harmonic.",
+      "steps": [
+        "8A/(π^{2} k^{2}) with A = 2, k = 3",
+        "16/(9π^{2})"
+      ],
+      "answer": "≈ 0.1801 V"
+    },
+    "try": "8*2/(9 pi^2)"
+  },
+  "x(t) = (2A/π) Σ_{k=1}^{∞} (−1)^{k+1} sin(kω_{o}t)/k": {
+    "title": "Fourier series of a sawtooth wave",
+    "about": "A sawtooth rising linearly from −A to A over one period, then dropping, is odd: sine terms at every harmonic, alternating in sign and falling as 1/k. The jump makes it converge slowly with Gibbs overshoot.",
+    "assumptions": [
+      "x = A t/(T/2) for −T/2 < t < T/2, repeated",
+      "Zero average"
+    ],
+    "vars": [
+      [
+        "x(t)",
+        "the sawtooth",
+        ""
+      ],
+      [
+        "A",
+        "peak amplitude",
+        ""
+      ],
+      [
+        "ω_{o}",
+        "fundamental frequency 2π/T",
+        "rad/s"
+      ],
+      [
+        "k",
+        "harmonic number",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "B_{k} = (2/T) ∫_{T} x(t) sin(kω_{o}t) dt",
+        "integrate by parts to get it"
+      ],
+      [
+        "A_{0} = A_{k} = 0",
+        "odd x: sines only"
+      ]
+    ],
+    "example": {
+      "problem": "Find the coefficient of sin(2ω_{o}t) for a sawtooth with A = 1.",
+      "steps": [
+        "(2A/π)(−1)^{3}/2 = −1/π"
+      ],
+      "answer": "≈ −0.3183"
+    },
+    "try": "-2/(2 pi)"
+  },
+  "a_{k} = 1/T": {
+    "title": "Fourier coefficients of an impulse train",
+    "about": "The periodic impulse train Σ δ(t − nT) has every coefficient equal to 1/T: all harmonics, equally strong. It is the sampling function, and its transform is another impulse train.",
+    "assumptions": [
+      "Unit-area impulses every T"
+    ],
+    "vars": [
+      [
+        "a_{k}",
+        "coefficient of e^{jkω_{o}t}",
+        "s^{−1}"
+      ],
+      [
+        "T",
+        "period",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "Σ_{n=−∞}^{∞} δ(t − nT) ↔ (2π/T) Σ_{k=−∞}^{∞} δ(ω − 2πk/T)",
+        "its Fourier transform"
+      ],
+      [
+        "a_{k} = (1/T) ∫_{T} x(t) e^{−jkω_{o}t} dt",
+        "only the impulse at t = 0 lies in one period"
+      ]
+    ],
+    "example": {
+      "problem": "Impulses every 1 ms. Find a_{k}.",
+      "steps": [
+        "a_{k} = (1/T) ∫_{−T/2}^{T/2} δ(t) e^{−jkω_{o}t} dt = 1/T"
+      ],
+      "answer": "a_{k} = 1000 s^{−1} (1/T, read as 1000 Hz) for every k"
+    },
+    "try": "1/(1 ms)"
+  },
+  "LTI ‖ b_{k} = a_{k} H(jkω_{o})": {
+    "title": "Fourier series through an LTI system",
+    "about": "A periodic input to a stable LTI system gives a periodic output with the same ω_{o}; each harmonic is multiplied by the frequency response at its own frequency. This is how to find a filtered square wave, or which harmonics survive a filter.",
+    "assumptions": [
+      "System LTI and stable; steady state (transients have died out)",
+      "H(jω) is the frequency response, the CTFT of h(t)"
+    ],
+    "vars": [
+      [
+        "a_{k}",
+        "input coefficients",
+        ""
+      ],
+      [
+        "b_{k}",
+        "output coefficients",
+        ""
+      ],
+      [
+        "H(jω)",
+        "frequency response",
+        ""
+      ],
+      [
+        "ω_{o}",
+        "fundamental frequency 2π/T",
+        "rad/s"
+      ]
+    ],
+    "related": [
+      [
+        "y(t) = |H(jω_{o})| cos(ω_{o}t + ∠H(jω_{o}))",
+        "one sinusoid"
+      ],
+      [
+        "x(t) = (4A/π) Σ_{k=1,3,5,…} sin(kω_{o}t)/k",
+        "a common input"
+      ]
+    ],
+    "example": {
+      "problem": "A ±1 square wave (a_{1} = 2/(jπ)) drives an RC low-pass H = 1/(1 + jω/ω_{c}) with ω_{c} = ω_{o}. Find |b_{1}|.",
+      "steps": [
+        "|H(jω_{o})| = 1/|1 + j| = 1/√2",
+        "|b_{1}| = (2/π)/√2"
+      ],
+      "answer": "|b_{1}| ≈ 0.4502"
+    },
+    "try": "2/pi/sqrt(2)"
+  },
+  "Response ‖ H(jω) = Y(jω)/X(jω) = (Σ b_{k}(jω)^{k})/(Σ a_{k}(jω)^{k})": {
+    "title": "Frequency response from a differential equation",
+    "about": "Transform both sides of a linear constant-coefficient ODE: each d^{k}/dt^{k} becomes (jω)^{k}, so H(jω) is a ratio of polynomials in jω. Use it to get |H| and ∠H at a frequency, or h(t) by partial fractions.",
+    "assumptions": [
+      "System LTI and stable (otherwise the CTFT of h may not exist)",
+      "Initial rest"
+    ],
+    "vars": [
+      [
+        "H(jω)",
+        "frequency response",
+        ""
+      ],
+      [
+        "a_{k}, b_{k}",
+        "output and input coefficients of the ODE",
+        ""
+      ],
+      [
+        "ω",
+        "frequency",
+        "rad/s"
+      ]
+    ],
+    "related": [
+      [
+        "d^{n}x(t)/dt^{n} ↔ (jω)^{n} X(jω)",
+        "the derivative property it uses"
+      ],
+      [
+        "H(s) = Y(s)/X(s)",
+        "the Laplace version"
+      ]
+    ],
+    "example": {
+      "problem": "dy/dt + 2y = x(t). Find |H(jω)| at ω = 2 rad/s.",
+      "steps": [
+        "jωY + 2Y = X, so H = 1/(2 + jω)",
+        "|H(j2)| = 1/√(2^{2} + 2^{2})"
+      ],
+      "answer": "|H| ≈ 0.3536"
+    },
+    "try": "1/sqrt(2^2 + 2^2)"
+  },
+  "Sinusoid ‖ y(t) = |H(jω_{o})| cos(ω_{o}t + ∠H(jω_{o}))": {
+    "title": "Sinusoidal steady-state output of an LTI system",
+    "about": "A sinusoid into a stable LTI system comes out as the same-frequency sinusoid, scaled by |H| and shifted by ∠H at that frequency. It is the fastest route for \"find y(t) for x(t) = cos(ω_{o}t)\".",
+    "assumptions": [
+      "Stable LTI, steady state",
+      "Real h(t), so H(−jω) = H^{*}(jω)"
+    ],
+    "vars": [
+      [
+        "ω_{o}",
+        "input frequency",
+        "rad/s"
+      ],
+      [
+        "|H|",
+        "gain at ω_{o}",
+        ""
+      ],
+      [
+        "∠H",
+        "phase shift at ω_{o}",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "b_{k} = a_{k} H(jkω_{o})",
+        "a whole periodic input"
+      ],
+      [
+        "Response ‖ H(jω) = Y(jω)/X(jω) = (Σ b_{k}(jω)^{k})/(Σ a_{k}(jω)^{k})",
+        "getting H"
+      ]
+    ],
+    "example": {
+      "problem": "H(jω) = 1/(1 + jω), input cos(t). Find y(t).",
+      "steps": [
+        "H(j1) = 1/(1 + j): |H| = 1/√2, ∠H = −45°"
+      ],
+      "answer": "y(t) ≈ 0.7071 cos(t − 45°)"
+    },
+    "try": "1/sqrt(2)"
+  },
+  "e^{−at} cos(ω_{o}t) u(t), a > 0 ‖ (a + jω)/((a + jω)^{2} + ω_{o}^{2})": {
+    "title": "CT Fourier pair: damped cosine",
+    "about": "A decaying cosine (an underdamped response) transforms to a resonant peak near ω = ±ω_{o} whose width is set by a. Replace s by jω in the Laplace pair to get it.",
+    "assumptions": [
+      "a > 0, so the signal decays and the transform exists"
+    ],
+    "vars": [
+      [
+        "a",
+        "decay rate",
+        "s^{−1}"
+      ],
+      [
+        "ω_{o}",
+        "oscillation frequency",
+        "rad/s"
+      ]
+    ],
+    "related": [
+      [
+        "e^{−at} cos(ωt) ↔ (s + a)/((s + a)^{2} + ω^{2})",
+        "the Laplace pair, s = jω"
+      ],
+      [
+        "e^{−at} sin(ω_{o}t) u(t) ↔ ω_{o}/((a + jω)^{2} + ω_{o}^{2})",
+        "the damped sine"
+      ]
+    ],
+    "example": {
+      "problem": "Find X(j0), the area under e^{−t} cos(2t) u(t).",
+      "steps": [
+        "X(j0) = a/(a^{2} + ω_{o}^{2}) = 1/(1 + 4)"
+      ],
+      "answer": "0.2"
+    },
+    "try": "1/(1 + 4)"
+  },
+  "e^{−at} sin(ω_{o}t) u(t), a > 0 ‖ ω_{o}/((a + jω)^{2} + ω_{o}^{2})": {
+    "title": "CT Fourier pair: damped sine",
+    "about": "A decaying sine, the impulse response of an underdamped second-order system, transforms to a resonant peak near ±ω_{o}.",
+    "assumptions": [
+      "a > 0"
+    ],
+    "vars": [
+      [
+        "a",
+        "decay rate",
+        "s^{−1}"
+      ],
+      [
+        "ω_{o}",
+        "oscillation frequency",
+        "rad/s"
+      ]
+    ],
+    "related": [
+      [
+        "e^{−at} sin(ωt) ↔ ω/((s + a)^{2} + ω^{2})",
+        "the Laplace pair, s = jω"
+      ],
+      [
+        "e^{−at} cos(ω_{o}t) u(t) ↔ (a + jω)/((a + jω)^{2} + ω_{o}^{2})",
+        "the damped cosine"
+      ]
+    ],
+    "example": {
+      "problem": "Find X(j0), the area under e^{−t} sin(2t) u(t).",
+      "steps": [
+        "X(j0) = ω_{o}/(a^{2} + ω_{o}^{2}) = 2/(1 + 4)"
+      ],
+      "answer": "0.4"
+    },
+    "try": "2/(1 + 4)"
+  },
+  "x(t) cos(ω_{o}t) ‖ (1/2)[X(j(ω − ω_{o})) + X(j(ω + ω_{o}))]": {
+    "title": "Modulation property (AM)",
+    "about": "Multiplying by a cosine carrier moves the spectrum to ±ω_{o}, each copy at half height. It is amplitude modulation, and demodulating (multiplying by the carrier again) puts a half-height copy back at 0 and copies at ±2ω_{o}.",
+    "assumptions": [
+      "Copies do not overlap if ω_{o} exceeds the bandwidth of x"
+    ],
+    "vars": [
+      [
+        "ω_{o}",
+        "carrier frequency",
+        "rad/s"
+      ],
+      [
+        "X(jω)",
+        "spectrum of the message",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "e^{jω_{o}t} x(t) ↔ X(j(ω − ω_{o}))",
+        "one exponential: the frequency shift"
+      ],
+      [
+        "y(t) = x(t) p(t) ↔ (1/2π) X ∗ P",
+        "general multiplication"
+      ]
+    ],
+    "example": {
+      "problem": "A message band-limited to 5 kHz multiplies a 100 kHz carrier. Which band does the upper copy fill?",
+      "steps": [
+        "The copy at +100 kHz spans 100 ± 5 kHz, at half height"
+      ],
+      "answer": "95 kHz to 105 kHz"
+    },
+    "try": "100 kHz + 5 kHz"
+  },
+  "x(t) Σ_{n} δ(t − nT) ‖ (1/T) Σ_{k} X(j(ω − 2πk/T))": {
+    "title": "Impulse sampling in frequency",
+    "about": "Sampling with an impulse train repeats the spectrum every ω_{s} = 2π/T, scaled by 1/T. If x is band-limited below ω_{s}/2 the copies do not overlap and a low-pass filter recovers x (the sampling theorem); otherwise they overlap: aliasing.",
+    "assumptions": [
+      "Ideal impulse sampling; real samplers hold, adding a sinc droop"
+    ],
+    "vars": [
+      [
+        "T",
+        "sampling period",
+        "s"
+      ],
+      [
+        "ω_{s}",
+        "sampling frequency 2π/T",
+        "rad/s"
+      ]
+    ],
+    "related": [
+      [
+        "f_{s} ≥ 2 f_{max}",
+        "Nyquist: no overlap"
+      ],
+      [
+        "Sampling ‖ ω = ΩT = 2πf/f_{s}",
+        "the DT frequency of a sampled signal"
+      ]
+    ],
+    "example": {
+      "problem": "x is band-limited to 4 kHz and sampled at 10 kHz. Where does the first copy above the original begin?",
+      "steps": [
+        "Copies are centred on 0, ±10 kHz, ±20 kHz, …",
+        "the one at 10 kHz reaches down to 10 − 4 kHz"
+      ],
+      "answer": "at 6 kHz: a 2 kHz guard band, no aliasing"
+    },
+    "try": "10 kHz - 4 kHz"
+  },
+  "Response ‖ H(e^{jω}) = (Σ b_{k} e^{−jωk})/(Σ a_{k} e^{−jωk})": {
+    "title": "Frequency response from a difference equation",
+    "about": "Transform a linear constant-coefficient difference equation: each delay of k samples becomes e^{−jωk}, so H(e^{jω}) is a ratio of polynomials in e^{−jω}. With every a_{k} = 0 for k ≥ 1 it is an FIR filter: H is just Σ b_{k} e^{−jωk}.",
+    "assumptions": [
+      "Stable LTI system; H repeats every 2π",
+      "ω = 0 is DC, ω = π is the highest frequency"
+    ],
+    "vars": [
+      [
+        "H(e^{jω})",
+        "frequency response",
+        ""
+      ],
+      [
+        "a_{k}, b_{k}",
+        "output and input coefficients",
+        ""
+      ],
+      [
+        "ω",
+        "frequency",
+        "rad/sample"
+      ]
+    ],
+    "related": [
+      [
+        "H(z) = Y(z)/X(z) = (Σ b_{k} z^{−k})/(Σ a_{k} z^{−k})",
+        "the z version, z = e^{jω}"
+      ],
+      [
+        "x[n − n_{o}] ↔ e^{−jωn_{o}} X(e^{jω})",
+        "the shift property it uses"
+      ]
+    ],
+    "example": {
+      "problem": "y[n] − 0.5 y[n − 1] = x[n]. Find |H| at ω = π.",
+      "steps": [
+        "H = 1/(1 − 0.5e^{−jω})",
+        "at ω = π: e^{−jπ} = −1, H = 1/1.5"
+      ],
+      "answer": "|H(e^{jπ})| ≈ 0.6667"
+    },
+    "try": "1/(1 + 0.5)"
+  },
+  "Sampling ‖ ω = ΩT = 2πf/f_{s}": {
+    "title": "Discrete-time frequency of a sampled signal",
+    "about": "Sampling a CT sinusoid at f_{s} gives a DT sinusoid with frequency ω = ΩT radians per sample. ω = π is the Nyquist frequency f_{s}/2; anything above folds back (aliases).",
+    "assumptions": [
+      "Unique only for |ω| ≤ π; higher f aliases to ω − 2πk"
+    ],
+    "vars": [
+      [
+        "ω",
+        "DT frequency",
+        "rad/sample"
+      ],
+      [
+        "Ω",
+        "CT frequency 2πf",
+        "rad/s"
+      ],
+      [
+        "T",
+        "sampling period 1/f_{s}",
+        "s"
+      ],
+      [
+        "f_{s}",
+        "sampling rate",
+        "Hz"
+      ]
+    ],
+    "related": [
+      [
+        "f_{k} = k f_{s}/N",
+        "the DFT bin frequencies"
+      ],
+      [
+        "f_{s} ≥ 2 f_{max}",
+        "no aliasing"
+      ]
+    ],
+    "example": {
+      "problem": "A 1 kHz tone is sampled at 8 kHz. What is ω?",
+      "steps": [
+        "ω = 2π(1000)/8000 = π/4"
+      ],
+      "answer": "ω ≈ 0.7854 rad/sample"
+    },
+    "try": "2 pi * 1 kHz/(8 kHz)"
+  },
+  "1 for 0 ≤ n ≤ N − 1, 0 else ‖ e^{−jω(N−1)/2} sin(ωN/2)/sin(ω/2)": {
+    "title": "DTFT of a rectangular window",
+    "about": "The length-N window starting at n = 0, the one used to truncate data. Its DTFT is a periodic sinc (Dirichlet kernel) with height N at ω = 0, first zeros at ±2π/N, and a linear phase from the (N − 1)/2 delay. Windowing a signal convolves its spectrum with this, which smears peaks (leakage).",
+    "assumptions": [
+      "Sum of a finite geometric series: Σ_{n=0}^{N−1} e^{−jωn}"
+    ],
+    "vars": [
+      [
+        "N",
+        "window length",
+        "samples"
+      ],
+      [
+        "ω",
+        "frequency",
+        "rad/sample"
+      ]
+    ],
+    "related": [
+      [
+        "1 for |n| ≤ N_{1}, 0 else ↔ sin(ω(N_{1} + 1/2))/sin(ω/2)",
+        "the centred window, no phase term"
+      ],
+      [
+        "x[n] y[n] ↔ (1/2π) ∫_{2π} X(e^{jθ}) Y(e^{j(ω − θ)}) dθ",
+        "windowing in frequency"
+      ]
+    ],
+    "example": {
+      "problem": "An 8-point rectangular window. Find its peak and the width to its first zero.",
+      "steps": [
+        "W(e^{j0}) = N = 8",
+        "first zero where ωN/2 = π: ω = 2π/8"
+      ],
+      "answer": "peak 8, first zero at ω ≈ 0.7854 rad/sample"
+    },
+    "try": "2 pi/8"
+  },
+  "x[n] cos(ω_{o}n) ‖ (1/2)[X(e^{j(ω − ω_{o})}) + X(e^{j(ω + ω_{o})})]": {
+    "title": "DT modulation: a windowed cosine",
+    "about": "Multiplying by cos(ω_{o}n) shifts the spectrum to ±ω_{o} at half height. Read the other way, a cosine seen through a window w[n] has DTFT ½W centred on ±ω_{o}: that is the \"DTFT of a windowed sinusoid\" problem.",
+    "assumptions": [
+      "Every spectrum repeats each 2π"
+    ],
+    "vars": [
+      [
+        "ω_{o}",
+        "carrier or tone frequency",
+        "rad/sample"
+      ],
+      [
+        "X(e^{jω})",
+        "DTFT of x (often the window)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "1 for 0 ≤ n ≤ N − 1, 0 else ↔ e^{−jω(N−1)/2} sin(ωN/2)/sin(ω/2)",
+        "the usual window"
+      ],
+      [
+        "e^{jω_{o}n} x[n] ↔ X(e^{j(ω − ω_{o})})",
+        "one exponential"
+      ]
+    ],
+    "example": {
+      "problem": "cos(πn/2) is kept for 0 ≤ n ≤ 7. How tall are the DTFT peaks at ±π/2?",
+      "steps": [
+        "X = ½W(e^{j(ω ∓ π/2)}), and W(e^{j0}) = 8",
+        "each peak is 8/2 (the other copy adds a little at that point)"
+      ],
+      "answer": "about 4 each"
+    },
+    "try": "8/2"
+  },
+  "x[n/k] if k divides n, 0 else ‖ X(e^{jkω})": {
+    "title": "Time expansion (upsampling)",
+    "about": "Inserting k − 1 zeros between samples squeezes the spectrum by k, so k copies (images) of it appear in each 2π. An interpolation low-pass filter with cutoff π/k then removes the images.",
+    "assumptions": [
+      "k a positive integer"
+    ],
+    "vars": [
+      [
+        "k",
+        "expansion factor",
+        ""
+      ],
+      [
+        "ω",
+        "frequency",
+        "rad/sample"
+      ]
+    ],
+    "related": [
+      [
+        "x(at) ↔ (1/|a|) X(jω/a)",
+        "the CT scaling property"
+      ],
+      [
+        "Sampling ‖ ω = ΩT = 2πf/f_{s}",
+        "the rate change in Hz"
+      ]
+    ],
+    "example": {
+      "problem": "x has its band edge at ω = 0.4π. After upsampling by 2, where is the edge?",
+      "steps": [
+        "X(e^{j2ω}): the edge moves to 0.4π/2, and an image appears around π"
+      ],
+      "answer": "ω = 0.2π ≈ 0.6283"
+    },
+    "try": "0.4 pi/2"
+  },
+  "Samples ‖ X[k] = X(e^{j2πk/N})": {
+    "title": "The DFT samples the DTFT",
+    "about": "For x of length at most N, the N-point DFT is the DTFT sampled at N even frequencies ω_{k} = 2πk/N. Zero padding (a larger N) samples the same DTFT more finely but adds no resolution; only a longer record does.",
+    "assumptions": [
+      "x[n] = 0 outside 0 ≤ n ≤ N − 1"
+    ],
+    "vars": [
+      [
+        "X[k]",
+        "DFT bin k",
+        ""
+      ],
+      [
+        "N",
+        "DFT length",
+        "samples"
+      ],
+      [
+        "ω_{k}",
+        "bin frequency 2πk/N",
+        "rad/sample"
+      ]
+    ],
+    "related": [
+      [
+        "f_{k} = k f_{s}/N",
+        "bins in Hz"
+      ],
+      [
+        "Analysis ‖ X(e^{jω}) = Σ_{n=−∞}^{∞} x[n] e^{−jωn}",
+        "the DTFT being sampled"
+      ]
+    ],
+    "example": {
+      "problem": "64 samples at 1 kHz are zero padded to a 256-point FFT. What is the bin spacing?",
+      "steps": [
+        "spacing f_{s}/N with N = 256"
+      ],
+      "answer": "≈ 3.906 Hz"
+    },
+    "try": "1000 Hz/256"
   }
 }

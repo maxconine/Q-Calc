@@ -1681,10 +1681,11 @@
   },
   "KE = (1/2) m v^{2}": {
     "title": "Translational kinetic energy",
-    "about": "The energy a body has because it is moving. It grows with the square of speed, so doubling speed quadruples it (and the stopping distance).",
+    "about": "The energy a body has because it is moving: the work a force must do to bring it from rest to v. It grows with the square of speed, so doubling speed quadruples it (and the braking distance).",
     "assumptions": [
       "Speeds much less than c (otherwise KE = (γ − 1) m c^{2})",
-      "Translation only; a spinning body adds (1/2) I ω^{2}"
+      "Translation only; a spinning body adds (1/2) I ω^{2}",
+      "v in m/s: convert km/h by dividing by 3.6"
     ],
     "vars": [
       [
@@ -1732,7 +1733,8 @@
     "assumptions": [
       "Uniform field: h much smaller than Earth's radius (otherwise U = −G M m/r)",
       "g ≈ 9.81 m/s^{2} at Earth's surface",
-      "h measured upward from the chosen reference"
+      "h measured upward from the chosen reference",
+      "Only changes in PE matter; the reference height is your choice, but keep it fixed"
     ],
     "vars": [
       [
@@ -1833,10 +1835,11 @@
   },
   "p = m v": {
     "title": "Linear momentum",
-    "about": "Mass times velocity, a vector. The total momentum of a system is conserved whenever the net external force is zero, which is what solves collision and explosion problems.",
+    "about": "Mass times velocity, a vector. Newton's second law is really F = dp/dt, so with no net external force the total momentum of a system stays constant. That solves collision and explosion problems even when the forces inside are unknown, though kinetic energy is usually lost.",
     "assumptions": [
       "Speeds much less than c (otherwise p = γ m v)",
-      "Vector: direction matters, add components"
+      "Vector: direction matters; give velocities signs or add components",
+      "Conserved only with no net external force, during the short time of the collision"
     ],
     "vars": [
       [
@@ -2080,10 +2083,11 @@
   },
   "KE = (1/2) I ω^{2}": {
     "title": "Rotational kinetic energy",
-    "about": "The energy of a spinning body. A body that rolls has both this and translational KE; for a rolling body the split depends on its shape.",
+    "about": "The energy of a spinning body: each bit of mass m at radius r moves at rω, and summing (1/2)m(rω)^{2} gives (1/2)Iω^{2}. A rolling body has both this and translational KE; the split depends on its shape, which is why a solid ball beats a hoop down a ramp.",
     "assumptions": [
       "Rigid body about a fixed axis, or about its centre of mass (then add (1/2) m v^{2})",
-      "ω in rad/s"
+      "ω in rad/s, not rpm: multiply rpm by 2π/60",
+      "I must be about the rotation axis"
     ],
     "vars": [
       [
@@ -2128,9 +2132,10 @@
   },
   "F = G m_{1} m_{2}/r^{2}": {
     "title": "Newton's law of gravitation",
-    "about": "Any two masses attract with a force proportional to both masses and inversely proportional to the square of the distance between their centres. G = 6.674 × 10^{−11} N·m^{2}/kg^{2}.",
+    "about": "Any two masses attract with a force proportional to both masses and inversely proportional to the square of the distance between their centres: the pull spreads over a sphere's area 4πr^{2}. Each body feels the same force, opposite in direction (Newton's third law).",
     "assumptions": [
       "Point masses, or spherically symmetric bodies (r between centres, outside the bodies)",
+      "r is centre to centre: for a satellite, Earth's radius plus altitude",
       "Weak fields and low speeds (general relativity otherwise)"
     ],
     "vars": [
@@ -2228,10 +2233,11 @@
   },
   "PE = (1/2) k x^{2}": {
     "title": "Elastic potential energy of a spring",
-    "about": "The energy stored in a stretched or compressed spring, equal to the work done deforming it (the area under the F–x line).",
+    "about": "The energy stored in a stretched or compressed spring, equal to the work done deforming it. The force rises from 0 to kx, so the work is the average force (1/2)kx times x: the triangle under the F–x line. Doubling the stretch stores four times the energy.",
     "assumptions": [
       "Linear spring (Hooke's law holds)",
-      "x measured from the unstretched length"
+      "x is measured from the unstretched length, not from some other position; for a hanging spring, mind which reference you use",
+      "x in metres: 8 cm is 0.08 m"
     ],
     "vars": [
       [
@@ -2363,7 +2369,7 @@
   },
   "v = f λ": {
     "title": "Wave speed",
-    "about": "Any travelling wave moves one wavelength each period, so its speed is frequency times wavelength. The medium sets v; the source sets f; λ follows.",
+    "about": "Any travelling wave moves one wavelength each period, so its speed is frequency times wavelength. The medium sets v; the source sets f; λ follows. So when sound passes from air into water, its pitch stays and its wavelength grows.",
     "assumptions": [
       "Periodic wave in a uniform medium",
       "When a wave crosses into a new medium f stays the same and λ changes"
@@ -2413,7 +2419,7 @@
     "about": "The period is the time for one complete cycle; frequency is the number of cycles per second. Each is the reciprocal of the other.",
     "assumptions": [
       "Periodic motion or signal",
-      "f in hertz (cycles per second); angular frequency ω = 2πf is in rad/s"
+      "f in hertz (cycles per second); angular frequency ω = 2πf is in rad/s, so T = 2π/ω, not 1/ω"
     ],
     "vars": [
       [
@@ -2452,7 +2458,8 @@
     "assumptions": [
       "Angles measured from the normal to the surface",
       "Smooth interface, isotropic media",
-      "If n_{1} sin(θ_{1})/n_{2} > 1 there is no refracted ray: total internal reflection"
+      "If n_{1} sin(θ_{1})/n_{2} > 1 there is no refracted ray: total internal reflection",
+      "Measuring from the surface instead of the normal is the classic mistake"
     ],
     "vars": [
       [
@@ -2493,11 +2500,11 @@
   },
   "Q = m c ΔT": {
     "title": "Sensible heat (temperature change)",
-    "about": "The heat needed to change the temperature of a mass of material without changing its phase. Water's high c (4186 J/(kg·K)) is why it stores so much heat.",
+    "about": "The heat needed to change the temperature of a mass of material without changing its phase. The heat speeds up the molecules, and c says how much energy each kilogram needs per kelvin. Water's high c (4186 J/(kg·K)) is why it stores so much heat and why coastal climates are mild.",
     "assumptions": [
       "No phase change in the temperature range (add Q = m L for melting or boiling)",
       "c roughly constant over the range",
-      "Gases: c depends on whether heated at constant pressure or volume"
+      "ΔT is the same in K and °C; c in J/(kg·K) needs m in kg, not g"
     ],
     "vars": [
       [
@@ -2546,7 +2553,7 @@
   },
   "ΔU = Q − W": {
     "title": "First law of thermodynamics",
-    "about": "Energy is conserved: the change in a system's internal energy equals the heat added to it minus the work it does on its surroundings.",
+    "about": "Energy is conserved: the change in a system's internal energy equals the heat added to it minus the work it does on its surroundings. Heat and work are two ways to move energy across the boundary; internal energy is what's stored. For an ideal gas U depends only on T, so in an isothermal process Q = W.",
     "assumptions": [
       "Sign convention: Q > 0 into the system, W > 0 done by the system (some texts use W on the system and write ΔU = Q + W)",
       "Closed system; kinetic and potential energy of the system as a whole neglected"
@@ -2583,13 +2590,14 @@
       ]
     ],
     "example": {
-      "problem": "A gas absorbs 500 J of heat and does 200 J of work pushing a piston. Find ΔU.",
+      "problem": "A gas in a cylinder absorbs 500 J of heat while expanding against a piston at 100 kPa through 2 L. Find ΔU.",
       "steps": [
+        "W = PΔV = 100 000 × 0.002 = 200 J (done by the gas)",
         "ΔU = 500 − 200"
       ],
       "answer": "ΔU = 300 J"
     },
-    "try": "500 J - 200 J"
+    "try": "500 J - 100 kPa * 2 L to J"
   },
   "F = k q_{1} q_{2}/r^{2}": {
     "title": "Coulomb's law",
@@ -2705,10 +2713,11 @@
   },
   "E = m c^{2}": {
     "title": "Mass–energy equivalence",
-    "about": "A body at rest has an energy proportional to its mass. Converting even a small amount of mass releases enormous energy, which powers nuclear reactors and the Sun.",
+    "about": "A body at rest has an energy proportional to its mass. c^{2} is about 9 × 10^{16} J/kg, so converting even a small amount of mass releases enormous energy: fission turns about 0.1% of the uranium's mass into energy, fusion in the Sun about 0.7%.",
     "assumptions": [
       "m is the rest mass; a moving body's total energy is γ m c^{2}",
-      "c = 2.998 × 10^{8} m/s"
+      "c = 2.998 × 10^{8} m/s; work in kg and m/s to get joules",
+      "In reactions only the mass change Δm is released, not the whole mass"
     ],
     "vars": [
       [
@@ -2742,17 +2751,18 @@
       ]
     ],
     "example": {
-      "problem": "Find the rest energy of 1 g of matter.",
+      "problem": "Fusing 1 kg of hydrogen into helium loses 0.7% of the mass. How much energy is released?",
       "steps": [
-        "E = 0.001 × (2.998e8)^{2}"
+        "Δm = 0.007 × 1 kg = 7 g",
+        "E = 0.007 × (2.998 × 10^{8})^{2}"
       ],
-      "answer": "E ≈ 8.99 × 10^{13} J"
+      "answer": "E ≈ 6.3 × 10^{14} J"
     },
-    "try": "1 g * (speed of light)^2 to J"
+    "try": "7 g * (speed of light)^2 to J"
   },
   "E = h f": {
     "title": "Photon energy",
-    "about": "Light comes in quanta (photons) whose energy is Planck's constant times the frequency. Higher frequency (bluer) light carries more energy per photon. h = 6.626 × 10^{−34} J·s.",
+    "about": "Light comes in quanta (photons) whose energy is Planck's constant times the frequency. Higher frequency (bluer) light carries more energy per photon; brighter light just means more photons. That is why below a threshold frequency no amount of light ejects electrons in the photoelectric effect.",
     "assumptions": [
       "Applies to a single photon (or any quantum of an oscillator)",
       "Equivalent: E = h c/λ; with hc = 1240 eV·nm, E(eV) = 1240/λ(nm)"
@@ -2800,7 +2810,7 @@
   },
   "λ = h/p": {
     "title": "de Broglie wavelength",
-    "about": "Every particle has a wavelength inversely proportional to its momentum. It matters when λ is comparable to the size of the things the particle interacts with, as for electrons in atoms and electron microscopes.",
+    "about": "Every particle has a wavelength inversely proportional to its momentum, the same relation as for a photon. It matters when λ is comparable to the size of the things the particle interacts with: electrons at 1 Mm/s have λ about the size of an atom, which is why electron microscopes and electron diffraction work. A thrown ball's λ is far too small to see.",
     "assumptions": [
       "p is the momentum; non-relativistic p = m v, otherwise p = γ m v",
       "For a particle accelerated through V from rest, p = √(2 m q V)"
@@ -2848,11 +2858,11 @@
   },
   "E = kq/r^{2}": {
     "title": "Electric field of a point charge",
-    "about": "The field a point charge sets up around it: radial, outward for a positive charge, falling off as 1/r^{2}. A test charge q_{0} placed there feels F = q_{0} E.",
+    "about": "The field a point charge sets up around it: radial, outward for a positive charge. The field's flux spreads over a sphere of area 4πr^{2}, so it falls off as 1/r^{2}. A test charge q_{0} placed there feels F = q_{0}E.",
     "assumptions": [
       "Point charge or spherically symmetric charge, r outside it",
       "Charges at rest",
-      "Fields from several charges add as vectors (superposition)"
+      "Fields from several charges add as vectors (superposition), not as magnitudes"
     ],
     "vars": [
       [
@@ -2954,10 +2964,11 @@
   },
   "U = qV": {
     "title": "Electric potential energy",
-    "about": "A charge q at a point of potential V has potential energy qV. Moving through a potential difference ΔV changes its energy by qΔV, which is why an electron accelerated through 1 V gains 1 eV.",
+    "about": "A charge q at a point of potential V has potential energy qV, just as a mass m at height h has mgh. Moving through a potential difference ΔV changes its energy by qΔV, which is why an electron accelerated through 1 V gains 1 eV.",
     "assumptions": [
-      "V defined relative to a chosen reference",
-      "Electrostatic (conservative) field"
+      "V defined relative to a chosen reference; only differences matter",
+      "Electrostatic (conservative) field",
+      "Keep q's sign: an electron (q = −e) loses potential energy moving to higher V"
     ],
     "vars": [
       [
@@ -3001,10 +3012,11 @@
   },
   "E = −dV/dx": {
     "title": "Electric field from potential",
-    "about": "The field points the way potential falls fastest, with a strength equal to how steeply it falls. Between parallel plates it reduces to E = V/d.",
+    "about": "The field points the way potential falls fastest, with a strength equal to how steeply it falls. The minus sign says a positive charge rolls downhill in potential. Between parallel plates it reduces to E = V/d, which is why V/m and N/C are the same unit.",
     "assumptions": [
       "One-dimensional form; in general E = −∇V",
-      "Electrostatic fields"
+      "Electrostatic fields",
+      "Don't drop the sign: E points from high to low potential"
     ],
     "vars": [
       [
@@ -3323,7 +3335,7 @@
   },
   "B = μ_{0} I/(2πr)": {
     "title": "Magnetic field of a long straight wire",
-    "about": "Current in a long straight wire makes circular field lines around it, with strength falling as 1/r. Follows from Ampère's law. μ_{0} = 4π × 10^{−7} T·m/A.",
+    "about": "Current in a long straight wire makes circular field lines around it. Ampère's law around a circle of radius r gives B·2πr = μ_{0}I, so the strength falls as 1/r. μ_{0} = 4π × 10^{−7} T·m/A, so 1 A at 1 cm gives 20 μT, about half Earth's field.",
     "assumptions": [
       "Wire long compared with r (infinite-wire approximation)",
       "r measured from the wire's axis, outside the wire",
@@ -3372,7 +3384,7 @@
       ],
       "answer": "B = 40 μT"
     },
-    "try": "4 pi 1e-7 * 10 / (2 pi * 0.05) * 1e6"
+    "try": "4 pi 1e-7 T m/A * 10 A / (2 pi * 5 cm) to uT"
   },
   "B = μ_{0} n I": {
     "title": "Magnetic field inside a solenoid",
@@ -3426,7 +3438,7 @@
   },
   "Φ = B A cos(θ)": {
     "title": "Magnetic flux",
-    "about": "How much magnetic field passes through a surface: the field times the area times the cosine of the angle between B and the surface's normal. Changing flux induces an emf.",
+    "about": "How much magnetic field passes through a surface: only the component of B along the surface's normal threads it, hence B cos θ times the area. Changing flux, by changing B, A or θ, induces an emf; a rotating coil makes θ = ωt, which is how a generator works.",
     "assumptions": [
       "Uniform B over a flat surface; otherwise Φ = ∫B · dA",
       "θ is measured from the surface normal, not from the surface"
@@ -3575,9 +3587,10 @@
   },
   "∇ · B = 0": {
     "title": "Gauss's law for magnetism",
-    "about": "There are no magnetic monopoles: magnetic field lines never start or end, they form closed loops. The net magnetic flux out of any closed surface is zero.",
+    "about": "There are no magnetic monopoles: magnetic field lines never start or end, they close on themselves. By the divergence theorem, the net magnetic flux out of any closed surface is zero. Contrast Gauss's law ∇ · E = ρ/ε_{0}, where charges are sources.",
     "assumptions": [
-      "Holds in all classical electromagnetism (no monopole has ever been observed)"
+      "Holds in all classical electromagnetism, static or changing fields (no monopole has ever been observed)",
+      "The flux through an open surface (a coil) can be anything; only a closed surface gives zero"
     ],
     "vars": [
       [
@@ -3592,8 +3605,12 @@
         "integral form"
       ],
       [
-        "B = ∇ × A",
-        "B written from a vector potential"
+        "∇ · E = ρ/ε_{0}",
+        "Gauss's law, the electric counterpart"
+      ],
+      [
+        "∇ × E = −∂B/∂t",
+        "Faraday's law"
       ]
     ],
     "example": {
@@ -3606,7 +3623,7 @@
   },
   "∇ × E = −∂B/∂t": {
     "title": "Faraday's law (Maxwell's third equation)",
-    "about": "A changing magnetic field creates a circulating electric field. Integrated around a loop it gives the induced emf, ε = −dΦ/dt.",
+    "about": "A changing magnetic field creates a circulating electric field. Integrated around a loop (Stokes' theorem) it gives the induced emf, ε = −dΦ/dt. The minus sign is Lenz's law: the induced current opposes the change. It is why transformers and generators work.",
     "assumptions": [
       "Differential form for a fixed point; the integral form for a moving loop also includes motional emf",
       "In electrostatics ∂B/∂t = 0, so E is curl-free and can be written as −∇V"
@@ -3639,7 +3656,7 @@
       ]
     ],
     "example": {
-      "problem": "A uniform field through a circular region of radius 0.1 m rises at 0.5 T/s. Find the induced E on the circle's edge.",
+      "problem": "A uniform field through a circular region of radius 0.1 m (in a solenoid) rises at 0.5 T/s. Find the induced E on the circle's edge.",
       "steps": [
         "E(2πr) = πr^{2} dB/dt",
         "E = (r/2) dB/dt = 0.05 × 0.5"
@@ -3653,7 +3670,8 @@
     "about": "Magnetic fields circulate around currents and around changing electric fields. Maxwell's displacement-current term μ_{0} ε_{0} ∂E/∂t completes the set and predicts electromagnetic waves moving at c = 1/√(μ_{0} ε_{0}).",
     "assumptions": [
       "Vacuum form; in materials use ∇ × H = J_{free} + ∂D/∂t",
-      "For steady currents the ∂E/∂t term vanishes and it reduces to Ampère's law"
+      "For steady currents the ∂E/∂t term vanishes and it reduces to Ampère's law",
+      "The displacement term is what carries 'current' across a charging capacitor's gap"
     ],
     "vars": [
       [
@@ -3853,7 +3871,8 @@
     "assumptions": [
       "Constant pressure; otherwise W = ∫P dV",
       "Quasi-static process",
-      "W > 0 when the gas expands (work done by the gas)"
+      "W > 0 when the gas expands (work done by the gas)",
+      "P in Pa and ΔV in m^{3} give J: 1 L = 10^{−3} m^{3}, so kPa × L gives J"
     ],
     "vars": [
       [
@@ -3956,10 +3975,11 @@
   },
   "U = (3/2) n R T": {
     "title": "Internal energy of a monatomic ideal gas",
-    "about": "A monatomic gas (He, Ne, Ar) stores energy only as translational kinetic energy of its atoms, (3/2)kT each. Diatomic gases near room temperature have (5/2) n R T.",
+    "about": "A monatomic gas (He, Ne, Ar) stores energy only as translational kinetic energy of its atoms, (3/2)k_{B}T each, (1/2)k_{B}T per direction of motion. Diatomic gases near room temperature can also rotate, adding two more terms: (5/2) n R T.",
     "assumptions": [
       "Ideal, monatomic gas",
-      "Depends only on temperature, so ΔU = (3/2) n R ΔT for any process"
+      "Depends only on temperature, so ΔU = (3/2) n R ΔT for any process",
+      "T in kelvin: U is zero at 0 K, not at 0 °C"
     ],
     "vars": [
       [
@@ -4008,11 +4028,11 @@
   },
   "P V^{γ} = constant": {
     "title": "Reversible adiabatic process of an ideal gas",
-    "about": "When an ideal gas is compressed or expanded with no heat transfer, pressure rises faster than in an isothermal process. It models fast compressions in engines and sound waves.",
+    "about": "When an ideal gas is compressed with no heat transfer, the work done on it all goes into internal energy, so its temperature rises too and the pressure climbs faster than in an isothermal process (PV = constant). It models fast compressions in engines, compressors and sound waves.",
     "assumptions": [
       "Ideal gas, reversible (isentropic), no heat transfer",
       "γ = C_{p}/C_{v}: 5/3 monatomic, 1.4 for air and diatomic gases",
-      "Also T V^{γ−1} = constant"
+      "Absolute pressures; in T V^{γ−1} = constant, T in kelvin"
     ],
     "vars": [
       [
@@ -4056,10 +4076,11 @@
   },
   "Q = m L": {
     "title": "Latent heat (change of phase)",
-    "about": "The heat needed to melt or boil a mass of material at constant temperature. For water L_{f} = 334 kJ/kg (melting) and L_{v} = 2257 kJ/kg (boiling at 1 atm).",
+    "about": "The heat needed to melt or boil a mass of material at constant temperature. The energy goes into breaking bonds between molecules, not into making them move faster, so the temperature stalls until the change is done. For water L_{f} = 334 kJ/kg (melting) and L_{v} = 2257 kJ/kg (boiling at 1 atm), far more than the 419 kJ/kg to heat it from 0 to 100 °C.",
     "assumptions": [
       "Temperature stays at the phase-change point during the transfer",
-      "L depends on the material and the phase change (fusion or vaporisation) and somewhat on pressure"
+      "Use L_{f} for melting/freezing and L_{v} for boiling/condensing; mixing them up is the usual mistake",
+      "Heating to the transition point is a separate Q = m c ΔT step"
     ],
     "vars": [
       [
@@ -4089,21 +4110,22 @@
       ]
     ],
     "example": {
-      "problem": "How much heat boils off 0.5 kg of water already at 100 °C?",
+      "problem": "How much heat turns 0.5 kg of ice at 0 °C into water at 0 °C, and how much more boils it away once it reaches 100 °C?",
       "steps": [
-        "Q = 0.5 × 2 257 000"
+        "Melting: Q = 0.5 × 334 = 167 kJ",
+        "Boiling: Q = 0.5 × 2257 = 1128.5 kJ"
       ],
-      "answer": "Q ≈ 1.13 MJ"
+      "answer": "167 kJ to melt; ≈ 1.13 MJ to boil"
     },
-    "try": "0.5 * 2257 / 1000"
+    "try": "0.5 kg * 2257 kJ/kg to MJ"
   },
   "Q/t = k A ΔT/d": {
     "title": "Fourier's law of heat conduction",
-    "about": "Heat flows through a slab at a rate proportional to its area and the temperature difference across it, and inversely to its thickness. k is the material's thermal conductivity.",
+    "about": "Heat flows through a slab at a rate proportional to its area and the temperature difference across it, and inversely to its thickness: each layer passes heat to the next in proportion to the local gradient ΔT/d. k is the material's thermal conductivity.",
     "assumptions": [
       "Steady state, one-dimensional flow through a flat slab",
       "k constant over the temperature range",
-      "Layers in series add as thermal resistances R = d/(kA)"
+      "ΔT is across the slab's own faces; with air films on each side the real ΔT across the glass is far smaller than room-to-outside"
     ],
     "vars": [
       [
@@ -4147,7 +4169,7 @@
       ]
     ],
     "example": {
-      "problem": "A 1.2 m^{2} window of glass (k = 0.8 W/(m·K)) 4 mm thick has 20 °C on one face and 5 °C on the other. Find the heat loss.",
+      "problem": "A 1.2 m^{2} window of glass (k = 0.8 W/(m·K)) 4 mm thick has 20 °C on one face and 5 °C on the other. Find the heat loss through the glass.",
       "steps": [
         "Q/t = 0.8 × 1.2 × 15/0.004"
       ],
@@ -4211,10 +4233,10 @@
   },
   "v = √(T/μ)": {
     "title": "Wave speed on a stretched string",
-    "about": "Transverse waves travel faster on a tighter, lighter string. It is why tuning a guitar string's tension changes its pitch.",
+    "about": "Transverse waves travel faster on a tighter, lighter string: tension pulls each bit back toward the line, and its mass per length resists. It is why tuning a guitar string's tension changes its pitch and why the bass strings are thicker.",
     "assumptions": [
       "Perfectly flexible string, small amplitudes",
-      "Uniform linear density μ = mass/length",
+      "Uniform linear density μ = mass/length, in kg/m (g/m must be divided by 1000)",
       "Tension unchanged by the wave"
     ],
     "vars": [
@@ -4245,11 +4267,12 @@
       ]
     ],
     "example": {
-      "problem": "A guitar string with μ = 0.005 kg/m is under 80 N tension. Find the wave speed.",
+      "problem": "A 0.65 m guitar string with μ = 0.005 kg/m is under 80 N tension. Find the wave speed and the fundamental frequency.",
       "steps": [
-        "v = √(80/0.005) = √16 000"
+        "v = √(80/0.005) = 126.5 m/s",
+        "f_{1} = v/(2L) = 126.5/1.3 = 97 Hz"
       ],
-      "answer": "v ≈ 126.5 m/s"
+      "answer": "v ≈ 126.5 m/s, f_{1} ≈ 97 Hz"
     },
     "try": "sqrt(80/0.005)"
   },
@@ -4363,7 +4386,7 @@
   },
   "β = 10 log_{10}(I/I_{0})": {
     "title": "Sound intensity level in decibels",
-    "about": "Loudness on a log scale relative to the threshold of hearing, I_{0} = 10^{−12} W/m^{2}. Every factor of 10 in intensity adds 10 dB; doubling adds about 3 dB.",
+    "about": "Loudness on a log scale relative to the threshold of hearing, I_{0} = 10^{−12} W/m^{2}. The ear responds roughly to ratios, so a log scale fits it. Every factor of 10 in intensity adds 10 dB; doubling adds about 3 dB; two equal sources do not double the dB.",
     "assumptions": [
       "I_{0} = 10^{−12} W/m^{2} is the reference",
       "Intensity, not pressure; for pressure the form is 20 log_{10}(p/p_{0})"
@@ -4400,17 +4423,18 @@
       ]
     ],
     "example": {
-      "problem": "A lawn mower produces 1 × 10^{−3} W/m^{2} at the operator. Find the sound level.",
+      "problem": "One lawn mower gives 1 × 10^{−3} W/m^{2} at the operator. Find the sound level, then the level with two identical mowers.",
       "steps": [
-        "β = 10 log_{10}(10^{−3}/10^{−12}) = 10 × 9"
+        "β = 10 log_{10}(10^{−3}/10^{−12}) = 90 dB",
+        "Two mowers: I doubles, β = 90 + 10 log_{10}(2) = 93 dB"
       ],
-      "answer": "β = 90 dB"
+      "answer": "β = 90 dB (93 dB for two)"
     },
     "try": "10 log10(1e-3/1e-12)"
   },
   "I = P/(4πr^{2})": {
     "title": "Intensity from a point source (inverse-square law)",
-    "about": "A source radiating equally in all directions spreads its power over a sphere, so intensity falls as 1/r^{2}: double the distance, a quarter the intensity.",
+    "about": "A source radiating equally in all directions spreads its power over a sphere of area 4πr^{2}, so intensity falls as 1/r^{2}: double the distance, a quarter the intensity (6 dB quieter for sound).",
     "assumptions": [
       "Point source, radiating uniformly in all directions",
       "No absorption or reflections (free field)",
@@ -4503,7 +4527,7 @@
   },
   "m = −d_{i}/d_{o}": {
     "title": "Lateral magnification",
-    "about": "The ratio of image height to object height. A negative m means the image is inverted; |m| > 1 means enlarged.",
+    "about": "The ratio of image height to object height. By similar triangles through the lens centre, h_{i}/h_{o} = −d_{i}/d_{o}. A negative m means the image is inverted; |m| > 1 means enlarged.",
     "assumptions": [
       "Thin lens or spherical mirror, paraxial rays",
       "Same sign convention as the lens equation"
@@ -4536,7 +4560,7 @@
       ]
     ],
     "example": {
-      "problem": "With d_{o} = 30 cm and d_{i} = 15 cm, find m. How tall is the image of a 4 cm object?",
+      "problem": "A camera lens forms an image 15 cm behind it of a 4 cm object 30 cm in front. Find m and the image height.",
       "steps": [
         "m = −15/30 = −0.5",
         "h_{i} = −0.5 × 4 = −2 cm (inverted, half size)"
@@ -4547,10 +4571,10 @@
   },
   "n = c/v": {
     "title": "Refractive index",
-    "about": "How much slower light travels in a material than in vacuum. Air is about 1.0003, water 1.33, glass about 1.5, diamond 2.42.",
+    "about": "How many times slower light travels in a material than in vacuum. Light slows because it drives the material's electrons, which re-radiate slightly late. Air is about 1.0003, water 1.33, glass about 1.5, diamond 2.42; n ≥ 1 always for ordinary materials.",
     "assumptions": [
       "n depends on wavelength (dispersion), which is why prisms split white light",
-      "c = 2.998 × 10^{8} m/s"
+      "Frequency stays the same in the material; speed and wavelength both drop by n"
     ],
     "vars": [
       [
@@ -4732,10 +4756,11 @@
   },
   "t = γ t_{0}": {
     "title": "Time dilation",
-    "about": "A clock moving relative to you runs slow: the time you measure between two of its ticks is γ times its proper time. Muons from cosmic rays reach the ground because of this.",
+    "about": "A clock moving relative to you runs slow: the time you measure between two of its ticks is γ times its proper time. Light in a moving clock travels a longer, diagonal path at the same speed c, so each tick takes longer. Muons from cosmic rays reach the ground because of this.",
     "assumptions": [
-      "t_{0} is the proper time, measured by a clock at rest relative to both events (same place in its frame)",
-      "Special relativity, constant relative velocity"
+      "t_{0} is the proper time, measured by a clock present at both events (same place in its frame); the moving clock's own time is the short one",
+      "Special relativity, constant relative velocity",
+      "γ ≥ 1, so t ≥ t_{0}; getting a t shorter than t_{0} means γ was used upside down"
     ],
     "vars": [
       [
@@ -5126,10 +5151,11 @@
   },
   "t_{1/2} = ln(2)/λ": {
     "title": "Half-life",
-    "about": "The time for half of a radioactive sample (or any exponentially decaying quantity) to go. After n half-lives a fraction (1/2)^{n} remains.",
+    "about": "The time for half of a radioactive sample (or any exponentially decaying quantity) to go. Setting N = N_{0}/2 in N_{0}e^{−λt} gives e^{−λt} = 1/2, so t = ln 2/λ. It does not depend on how much you start with. After n half-lives a fraction (1/2)^{n} remains.",
     "assumptions": [
       "Exponential (first-order) decay with a constant rate λ",
-      "Also applies to drug elimination, RC discharge (with λ = 1/RC) and first-order reactions"
+      "λ and t_{1/2} in matching time units",
+      "Not the same as the mean lifetime τ = 1/λ, which is 1.44 times longer"
     ],
     "vars": [
       [
@@ -5211,9 +5237,18 @@
   },
   "R = v_{0}^{2} sin(2θ)/g": {
     "title": "Projectile range on level ground",
-    "about": "Horizontal distance for a launch and landing at the same height, no air resistance. Maximum at 45°.",
-    "assumptions": [],
+    "about": "The horizontal distance a projectile covers when it lands at its launch height. It peaks at θ = 45°, and complementary angles (30° and 60°) give the same range.",
+    "assumptions": [
+      "No air resistance",
+      "Lands at the same height it was launched from",
+      "Uniform gravity g = 9.81 m/s^{2}"
+    ],
     "vars": [
+      [
+        "R",
+        "horizontal range",
+        "m"
+      ],
       [
         "v_{0}",
         "launch speed",
@@ -5221,22 +5256,36 @@
       ],
       [
         "θ",
-        "launch angle",
+        "launch angle above horizontal",
         "rad"
       ],
       [
         "g",
-        "gravity",
-        "m/s²"
+        "gravitational acceleration",
+        "m/s^{2}"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "20 m/s at 30°.",
-      "steps": [
-        "400 sin 60°/9.81"
+    "related": [
+      [
+        "t = 2 v_{0} sin(θ)/g",
+        "time of flight"
       ],
-      "answer": "≈ 35.3 m"
+      [
+        "H = v_{0}^{2} sin^{2}(θ)/(2g)",
+        "maximum height"
+      ],
+      [
+        "R_{max} = v_{0}^{2}/g",
+        "at θ = 45°"
+      ]
+    ],
+    "example": {
+      "problem": "A ball is kicked at 20 m/s, 30° above level ground. How far does it travel?",
+      "steps": [
+        "sin(2 × 30°) = sin 60° = 0.866",
+        "R = 400 × 0.866/9.81"
+      ],
+      "answer": "R ≈ 35.3 m"
     },
     "try": "(20 m/s)^2 sin(60 deg)/(9.81 m/s^2)"
   },
@@ -5281,12 +5330,18 @@
   },
   "t = 2 v_{0} sin(θ)/g": {
     "title": "Time of flight of a projectile",
-    "about": "How long a projectile stays in the air when it lands at its launch height: up for v_{0} sin θ/g and the same time back down.",
+    "about": "How long a projectile stays in the air when it lands at its launch height. Only the vertical motion matters: it rises for v_{0} sin θ/g until its vertical speed is zero and takes the same time back down. The horizontal speed plays no part.",
     "assumptions": [
       "No air resistance",
-      "Lands at the launch height"
+      "Lands at the launch height; otherwise solve y(t) = 0 from the full quadratic",
+      "Use the vertical component v_{0} sin θ, not v_{0}"
     ],
     "vars": [
+      [
+        "t",
+        "time of flight",
+        "s"
+      ],
       [
         "v_{0}",
         "launch speed",
@@ -5294,8 +5349,13 @@
       ],
       [
         "θ",
-        "launch angle",
+        "launch angle above horizontal",
         "rad"
+      ],
+      [
+        "g",
+        "gravitational acceleration, 9.81",
+        "m/s^{2}"
       ]
     ],
     "related": [
@@ -5319,9 +5379,13 @@
     "try": "2 * 20 m/s * sin(30 deg)/(9.81 m/s^2)"
   },
   "m_{1} v_{1} + m_{2} v_{2} = m_{1} v′_{1} + m_{2} v′_{2}": {
-    "title": "Conservation of momentum (collisions)",
-    "about": "With no external force total momentum is the same before (v) and after (v′), elastic or not.",
-    "assumptions": [],
+    "title": "Conservation of momentum in a collision",
+    "about": "With no net external force, the total momentum of two colliding bodies is the same just before (v) and just after (v′) the impact, whether the collision is elastic or not. One equation per direction; an elastic collision also conserves kinetic energy, which gives a second equation.",
+    "assumptions": [
+      "No net external impulse during the collision (short impacts make friction and gravity negligible)",
+      "Velocities are signed (vectors): pick a positive direction",
+      "Speeds much less than c"
+    ],
     "vars": [
       [
         "m_{1}, m_{2}",
@@ -5329,19 +5393,39 @@
         "kg"
       ],
       [
-        "v, v′",
-        "velocities before and after",
+        "v_{1}, v_{2}",
+        "velocities just before",
+        "m/s"
+      ],
+      [
+        "v′_{1}, v′_{2}",
+        "velocities just after",
         "m/s"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "A 2 kg cart at 3 m/s hits and sticks to a 1 kg cart at rest.",
-      "steps": [
-        "6 = 3 v′"
+    "related": [
+      [
+        "v′ = (m_{1} v_{1} + m_{2} v_{2})/(m_{1} + m_{2})",
+        "perfectly inelastic (they stick)"
       ],
-      "answer": "2 m/s"
-    }
+      [
+        "e = (v′_{2} − v′_{1})/(v_{1} − v_{2})",
+        "coefficient of restitution"
+      ],
+      [
+        "p = m v",
+        "momentum"
+      ]
+    ],
+    "example": {
+      "problem": "A 2 kg cart at 3 m/s hits and sticks to a 1 kg cart at rest. How fast do they move together?",
+      "steps": [
+        "Before: 2 × 3 + 1 × 0 = 6 kg·m/s",
+        "After: (2 + 1) v′ = 6"
+      ],
+      "answer": "v′ = 2 m/s"
+    },
+    "try": "2 kg * 3 m/s / 3 kg"
   },
   "F_{c} = m v^{2}/r": {
     "title": "Centripetal force",
@@ -5389,12 +5473,18 @@
   },
   "x(t) = A cos(ωt + φ)": {
     "title": "Simple harmonic motion",
-    "about": "The motion of any undamped linear oscillator: a mass on a spring, a small-angle pendulum, an LC circuit. A sets the size, ω the rate and φ the starting point.",
+    "about": "The motion of any undamped linear oscillator: a mass on a spring, a small-angle pendulum, an LC circuit. A sets the size of the swing, ω how fast it repeats and φ where in the cycle it starts. Speed is largest (Aω) at the centre and acceleration largest (Aω^{2}) at the ends.",
     "assumptions": [
-      "Restoring force proportional to displacement",
-      "No damping"
+      "Restoring force proportional to displacement (linear)",
+      "No damping or driving force",
+      "φ found from the starting position and velocity"
     ],
     "vars": [
+      [
+        "x",
+        "displacement from equilibrium",
+        "m"
+      ],
       [
         "A",
         "amplitude",
@@ -5406,29 +5496,39 @@
         "rad/s"
       ],
       [
+        "t",
+        "time",
+        "s"
+      ],
+      [
         "φ",
-        "phase",
+        "phase constant",
         "rad"
       ]
     ],
     "related": [
       [
         "v(t) = −Aω sin(ωt + φ)",
-        "velocity, largest Aω at x = 0"
+        "velocity"
       ],
       [
         "a(t) = −ω^{2} x",
         "acceleration"
+      ],
+      [
+        "ω = √(k/m)",
+        "for a mass on a spring"
       ]
     ],
     "example": {
       "problem": "A mass oscillates with A = 0.1 m and ω = 4 rad/s. Find its maximum speed and maximum acceleration.",
       "steps": [
-        "v_{max} = Aω = 0.1 × 4",
-        "a_{max} = Aω^{2} = 0.1 × 16"
+        "v_{max} = Aω = 0.1 × 4 = 0.4 m/s",
+        "a_{max} = Aω^{2} = 0.1 × 16 = 1.6 m/s^{2}"
       ],
       "answer": "v_{max} = 0.4 m/s, a_{max} = 1.6 m/s^{2}"
-    }
+    },
+    "try": "0.1 * 4"
   },
   "ω = √(k/m)": {
     "title": "Natural frequency of a mass on a spring",
@@ -5476,12 +5576,21 @@
   },
   "f_{n} = n v/(4L)": {
     "title": "Harmonics of a pipe closed at one end",
-    "about": "Only odd harmonics fit: a node at the closed end, an antinode at the open end.",
-    "assumptions": [],
+    "about": "A pipe closed at one end has a displacement node at the closed end and an antinode at the open end, so only odd numbers of quarter-wavelengths fit: λ_{n} = 4L/n with n = 1, 3, 5, …. Its fundamental is an octave below an open pipe of the same length.",
+    "assumptions": [
+      "n odd only: 1, 3, 5, …",
+      "Narrow pipe; the open end's effective length is about 0.6 r longer (end correction)",
+      "v is the speed of sound in the gas (343 m/s in air at 20 °C)"
+    ],
     "vars": [
       [
+        "f_{n}",
+        "frequency of the n-th harmonic",
+        "Hz"
+      ],
+      [
         "n",
-        "1, 3, 5, …",
+        "harmonic number, odd",
         ""
       ],
       [
@@ -5495,29 +5604,47 @@
         "m"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Fundamental of a 0.5 m closed pipe, v = 343 m/s.",
-      "steps": [
-        "343/2"
+    "related": [
+      [
+        "f_{n} = n v/(2L)",
+        "open–open pipe or string, all n"
       ],
-      "answer": "171.5 Hz"
+      [
+        "v = f λ",
+        "wave speed"
+      ]
+    ],
+    "example": {
+      "problem": "Find the fundamental frequency of a 0.5 m pipe closed at one end, with v = 343 m/s.",
+      "steps": [
+        "f_{1} = 343/(4 × 0.5) = 343/2"
+      ],
+      "answer": "f_{1} = 171.5 Hz"
     },
     "try": "343 m/s/(4*0.5 m)"
   },
   "ΔL = α L ΔT": {
     "title": "Linear thermal expansion",
-    "about": "Length change for a temperature change.",
-    "assumptions": [],
+    "about": "A solid's length grows in proportion to its original length and its temperature rise. Bridges, rails and pipelines need expansion joints because of it; if the growth is blocked it becomes thermal stress EαΔT.",
+    "assumptions": [
+      "α roughly constant over the temperature range",
+      "Free to expand (no restraint)",
+      "Uniform temperature along the length"
+    ],
     "vars": [
       [
+        "ΔL",
+        "change in length",
+        "m"
+      ],
+      [
         "α",
-        "coefficient of expansion",
+        "coefficient of linear expansion (steel ≈ 12 × 10^{−6}, aluminium ≈ 23 × 10^{−6})",
         "1/K"
       ],
       [
         "L",
-        "length",
+        "original length",
         "m"
       ],
       [
@@ -5526,50 +5653,79 @@
         "K"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "100 m steel rail (α = 12 × 10⁻⁶ /K) warms 30 K.",
-      "steps": [
-        "12e-6 · 100 · 30"
+    "related": [
+      [
+        "ΔV = β V ΔT, β ≈ 3α",
+        "volume expansion"
       ],
-      "answer": "3.6 cm"
+      [
+        "σ = −EαΔT",
+        "stress if fully restrained"
+      ]
+    ],
+    "example": {
+      "problem": "A 100 m steel rail (α = 12 × 10^{−6} /K) warms by 30 K. How much does it lengthen?",
+      "steps": [
+        "ΔL = 12 × 10^{−6} × 100 × 30 = 0.036 m"
+      ],
+      "answer": "ΔL = 3.6 cm"
     },
     "try": "12e-6/K * 100 m * 30 K to cm"
   },
   "r = m v/(q B)": {
-    "title": "Radius of a charged particle in a magnetic field",
-    "about": "The magnetic force supplies the centripetal force. The basis of mass spectrometers and cyclotrons.",
-    "assumptions": [],
+    "title": "Radius of a charged particle's circle in a magnetic field",
+    "about": "A charge moving across a uniform magnetic field circles because the magnetic force qvB supplies the centripetal force mv^{2}/r. Heavier or faster particles circle wider. It is the basis of mass spectrometers and cyclotrons.",
+    "assumptions": [
+      "Velocity perpendicular to a uniform B (with a component along B the path is a helix)",
+      "Non-relativistic speed",
+      "Use |q|",
+      "Only the speed perpendicular to B goes in"
+    ],
     "vars": [
       [
+        "r",
+        "radius of the circular path",
+        "m"
+      ],
+      [
         "m",
-        "mass",
+        "particle mass",
         "kg"
       ],
       [
         "v",
-        "speed",
+        "speed perpendicular to B",
         "m/s"
       ],
       [
         "q",
-        "charge",
+        "charge magnitude",
         "C"
       ],
       [
         "B",
-        "field",
+        "magnetic field",
         "T"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Proton at 10⁶ m/s in 0.5 T.",
-      "steps": [
-        "1.67e-27 · 1e6/(1.6e-19 · 0.5)"
+    "related": [
+      [
+        "F = q v B sin(θ)",
+        "magnetic force"
       ],
-      "answer": "≈ 2.1 cm"
-    }
+      [
+        "f = |q| B/(2π m)",
+        "cyclotron frequency, independent of speed"
+      ]
+    ],
+    "example": {
+      "problem": "A proton (m = 1.673 × 10^{−27} kg, q = 1.602 × 10^{−19} C) moves at 10^{6} m/s across a 0.5 T field. Find the radius of its path.",
+      "steps": [
+        "r = 1.673 × 10^{−27} × 10^{6}/(1.602 × 10^{−19} × 0.5) = 0.0209 m"
+      ],
+      "answer": "r ≈ 2.1 cm"
+    },
+    "try": "1.673e-27 * 1e6 / (1.602e-19 * 0.5) * 100"
   },
   "p = F/A": {
     "title": "Pressure",
@@ -5621,7 +5777,8 @@
     "assumptions": [
       "Ideal, linear capacitor",
       "Measured from zero charge",
-      "Charging through a resistor from a fixed source loses as much energy in the resistor as ends up stored"
+      "Charging through a resistor from a fixed source loses as much energy in the resistor as ends up stored",
+      "Doubling V stores four times the energy; C in farads (µF × 10^{−6})"
     ],
     "vars": [
       [
@@ -5659,5 +5816,292 @@
       "answer": "E ≈ 12.0 J"
     },
     "try": "0.5 * 220 uF * (330 V)^2 to J"
+  },
+  "x = v_{0} cos(θ) t": {
+    "title": "Projectile horizontal position",
+    "about": "With no air resistance nothing pushes a projectile sideways, so its horizontal velocity v_{0} cos(θ) never changes and the distance it covers grows in step with time. Pair it with the vertical equation: solve that one for the time, then put the time in here.",
+    "assumptions": [
+      "No air resistance",
+      "x measured from the launch point; θ above the horizontal"
+    ],
+    "vars": [
+      [
+        "x",
+        "horizontal distance from the launch point",
+        "m"
+      ],
+      [
+        "v_{0}",
+        "launch speed",
+        "m/s"
+      ],
+      [
+        "θ",
+        "launch angle above horizontal",
+        "rad"
+      ],
+      [
+        "t",
+        "time since launch",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "y = y_{0} + v_{0} sin(θ) t − (1/2) g t^{2}",
+        "the vertical motion"
+      ],
+      [
+        "R = v_{0}^{2} sin(2θ)/g",
+        "range on level ground"
+      ]
+    ],
+    "example": {
+      "problem": "A ball is thrown at 15 m/s, 40° above horizontal. How far has it moved horizontally after 1.2 s?",
+      "steps": [
+        "v_{x} = 15 cos 40° = 11.49 m/s",
+        "x = 11.49 × 1.2"
+      ],
+      "answer": "x ≈ 13.8 m"
+    },
+    "try": "15 m/s * cos(40 deg) * 1.2 s"
+  },
+  "y = y_{0} + v_{0} sin(θ) t − (1/2) g t^{2}": {
+    "title": "Projectile height at time t (launched from any height)",
+    "about": "The vertical motion of a projectile is constant acceleration at −g, starting at height y_{0} with upward speed v_{0} sin(θ). Use it when the projectile is launched from a cliff, a table or a building, where the level-ground range formula fails: set y to the landing height and solve the quadratic for t.",
+    "assumptions": [
+      "No air resistance",
+      "y up; uniform gravity g = 9.81 m/s^{2}",
+      "θ above the horizontal (negative if thrown downward)"
+    ],
+    "vars": [
+      [
+        "y",
+        "height at time t",
+        "m"
+      ],
+      [
+        "y_{0}",
+        "launch height",
+        "m"
+      ],
+      [
+        "v_{0}",
+        "launch speed",
+        "m/s"
+      ],
+      [
+        "θ",
+        "launch angle above horizontal",
+        "rad"
+      ],
+      [
+        "g",
+        "gravitational acceleration",
+        "m/s^{2}"
+      ],
+      [
+        "t",
+        "time since launch",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "x = v_{0} cos(θ) t",
+        "the horizontal motion"
+      ],
+      [
+        "v^{2} = v_{0}^{2} + 2a Δx",
+        "speed at a height, without time"
+      ]
+    ],
+    "example": {
+      "problem": "A stone is thrown from the top of a 20 m cliff at 15 m/s, 30° above horizontal. How high above the base is it after 2 s?",
+      "steps": [
+        "v_{0} sin 30° = 7.5 m/s",
+        "y = 20 + 7.5 × 2 − 4.905 × 2^{2} = 20 + 15 − 19.62"
+      ],
+      "answer": "y ≈ 15.4 m"
+    },
+    "try": "20 m + 15 m/s * sin(30 deg) * 2 s - 0.5 * 9.81 m/s^2 * (2 s)^2"
+  },
+  "tan(θ) = v^{2}/(r g)": {
+    "title": "Banked curve: the angle that needs no friction",
+    "about": "On a curve banked at θ the normal force tilts inward, and at the design speed its horizontal part alone supplies the centripetal force m v^{2}/r. Use it to find the bank angle for a speed, or the speed a bank is built for.",
+    "assumptions": [
+      "No friction needed at the design speed; faster or slower cars need friction",
+      "Steady speed on a circular path"
+    ],
+    "vars": [
+      [
+        "θ",
+        "bank angle from horizontal",
+        "rad"
+      ],
+      [
+        "v",
+        "design speed",
+        "m/s"
+      ],
+      [
+        "r",
+        "radius of the curve",
+        "m"
+      ],
+      [
+        "g",
+        "gravitational acceleration",
+        "m/s^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "F_{c} = m v^{2}/r",
+        "centripetal force"
+      ],
+      [
+        "a_{c} = v^{2}/r",
+        "centripetal acceleration"
+      ]
+    ],
+    "example": {
+      "problem": "A curve of radius 120 m is to be taken at 25 m/s with no friction. What bank angle does it need?",
+      "steps": [
+        "tan θ = 25^{2}/(120 × 9.81) = 0.531",
+        "θ = atan(0.531)"
+      ],
+      "answer": "θ ≈ 28.0°"
+    },
+    "try": "atan((25 m/s)^2/(120 m * 9.81 m/s^2)) to deg"
+  },
+  "R = R_{1} + R_{2}": {
+    "title": "Resistors in series",
+    "about": "Resistors in series carry the same current, so their voltages add and so do their resistances. Any number add the same way: R = R_{1} + R_{2} + R_{3} + …",
+    "assumptions": [
+      "One path: the same current flows through each"
+    ],
+    "vars": [
+      [
+        "R",
+        "equivalent resistance",
+        "Ω"
+      ],
+      [
+        "R_{1}, R_{2}",
+        "the resistors",
+        "Ω"
+      ]
+    ],
+    "related": [
+      [
+        "1/R = 1/R_{1} + 1/R_{2}",
+        "in parallel"
+      ],
+      [
+        "V = I R",
+        "Ohm's law"
+      ]
+    ],
+    "example": {
+      "problem": "A 100 Ω and a 220 Ω resistor are in series. What is their total resistance?",
+      "steps": [
+        "R = 100 + 220"
+      ],
+      "answer": "R = 320 Ω"
+    },
+    "try": "100 ohm + 220 ohm"
+  },
+  "1/R = 1/R_{1} + 1/R_{2}": {
+    "title": "Resistors in parallel",
+    "about": "Resistors in parallel share the same voltage, so their currents add and their conductances 1/R add. The result is always smaller than the smallest resistor. For two, R = R_{1}R_{2}/(R_{1} + R_{2}).",
+    "assumptions": [
+      "Both resistors connect across the same two nodes"
+    ],
+    "vars": [
+      [
+        "R",
+        "equivalent resistance",
+        "Ω"
+      ],
+      [
+        "R_{1}, R_{2}",
+        "the resistors",
+        "Ω"
+      ]
+    ],
+    "related": [
+      [
+        "R = R_{1} + R_{2}",
+        "in series"
+      ],
+      [
+        "V = I R",
+        "Ohm's law"
+      ]
+    ],
+    "example": {
+      "problem": "A 100 Ω and a 220 Ω resistor are in parallel. What is their equivalent resistance?",
+      "steps": [
+        "1/R = 1/100 + 1/220 = 0.014545",
+        "R = 1/0.014545"
+      ],
+      "answer": "R ≈ 68.8 Ω"
+    },
+    "try": "1/(1/(100 ohm) + 1/(220 ohm))"
+  },
+  "q = Q (1 − e^{−t/(RC)})": {
+    "title": "RC circuit: a capacitor charging",
+    "about": "A capacitor charged through a resistor from a battery fills along an exponential: after one time constant τ = RC it holds 63% of its final charge Q = C V, after 5τ nearly all of it. The voltage across it follows the same curve, V_{C} = V (1 − e^{−t/(RC)}); discharging is q = Q e^{−t/(RC)}.",
+    "assumptions": [
+      "Capacitor starts uncharged",
+      "Ideal battery of voltage V switched on at t = 0"
+    ],
+    "vars": [
+      [
+        "q",
+        "charge at time t",
+        "C"
+      ],
+      [
+        "Q",
+        "final charge, C V",
+        "C"
+      ],
+      [
+        "R",
+        "series resistance",
+        "Ω"
+      ],
+      [
+        "C",
+        "capacitance",
+        "F"
+      ],
+      [
+        "t",
+        "time since the switch closed",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "τ = R C",
+        "time constant"
+      ],
+      [
+        "Q = C V",
+        "capacitor charge"
+      ]
+    ],
+    "example": {
+      "problem": "A 100 μF capacitor charges through 10 kΩ from a 9 V battery. How much charge does it hold after 2 s?",
+      "steps": [
+        "τ = 10 kΩ × 100 μF = 1 s; Q = 100 μF × 9 V = 900 μC",
+        "q = 900 μC × (1 − e^{−2}) = 900 × 0.8647"
+      ],
+      "answer": "q ≈ 0.778 mC (778 μC)"
+    },
+    "try": "(1 - exp(-2)) * 100 uF * 9 V to mC"
   }
 }

@@ -1495,7 +1495,9 @@
     "about": "Solves ax^{2} + bx + c = 0 for any coefficients, found by completing the square. The ± gives the two roots.",
     "assumptions": [
       "a ≠ 0 (otherwise the equation is linear)",
-      "The discriminant b^{2} − 4ac decides the roots: > 0 two real, = 0 one repeated, < 0 two complex"
+      "The discriminant b^{2} − 4ac decides the roots: > 0 two real, = 0 one repeated, < 0 two complex",
+      "Common slips: the 2a divides the whole numerator, and −b flips the sign of b",
+      "Loses digits when b^{2} ≫ 4ac: compute the larger root, then the other as c/(a r_{1})"
     ],
     "vars": [
       [
@@ -1568,7 +1570,8 @@
     "title": "Vertex of a parabola",
     "about": "The x of the turning point of y = ax^{2} + bx + c, halfway between the roots. It is a minimum when a > 0 and a maximum when a < 0; put it back in to get the extreme value.",
     "assumptions": [
-      "a ≠ 0"
+      "a ≠ 0",
+      "Why: the parabola is symmetric, so the vertex sits midway between the roots, at the average of −b/(2a) ± √Δ/(2a)"
     ],
     "vars": [
       [
@@ -1639,9 +1642,10 @@
   },
   "y = m x + b": {
     "title": "Slope-intercept form of a line",
-    "about": "A straight line with slope m (rise over run) that crosses the y-axis at b.",
+    "about": "A straight line with slope m (rise per unit of run) that crosses the y-axis at b, where x = 0. On a calibration or force–displacement plot, m is the gain or stiffness and b the offset.",
     "assumptions": [
-      "Not for vertical lines (x = constant), whose slope is undefined"
+      "Not for vertical lines (x = constant), whose slope is undefined",
+      "Find m from two points first, then b = y_{1} − m x_{1}"
     ],
     "vars": [
       [
@@ -1653,6 +1657,16 @@
         "b",
         "y-intercept",
         ""
+      ],
+      [
+        "x",
+        "input (horizontal coordinate)",
+        ""
+      ],
+      [
+        "y",
+        "output (vertical coordinate)",
+        ""
       ]
     ],
     "related": [
@@ -1662,7 +1676,11 @@
       ],
       [
         "y − y_{1} = m(x − x_{1})",
-        "point-slope"
+        "point-slope form"
+      ],
+      [
+        "m_{1} m_{2} = −1",
+        "perpendicular lines"
       ]
     ],
     "example": {
@@ -1677,9 +1695,10 @@
   },
   "y − y_{1} = m(x − x_{1})": {
     "title": "Point-slope form of a line",
-    "about": "The line with slope m through the point (x_{1}, y_{1}). Quickest when you know a point and a slope, as with a tangent line.",
+    "about": "The line of slope m through the point (x_{1}, y_{1}): moving x − x_{1} across, the line rises m(x − x_{1}). Quickest when you know a point and a slope, as for a tangent line y − f(a) = f′(a)(x − a).",
     "assumptions": [
-      "Not for vertical lines"
+      "Not for vertical lines",
+      "Watch the signs: through (−2, 5) it is y − 5 = m(x + 2)"
     ],
     "vars": [
       [
@@ -1696,7 +1715,15 @@
     "related": [
       [
         "y = m x + b",
-        "slope-intercept"
+        "slope-intercept form"
+      ],
+      [
+        "m = (y_{2} − y_{1})/(x_{2} − x_{1})",
+        "slope from two points"
+      ],
+      [
+        "m_{1} m_{2} = −1",
+        "perpendicular line"
       ]
     ],
     "example": {
@@ -1712,9 +1739,11 @@
   },
   "m_{1} m_{2} = −1": {
     "title": "Perpendicular slopes",
-    "about": "Two lines are perpendicular when their slopes are negative reciprocals.",
+    "about": "Two lines are perpendicular when their slopes are negative reciprocals. Turning a line through 90° swaps its rise and run and flips one sign, so slope m becomes −1/m.",
     "assumptions": [
-      "Neither line is vertical or horizontal (a horizontal line, slope 0, is perpendicular to a vertical one)"
+      "Neither line vertical or horizontal (a horizontal line, slope 0, is perpendicular to a vertical one)",
+      "Take both the reciprocal and the negative: perpendicular to 2/3 is −3/2, not 3/2 or −2/3",
+      "Common slip: taking only the negative or only the reciprocal; it is both"
     ],
     "vars": [
       [
@@ -1727,6 +1756,14 @@
       [
         "m_{1} = m_{2}",
         "parallel lines"
+      ],
+      [
+        "y − y_{1} = m(x − x_{1})",
+        "the perpendicular through a point"
+      ],
+      [
+        "((x_{1} + x_{2})/2, (y_{1} + y_{2})/2)",
+        "midpoint, for a perpendicular bisector"
       ]
     ],
     "example": {
@@ -1740,26 +1777,40 @@
   },
   "(x − h)^{2} + (y − k)^{2} = r^{2}": {
     "title": "Circle",
-    "about": "Every point at distance r from the centre (h, k), from the distance formula. With h = k = 0 it is x^{2} + y^{2} = r^{2}.",
+    "about": "Every point at distance r from the centre (h, k): the distance formula, squared. With h = k = 0 it is x^{2} + y^{2} = r^{2}. From the expanded form x^{2} + y^{2} + Dx + Ey + F = 0, complete the square in x and y to find the centre and radius.",
     "assumptions": [
-      "r > 0"
+      "r > 0",
+      "Mind the signs: (x − 1)^{2} + (y + 2)^{2} = 25 has centre (1, −2), not (−1, 2)"
     ],
     "vars": [
       [
         "(h, k)",
         "centre",
-        ""
+        "m"
       ],
       [
         "r",
         "radius",
-        ""
+        "m"
+      ],
+      [
+        "(x, y)",
+        "any point on the circle",
+        "m"
       ]
     ],
     "related": [
       [
         "d = √((x_{2} − x_{1})^{2} + (y_{2} − y_{1})^{2})",
         "distance formula"
+      ],
+      [
+        "A = πr^{2}",
+        "area"
+      ],
+      [
+        "C = 2πr",
+        "circumference"
       ]
     ],
     "example": {
@@ -2113,7 +2164,9 @@
     "about": "Any log can be written with natural logs (or base 10). Use it when a calculator only has ln and log.",
     "assumptions": [
       "x > 0",
-      "b > 0, b ≠ 1"
+      "b > 0, b ≠ 1",
+      "Why: write x = b^{y} and take ln of both sides: ln x = y ln b",
+      "Common slip: the base goes on the bottom"
     ],
     "vars": [
       [
@@ -2223,7 +2276,7 @@
   },
   "0° ‖ 0 ‖ 0 ‖ 1 ‖ 0": {
     "title": "Unit circle at 0°",
-    "about": "The point at 0° (0 rad) on the unit circle is (cos, sin) = (1, 0), on the positive x-axis. tan = sin/cos = 0.",
+    "about": "The point at 0° (0 rad) on the unit circle is (cos, sin) = (1, 0), on the positive x-axis. tan = sin/cos = 0. On an axis the point is (±1, 0) or (0, ±1), so one of sin and cos is 0. A common mistake is swapping sin and cos: on the x axis sin is 0 and cos is ±1.",
     "assumptions": [
       "Angles in degrees here equal the radians column (180° = π rad)",
       "Adding 360° (2π) gives the same values"
@@ -2243,6 +2296,10 @@
       [
         "tan θ = sin θ/cos θ",
         "the tan column"
+      ],
+      [
+        "(x, y) = (cos θ, sin θ)",
+        "cos is x, sin is y"
       ]
     ],
     "example": {
@@ -2257,7 +2314,7 @@
   },
   "30° ‖ π/6 ‖ 1/2 ‖ √3/2 ‖ √3/3": {
     "title": "Unit circle at 30°",
-    "about": "The point at 30° (π/6 rad) on the unit circle is (cos, sin) = (√3/2, 1/2), in quadrant I. tan = sin/cos = √3/3.",
+    "about": "The point at 30° (π/6 rad) on the unit circle is (cos, sin) = (√3/2, 1/2), in quadrant I. tan = sin/cos = √3/3. The values come from half an equilateral triangle of side 1: hypotenuse 1, side 1/2 opposite 30°, side √3/2 opposite 60°. A common mistake is swapping 1/2 and √3/2: the smaller angle has the smaller sine.",
     "assumptions": [
       "Angles in degrees here equal the radians column (180° = π rad)",
       "Adding 360° (2π) gives the same values"
@@ -2277,6 +2334,10 @@
       [
         "tan θ = sin θ/cos θ",
         "the tan column"
+      ],
+      [
+        "sin 60° = √3/2, cos 60° = 1/2",
+        "the complement: sin and cos swap"
       ]
     ],
     "example": {
@@ -2291,7 +2352,7 @@
   },
   "45° ‖ π/4 ‖ √2/2 ‖ √2/2 ‖ 1": {
     "title": "Unit circle at 45°",
-    "about": "The point at 45° (π/4 rad) on the unit circle is (cos, sin) = (√2/2, √2/2), in quadrant I. tan = sin/cos = 1.",
+    "about": "The point at 45° (π/4 rad) on the unit circle is (cos, sin) = (√2/2, √2/2), in quadrant I. tan = sin/cos = 1. Both legs of the 45-45-90 triangle with hypotenuse 1 are √2/2. A common mistake is treating 1/√2 and √2/2 as different; they are equal (≈ 0.7071).",
     "assumptions": [
       "Angles in degrees here equal the radians column (180° = π rad)",
       "Adding 360° (2π) gives the same values"
@@ -2311,6 +2372,10 @@
       [
         "tan θ = sin θ/cos θ",
         "the tan column"
+      ],
+      [
+        "sin 45° = √2/2, cos 45° = √2/2",
+        "the complement: sin and cos swap"
       ]
     ],
     "example": {
@@ -2325,7 +2390,7 @@
   },
   "60° ‖ π/3 ‖ √3/2 ‖ 1/2 ‖ √3": {
     "title": "Unit circle at 60°",
-    "about": "The point at 60° (π/3 rad) on the unit circle is (cos, sin) = (1/2, √3/2), in quadrant I. tan = sin/cos = √3.",
+    "about": "The point at 60° (π/3 rad) on the unit circle is (cos, sin) = (1/2, √3/2), in quadrant I. tan = sin/cos = √3. The values come from half an equilateral triangle of side 1: hypotenuse 1, side 1/2 opposite 30°, side √3/2 opposite 60°. A common mistake is swapping 1/2 and √3/2: the smaller angle has the smaller sine.",
     "assumptions": [
       "Angles in degrees here equal the radians column (180° = π rad)",
       "Adding 360° (2π) gives the same values"
@@ -2345,6 +2410,10 @@
       [
         "tan θ = sin θ/cos θ",
         "the tan column"
+      ],
+      [
+        "sin 30° = 1/2, cos 30° = √3/2",
+        "the complement: sin and cos swap"
       ]
     ],
     "example": {
@@ -2359,7 +2428,7 @@
   },
   "90° ‖ π/2 ‖ 1 ‖ 0 ‖ undefined": {
     "title": "Unit circle at 90°",
-    "about": "The point at 90° (π/2 rad) on the unit circle is (cos, sin) = (0, 1), on the positive y-axis. tan = sin/cos is undefined here because cos = 0.",
+    "about": "The point at 90° (π/2 rad) on the unit circle is (cos, sin) = (0, 1), on the positive y-axis. tan = sin/cos is undefined here because cos = 0. On an axis the point is (±1, 0) or (0, ±1), so one of sin and cos is 0. A common mistake is calling tan here 0 or ∞; it is undefined because cos = 0.",
     "assumptions": [
       "Angles in degrees here equal the radians column (180° = π rad)",
       "Adding 360° (2π) gives the same values"
@@ -2379,6 +2448,10 @@
       [
         "tan θ = sin θ/cos θ",
         "the tan column"
+      ],
+      [
+        "(x, y) = (cos θ, sin θ)",
+        "cos is x, sin is y"
       ]
     ],
     "example": {
@@ -2393,7 +2466,7 @@
   },
   "120° ‖ 2π/3 ‖ √3/2 ‖ −1/2 ‖ −√3": {
     "title": "Unit circle at 120°",
-    "about": "The point at 120° (2π/3 rad) on the unit circle is (cos, sin) = (−1/2, √3/2), in quadrant II. Its reference angle is 60°, so the values match 60° with signs set by the quadrant. tan = sin/cos = −√3.",
+    "about": "The point at 120° (2π/3 rad) on the unit circle is (cos, sin) = (−1/2, √3/2), in quadrant II. Its reference angle is 60°, so the values match 60° with signs set by the quadrant. tan = sin/cos = −√3. The values come from half an equilateral triangle of side 1: hypotenuse 1, side 1/2 opposite 30°, side √3/2 opposite 60°. A common mistake is swapping 1/2 and √3/2: the smaller angle has the smaller sine.",
     "assumptions": [
       "Angles in degrees here equal the radians column (180° = π rad)",
       "Adding 360° (2π) gives the same values"
@@ -2413,6 +2486,10 @@
       [
         "tan θ = sin θ/cos θ",
         "the tan column"
+      ],
+      [
+        "sin 60° = √3/2, cos 60° = 1/2",
+        "reference angle 60°; the quadrant sets the signs"
       ]
     ],
     "example": {
@@ -2427,7 +2504,7 @@
   },
   "135° ‖ 3π/4 ‖ √2/2 ‖ −√2/2 ‖ −1": {
     "title": "Unit circle at 135°",
-    "about": "The point at 135° (3π/4 rad) on the unit circle is (cos, sin) = (−√2/2, √2/2), in quadrant II. Its reference angle is 45°, so the values match 45° with signs set by the quadrant. tan = sin/cos = −1.",
+    "about": "The point at 135° (3π/4 rad) on the unit circle is (cos, sin) = (−√2/2, √2/2), in quadrant II. Its reference angle is 45°, so the values match 45° with signs set by the quadrant. tan = sin/cos = −1. Both legs of the 45-45-90 triangle with hypotenuse 1 are √2/2. A common mistake is treating 1/√2 and √2/2 as different; they are equal (≈ 0.7071).",
     "assumptions": [
       "Angles in degrees here equal the radians column (180° = π rad)",
       "Adding 360° (2π) gives the same values"
@@ -2447,6 +2524,10 @@
       [
         "tan θ = sin θ/cos θ",
         "the tan column"
+      ],
+      [
+        "sin 45° = √2/2, cos 45° = √2/2",
+        "reference angle 45°; the quadrant sets the signs"
       ]
     ],
     "example": {
@@ -2461,7 +2542,7 @@
   },
   "150° ‖ 5π/6 ‖ 1/2 ‖ −√3/2 ‖ −√3/3": {
     "title": "Unit circle at 150°",
-    "about": "The point at 150° (5π/6 rad) on the unit circle is (cos, sin) = (−√3/2, 1/2), in quadrant II. Its reference angle is 30°, so the values match 30° with signs set by the quadrant. tan = sin/cos = −√3/3.",
+    "about": "The point at 150° (5π/6 rad) on the unit circle is (cos, sin) = (−√3/2, 1/2), in quadrant II. Its reference angle is 30°, so the values match 30° with signs set by the quadrant. tan = sin/cos = −√3/3. The values come from half an equilateral triangle of side 1: hypotenuse 1, side 1/2 opposite 30°, side √3/2 opposite 60°. A common mistake is swapping 1/2 and √3/2: the smaller angle has the smaller sine.",
     "assumptions": [
       "Angles in degrees here equal the radians column (180° = π rad)",
       "Adding 360° (2π) gives the same values"
@@ -2481,6 +2562,10 @@
       [
         "tan θ = sin θ/cos θ",
         "the tan column"
+      ],
+      [
+        "sin 30° = 1/2, cos 30° = √3/2",
+        "reference angle 30°; the quadrant sets the signs"
       ]
     ],
     "example": {
@@ -2495,7 +2580,7 @@
   },
   "180° ‖ π ‖ 0 ‖ −1 ‖ 0": {
     "title": "Unit circle at 180°",
-    "about": "The point at 180° (π rad) on the unit circle is (cos, sin) = (−1, 0), on the negative x-axis. tan = sin/cos = 0.",
+    "about": "The point at 180° (π rad) on the unit circle is (cos, sin) = (−1, 0), on the negative x-axis. tan = sin/cos = 0. On an axis the point is (±1, 0) or (0, ±1), so one of sin and cos is 0. A common mistake is swapping sin and cos: on the x axis sin is 0 and cos is ±1.",
     "assumptions": [
       "Angles in degrees here equal the radians column (180° = π rad)",
       "Adding 360° (2π) gives the same values"
@@ -2515,6 +2600,10 @@
       [
         "tan θ = sin θ/cos θ",
         "the tan column"
+      ],
+      [
+        "(x, y) = (cos θ, sin θ)",
+        "cos is x, sin is y"
       ]
     ],
     "example": {
@@ -2529,7 +2618,7 @@
   },
   "210° ‖ 7π/6 ‖ −1/2 ‖ −√3/2 ‖ √3/3": {
     "title": "Unit circle at 210°",
-    "about": "The point at 210° (7π/6 rad) on the unit circle is (cos, sin) = (−√3/2, −1/2), in quadrant III. Its reference angle is 30°, so the values match 30° with signs set by the quadrant. tan = sin/cos = √3/3.",
+    "about": "The point at 210° (7π/6 rad) on the unit circle is (cos, sin) = (−√3/2, −1/2), in quadrant III. Its reference angle is 30°, so the values match 30° with signs set by the quadrant. tan = sin/cos = √3/3. The values come from half an equilateral triangle of side 1: hypotenuse 1, side 1/2 opposite 30°, side √3/2 opposite 60°. A common mistake is swapping 1/2 and √3/2: the smaller angle has the smaller sine.",
     "assumptions": [
       "Angles in degrees here equal the radians column (180° = π rad)",
       "Adding 360° (2π) gives the same values"
@@ -2549,6 +2638,10 @@
       [
         "tan θ = sin θ/cos θ",
         "the tan column"
+      ],
+      [
+        "sin 30° = 1/2, cos 30° = √3/2",
+        "reference angle 30°; the quadrant sets the signs"
       ]
     ],
     "example": {
@@ -2563,7 +2656,7 @@
   },
   "225° ‖ 5π/4 ‖ −√2/2 ‖ −√2/2 ‖ 1": {
     "title": "Unit circle at 225°",
-    "about": "The point at 225° (5π/4 rad) on the unit circle is (cos, sin) = (−√2/2, −√2/2), in quadrant III. Its reference angle is 45°, so the values match 45° with signs set by the quadrant. tan = sin/cos = 1.",
+    "about": "The point at 225° (5π/4 rad) on the unit circle is (cos, sin) = (−√2/2, −√2/2), in quadrant III. Its reference angle is 45°, so the values match 45° with signs set by the quadrant. tan = sin/cos = 1. Both legs of the 45-45-90 triangle with hypotenuse 1 are √2/2. A common mistake is treating 1/√2 and √2/2 as different; they are equal (≈ 0.7071).",
     "assumptions": [
       "Angles in degrees here equal the radians column (180° = π rad)",
       "Adding 360° (2π) gives the same values"
@@ -2583,6 +2676,10 @@
       [
         "tan θ = sin θ/cos θ",
         "the tan column"
+      ],
+      [
+        "sin 45° = √2/2, cos 45° = √2/2",
+        "reference angle 45°; the quadrant sets the signs"
       ]
     ],
     "example": {
@@ -2597,7 +2694,7 @@
   },
   "240° ‖ 4π/3 ‖ −√3/2 ‖ −1/2 ‖ √3": {
     "title": "Unit circle at 240°",
-    "about": "The point at 240° (4π/3 rad) on the unit circle is (cos, sin) = (−1/2, −√3/2), in quadrant III. Its reference angle is 60°, so the values match 60° with signs set by the quadrant. tan = sin/cos = √3.",
+    "about": "The point at 240° (4π/3 rad) on the unit circle is (cos, sin) = (−1/2, −√3/2), in quadrant III. Its reference angle is 60°, so the values match 60° with signs set by the quadrant. tan = sin/cos = √3. The values come from half an equilateral triangle of side 1: hypotenuse 1, side 1/2 opposite 30°, side √3/2 opposite 60°. A common mistake is swapping 1/2 and √3/2: the smaller angle has the smaller sine.",
     "assumptions": [
       "Angles in degrees here equal the radians column (180° = π rad)",
       "Adding 360° (2π) gives the same values"
@@ -2617,6 +2714,10 @@
       [
         "tan θ = sin θ/cos θ",
         "the tan column"
+      ],
+      [
+        "sin 60° = √3/2, cos 60° = 1/2",
+        "reference angle 60°; the quadrant sets the signs"
       ]
     ],
     "example": {
@@ -2631,7 +2732,7 @@
   },
   "270° ‖ 3π/2 ‖ −1 ‖ 0 ‖ undefined": {
     "title": "Unit circle at 270°",
-    "about": "The point at 270° (3π/2 rad) on the unit circle is (cos, sin) = (0, −1), on the negative y-axis. tan = sin/cos is undefined here because cos = 0.",
+    "about": "The point at 270° (3π/2 rad) on the unit circle is (cos, sin) = (0, −1), on the negative y-axis. tan = sin/cos is undefined here because cos = 0. On an axis the point is (±1, 0) or (0, ±1), so one of sin and cos is 0. A common mistake is calling tan here 0 or ∞; it is undefined because cos = 0.",
     "assumptions": [
       "Angles in degrees here equal the radians column (180° = π rad)",
       "Adding 360° (2π) gives the same values"
@@ -2651,6 +2752,10 @@
       [
         "tan θ = sin θ/cos θ",
         "the tan column"
+      ],
+      [
+        "(x, y) = (cos θ, sin θ)",
+        "cos is x, sin is y"
       ]
     ],
     "example": {
@@ -2665,7 +2770,7 @@
   },
   "300° ‖ 5π/3 ‖ −√3/2 ‖ 1/2 ‖ −√3": {
     "title": "Unit circle at 300°",
-    "about": "The point at 300° (5π/3 rad) on the unit circle is (cos, sin) = (1/2, −√3/2), in quadrant IV. Its reference angle is 60°, so the values match 60° with signs set by the quadrant. tan = sin/cos = −√3.",
+    "about": "The point at 300° (5π/3 rad) on the unit circle is (cos, sin) = (1/2, −√3/2), in quadrant IV. Its reference angle is 60°, so the values match 60° with signs set by the quadrant. tan = sin/cos = −√3. The values come from half an equilateral triangle of side 1: hypotenuse 1, side 1/2 opposite 30°, side √3/2 opposite 60°. A common mistake is swapping 1/2 and √3/2: the smaller angle has the smaller sine.",
     "assumptions": [
       "Angles in degrees here equal the radians column (180° = π rad)",
       "Adding 360° (2π) gives the same values"
@@ -2685,6 +2790,10 @@
       [
         "tan θ = sin θ/cos θ",
         "the tan column"
+      ],
+      [
+        "sin 60° = √3/2, cos 60° = 1/2",
+        "reference angle 60°; the quadrant sets the signs"
       ]
     ],
     "example": {
@@ -2699,7 +2808,7 @@
   },
   "315° ‖ 7π/4 ‖ −√2/2 ‖ √2/2 ‖ −1": {
     "title": "Unit circle at 315°",
-    "about": "The point at 315° (7π/4 rad) on the unit circle is (cos, sin) = (√2/2, −√2/2), in quadrant IV. Its reference angle is 45°, so the values match 45° with signs set by the quadrant. tan = sin/cos = −1.",
+    "about": "The point at 315° (7π/4 rad) on the unit circle is (cos, sin) = (√2/2, −√2/2), in quadrant IV. Its reference angle is 45°, so the values match 45° with signs set by the quadrant. tan = sin/cos = −1. Both legs of the 45-45-90 triangle with hypotenuse 1 are √2/2. A common mistake is treating 1/√2 and √2/2 as different; they are equal (≈ 0.7071).",
     "assumptions": [
       "Angles in degrees here equal the radians column (180° = π rad)",
       "Adding 360° (2π) gives the same values"
@@ -2719,6 +2828,10 @@
       [
         "tan θ = sin θ/cos θ",
         "the tan column"
+      ],
+      [
+        "sin 45° = √2/2, cos 45° = √2/2",
+        "reference angle 45°; the quadrant sets the signs"
       ]
     ],
     "example": {
@@ -2733,7 +2846,7 @@
   },
   "330° ‖ 11π/6 ‖ −1/2 ‖ √3/2 ‖ −√3/3": {
     "title": "Unit circle at 330°",
-    "about": "The point at 330° (11π/6 rad) on the unit circle is (cos, sin) = (√3/2, −1/2), in quadrant IV. Its reference angle is 30°, so the values match 30° with signs set by the quadrant. tan = sin/cos = −√3/3.",
+    "about": "The point at 330° (11π/6 rad) on the unit circle is (cos, sin) = (√3/2, −1/2), in quadrant IV. Its reference angle is 30°, so the values match 30° with signs set by the quadrant. tan = sin/cos = −√3/3. The values come from half an equilateral triangle of side 1: hypotenuse 1, side 1/2 opposite 30°, side √3/2 opposite 60°. A common mistake is swapping 1/2 and √3/2: the smaller angle has the smaller sine.",
     "assumptions": [
       "Angles in degrees here equal the radians column (180° = π rad)",
       "Adding 360° (2π) gives the same values"
@@ -2753,6 +2866,10 @@
       [
         "tan θ = sin θ/cos θ",
         "the tan column"
+      ],
+      [
+        "sin 30° = 1/2, cos 30° = √3/2",
+        "reference angle 30°; the quadrant sets the signs"
       ]
     ],
     "example": {
@@ -2767,7 +2884,7 @@
   },
   "360° ‖ 2π ‖ 0 ‖ 1 ‖ 0": {
     "title": "Unit circle at 360°",
-    "about": "The point at 360° (2π rad) on the unit circle is (cos, sin) = (1, 0), back on the positive x-axis. tan = sin/cos = 0.",
+    "about": "The point at 360° (2π rad) on the unit circle is (cos, sin) = (1, 0), back on the positive x-axis. tan = sin/cos = 0. On an axis the point is (±1, 0) or (0, ±1), so one of sin and cos is 0. A common mistake is swapping sin and cos: on the x axis sin is 0 and cos is ±1.",
     "assumptions": [
       "Angles in degrees here equal the radians column (180° = π rad)",
       "Adding 360° (2π) gives the same values"
@@ -2787,6 +2904,10 @@
       [
         "tan θ = sin θ/cos θ",
         "the tan column"
+      ],
+      [
+        "(x, y) = (cos θ, sin θ)",
+        "cos is x, sin is y"
       ]
     ],
     "example": {
@@ -2856,7 +2977,9 @@
     "about": "Every derivative of e^{x} is e^{x}, which is 1 at 0, so each coefficient is 1/n!. The factorials make it converge fast for any x.",
     "assumptions": [
       "Converges for every real (and complex) x",
-      "For large |x| you need more terms"
+      "For large |x| you need more terms",
+      "Why: e^{x} is its own derivative, so every f^{(n)}(0) = 1 and the Taylor coefficients are 1/n!",
+      "Converges for every x, but for large |x| compute e^{x} as (e^{x/m})^{m} to avoid big alternating terms"
     ],
     "vars": [
       [
@@ -2966,7 +3089,7 @@
   },
   "sinh x = x + x^{3}/3! + x^{5}/5! + …": {
     "title": "Series for sinh x",
-    "about": "The odd half of the e^{x} series: sinh x = (e^{x} − e^{−x})/2. Like sin x but with every sign positive.",
+    "about": "The odd-power half of the e^{x} series, since sinh x = (e^{x} − e^{−x})/2 keeps the odd terms and cancels the even ones. It is the sin x series with every sign positive, so for small x, sinh x ≈ x and slightly above it.",
     "assumptions": [
       "Converges for every x"
     ],
@@ -3000,7 +3123,8 @@
     "title": "Series for cosh x",
     "about": "The even half of the e^{x} series: cosh x = (e^{x} + e^{−x})/2. A hanging cable (catenary) follows cosh, and its first two terms show it is nearly a parabola near the bottom.",
     "assumptions": [
-      "Converges for every x"
+      "Converges for every x",
+      "Common slip: copying cos x's alternating signs; cosh's terms are all positive"
     ],
     "vars": [
       [
@@ -3032,7 +3156,8 @@
     "title": "Geometric series",
     "about": "The infinite geometric series with first term 1 and ratio x. Substituting, differentiating or integrating it produces many other series (ln(1 + x), arctan x).",
     "assumptions": [
-      "|x| < 1; outside that it diverges"
+      "|x| < 1; outside that it diverges",
+      "Why: multiply (1 − x)(1 + x + … + x^{n}) = 1 − x^{n+1}; the x^{n+1} vanishes as n → ∞ when |x| < 1"
     ],
     "vars": [
       [
@@ -3207,7 +3332,8 @@
     "about": "A scalar measuring how much a vector field spreads out from a point: positive at a source, negative at a sink, zero for an incompressible flow.",
     "assumptions": [
       "F has differentiable components",
-      "Cartesian coordinates"
+      "Cartesian coordinates",
+      "Common slip: each component is differentiated by its own variable only; divergence is a scalar, not a vector"
     ],
     "vars": [
       [
@@ -3353,7 +3479,8 @@
     "title": "Divergence of a curl is zero",
     "about": "A curl field has no sources or sinks, again because mixed partials cancel. It is why ∇ · B = 0 lets the magnetic field be written B = ∇ × A.",
     "assumptions": [
-      "F has continuous second partial derivatives"
+      "F has continuous second partial derivatives",
+      "Memory aid: like a · (a × b) = 0, a vector dotted with a cross product it is part of"
     ],
     "vars": [
       [
@@ -3366,6 +3493,10 @@
       [
         "∇ × (∇f) = 0",
         "the companion"
+      ],
+      [
+        "∯_{S} F · dS = ∭_{V} (∇ · F) dV",
+        "so the flux of a curl through any closed surface is 0"
       ]
     ],
     "example": {
@@ -3566,8 +3697,11 @@
   },
   "(x, y) = (cos θ, sin θ)": {
     "title": "Point on the unit circle",
-    "about": "The point at angle θ from the positive x axis has x = cos θ and y = sin θ. All three are positive in quadrant I, only sin in II, tan in III, cos in IV (All Students Take Calculus).",
-    "assumptions": [],
+    "about": "The point at angle θ, measured counter-clockwise from the positive x axis, has x = cos θ and y = sin θ: that is the definition of cos and sin. All three are positive in quadrant I, only sin in II, tan in III, cos in IV (All Students Take Calculus). A common mistake is swapping them: x goes with cos.",
+    "assumptions": [
+      "θ counter-clockwise from the +x axis",
+      "On a circle of radius r the point is (r cos θ, r sin θ)"
+    ],
     "vars": [
       [
         "θ",
@@ -3575,20 +3709,32 @@
         "rad"
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "sin^{2}x + cos^{2}x = 1",
+        "x^{2} + y^{2} = 1"
+      ],
+      [
+        "tan x = sin x / cos x",
+        "y/x, the slope of the radius"
+      ]
+    ],
     "example": {
       "problem": "Where is the point at 150°?",
       "steps": [
-        "cos 150° = −√3/2",
-        "sin 150° = 1/2"
+        "Reference angle 180° − 150° = 30°: (√3/2, 1/2) in size",
+        "Quadrant II: x negative, y positive"
       ],
-      "answer": "(−√3/2, 1/2)"
-    }
+      "answer": "(−√3/2, 1/2) ≈ (−0.866, 0.5)"
+    },
+    "try": "cos(150)"
   },
   "θ_{rad} = θ_{deg} π/180": {
     "title": "Degrees to radians",
-    "about": "A full turn is 360° or 2π rad. Multiply by π/180 to go to radians, by 180/π to go back.",
-    "assumptions": [],
+    "about": "A full turn is 360° or 2π rad, so 1° = π/180 rad. Multiply by π/180 to go to radians, by 180/π to go back. Radians are needed wherever θ enters a length or a derivative (s = rθ, d(sin θ)/dθ = cos θ). A common mistake is a calculator in the wrong mode: sin(π/6) in degree mode reads π/6 as 0.52°.",
+    "assumptions": [
+      "π rad = 180°"
+    ],
     "vars": [
       [
         "θ_{deg}",
@@ -3601,7 +3747,16 @@
         "rad"
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "(x, y) = (cos θ, sin θ)",
+        "the angle it measures"
+      ],
+      [
+        "s = rθ",
+        "arc length, θ in radians"
+      ]
+    ],
     "example": {
       "problem": "Convert 135° to radians.",
       "steps": [
@@ -3613,23 +3768,53 @@
   },
   "f(x) = Σ_{n=0}^{∞} f^{(n)}(0) x^{n}/n!": {
     "title": "Maclaurin series",
-    "about": "A Taylor series centred at a = 0.",
-    "assumptions": [],
+    "about": "A Taylor series centred at a = 0: each coefficient is the nth derivative at 0 divided by n!. The standard series for e^{x}, sin x, cos x, ln(1 + x) and (1 + x)^{a} are all Maclaurin series, and their first few terms give the small-x approximations used throughout engineering.",
+    "assumptions": [
+      "f has derivatives of every order at 0",
+      "Holds only inside the radius of convergence; a truncated series is accurate only for x near 0"
+    ],
     "vars": [
       [
         "f^{(n)}(0)",
-        "nth derivative at 0",
+        "nth derivative of f at x = 0",
+        ""
+      ],
+      [
+        "x",
+        "the point where the series is evaluated",
+        ""
+      ],
+      [
+        "n",
+        "summation index, 0, 1, 2, …",
+        ""
+      ],
+      [
+        "n!",
+        "n factorial, 1 · 2 · … · n, with 0! = 1",
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Find the Maclaurin series of e^{2x} to x².",
-      "steps": [
-        "f(0) = 1, f′(0) = 2, f′′(0) = 4"
+    "related": [
+      [
+        "f(x) = Σ_{n=0}^{∞} f^{(n)}(a) (x − a)^{n}/n!",
+        "Taylor series about any a"
       ],
-      "answer": "1 + 2x + 2x² + …"
-    }
+      [
+        "e^{x} = Σ x^{n}/n!",
+        "the best-known one"
+      ]
+    ],
+    "example": {
+      "problem": "Find the Maclaurin series of e^{2x} to x², and use it to estimate e^{0.2}.",
+      "steps": [
+        "f(0) = 1, f′(0) = 2, f′′(0) = 4",
+        "Coefficients 1, 2/1!, 4/2! = 1, 2, 2",
+        "At x = 0.1: 1 + 0.2 + 0.02 = 1.22 (true e^{0.2} = 1.2214)"
+      ],
+      "answer": "1 + 2x + 2x² + …; e^{0.2} ≈ 1.22"
+    },
+    "try": "1 + 2*0.1 + 2*0.1^2"
   },
   "f(x) ≈ f(a) + f′(a)(x − a)": {
     "title": "Linear approximation (tangent line)",
@@ -3642,6 +3827,21 @@
       [
         "a",
         "point of tangency",
+        ""
+      ],
+      [
+        "f(a)",
+        "value of f at a",
+        ""
+      ],
+      [
+        "f′(a)",
+        "slope of f at a",
+        ""
+      ],
+      [
+        "x",
+        "the nearby point",
         ""
       ]
     ],
@@ -3658,18 +3858,42 @@
     "example": {
       "problem": "Estimate √4.1 with the tangent line at a = 4.",
       "steps": [
-        "f = √x, f(4) = 2, f′(4) = 1/4",
-        "2 + 0.1/4"
+        "f = √x, f(4) = 2, f′(4) = 1/(2√4) = 1/4",
+        "√4.1 ≈ 2 + (1/4)(0.1) = 2.025"
       ],
       "answer": "≈ 2.025 (true 2.02485)"
     },
-    "try": "sqrt(4.1)"
+    "try": "2 + 0.1/4"
   },
   "R_{n}(x) = f^{(n+1)}(c) (x − a)^{n+1}/(n + 1)!": {
     "title": "Lagrange remainder (Taylor error bound)",
-    "about": "The error after the degree-n polynomial, with c somewhere between a and x. Bound f^{(n+1)} to bound the error.",
-    "assumptions": [],
+    "about": "The exact error left after cutting a Taylor series off at degree n. It looks like the next term, but with the derivative taken at some unknown point c between a and x. Bound |f^{(n+1)}| on that interval to get a guaranteed error bound, which tells you how many terms you need.",
+    "assumptions": [
+      "f has n + 1 continuous derivatives between a and x",
+      "c is unknown; use the largest |f^{(n+1)}| on the interval to get a bound",
+      "If the next term of the series is zero you may use the one after: x − x^{3}/6 is also the degree-4 polynomial of sin x"
+    ],
     "vars": [
+      [
+        "R_{n}(x)",
+        "error f(x) − P_{n}(x) of the degree-n Taylor polynomial",
+        ""
+      ],
+      [
+        "f^{(n+1)}",
+        "(n + 1)th derivative of f",
+        ""
+      ],
+      [
+        "a",
+        "the centre of the expansion",
+        ""
+      ],
+      [
+        "x",
+        "the point where f is approximated",
+        ""
+      ],
       [
         "n",
         "degree of the polynomial",
@@ -3683,13 +3907,16 @@
     ],
     "related": [],
     "example": {
-      "problem": "Bound the error of sin x ≈ x − x³/6 at x = 0.5.",
+      "problem": "Bound the error of sin x ≈ x − x³/6 at x = 0.5 rad.",
       "steps": [
-        "next nonzero term: |f^{(5)}| ≤ 1",
-        "0.5⁵/5! ≈ 0.00026"
+        "x − x^{3}/6 is the degree-4 polynomial (its x^{4} term is 0), so use R_{4}",
+        "f^{(5)} = cos c, so |f^{(5)}| ≤ 1",
+        "|R_{4}| ≤ 0.5^{5}/5! = 0.03125/120 = 0.00026",
+        "The actual error is 0.000259"
       ],
-      "answer": "error < 0.00026"
-    }
+      "answer": "|error| ≤ 0.00026"
+    },
+    "try": "0.5^5/5!"
   },
   "L = lim_{n→∞} |a_{n+1}/a_{n}|": {
     "title": "Ratio test for a series",
@@ -3735,7 +3962,9 @@
     "about": "The ratio test applied to Σ a_{n} (x − a)^{n}: the series converges for |x − a| < R and diverges for |x − a| > R. The endpoints x = a ± R are checked separately.",
     "assumptions": [
       "The limit exists (R may be 0 or ∞)",
-      "Says nothing at |x − a| = R"
+      "Says nothing at |x − a| = R",
+      "Common slip: the ratio is a_{n}/a_{n+1} for R, upside down from the ratio test's a_{n+1}/a_{n}",
+      "Inside the radius a power series can be differentiated and integrated term by term with the same R"
     ],
     "vars": [
       [
@@ -3797,51 +4026,84 @@
       ]
     ],
     "example": {
-      "problem": "Estimate tan(0.3) with two terms.",
+      "problem": "Estimate tan(0.3 rad) with two terms.",
       "steps": [
-        "0.3 + 0.027/3"
+        "0.3 + 0.3^{3}/3 = 0.3 + 0.009",
+        "= 0.309"
       ],
       "answer": "≈ 0.309 (true 0.3093)"
     },
-    "try": "tan(0.1 rad)"
+    "try": "0.3 + 0.3^3/3"
   },
   "1/(1 + x) = 1 − x + x^{2} − x^{3} + …": {
     "title": "Alternating geometric series",
-    "about": "The geometric series with −x; integrate it to get ln(1 + x).",
-    "assumptions": [],
+    "about": "The geometric series with ratio −x. Because the terms alternate and shrink, the error after stopping is smaller than the first term left out. Integrate it term by term to get ln(1 + x); put x^{2} for x and integrate to get tan^{−1} x.",
+    "assumptions": [
+      "|x| < 1; at x = 1 the partial sums jump between 1 and 0 and never settle",
+      "Common slip: using it for x ≥ 1, where the terms grow instead of shrinking"
+    ],
     "vars": [
       [
         "x",
-        "|x| < 1",
+        "the small quantity, |x| < 1",
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Estimate 1/1.1.",
-      "steps": [
-        "1 − 0.1 + 0.01 − 0.001"
+    "related": [
+      [
+        "1/(1 − x) = Σ x^{n} = 1 + x + x^{2} + x^{3} + …",
+        "the geometric series it comes from"
       ],
-      "answer": "≈ 0.909"
+      [
+        "ln(1 + x) = x − x^{2}/2 + x^{3}/3 − …",
+        "its integral"
+      ],
+      [
+        "tan^{−1} x = x − x^{3}/3 + x^{5}/5 − …",
+        "integral of 1/(1 + x^{2})"
+      ]
+    ],
+    "example": {
+      "problem": "A resistor reads 10% high, so a current I = V/(1.1R) is low. Estimate 1/1.1.",
+      "steps": [
+        "x = 0.1: 1 − 0.1 + 0.01 − 0.001 = 0.909",
+        "The next term, 0.0001, bounds the error"
+      ],
+      "answer": "≈ 0.909 (exactly 0.90909)"
     },
     "try": "1/1.1"
   },
   "ln(1 − x) = −x − x^{2}/2 − x^{3}/3 − …": {
     "title": "Series for ln(1 − x)",
-    "about": "ln(1 + x) with −x: every term is negative.",
-    "assumptions": [],
+    "about": "Integrate the geometric series 1/(1 − x) = 1 + x + x^{2} + … term by term and change the sign: that is where the 1/n comes from. It is ln(1 + x) with x replaced by −x, so every term is negative and each added term pulls the sum lower.",
+    "assumptions": [
+      "−1 ≤ x < 1; at x = 1 it is ln 0 = −∞ and the series is the divergent harmonic series",
+      "Common slip: copying the alternating signs of ln(1 + x); here there are none",
+      "Slow near x = ±1: use ln((1 + x)/(1 − x)) = 2(x + x^{3}/3 + x^{5}/5 + …) instead"
+    ],
     "vars": [
       [
         "x",
-        "−1 ≤ x < 1",
+        "the small quantity, −1 ≤ x < 1",
         ""
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "ln(1 + x) = x − x^{2}/2 + x^{3}/3 − …",
+        "the same series with alternating signs"
+      ],
+      [
+        "1/(1 − x) = Σ x^{n} = 1 + x + x^{2} + x^{3} + …",
+        "what it integrates"
+      ]
+    ],
     "example": {
-      "problem": "Estimate ln 0.9.",
+      "problem": "A quantity falls by 10%. Estimate ln 0.9, the continuous rate of that drop.",
       "steps": [
-        "x = 0.1: −0.1 − 0.005 − 0.00033"
+        "x = 0.1: −0.1 − 0.01/2 − 0.001/3",
+        "= −0.1 − 0.005 − 0.00033 = −0.10533",
+        "Each further term is negative, so the true value is a little lower"
       ],
       "answer": "≈ −0.1054"
     },
@@ -3851,7 +4113,8 @@
     "title": "Series for √(1 + x)",
     "about": "The binomial series with a = 1/2. Two terms, 1 + x/2, is the usual quick estimate of a square root near 1.",
     "assumptions": [
-      "Converges for |x| ≤ 1; fast only for small x"
+      "Converges for |x| ≤ 1; fast only for small x",
+      "Common slip: √(a + b) is not √a + √b; factor out first: √(a + b) = √a √(1 + b/a)"
     ],
     "vars": [
       [
@@ -3881,8 +4144,11 @@
   },
   "sin x ≈ x": {
     "title": "Small-angle approximation for sine",
-    "about": "For small x in radians, sin x ≈ x; the error is about x³/6. Within 1% up to about 14°.",
-    "assumptions": [],
+    "about": "For small x in radians, sin x ≈ x: the first term of the sine series. It linearises the pendulum (θ′′ + (g/L) sin θ = 0 becomes simple harmonic motion) and small-deflection problems. The error is about x³/6, within 1% up to about 0.24 rad (14°).",
+    "assumptions": [
+      "x in radians, not degrees",
+      "|x| small; at 0.5 rad the error is already 4%"
+    ],
     "vars": [
       [
         "x",
@@ -3936,50 +4202,84 @@
   },
   "e^{x} ≈ 1 + x": {
     "title": "First-order approximation of e^x",
-    "about": "Good for small x, as in small growth rates.",
-    "assumptions": [],
+    "about": "The tangent line to e^{x} at 0: the first two terms of its series. The error is about x^{2}/2, so it is good to 0.5% at x = 0.1. It is why a small continuous rate r over time t multiplies by about 1 + rt, and why e^{−t/τ} ≈ 1 − t/τ early in a decay.",
+    "assumptions": [
+      "|x| ≪ 1; at x = 0.1 the error is about 0.5%, at x = 0.5 about 10%",
+      "Always an underestimate (e^{x} lies above its tangent line)"
+    ],
     "vars": [
       [
         "x",
-        "small number",
+        "small dimensionless number, such as a rate times a time",
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Estimate e^{0.03}.",
-      "steps": [
-        "1 + 0.03"
+    "related": [
+      [
+        "e^{x} = Σ x^{n}/n! = 1 + x + x^{2}/2! + x^{3}/3! + …",
+        "the full series"
       ],
-      "answer": "≈ 1.03 (exactly 1.0305)"
+      [
+        "ln(1 + x) = x − x^{2}/2 + x^{3}/3 − …",
+        "the inverse: ln(1 + x) ≈ x"
+      ],
+      [
+        "(1 + x)^{a} ≈ 1 + a x",
+        "the binomial version"
+      ]
+    ],
+    "example": {
+      "problem": "A capacitor charges as 1 − e^{−t/τ}. Estimate the charge fraction at t = 0.03τ.",
+      "steps": [
+        "e^{−0.03} ≈ 1 − 0.03 = 0.97",
+        "1 − 0.97 = 0.03 (exact 0.02955)"
+      ],
+      "answer": "≈ 0.03 (exactly 0.0296)"
     },
-    "try": "e^0.03"
+    "try": "1 - e^-0.03"
   },
   "(1 + x)^{a} ≈ 1 + a x": {
     "title": "Binomial approximation",
-    "about": "The first two terms of the binomial series, for |x| ≪ 1. Used in relativity and error propagation.",
-    "assumptions": [],
+    "about": "The tangent line to (1 + x)^{a} at x = 0, i.e. the first two terms of the binomial series. The first neglected term, a(a − 1)x^{2}/2, is the error, so it works when a·x is small, not just x. It turns percentage changes into simple multiples: a 1% change in r changes r^{4} by about 4%.",
+    "assumptions": [
+      "|a x| ≪ 1, not only |x| ≪ 1: 1.01^{100} ≈ 2 by this, but the truth is 2.70",
+      "a any real power, including fractions and negatives (√ is a = 1/2, 1/x is a = −1)"
+    ],
     "vars": [
       [
         "a",
-        "any real power",
+        "the power, any real number",
         ""
       ],
       [
         "x",
-        "small number",
+        "small fractional change",
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Estimate 1.01^{10}.",
-      "steps": [
-        "1 + 10 · 0.01"
+    "related": [
+      [
+        "(1 + x)^{a} = 1 + ax + a(a − 1)x^{2}/2! + …",
+        "the full binomial series"
       ],
-      "answer": "≈ 1.1 (exactly 1.1046)"
+      [
+        "√(1 + x) = 1 + x/2 − x^{2}/8 + …",
+        "the case a = 1/2"
+      ],
+      [
+        "e^{x} ≈ 1 + x",
+        "the same idea for e^{x}"
+      ]
+    ],
+    "example": {
+      "problem": "Flow through a pipe goes as r^{4}. The radius is 1% too large. How much more flow?",
+      "steps": [
+        "(1.01)^{4} ≈ 1 + 4(0.01) = 1.04",
+        "Exact: 1.0406"
+      ],
+      "answer": "about 4% more flow (exactly 4.06%)"
     },
-    "try": "1.01^10"
+    "try": "1.01^4"
   },
   "D_{u} f = ∇f · u": {
     "title": "Directional derivative",
@@ -3992,6 +4292,21 @@
       [
         "u",
         "unit vector",
+        ""
+      ],
+      [
+        "D_{u} f",
+        "rate of change of f per unit distance along u",
+        ""
+      ],
+      [
+        "f",
+        "scalar field f(x, y, z)",
+        ""
+      ],
+      [
+        "∇f",
+        "gradient of f at the point",
         ""
       ]
     ],
@@ -4020,7 +4335,9 @@
     "title": "Product rule for divergence",
     "about": "The product rule for divergence: scaling a field by a varying f changes its outflow both by the field's own divergence and by how f changes along the field.",
     "assumptions": [
-      "f and F differentiable"
+      "f and F differentiable",
+      "Why: apply the ordinary product rule to each term ∂(f F_{x})/∂x + … and regroup",
+      "Common slip: the second term is a dot product F · ∇f (a scalar), not F ∇f"
     ],
     "vars": [
       [
@@ -4059,7 +4376,9 @@
     "about": "Rewrites a double curl as a gradient of the divergence minus the vector Laplacian. It is the step that turns Maxwell's equations into the wave equation.",
     "assumptions": [
       "Cartesian components: ∇^{2} F applies the Laplacian to each component",
-      "F twice differentiable"
+      "F twice differentiable",
+      "Memory aid: it is the vector triple product a × (b × c) = b(a · c) − (a · b)c with a = b = ∇",
+      "Common slip: in cylindrical or spherical components ∇^{2}F is not the Laplacian of each component"
     ],
     "vars": [
       [
@@ -4072,6 +4391,10 @@
       [
         "∇^{2} E = μ_{0} ε_{0} ∂^{2}E/∂t^{2}",
         "the wave equation it gives, wave speed 1/√(μ_{0} ε_{0}) = c"
+      ],
+      [
+        "∇ · (∇ × F) = 0",
+        "the other second-derivative identity"
       ]
     ],
     "example": {
@@ -4085,24 +4408,59 @@
   },
   "∫_{C} F · dr = ∫_{a}^{b} F(r(t)) · r′(t) dt": {
     "title": "Line integral of a vector field",
-    "about": "Parametrise the curve and integrate F along it: the work done by a force.",
-    "assumptions": [],
+    "about": "Parametrise the curve by r(t), a ≤ t ≤ b, put r(t) into F, dot it with the velocity r′(t) and integrate over t. For a force it is the work done moving along C; around a closed loop of a flow field it is the circulation.",
+    "assumptions": [
+      "C is piecewise smooth; split it at corners",
+      "The result depends on the path unless F is conservative (F = ∇f)",
+      "Direction matters: going from b to a flips the sign"
+    ],
     "vars": [
       [
+        "F",
+        "vector field, such as a force",
+        "N"
+      ],
+      [
+        "C",
+        "the curve, with a direction",
+        ""
+      ],
+      [
         "r(t)",
-        "curve, a ≤ t ≤ b",
+        "parametrisation of C, a ≤ t ≤ b",
+        "m"
+      ],
+      [
+        "r′(t)",
+        "velocity dr/dt along the curve",
+        ""
+      ],
+      [
+        "a, b",
+        "parameter values at the start and end",
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "F = (y, x) along r = (t, t), 0 ≤ t ≤ 1.",
-      "steps": [
-        "F · r′ = 2t",
-        "∫₀¹ 2t dt"
+    "related": [
+      [
+        "ds = |r′(t)| dt",
+        "arc length element"
       ],
-      "answer": "1"
-    }
+      [
+        "∫_{C} ∇f · dr = f(b) − f(a)",
+        "shortcut for a gradient field"
+      ]
+    ],
+    "example": {
+      "problem": "Find the work done by F = (y, x) along the straight path r(t) = (t, t), 0 ≤ t ≤ 1.",
+      "steps": [
+        "F(r(t)) = (t, t), r′(t) = (1, 1)",
+        "F · r′ = t + t = 2t",
+        "∫_{0}^{1} 2t dt = 1"
+      ],
+      "answer": "W = 1"
+    },
+    "try": "integral(2t, t, 0, 1)"
   },
   "ds = |r′(t)| dt": {
     "title": "Arc length element",
@@ -4140,23 +4498,59 @@
   },
   "∬_{S} F · dS = ∬_{D} F · (r_{u} × r_{v}) du dv": {
     "title": "Flux integral through a parametrised surface",
-    "about": "r_u × r_v is a normal of size equal to the area patch.",
-    "assumptions": [],
+    "about": "The flux of F through a surface given as r(u, v). The cross product r_{u} × r_{v} is a normal whose length is the area of the little patch, so F · (r_{u} × r_{v}) du dv is the flow through that patch; integrate over the parameter region D. For a fluid velocity field it is the volume flow rate through the surface.",
+    "assumptions": [
+      "The surface is smooth and r_{u} × r_{v} ≠ 0 on D",
+      "The order of u and v sets the normal: swap them (or change the sign) to get the orientation you want, such as outward or upward"
+    ],
     "vars": [
       [
+        "F",
+        "vector field (for a fluid, its velocity)",
+        "m/s"
+      ],
+      [
         "r(u, v)",
-        "surface",
+        "parametrisation of the surface S",
+        "m"
+      ],
+      [
+        "r_{u}, r_{v}",
+        "partial derivatives ∂r/∂u and ∂r/∂v",
         ""
+      ],
+      [
+        "D",
+        "region of (u, v) values that covers S",
+        ""
+      ],
+      [
+        "dS",
+        "vector area element, n̂ dS",
+        "m^{2}"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Flux of F = (0, 0, 1) through the unit square z = 0, upward.",
-      "steps": [
-        "normal (0, 0, 1)"
+    "related": [
+      [
+        "∯_{S} F · dS = ∭_{V} (∇ · F) dV",
+        "divergence theorem, for a closed surface"
       ],
-      "answer": "1"
-    }
+      [
+        "dS = |r_{u} × r_{v}| du dv",
+        "scalar area element"
+      ]
+    ],
+    "example": {
+      "problem": "Find the upward flux of F = (x, y, z) through the triangle of the plane x + y + z = 1 with x, y, z ≥ 0.",
+      "steps": [
+        "r(u, v) = (u, v, 1 − u − v) over u, v ≥ 0, u + v ≤ 1",
+        "r_{u} = (1, 0, −1), r_{v} = (0, 1, −1), r_{u} × r_{v} = (1, 1, 1), which points up",
+        "F · (1, 1, 1) = u + v + (1 − u − v) = 1",
+        "Flux = ∬_{D} 1 du dv = area of D = 1/2"
+      ],
+      "answer": "Flux = 1/2"
+    },
+    "try": "integral(1 - u, u, 0, 1)"
   },
   "dA = r dr dθ": {
     "title": "Area element in polar coordinates",
@@ -4262,20 +4656,49 @@
   },
   "∇ × F = 0": {
     "title": "Conservative (curl-free) field",
-    "about": "On a simply connected region a curl-free field is a gradient, so line integrals depend only on the end points.",
-    "assumptions": [],
+    "about": "A field whose curl is zero throughout a simply connected region (no holes through it) is conservative: it is the gradient of a potential f, its line integrals depend only on the end points, and its work around any closed loop is zero. Gravity, spring and electrostatic forces pass; friction does not.",
+    "assumptions": [
+      "F has continuous first partial derivatives",
+      "The region is simply connected; around a hole (such as a wire along the z-axis) zero curl is not enough"
+    ],
     "vars": [
       [
         "F",
-        "vector field",
+        "vector field (F_{x}, F_{y}, F_{z})",
+        ""
+      ],
+      [
+        "∇ ×",
+        "curl operator",
+        "1/m"
+      ],
+      [
+        "f",
+        "potential, with F = ∇f",
         ""
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "∇ × (∇f) = 0",
+        "why every gradient passes"
+      ],
+      [
+        "∂Q/∂x = ∂P/∂y",
+        "the 2D test"
+      ],
+      [
+        "∫_{C} ∇f · dr = f(b) − f(a)",
+        "path independence"
+      ]
+    ],
     "example": {
-      "problem": "Is F = (2x, 2y, 0) conservative?",
+      "problem": "Is F = (2x, 2y, 0) conservative? If so, find a potential.",
       "steps": [
-        "curl = 0"
+        "x: ∂0/∂y − ∂(2y)/∂z = 0",
+        "y: ∂(2x)/∂z − ∂0/∂x = 0",
+        "z: ∂(2y)/∂x − ∂(2x)/∂y = 0",
+        "f = x^{2} + y^{2} has ∇f = (2x, 2y, 0)"
       ],
       "answer": "yes, F = ∇(x² + y²)"
     }
@@ -4312,5 +4735,752 @@
       ],
       "answer": "Conservative, f = x^{2}y + y"
     }
+  },
+  "P_{n}(x) = Σ_{k=0}^{n} f^{(k)}(a) (x − a)^{k}/k!": {
+    "title": "Taylor polynomial of degree n",
+    "about": "The Taylor series cut off after the (x − a)^{n} term: the polynomial of degree n that matches f and its first n derivatives at a. Use it to approximate f near a; the remainder says how good it is.",
+    "assumptions": [
+      "f has n derivatives at a",
+      "Most accurate near a; the error grows with |x − a|",
+      "a = 0 gives the Maclaurin polynomial"
+    ],
+    "vars": [
+      [
+        "P_{n}",
+        "Taylor polynomial of degree n",
+        ""
+      ],
+      [
+        "f^{(k)}(a)",
+        "kth derivative of f at a",
+        ""
+      ],
+      [
+        "a",
+        "centre",
+        ""
+      ],
+      [
+        "n",
+        "degree",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "R_{n}(x) = f^{(n+1)}(c) (x − a)^{n+1}/(n + 1)!",
+        "the remainder"
+      ],
+      [
+        "f(x) = Σ_{n=0}^{∞} f^{(n)}(a) (x − a)^{n}/n!",
+        "the whole series"
+      ]
+    ],
+    "example": {
+      "problem": "Find P₃ for ln x about a = 1 and estimate ln 1.1.",
+      "steps": [
+        "f(1) = 0, f′(1) = 1, f′′(1) = −1, f′′′(1) = 2",
+        "P₃ = (x − 1) − (x − 1)^{2}/2 + (x − 1)^{3}/3",
+        "P₃(1.1) = 0.1 − 0.005 + 0.000333; ln 1.1 = 0.09531"
+      ],
+      "answer": "≈ 0.095333"
+    },
+    "try": "0.1 - 0.1^2/2 + 0.1^3/3"
+  },
+  "|R_{n}(x)| ≤ M |x − a|^{n+1}/(n + 1)!": {
+    "title": "Taylor's inequality: error bound for a Taylor polynomial",
+    "about": "Bounds the error of P_n without knowing the point c in the Lagrange remainder: take M as the largest |f^{(n+1)}| between a and x. Use it to answer 'how accurate is P_n' or 'what n makes the error under ε'.",
+    "assumptions": [
+      "|f^{(n+1)}(t)| ≤ M for every t between a and x",
+      "Any valid M works; a smaller one gives a tighter bound"
+    ],
+    "vars": [
+      [
+        "R_{n}",
+        "remainder f − P_{n}",
+        ""
+      ],
+      [
+        "M",
+        "bound on |f^{(n+1)}| between a and x",
+        ""
+      ],
+      [
+        "a",
+        "centre",
+        ""
+      ],
+      [
+        "n",
+        "degree of the polynomial",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "R_{n}(x) = f^{(n+1)}(c) (x − a)^{n+1}/(n + 1)!",
+        "Lagrange remainder"
+      ],
+      [
+        "|S − S_{n}| ≤ |a_{n+1}|",
+        "alternating series estimate"
+      ]
+    ],
+    "example": {
+      "problem": "Bound the error of P₃ for e^{x} about 0 on [0, 0.5].",
+      "steps": [
+        "f^{(4)} = e^{x} ≤ e^{0.5} = 1.6487 on [0, 0.5]",
+        "|R₃| ≤ 1.6487 × 0.5^{4}/4!"
+      ],
+      "answer": "≈ 0.00429"
+    },
+    "try": "e^0.5 * 0.5^4 / 24"
+  },
+  "|S − S_{n}| ≤ |a_{n+1}|": {
+    "title": "Alternating series estimation theorem",
+    "about": "For an alternating series whose terms shrink to zero, the error after n terms is no bigger than the first term left out, and has its sign. It is the quickest error bound for series like sin x, cos x and ln(1 + x).",
+    "assumptions": [
+      "Terms alternate in sign",
+      "|a_{n}| decreases and → 0 (the alternating series test)"
+    ],
+    "vars": [
+      [
+        "S",
+        "sum of the series",
+        ""
+      ],
+      [
+        "S_{n}",
+        "partial sum of n terms",
+        ""
+      ],
+      [
+        "a_{n+1}",
+        "first term left out",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "|R_{n}(x)| ≤ M |x − a|^{n+1}/(n + 1)!",
+        "Taylor's inequality"
+      ],
+      [
+        "sin x = Σ (−1)^{n} x^{2n+1}/(2n + 1)! = x − x^{3}/3! + x^{5}/5! − …",
+        "an alternating series"
+      ]
+    ],
+    "example": {
+      "problem": "Estimate sin 0.5 by x − x^{3}/6 and bound the error.",
+      "steps": [
+        "sin 0.5 ≈ 0.5 − 0.020833 = 0.479167",
+        "First term left out: 0.5^{5}/5! = 0.5^{5}/120"
+      ],
+      "answer": "error ≤ 2.60 × 10^{−4}"
+    },
+    "try": "0.5^5/120"
+  },
+  "L = lim_{n→∞} |a_{n}|^{1/n}": {
+    "title": "Root test",
+    "about": "Takes the nth root of the nth term: Σ a_n converges absolutely if the limit is under 1 and diverges if over 1. Use it when the terms have an nth power, like (n/(2n + 1))^{n}.",
+    "assumptions": [
+      "L = 1 tells nothing; try another test",
+      "It gives the same radius of convergence as the ratio test when both limits exist"
+    ],
+    "vars": [
+      [
+        "a_{n}",
+        "nth term of the series",
+        ""
+      ],
+      [
+        "L",
+        "the limit",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "L = lim_{n→∞} |a_{n+1}/a_{n}|",
+        "ratio test"
+      ],
+      [
+        "Σ 1/n^{p}",
+        "p-series"
+      ]
+    ],
+    "example": {
+      "problem": "Does Σ (n/(2n + 1))^{n} converge?",
+      "steps": [
+        "|a_{n}|^{1/n} = n/(2n + 1) → 1/2",
+        "L = 1/2 < 1"
+      ],
+      "answer": "converges (L = 1/2)"
+    }
+  },
+  "Σ 1/n^{p}": {
+    "title": "p-series",
+    "about": "The benchmark series for comparison: Σ 1/n^{p} converges exactly when p > 1. With p = 1 it is the harmonic series, which diverges. Compare a series to one of these when its terms behave like a power of n.",
+    "assumptions": [
+      "Sum from n = 1",
+      "p ≤ 1 diverges, including the harmonic series p = 1",
+      "Proved by the integral test"
+    ],
+    "vars": [
+      [
+        "n",
+        "summation index",
+        ""
+      ],
+      [
+        "p",
+        "the power",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "lim_{n→∞} a_{n} ≠ 0",
+        "divergence test"
+      ],
+      [
+        "L = lim_{n→∞} |a_{n+1}/a_{n}|",
+        "ratio test (inconclusive for p-series)"
+      ]
+    ],
+    "example": {
+      "problem": "Do Σ 1/n^{1.5} and Σ 1/√n converge?",
+      "steps": [
+        "p = 1.5 > 1: converges",
+        "1/√n = 1/n^{0.5}, p = 0.5 ≤ 1: diverges"
+      ],
+      "answer": "Σ 1/n^{1.5} converges; Σ 1/√n diverges"
+    }
+  },
+  "lim_{n→∞} a_{n} ≠ 0": {
+    "title": "Divergence (nth-term) test",
+    "about": "If the terms of a series don't go to zero, the series diverges. Check this first on any series. The converse fails: terms going to zero does not make a series converge (the harmonic series).",
+    "assumptions": [
+      "Only proves divergence; lim a_{n} = 0 tells nothing",
+      "If the limit doesn't exist, the series also diverges"
+    ],
+    "vars": [
+      [
+        "a_{n}",
+        "nth term of the series",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Σ 1/n^{p}",
+        "p-series"
+      ],
+      [
+        "L = lim_{n→∞} |a_{n+1}/a_{n}|",
+        "ratio test"
+      ]
+    ],
+    "example": {
+      "problem": "Does Σ n/(n + 1) converge?",
+      "steps": [
+        "n/(n + 1) → 1 ≠ 0"
+      ],
+      "answer": "diverges"
+    }
+  },
+  "z − z_{0} = f_{x}(x − x_{0}) + f_{y}(y − y_{0})": {
+    "title": "Tangent plane to a surface z = f(x, y)",
+    "about": "The plane that touches the surface at (x₀, y₀, z₀) with the same slopes in x and y. It is the two-variable linear approximation: near the point, f ≈ z₀ + f_x Δx + f_y Δy.",
+    "assumptions": [
+      "f is differentiable at (x₀, y₀); partials evaluated there",
+      "z₀ = f(x₀, y₀)",
+      "For a level surface F(x, y, z) = 0, use ∇F · (x − x₀, y − y₀, z − z₀) = 0"
+    ],
+    "vars": [
+      [
+        "f_{x}, f_{y}",
+        "partial derivatives at (x₀, y₀)",
+        ""
+      ],
+      [
+        "(x_{0}, y_{0}, z_{0})",
+        "point of tangency",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∇f = (∂f/∂x, ∂f/∂y, ∂f/∂z)",
+        "gradient"
+      ],
+      [
+        "f(x) ≈ f(a) + f′(a)(x − a)",
+        "one-variable linearization"
+      ]
+    ],
+    "example": {
+      "problem": "Use the tangent plane to z = x^{2} + y^{2} at (1, 2) to estimate z at (1.1, 1.9).",
+      "steps": [
+        "z₀ = 5, f_x = 2x = 2, f_y = 2y = 4",
+        "z ≈ 5 + 2(0.1) + 4(−0.1); exact 4.82"
+      ],
+      "answer": "≈ 4.8"
+    },
+    "try": "5 + 2*0.1 + 4*(-0.1)"
+  },
+  "∇f = λ ∇g": {
+    "title": "Lagrange multipliers",
+    "about": "At a maximum or minimum of f on the constraint g = k, the gradients of f and g are parallel. Solve ∇f = λ∇g together with g = k for x, y (and λ), then compare f at the candidates.",
+    "assumptions": [
+      "f and g differentiable, ∇g ≠ 0 on the constraint",
+      "Gives candidates; evaluate f at each (and at endpoints of a bounded curve) to pick the max and min",
+      "Two constraints: ∇f = λ∇g + μ∇h"
+    ],
+    "vars": [
+      [
+        "f",
+        "function to optimize",
+        ""
+      ],
+      [
+        "g",
+        "constraint function, g = k",
+        ""
+      ],
+      [
+        "λ",
+        "Lagrange multiplier: df*/dk",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∇f = (∂f/∂x, ∂f/∂y, ∂f/∂z)",
+        "gradient"
+      ],
+      [
+        "D_{u} f = ∇f · u",
+        "directional derivative"
+      ]
+    ],
+    "example": {
+      "problem": "Maximize f = xy on x + y = 10.",
+      "steps": [
+        "∇f = (y, x), ∇g = (1, 1): y = λ, x = λ",
+        "So x = y, and x + y = 10 gives x = y = 5",
+        "f = 5 × 5"
+      ],
+      "answer": "f_{max} = 25"
+    },
+    "try": "5*5"
+  },
+  "∫_{C} f ds = ∫_{a}^{b} f(r(t)) |r′(t)| dt": {
+    "title": "Line integral of a scalar function",
+    "about": "Adds f along a curve, weighted by arc length: the mass of a wire of density f, or the area of a curtain of height f over the curve. Parametrize C by r(t), a ≤ t ≤ b, and use ds = |r′(t)| dt.",
+    "assumptions": [
+      "The value doesn't depend on the direction of travel (unlike ∫ F · dr)",
+      "r is smooth, r′ ≠ 0",
+      "f = 1 gives the length of C"
+    ],
+    "vars": [
+      [
+        "f",
+        "scalar function on the curve, e.g. density",
+        "kg/m"
+      ],
+      [
+        "r(t)",
+        "parametrization of C",
+        "m"
+      ],
+      [
+        "ds",
+        "arc length element",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "ds = |r′(t)| dt",
+        "arc length element"
+      ],
+      [
+        "∫_{C} F · dr = ∫_{a}^{b} F(r(t)) · r′(t) dt",
+        "line integral of a vector field"
+      ]
+    ],
+    "example": {
+      "problem": "Find ∫_C (x + y) ds on the segment from (0, 0) to (3, 4).",
+      "steps": [
+        "r = (3t, 4t), 0 ≤ t ≤ 1, |r′| = 5",
+        "∫₀¹ 7t × 5 dt = 35/2"
+      ],
+      "answer": "= 17.5"
+    },
+    "try": "35/2"
+  },
+  "∬_{S} F · dS = ∬_{D} F · (−g_{x}, −g_{y}, 1) dA": {
+    "title": "Flux through a graph z = g(x, y)",
+    "about": "The flux integral when the surface is a graph over a region D in the xy-plane: the upward normal (unnormalized) is (−g_x, −g_y, 1), so the surface integral becomes a double integral over D.",
+    "assumptions": [
+      "Upward orientation; for downward use (g_x, g_y, −1)",
+      "g has continuous partials on D",
+      "Write F in terms of x and y by putting z = g(x, y)"
+    ],
+    "vars": [
+      [
+        "F",
+        "vector field",
+        ""
+      ],
+      [
+        "g",
+        "height of the surface",
+        "m"
+      ],
+      [
+        "D",
+        "shadow of S in the xy-plane",
+        "m²"
+      ]
+    ],
+    "related": [
+      [
+        "∬_{S} F · dS = ∬_{D} F · (r_{u} × r_{v}) du dv",
+        "flux of a parametric surface"
+      ],
+      [
+        "∯_{S} F · dS = ∭_{V} (∇ · F) dV",
+        "divergence theorem, closed surfaces"
+      ]
+    ],
+    "example": {
+      "problem": "Find the upward flux of F = (0, 0, z) through z = 4 − x^{2} − y^{2}, z ≥ 0.",
+      "steps": [
+        "F · (−g_x, −g_y, 1) = z = 4 − r^{2}",
+        "∬ (4 − r^{2}) r dr dθ over r ≤ 2 = 2π(8 − 4)"
+      ],
+      "answer": "= 8π ≈ 25.13"
+    },
+    "try": "8 pi"
+  },
+  "A = ∬_{D} |r_{u} × r_{v}| du dv": {
+    "title": "Surface area of a parametric surface",
+    "about": "The area of a surface r(u, v): each small patch du dv is a parallelogram of area |r_u × r_v| du dv. For a graph z = g(x, y) this is ∬ √(1 + g_x^{2} + g_y^{2}) dA.",
+    "assumptions": [
+      "r is smooth and one-to-one on D, r_u × r_v ≠ 0",
+      "Pick the parametrization that makes D a rectangle when you can"
+    ],
+    "vars": [
+      [
+        "r(u, v)",
+        "parametrization of the surface",
+        "m"
+      ],
+      [
+        "r_{u}, r_{v}",
+        "partial derivatives of r",
+        "m"
+      ],
+      [
+        "D",
+        "parameter region",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∬_{S} F · dS = ∬_{D} F · (r_{u} × r_{v}) du dv",
+        "flux integral"
+      ],
+      [
+        "dV = ρ^{2} sin(φ) dρ dθ dφ",
+        "spherical volume element"
+      ]
+    ],
+    "example": {
+      "problem": "Find the surface area of a sphere of radius 2.",
+      "steps": [
+        "r = (2 sin φ cos θ, 2 sin φ sin θ, 2 cos φ): |r_φ × r_θ| = 4 sin φ",
+        "∫₀^{2π} ∫₀^{π} 4 sin φ dφ dθ = 4 × 2 × 2π = 16π"
+      ],
+      "answer": "= 16π ≈ 50.27"
+    },
+    "try": "4 pi 2^2"
+  },
+  "A = (1/2) ∮_{C} (x dy − y dx)": {
+    "title": "Area from Green's theorem",
+    "about": "Green's theorem with P = −y/2, Q = x/2 makes the integrand 1, so the area of a region is a line integral around its edge. Use it for areas bounded by parametric curves, and it is the idea behind the planimeter and the shoelace formula.",
+    "assumptions": [
+      "C is simple, closed and counterclockwise (region on the left)",
+      "∮ x dy and −∮ y dx give the area too"
+    ],
+    "vars": [
+      [
+        "A",
+        "area enclosed by C",
+        "m²"
+      ],
+      [
+        "C",
+        "boundary curve, counterclockwise",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "∮_{C} (P dx + Q dy) = ∬_{D} (∂Q/∂x − ∂P/∂y) dA",
+        "Green's theorem"
+      ]
+    ],
+    "example": {
+      "problem": "Find the area of the ellipse x = 3 cos t, y = 2 sin t.",
+      "steps": [
+        "x dy − y dx = (6 cos^{2} t + 6 sin^{2} t) dt = 6 dt",
+        "A = (1/2)(6)(2π) = πab"
+      ],
+      "answer": "= 6π ≈ 18.85"
+    },
+    "try": "pi*3*2"
+  },
+  "x = ρ sin(φ) cos(θ),  y = ρ sin(φ) sin(θ),  z = ρ cos(φ)": {
+    "title": "Spherical coordinates",
+    "about": "Converts spherical (ρ, φ, θ) to rectangular: ρ is the distance from the origin, φ the angle down from the +z axis, θ the same angle as in polar coordinates. Use them for spheres and cones, with dV = ρ² sin φ dρ dθ dφ.",
+    "assumptions": [
+      "0 ≤ φ ≤ π, 0 ≤ θ < 2π, ρ ≥ 0",
+      "This is the math convention; physics swaps φ and θ",
+      "ρ^{2} = x^{2} + y^{2} + z^{2}, cos φ = z/ρ"
+    ],
+    "vars": [
+      [
+        "ρ",
+        "distance from the origin",
+        "m"
+      ],
+      [
+        "φ",
+        "polar angle from the +z axis",
+        "rad"
+      ],
+      [
+        "θ",
+        "azimuth, from the +x axis",
+        "rad"
+      ]
+    ],
+    "related": [
+      [
+        "dV = ρ^{2} sin(φ) dρ dθ dφ",
+        "volume element"
+      ],
+      [
+        "dV = r dr dθ dz",
+        "cylindrical"
+      ]
+    ],
+    "example": {
+      "problem": "Convert ρ = 2, φ = π/3, θ = π/4 to rectangular.",
+      "steps": [
+        "x = 2 sin(π/3) cos(π/4) = 2(0.8660)(0.7071)",
+        "y = x by symmetry",
+        "z = 2 cos(π/3) = 1"
+      ],
+      "answer": "(1.2247, 1.2247, 1)"
+    },
+    "try": "2 sin(60°) cos(45°)"
+  },
+  "dA = |∂(x, y)/∂(u, v)| du dv": {
+    "title": "Jacobian: change of variables in a double integral",
+    "about": "Swapping x, y for new variables u, v scales area by the absolute value of the Jacobian determinant, x_u y_v − x_v y_u. Polar coordinates' r dr dθ is one case.",
+    "assumptions": [
+      "The map (u, v) → (x, y) is one-to-one with continuous partials",
+      "Use the absolute value of the determinant",
+      "∂(x, y)/∂(u, v) = 1/(∂(u, v)/∂(x, y)), handy when u, v are given in terms of x, y"
+    ],
+    "vars": [
+      [
+        "∂(x, y)/∂(u, v)",
+        "Jacobian determinant x_u y_v − x_v y_u",
+        ""
+      ],
+      [
+        "u, v",
+        "new variables",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "dA = r dr dθ",
+        "polar"
+      ],
+      [
+        "dV = ρ^{2} sin(φ) dρ dθ dφ",
+        "spherical"
+      ]
+    ],
+    "example": {
+      "problem": "Find dA for x = u + v, y = u − v.",
+      "steps": [
+        "∂(x, y)/∂(u, v) = (1)(−1) − (1)(1) = −2",
+        "|−2| = 2"
+      ],
+      "answer": "dA = 2 du dv"
+    },
+    "try": "abs(1*(-1) - 1*1)"
+  },
+  "θ_{ref} = 180° − θ,  θ − 180°,  360° − θ": {
+    "title": "Reference angle",
+    "about": "The acute angle between the terminal side and the x axis. Every trig value at θ equals the value at its reference angle, with the sign from the quadrant (All, Sin, Tan, Cos positive in I, II, III, IV). It is how to evaluate any angle from the first-quadrant table.",
+    "assumptions": [
+      "Reduce θ into 0° to 360° first (add or subtract 360°)",
+      "In radians: π − θ, θ − π, 2π − θ"
+    ],
+    "vars": [
+      [
+        "θ",
+        "angle",
+        "°"
+      ],
+      [
+        "θ_{ref}",
+        "reference angle, 0° to 90°",
+        "°"
+      ]
+    ],
+    "related": [
+      [
+        "(x, y) = (cos θ, sin θ)",
+        "the point and its signs"
+      ],
+      [
+        "sin(π − x) = sin x",
+        "the quadrant II case"
+      ]
+    ],
+    "example": {
+      "problem": "Find sin 225° exactly.",
+      "steps": [
+        "Quadrant III: θ_{ref} = 225° − 180° = 45°",
+        "sin is negative in III: −sin 45° = −√2/2"
+      ],
+      "answer": "sin 225° = −√2/2 ≈ −0.7071"
+    },
+    "try": "sin(225)"
+  },
+  "arcsin x ∈ [−π/2, π/2]": {
+    "title": "Range of arcsin",
+    "about": "arcsin (sin⁻¹) returns the one angle in [−90°, 90°] with that sine. sin θ = x has a second solution in [0°, 360°): 180° minus the first. sin⁻¹x is not 1/sin x (that is csc).",
+    "assumptions": [
+      "−1 ≤ x ≤ 1"
+    ],
+    "vars": [
+      [
+        "x",
+        "a sine value",
+        ""
+      ],
+      [
+        "arcsin x",
+        "angle, −90° to 90°",
+        "°"
+      ]
+    ],
+    "related": [
+      [
+        "sin(π − x) = sin x",
+        "the second solution"
+      ],
+      [
+        "csc x = 1/sin x",
+        "not the same as sin⁻¹"
+      ]
+    ],
+    "example": {
+      "problem": "Solve sin θ = 0.5 for 0° ≤ θ < 360°.",
+      "steps": [
+        "arcsin 0.5 = 30°",
+        "second: 180° − 30° = 150°"
+      ],
+      "answer": "θ = 30° and 150°"
+    },
+    "try": "arcsin(0.5)"
+  },
+  "arccos x ∈ [0, π]": {
+    "title": "Range of arccos",
+    "about": "arccos returns the one angle in [0°, 180°] with that cosine, so a negative x gives a quadrant II angle. cos θ = x has the second solution 360° minus the first.",
+    "assumptions": [
+      "−1 ≤ x ≤ 1"
+    ],
+    "vars": [
+      [
+        "x",
+        "a cosine value",
+        ""
+      ],
+      [
+        "arccos x",
+        "angle, 0° to 180°",
+        "°"
+      ]
+    ],
+    "related": [
+      [
+        "cos(−x) = cos x",
+        "the second solution, −θ"
+      ],
+      [
+        "cos(π − x) = −cos x",
+        "why negative x lands in II"
+      ]
+    ],
+    "example": {
+      "problem": "Solve cos θ = −0.5 for 0° ≤ θ < 360°.",
+      "steps": [
+        "arccos(−0.5) = 120°",
+        "second: 360° − 120° = 240°"
+      ],
+      "answer": "θ = 120° and 240°"
+    },
+    "try": "arccos(-0.5)"
+  },
+  "arctan x ∈ (−π/2, π/2)": {
+    "title": "Range of arctan",
+    "about": "arctan returns an angle in (−90°, 90°), quadrants I and IV only. For the angle of a point (x, y) or a complex number in quadrant II or III, add 180° (that is atan2). tan θ = x repeats every 180°.",
+    "assumptions": [
+      "any real x"
+    ],
+    "vars": [
+      [
+        "x",
+        "a tangent value (y/x)",
+        ""
+      ],
+      [
+        "arctan x",
+        "angle, −90° to 90°",
+        "°"
+      ]
+    ],
+    "related": [
+      [
+        "θ = atan2(y, x)",
+        "the quadrant-aware angle"
+      ],
+      [
+        "tan x = sin x / cos x",
+        "the ratio it inverts"
+      ]
+    ],
+    "example": {
+      "problem": "Find the angle of the point (−1, −1).",
+      "steps": [
+        "arctan((−1)/(−1)) = arctan 1 = 45°, but the point is in quadrant III",
+        "add 180°"
+      ],
+      "answer": "θ = 225°"
+    },
+    "try": "arctan(-1/-1) + 180"
   }
 }

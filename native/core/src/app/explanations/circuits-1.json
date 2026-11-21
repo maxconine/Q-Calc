@@ -840,7 +840,8 @@
     "assumptions": [
       "Ideal, linear capacitor",
       "Measured from zero charge",
-      "Charging through a resistor from a fixed source loses as much energy in the resistor as ends up stored"
+      "Charging through a resistor from a fixed source loses as much energy in the resistor as ends up stored",
+      "Doubling V stores four times the energy; C in farads (µF × 10^{−6})"
     ],
     "vars": [
       [
@@ -954,6 +955,10 @@
       [
         "V = IZ",
         "Ohm's law for phasors"
+      ],
+      [
+        "Z = R + jX",
+        "combining them"
       ]
     ],
     "example": {
@@ -972,7 +977,8 @@
     "assumptions": [
       "Ideal inductor (no winding resistance, no self-capacitance)",
       "Sinusoidal steady state",
-      "ω is angular frequency in rad/s, ω = 2πf"
+      "ω is angular frequency in rad/s, ω = 2πf",
+      "ω, not f: forgetting the 2π understates the reactance by 6.28"
     ],
     "vars": [
       [
@@ -1026,7 +1032,8 @@
     "assumptions": [
       "Ideal capacitor (no ESR, no leakage, no lead inductance)",
       "Sinusoidal steady state",
-      "1/j = −j, so Z_{C} = −j/(ωC)"
+      "1/j = −j, so Z_{C} = −j/(ωC)",
+      "ω, not f: forgetting the 2π overstates the reactance by 6.28"
     ],
     "vars": [
       [
@@ -1125,7 +1132,8 @@
     "assumptions": [
       "One capacitor and the Thévenin resistance R it sees (turn off the sources to find it)",
       "Ideal, linear components",
-      "The input changes as a step, then stays put"
+      "The input changes as a step, then stays put",
+      "R is the resistance the capacitor sees with sources off, not necessarily the resistor in series with the source"
     ],
     "vars": [
       [
@@ -1846,10 +1854,10 @@
   },
   "X_{L} = ωL": {
     "title": "Inductive reactance",
-    "about": "The magnitude of an inductor's impedance. It rises in proportion to frequency, so inductors choke high frequencies.",
+    "about": "The magnitude of an inductor's impedance. An inductor resists changes in current with v = L di/dt, and faster changes (higher ω) mean more voltage for the same current, so reactance rises in proportion to frequency. Inductors pass DC (X_{L} = 0) and choke high frequencies.",
     "assumptions": [
       "Ideal inductor",
-      "Sinusoidal steady state; ω in rad/s"
+      "Sinusoidal steady state; ω in rad/s. Using f in Hz without the 2π is the usual mistake"
     ],
     "vars": [
       [
@@ -2247,7 +2255,8 @@
     "assumptions": [
       "Balanced three-phase system, positive (abc) sequence",
       "Phase voltages are line-to-neutral",
-      "Magnitudes; the line voltage leads its phase voltage by 30°"
+      "Magnitudes; the line voltage leads its phase voltage by 30°",
+      "A '208 V' or '400 V' system rating is the line voltage; divide by √3 for the phase voltage"
     ],
     "vars": [
       [
@@ -2290,7 +2299,8 @@
     "about": "In a wye connection each line feeds exactly one phase, so the line current is the phase current. In a balanced system the neutral carries no current.",
     "assumptions": [
       "Wye (star) connection",
-      "Balanced load for the neutral current to be zero"
+      "Balanced load for the neutral current to be zero",
+      "The phase voltage is V_{L}/√3: forgetting it overstates the current by √3"
     ],
     "vars": [
       [
@@ -2327,10 +2337,11 @@
   },
   "V_{L} = V_{ph}": {
     "title": "Delta line voltage",
-    "about": "In a delta connection each phase sits directly between two lines, so the phase voltage equals the line voltage.",
+    "about": "In a delta connection each phase winding or load sits directly between two lines, so the voltage across it is the line voltage. The current is what differs: each line carries the difference of two phase currents, √3 times larger.",
     "assumptions": [
       "Delta connection (no neutral)",
-      "Magnitudes"
+      "Magnitudes; balanced three-phase",
+      "Nameplate voltages are line-to-line, so in delta each phase sees the full rating"
     ],
     "vars": [
       [
@@ -2351,25 +2362,31 @@
       ],
       [
         "V_{L} = √3 V_{ph}",
-        "wye"
+        "wye, where it differs"
+      ],
+      [
+        "P = √3 V_{L} I_{L} cos(θ)",
+        "total three-phase power"
       ]
     ],
     "example": {
-      "problem": "A delta load with 24 Ω per phase is on a 480 V line. Find the phase current.",
+      "problem": "A delta heater with 24 Ω per phase is on a 480 V line. Find the phase and line currents.",
       "steps": [
         "V_{ph} = V_{L} = 480 V",
-        "I_{ph} = 480/24 = 20 A"
+        "I_{ph} = 480/24 = 20 A",
+        "I_{L} = √3 × 20 = 34.6 A"
       ],
-      "answer": "I_{ph} = 20 A"
+      "answer": "I_{ph} = 20 A, I_{L} ≈ 34.6 A"
     },
-    "try": "480 V / 24 ohm"
+    "try": "sqrt(3) * 480 V / 24 ohm"
   },
   "I_{L} = √3 I_{ph}": {
     "title": "Delta line current",
     "about": "In a balanced delta, each line current is the difference of two phase currents 120° apart, so it is √3 times larger than the phase current and lags it by 30°.",
     "assumptions": [
       "Balanced delta connection, positive sequence",
-      "Magnitudes"
+      "Magnitudes",
+      "In a wye the line and phase currents are equal; √3 applies to voltage there instead"
     ],
     "vars": [
       [
@@ -2389,12 +2406,16 @@
         "delta voltages"
       ],
       [
+        "V_{L} = √3 V_{ph}",
+        "wye voltages"
+      ],
+      [
         "P = √3 V_{L}I_{L} cos(θ)",
         "total power"
       ]
     ],
     "example": {
-      "problem": "Each phase of a delta load carries 20 A. Find the line current.",
+      "problem": "A delta-connected motor draws 20 A in each winding. What current must each supply line and its breaker carry?",
       "steps": [
         "I_{L} = √3 × 20",
         "I_{L} = 34.64 A"
@@ -2513,10 +2534,11 @@
   },
   "I_{1}/I_{2} = N_{2}/N_{1}": {
     "title": "Ideal transformer current ratio",
-    "about": "Currents go in the inverse ratio of the turns, so power in equals power out: stepping voltage down steps current up.",
+    "about": "Currents go in the inverse ratio of the turns. The core's net magnetizing ampere-turns are nearly zero, so N_{1}I_{1} = N_{2}I_{2}; equivalently, power in equals power out, so stepping voltage down steps current up.",
     "assumptions": [
       "Ideal transformer (no losses, no magnetizing current)",
-      "Currents defined with the dot convention"
+      "Currents defined with the dot convention",
+      "The ratio is inverted relative to the voltage ratio: the side with more turns carries less current"
     ],
     "vars": [
       [
@@ -2551,7 +2573,7 @@
       ]
     ],
     "example": {
-      "problem": "The 1000:50 transformer above supplies 4 A on its secondary. What does the primary draw?",
+      "problem": "A 1000:50 step-down transformer supplies 4 A to a 12 V lamp circuit. What does the primary draw?",
       "steps": [
         "I_{1} = I_{2} N_{2}/N_{1}",
         "I_{1} = 4 × 50/1000 = 0.2 A"
@@ -2611,10 +2633,11 @@
   },
   "α = R/(2L)": {
     "title": "Neper frequency of a series RLC circuit",
-    "about": "α is the exponential decay rate of a series RLC circuit's natural response. Compared with ω₀ it decides whether the response is overdamped, critically damped or underdamped.",
+    "about": "α is the exponential decay rate of a series RLC circuit's natural response. Only R dissipates energy, and the inductor's current sets how hard it works, so damping grows with R and falls with L. Compared with ω₀ = 1/√(LC) it decides whether the response is overdamped, critically damped or underdamped.",
     "assumptions": [
       "R, L and C in series (source turned off)",
-      "Ideal, linear components"
+      "Ideal, linear components",
+      "The parallel circuit has α = 1/(2RC); swapping them is a common slip"
     ],
     "vars": [
       [
@@ -2639,30 +2662,32 @@
         "parallel RLC"
       ],
       [
-        "ζ = α/ω_{0}",
-        "damping ratio"
+        "ω_{0} = 1/√(LC)",
+        "to compare with"
       ],
       [
-        "s = −α ± √(α^{2} − ω_{0}^{2})",
-        "natural roots"
+        "ω_{d} = √(ω_{0}^{2} − α^{2})",
+        "ringing frequency"
       ]
     ],
     "example": {
-      "problem": "A series RLC has R = 100 Ω and L = 10 mH. Find α.",
+      "problem": "A series RLC has R = 100 Ω, L = 10 mH and C = 1 µF. Find α and the type of response.",
       "steps": [
-        "α = 100/(2 × 0.01)",
-        "α = 5000 s^{−1}"
+        "α = 100/(2 × 0.01) = 5000 s^{−1}",
+        "ω_{0} = 1/√(0.01 × 10^{−6}) = 10 000 rad/s",
+        "α < ω_{0}: underdamped"
       ],
-      "answer": "α = 5000 s^{−1}"
+      "answer": "α = 5000 s^{−1} (underdamped)"
     },
     "try": "100 / (2 * 10e-3)"
   },
   "α = 1/(2RC)": {
     "title": "Neper frequency of a parallel RLC circuit",
-    "about": "The decay rate of a parallel RLC circuit's natural response. Here a larger R means less damping, the opposite of the series case.",
+    "about": "The decay rate of a parallel RLC circuit's natural response. Energy is lost only through R, and in parallel a larger R draws less current, so it damps less: the opposite of the series case, α = R/(2L).",
     "assumptions": [
       "R, L and C in parallel (source turned off)",
-      "Ideal, linear components"
+      "Ideal, linear components",
+      "Compare α with ω_{0} = 1/√(LC): α > ω_{0} overdamped, = critical, < underdamped"
     ],
     "vars": [
       [
@@ -2687,17 +2712,22 @@
         "series RLC"
       ],
       [
+        "ω_{0} = 1/√(LC)",
+        "resonant frequency to compare with"
+      ],
+      [
         "ζ = α/ω_{0}",
         "damping ratio"
       ]
     ],
     "example": {
-      "problem": "A parallel RLC has R = 2 kΩ and C = 0.5 µF. Find α.",
+      "problem": "A parallel RLC has R = 2 kΩ, L = 50 mH and C = 0.5 µF. Find α and say how it is damped.",
       "steps": [
-        "α = 1/(2 × 2000 × 0.5 × 10^{−6})",
-        "α = 1/0.002 = 500 s^{−1}"
+        "α = 1/(2 × 2000 × 0.5 × 10^{−6}) = 500 s^{−1}",
+        "ω_{0} = 1/√(0.05 × 0.5 × 10^{−6}) = 6325 rad/s",
+        "α < ω_{0}: underdamped"
       ],
-      "answer": "α = 500 s^{−1}"
+      "answer": "α = 500 s^{−1} (underdamped)"
     },
     "try": "1 / (2 * 2000 * 0.5e-6)"
   },
@@ -2801,10 +2831,11 @@
   },
   "ω_{d} = √(ω_{0}^{2} − α^{2})": {
     "title": "Damped natural frequency",
-    "about": "The frequency at which an underdamped circuit actually rings. It is a bit below ω₀; the more damping, the lower it is, until it reaches zero at critical damping.",
+    "about": "The frequency at which an underdamped circuit actually rings. The natural roots are s = −α ± jω_{d}: α sets the decay, ω_{d} the oscillation. Damping drags on each swing, so ω_{d} sits below ω_{0}, reaching zero at critical damping (α = ω_{0}).",
     "assumptions": [
       "Underdamped: α < ω₀",
-      "Second-order linear circuit"
+      "Second-order linear circuit",
+      "ω_{d} is in rad/s; divide by 2π for the ringing frequency in Hz"
     ],
     "vars": [
       [
@@ -2989,10 +3020,11 @@
   },
   "t_{p} = π/ω_{d}": {
     "title": "Peak time",
-    "about": "The time for an underdamped step response to reach its first (highest) peak: half a period of the ringing.",
+    "about": "The time for an underdamped step response to reach its first (highest) peak. The response rings as sin(ω_{d}t) under a decaying envelope, and its first maximum comes half a ringing period after the step.",
     "assumptions": [
       "Standard second-order system, no zeros, step input",
-      "Underdamped (ζ < 1)"
+      "Underdamped (ζ < 1)",
+      "Use ω_{d}, not ω_{0}; they differ noticeably above ζ ≈ 0.3"
     ],
     "vars": [
       [
@@ -3270,10 +3302,11 @@
   },
   "|H|_{dB} = 20 log_{10}|H|": {
     "title": "Transfer function magnitude in decibels",
-    "about": "The Bode magnitude plot shows 20 log₁₀ of the gain against log frequency. On that scale cascaded stages add and each pole or zero bends the plot by ±20 dB/decade.",
+    "about": "The Bode magnitude plot shows 20 log₁₀ of the gain against log frequency. Power goes as voltage squared, and a decibel is 10 log₁₀ of a power ratio, hence the 20. On that scale cascaded stages add and each pole or zero bends the plot by ±20 dB/decade.",
     "assumptions": [
-      "|H| is a voltage (or current) ratio",
-      "0 dB is unity gain; negative dB is attenuation"
+      "|H| is a voltage (or current) ratio; for a power ratio use 10 log₁₀",
+      "0 dB is unity gain; negative dB is attenuation",
+      "−3 dB is a voltage ratio of 0.707, half the power"
     ],
     "vars": [
       [
@@ -3500,9 +3533,12 @@
     "try": "1 MHz / 50 to kHz"
   },
   "R_{N} = R_{th}": {
-    "title": "Norton resistance",
-    "about": "Norton and Thévenin equivalents share one resistance: turn off the independent sources and look into the terminals.",
-    "assumptions": [],
+    "title": "Norton resistance equals Thévenin resistance",
+    "about": "A Norton equivalent (current source I_{N} in parallel with R_{N}) and a Thévenin equivalent (voltage source V_{th} in series with R_{th}) describe the same two terminals, so they share one resistance. Find it by turning off independent sources (voltage sources shorted, current sources opened) and looking into the terminals, or as V_{oc}/I_{sc}.",
+    "assumptions": [
+      "Linear circuit",
+      "Dependent sources stay on; with them use V_{oc}/I_{sc} or a test source"
+    ],
     "vars": [
       [
         "R_{N}",
@@ -3515,20 +3551,33 @@
         "Ω"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "V_th = 12 V, R_th = 4 Ω. Find the Norton equivalent.",
-      "steps": [
-        "I_N = 12/4 = 3 A",
-        "R_N = 4 Ω"
+    "related": [
+      [
+        "I_{N} = V_{th}/R_{th}",
+        "Norton current (short-circuit current)"
       ],
-      "answer": "3 A in parallel with 4 Ω"
-    }
+      [
+        "R_{th} = V_{oc}/I_{sc}",
+        "from open-circuit and short-circuit tests"
+      ]
+    ],
+    "example": {
+      "problem": "A circuit's Thévenin equivalent is 12 V in series with 4 Ω. Find its Norton equivalent.",
+      "steps": [
+        "I_{N} = V_{th}/R_{th} = 12/4 = 3 A",
+        "R_{N} = R_{th} = 4 Ω"
+      ],
+      "answer": "I_{N} = 3 A in parallel with R_{N} = 4 Ω"
+    },
+    "try": "12/4"
   },
   "V_{s} = I_{s} R": {
     "title": "Source transformation",
-    "about": "A voltage source in series with R equals a current source in parallel with the same R.",
-    "assumptions": [],
+    "about": "A voltage source V_{s} in series with a resistor R behaves, at its terminals, exactly like a current source I_{s} = V_{s}/R in parallel with the same R. Swapping between the two forms simplifies ladder circuits step by step without writing node or mesh equations.",
+    "assumptions": [
+      "The resistor must be in series with the voltage source (or in parallel with the current source)",
+      "Equivalent only at the terminals: power inside the two forms differs"
+    ],
     "vars": [
       [
         "V_{s}",
@@ -3542,43 +3591,79 @@
       ],
       [
         "R",
-        "resistance",
+        "the series (or parallel) resistance",
         "Ω"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Convert 2 A in parallel with 5 Ω.",
-      "steps": [
-        "2 · 5"
+    "related": [
+      [
+        "R_{N} = R_{th}",
+        "Norton and Thévenin, the same idea for a whole circuit"
       ],
-      "answer": "10 V in series with 5 Ω"
-    }
+      [
+        "I_{N} = V_{th}/R_{th}",
+        "Norton current"
+      ]
+    ],
+    "example": {
+      "problem": "Convert a 2 A current source in parallel with 5 Ω into its voltage-source form.",
+      "steps": [
+        "V_{s} = I_{s} R = 2 × 5 = 10 V",
+        "R stays 5 Ω, now in series"
+      ],
+      "answer": "V_{s} = 10 V in series with 5 Ω"
+    },
+    "try": "2 * 5"
   },
   "V_{rms} = √((1/T) ∫_{T} v^{2} dt)": {
     "title": "RMS value of any periodic waveform",
-    "about": "The DC voltage that would heat a resistor the same. For a sine it reduces to V_peak/√2.",
-    "assumptions": [],
+    "about": "The root of the mean of the square over one period: the DC voltage that would heat a resistor equally. For a sine it is V_{peak}/√2; for a square wave of ±V_{p} it is V_{p}; for a pulse of height V_{p} on for a fraction D of the period it is V_{p}√D.",
+    "assumptions": [
+      "Periodic waveform; integrate over exactly one period T",
+      "Same definition for current, I_{rms}"
+    ],
     "vars": [
+      [
+        "V_{rms}",
+        "root-mean-square voltage",
+        "V"
+      ],
       [
         "T",
         "period",
         "s"
       ],
       [
-        "v(t)",
-        "voltage",
+        "v",
+        "instantaneous voltage v(t)",
         "V"
+      ],
+      [
+        "t",
+        "time",
+        "s"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "A square wave switching between +5 V and −5 V.",
-      "steps": [
-        "v² = 25 always"
+    "related": [
+      [
+        "V_{rms} = V_{m}/√2",
+        "sine wave"
       ],
-      "answer": "5 V"
-    }
+      [
+        "P = V_{rms}^{2}/R",
+        "average power in a resistor"
+      ]
+    ],
+    "example": {
+      "problem": "A 10 V rectangular pulse is on for 25% of each period and 0 V otherwise. Find its rms value.",
+      "steps": [
+        "v^{2} = 100 V^{2} for a quarter of the period, 0 for the rest",
+        "Mean of v^{2} = 100 × 0.25 = 25 V^{2}",
+        "V_{rms} = √25"
+      ],
+      "answer": "V_{rms} = 5 V"
+    },
+    "try": "sqrt(10^2 * 0.25)"
   },
   "V = I Z": {
     "title": "Ohm's law for phasors",
@@ -3626,9 +3711,17 @@
   },
   "Z = R + j(ωL − 1/(ωC))": {
     "title": "Impedance of a series RLC circuit",
-    "about": "The reactances cancel at resonance, ω = 1/√(LC), leaving R.",
-    "assumptions": [],
+    "about": "The resistor, inductor and capacitor impedances add in series. The inductive reactance ωL and capacitive reactance 1/(ωC) oppose each other: above resonance the circuit is inductive, below it capacitive, and at ω_{0} = 1/√(LC) they cancel, leaving just R.",
+    "assumptions": [
+      "Sinusoidal steady state at angular frequency ω",
+      "Ideal, linear components"
+    ],
     "vars": [
+      [
+        "Z",
+        "impedance",
+        "Ω"
+      ],
       [
         "R",
         "resistance",
@@ -3650,25 +3743,54 @@
         "rad/s"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "R = 10 Ω, L = 10 mH, C = 100 µF, ω = 1000 rad/s.",
-      "steps": [
-        "ωL = 10",
-        "1/(ωC) = 10"
+    "related": [
+      [
+        "ω_{0} = 1/√(LC)",
+        "resonant frequency"
       ],
-      "answer": "10 Ω (resonance)"
-    }
+      [
+        "|Z| = √(R^{2} + X^{2})",
+        "magnitude"
+      ],
+      [
+        "θ = atan(X/R)",
+        "phase of Z"
+      ]
+    ],
+    "example": {
+      "problem": "A series circuit has R = 10 Ω, L = 10 mH and C = 100 μF, driven at ω = 2000 rad/s. Find Z and |Z|.",
+      "steps": [
+        "ωL = 2000 × 0.01 = 20 Ω",
+        "1/(ωC) = 1/(2000 × 100 × 10^{−6}) = 5 Ω",
+        "Z = 10 + j15 Ω, |Z| = √(10^{2} + 15^{2}) = 18.0 Ω (inductive: above ω_{0} = 1000 rad/s)"
+      ],
+      "answer": "Z = 10 + j15 Ω, |Z| ≈ 18.0 Ω"
+    },
+    "try": "sqrt(10^2 + (2000*0.01 - 1/(2000*100e-6))^2)"
   },
   "P = (1/2) V_{m} I_{m} cos(θ)": {
     "title": "Average AC power from peak values",
-    "about": "Same as V_rms I_rms cos θ, written with amplitudes.",
-    "assumptions": [],
+    "about": "Average power delivered to a load in sinusoidal steady state, written with amplitudes. The instantaneous power v·i swings at twice the line frequency; its average is (1/2)V_{m}I_{m}cos θ because the mean of cos^{2} is 1/2. Only the part of the current in phase with the voltage does work, hence cos θ.",
+    "assumptions": [
+      "Sinusoidal steady state",
+      "V_{m} and I_{m} are peak (amplitude) values; with rms values drop the 1/2. Mixing the two is the classic factor-of-2 mistake",
+      "θ is the angle of V minus the angle of I; cos θ > 0 for any passive load"
+    ],
     "vars": [
       [
-        "V_{m}, I_{m}",
-        "peak voltage and current",
-        ""
+        "P",
+        "average (real) power",
+        "W"
+      ],
+      [
+        "V_{m}",
+        "peak voltage",
+        "V"
+      ],
+      [
+        "I_{m}",
+        "peak current",
+        "A"
       ],
       [
         "θ",
@@ -3676,24 +3798,43 @@
         "rad"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "V_m = 170 V, I_m = 10 A, θ = 30°.",
-      "steps": [
-        "0.5 · 170 · 10 · cos 30°"
+    "related": [
+      [
+        "P = V_{rms} I_{rms} cos(θ)",
+        "the same power with rms values"
       ],
-      "answer": "≈ 736 W"
+      [
+        "V_{rms} = V_{m}/√2",
+        "peak to rms"
+      ],
+      [
+        "S = P + jQ",
+        "complex power"
+      ]
+    ],
+    "example": {
+      "problem": "A motor on a 120 V rms line (V_{m} = 170 V) draws a current of 10 A peak lagging the voltage by 30°. Find its average power.",
+      "steps": [
+        "P = 0.5 × 170 × 10 × cos 30°",
+        "= 850 × 0.866"
+      ],
+      "answer": "P ≈ 736 W"
     },
     "try": "0.5*170*10*cos(30 deg)"
   },
   "e_{ss} = 1/K_{v}": {
     "title": "Steady-state error to a ramp, type 1",
-    "about": "A type 1 loop (one integrator) follows a ramp input with a constant lag. Raising the gain shrinks the lag; a second integrator removes it.",
+    "about": "A type 1 loop (one integrator) follows a ramp input with a constant lag. The integrator needs a steady error to keep its output ramping, and the error that produces the right slope is 1/K_{v}. Raising the gain shrinks the lag; a second integrator removes it.",
     "assumptions": [
       "Unity feedback, closed loop stable",
       "Unit ramp input; for slope A the error is A/K_{v}"
     ],
     "vars": [
+      [
+        "e_{ss}",
+        "steady-state error (same units as the input)",
+        ""
+      ],
       [
         "K_{v}",
         "velocity error constant",
@@ -3721,15 +3862,27 @@
   },
   "K_{v} = lim_{s→0} s G(s)": {
     "title": "Velocity error constant",
-    "about": "The low-frequency gain of a type 1 open loop once its integrator is cancelled. It fixes the ramp-tracking error 1/K_{v}.",
+    "about": "The low-frequency gain of a type 1 open loop once its integrator is cancelled by the factor s. A type 1 loop tracks a ramp with a constant lag, and that lag is 1/K_{v} per unit ramp slope: the higher K_{v}, the tighter the tracking.",
     "assumptions": [
-      "Zero for type 0, infinite for type 2 or higher"
+      "Unity feedback (with other H, form the equivalent unity-feedback G first)",
+      "Zero for type 0, infinite for type 2 or higher",
+      "Only meaningful if the closed loop is stable; check that first"
     ],
     "vars": [
+      [
+        "K_{v}",
+        "velocity error constant",
+        "1/s"
+      ],
       [
         "G(s)",
         "open-loop transfer function",
         ""
+      ],
+      [
+        "s",
+        "Laplace variable",
+        "1/s"
       ]
     ],
     "related": [
@@ -3740,15 +3893,253 @@
       [
         "K_{p} = lim_{s→0} G(s)",
         "position constant"
+      ],
+      [
+        "1 + GH = 0",
+        "check stability first"
       ]
     ],
     "example": {
-      "problem": "G(s) = 10/(s(s + 2)). Find K_{v} and the ramp error.",
+      "problem": "A servo has G(s) = 10/(s(s + 2)) and follows a ramp of 1 rad/s. Find K_{v} and the steady lag.",
       "steps": [
         "s G(s) = 10/(s + 2) → 5 at s = 0",
-        "e_{ss} = 1/5"
+        "e_{ss} = slope/K_{v} = 1/5"
       ],
-      "answer": "K_{v} = 5 s^{−1}, e_{ss} = 0.2"
-    }
+      "answer": "K_{v} = 5 s^{−1}, lag 0.2 rad"
+    },
+    "try": "10/(0 + 2)"
+  },
+  "s^{2} + (R/L) s + 1/(LC) = 0": {
+    "title": "Series RLC characteristic equation",
+    "about": "The characteristic equation of a series RLC circuit, from KVL written as a second-order ODE in the current or the capacitor voltage. Its roots s = −α ± √(α^{2} − ω_{0}^{2}), with α = R/(2L) and ω_{0} = 1/√(LC), decide the response: overdamped if α > ω_{0}, critically damped if equal, underdamped if α < ω_{0}.",
+    "assumptions": [
+      "Series R, L and C with ideal parts",
+      "For a parallel RLC the middle term is s/(RC)"
+    ],
+    "vars": [
+      [
+        "s",
+        "natural frequency (root)",
+        "1/s"
+      ],
+      [
+        "R",
+        "series resistance",
+        "Ω"
+      ],
+      [
+        "L",
+        "inductance",
+        "H"
+      ],
+      [
+        "C",
+        "capacitance",
+        "F"
+      ]
+    ],
+    "related": [
+      [
+        "s = −α ± √(α^{2} − ω_{0}^{2})",
+        "the roots"
+      ],
+      [
+        "α = R/(2L)",
+        "neper frequency, series"
+      ],
+      [
+        "ω_{0} = 1/√(LC)",
+        "resonance"
+      ]
+    ],
+    "example": {
+      "problem": "A series RLC has R = 200 Ω, L = 50 mH, C = 20 μF. Find the roots and the kind of response.",
+      "steps": [
+        "α = 200/(2 × 0.05) = 2000 s^{−1}; ω_{0} = 1/√(0.05 × 20×10^{−6}) = 1000 rad/s",
+        "α > ω_{0}: overdamped",
+        "s = −2000 ± √(2000^{2} − 1000^{2}) = −2000 ± 1732"
+      ],
+      "answer": "s_{1} ≈ −268 s^{−1}, s_{2} ≈ −3732 s^{−1} (overdamped)"
+    },
+    "try": "-200 ohm/(2*50 mH) + sqrt((200 ohm/(2*50 mH))^2 - 1/(50 mH * 20 uF))"
+  },
+  "v(t) = V_{f} + A_{1} e^{s_{1}t} + A_{2} e^{s_{2}t}": {
+    "title": "Overdamped RLC step response",
+    "about": "When α > ω_{0} the two roots s_{1}, s_{2} are real and negative, and the response rises to its final value V_{f} without ringing. Find A_{1} and A_{2} from the initial conditions: v(0) = V_{f} + A_{1} + A_{2} and dv/dt(0) = s_{1}A_{1} + s_{2}A_{2}. For the capacitor voltage, dv/dt(0) = i_{L}(0)/C.",
+    "assumptions": [
+      "Source switched in at t = 0 and constant after",
+      "α > ω_{0}: two distinct real roots"
+    ],
+    "vars": [
+      [
+        "v(t)",
+        "capacitor voltage (or any circuit variable)",
+        "V"
+      ],
+      [
+        "V_{f}",
+        "final value, v(∞)",
+        "V"
+      ],
+      [
+        "s_{1}, s_{2}",
+        "the real roots",
+        "1/s"
+      ],
+      [
+        "A_{1}, A_{2}",
+        "constants from the initial conditions",
+        "V"
+      ],
+      [
+        "t",
+        "time after the switch",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "s^{2} + (R/L) s + 1/(LC) = 0",
+        "characteristic equation"
+      ],
+      [
+        "v(t) = V_{f} + (A_{1} + A_{2} t) e^{−αt}",
+        "critically damped"
+      ]
+    ],
+    "example": {
+      "problem": "The circuit with s_{1} = −268 s^{−1} and s_{2} = −3732 s^{−1} is switched onto 10 V with the capacitor empty and no inductor current. Find v_{C} at 1 ms.",
+      "steps": [
+        "A_{1} + A_{2} = −10 and −268A_{1} − 3732A_{2} = 0",
+        "A_{1} = −10.77 V, A_{2} = 0.77 V",
+        "v = 10 − 10.77 e^{−0.268} + 0.77 e^{−3.732}"
+      ],
+      "answer": "v_{C}(1 ms) ≈ 1.78 V"
+    },
+    "try": "10 - 10.77 e^(-0.268) + 0.77 e^(-3.732)"
+  },
+  "v(t) = V_{f} + (A_{1} + A_{2} t) e^{−αt}": {
+    "title": "Critically damped RLC step response",
+    "about": "When α = ω_{0} the roots repeat at s = −α and the response reaches its final value as fast as it can without overshoot. Find A_{1} = v(0) − V_{f} and then A_{2} from dv/dt(0) = A_{2} − αA_{1}.",
+    "assumptions": [
+      "Constant source after t = 0",
+      "α = ω_{0} exactly: for a series RLC, R = 2√(L/C)"
+    ],
+    "vars": [
+      [
+        "v(t)",
+        "capacitor voltage (or any circuit variable)",
+        "V"
+      ],
+      [
+        "V_{f}",
+        "final value",
+        "V"
+      ],
+      [
+        "α",
+        "neper frequency",
+        "1/s"
+      ],
+      [
+        "A_{1}",
+        "constant, v(0) − V_{f}",
+        "V"
+      ],
+      [
+        "A_{2}",
+        "constant from the slope at 0",
+        "V/s"
+      ],
+      [
+        "t",
+        "time after the switch",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "α = R/(2L)",
+        "neper frequency, series"
+      ],
+      [
+        "v(t) = V_{f} + e^{−αt} (B_{1} cos(ω_{d}t) + B_{2} sin(ω_{d}t))",
+        "underdamped"
+      ]
+    ],
+    "example": {
+      "problem": "A series RLC with L = 50 mH, C = 20 μF and R = 100 Ω (so α = ω_{0} = 1000 s^{−1}) is switched onto 10 V with everything at rest. Find v_{C} at 1 ms.",
+      "steps": [
+        "A_{1} = 0 − 10 = −10 V",
+        "dv/dt(0) = 0 so A_{2} = αA_{1} = −10^{4} V/s",
+        "v = 10 − (10 + 10^{4} × 0.001) e^{−1} = 10 − 20 × 0.368"
+      ],
+      "answer": "v_{C}(1 ms) ≈ 2.64 V"
+    },
+    "try": "10 - 20 e^(-1)"
+  },
+  "v(t) = V_{f} + e^{−αt} (B_{1} cos(ω_{d}t) + B_{2} sin(ω_{d}t))": {
+    "title": "Underdamped RLC step response",
+    "about": "When α < ω_{0} the roots are complex, −α ± jω_{d}, and the response overshoots and rings at the damped frequency ω_{d} = √(ω_{0}^{2} − α^{2}) inside an e^{−αt} envelope. B_{1} = v(0) − V_{f}; B_{2} follows from dv/dt(0) = −αB_{1} + ω_{d}B_{2}. The first peak is at t = π/ω_{d}.",
+    "assumptions": [
+      "Constant source after t = 0",
+      "α < ω_{0}"
+    ],
+    "vars": [
+      [
+        "v(t)",
+        "capacitor voltage (or any circuit variable)",
+        "V"
+      ],
+      [
+        "V_{f}",
+        "final value",
+        "V"
+      ],
+      [
+        "α",
+        "neper frequency (decay rate)",
+        "1/s"
+      ],
+      [
+        "ω_{d}",
+        "damped frequency",
+        "rad/s"
+      ],
+      [
+        "B_{1}, B_{2}",
+        "constants from the initial conditions",
+        "V"
+      ],
+      [
+        "t",
+        "time after the switch",
+        "s"
+      ]
+    ],
+    "related": [
+      [
+        "ω_{d} = √(ω_{0}^{2} − α^{2})",
+        "damped frequency"
+      ],
+      [
+        "%OS = 100 e^{−πζ/√(1 − ζ^{2})}",
+        "overshoot"
+      ],
+      [
+        "t_{p} = π/ω_{d}",
+        "peak time"
+      ]
+    ],
+    "example": {
+      "problem": "A series RLC with R = 40 Ω, L = 50 mH, C = 20 μF is switched onto 10 V from rest. Find the peak capacitor voltage.",
+      "steps": [
+        "α = 40/(2 × 0.05) = 400 s^{−1}; ω_{0} = 1000 rad/s; ω_{d} = √(1000^{2} − 400^{2}) = 916.5 rad/s",
+        "B_{1} = −10 V; B_{2} = αB_{1}/ω_{d} = −4.36 V",
+        "at t_{p} = π/ω_{d} = 3.43 ms the sine term is zero and cos = −1: v = 10 + 10 e^{−400 × 0.00343}"
+      ],
+      "answer": "v_{max} ≈ 12.5 V"
+    },
+    "try": "10 (1 + e^(-400 pi / sqrt(1000^2 - 400^2)))"
   }
 }

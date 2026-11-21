@@ -60,7 +60,8 @@
   "assumptions": [
    "h is an average over the surface and is roughly constant over the temperature range",
    "T_{∞} is the fluid temperature far from the surface (or the bulk temperature in a pipe)",
-   "Typical h: free convection in air 2–25, forced air 25–250, water 50–20 000 W/(m^{2}·K)"
+   "Typical h: free convection in air 2–25, forced air 25–250, water 50–20 000 W/(m^{2}·K)",
+   "ΔT is the same in K and °C; h in W/(m^{2}·K) needs A in m^{2}"
   ],
   "vars": [
    [
@@ -226,10 +227,11 @@
  },
  "R = 1/(h A)": {
   "title": "Convection resistance of a surface film",
-  "about": "The convection law Q̇ = h A ΔT written as a resistance. It lets the fluid films on each side of a wall sit in series with the wall's conduction resistance.",
+  "about": "The convection law Q̇ = h A ΔT written as a resistance ΔT/Q̇. It lets the fluid films on each side of a wall sit in series with the wall's conduction resistance, just like resistors. A small h or a small area gives a large resistance: the still-air film is often the biggest one in a window.",
   "assumptions": [
    "h is a constant average over the surface",
-   "Radiation in parallel can be included by using h + h_{r}"
+   "Radiation in parallel can be included by using h + h_{r}",
+   "For a pipe, the inside film uses the inner area and the outside film the outer area"
   ],
   "vars": [
    [
@@ -324,7 +326,8 @@
   "about": "The thermal Ohm's law: temperature difference drives heat flow the way voltage drives current. With the total resistance of a path you get the heat flow, and with the heat flow you get the temperature at every interface.",
   "assumptions": [
    "Steady state",
-   "R is the total resistance between the two temperatures, series and parallel combined like resistors"
+   "R is the total resistance between the two temperatures, series and parallel combined like resistors",
+   "ΔT in K or °C (the same); never ΔT of absolute temperatures squared or to the fourth, which is radiation"
   ],
   "vars": [
    [
@@ -358,9 +361,11 @@
    ]
   ],
   "example": {
-   "problem": "The wall above (Σ R = 0.0369 K/W) separates a 20 °C room from 0 °C outdoor air. Find the heat loss.",
+   "problem": "A 12 m^{2} wall (brick 0.2 m thick, k = 0.72 W/(m·K)) has h = 8 W/(m^{2}·K) inside and 25 W/(m^{2}·K) outside. With the room at 20 °C and outside air at 0 °C, find the heat loss.",
    "steps": [
-    "Q̇ = 20 K/0.0369 K/W = 542 W"
+    "R_{in} = 1/(8 × 12) = 0.0104, R_{wall} = 0.2/(0.72 × 12) = 0.0231, R_{out} = 1/(25 × 12) = 0.0033 K/W",
+    "Σ R = 0.0369 K/W",
+    "Q̇ = 20/0.0369"
    ],
    "answer": "Q̇ ≈ 542 W"
   },
@@ -430,8 +435,9 @@
   "title": "Thermal time constant of a lumped body",
   "about": "The ratio of the heat a body stores per degree (ρVc_{p}) to the rate it sheds heat per degree (hA). Small, thin or well-cooled objects have short time constants; this is why a thermocouple bead responds fast.",
   "assumptions": [
-   "Lumped body: Bi < 0.1",
-   "Constant properties and h"
+   "Lumped body: Bi = h(V/A)/k < 0.1; check it first",
+   "Constant properties and h",
+   "After τ the body has covered 63% of the way to T_{∞}; after 5τ about 99%"
   ],
   "vars": [
    [
@@ -589,7 +595,7 @@
  },
  "ΔT_{m} = (ΔT_{1} − ΔT_{2})/ln(ΔT_{1}/ΔT_{2})": {
   "title": "Log mean temperature difference",
-  "about": "The temperature gap between the streams changes along an exchanger, roughly exponentially. The log mean is the exact average to use in Q̇ = UAΔT_{m}. ΔT_{1} and ΔT_{2} are the gaps at the two ends.",
+  "about": "The temperature gap between the streams changes along an exchanger, roughly exponentially, so a plain average of the end gaps overstates the driving force. The log mean is the exact average to use in Q̇ = UAΔT_{m}. ΔT_{1} and ΔT_{2} are the stream-to-stream gaps at the two ends, not the change of either stream.",
   "assumptions": [
    "Counterflow: ΔT_{1} = T_{h,in} − T_{c,out}, ΔT_{2} = T_{h,out} − T_{c,in}; parallel flow: both inlets at one end",
    "Constant U and specific heats",
@@ -630,7 +636,7 @@
  },
  "Nu = h L/k": {
   "title": "Nusselt number: dimensionless convection coefficient",
-  "about": "The Nusselt number is the convection coefficient made dimensionless with a length and the fluid's conductivity. Correlations give Nu from Re and Pr; you then solve this for h.",
+  "about": "The Nusselt number is the convection coefficient made dimensionless with a length and the fluid's conductivity: the heat convected compared with what pure conduction through a still fluid layer of thickness L would carry. Nu = 1 means no help from flow. Correlations give Nu from Re and Pr; you then solve this for h.",
   "assumptions": [
    "k is the fluid's conductivity (contrast Biot)",
    "L is the correlation's own length: diameter D for pipes, plate length for plates"
@@ -686,7 +692,8 @@
   "assumptions": [
    "In a pipe, L = D and v is the mean velocity; laminar below about 2300, turbulent above about 4000",
    "On a flat plate, L = x from the leading edge; transition near 5 × 10^{5}",
-   "Properties at the film or bulk temperature, as the correlation specifies"
+   "Properties at the film or bulk temperature, as the correlation specifies",
+   "μ is dynamic viscosity (Pa·s); with kinematic ν use Re = vL/ν"
   ],
   "vars": [
    [
@@ -739,7 +746,8 @@
   "title": "Prandtl number: momentum vs heat diffusion",
   "about": "The ratio of how fast momentum diffuses (viscosity) to how fast heat diffuses in a fluid. It is a property of the fluid alone: about 0.7 for gases, 7 for water at room temperature, hundreds for oils.",
   "assumptions": [
-   "Evaluate at the temperature the correlation specifies (bulk or film)"
+   "A fluid property: evaluate at the temperature the correlation specifies (bulk or film)",
+   "Pr ≈ 1 means the velocity and thermal boundary layers are about the same thickness; for Pr > 1 the thermal layer is thinner"
   ],
   "vars": [
    [
@@ -842,7 +850,8 @@
   "about": "The number of moles in a sample is its mass divided by the molar mass, which is the sum of atomic masses in the formula, in g/mol. This is the bridge from what a balance reads to what a balanced equation counts.",
   "assumptions": [
    "M is for the exact formula weighed (hydrates include their water)",
-   "The sample is pure"
+   "The sample is pure",
+   "Grams with g/mol give mol; kilograms need kg/mol"
   ],
   "vars": [
    [
@@ -882,9 +891,10 @@
  },
  "N = n N_{A}": {
   "title": "Number of particles from moles",
-  "about": "A mole is 6.022 × 10^{23} particles (Avogadro's number), so multiplying moles by N_{A} counts atoms, molecules or ions.",
+  "about": "A mole is defined as N_{A} = 6.022 × 10^{23} particles, chosen so that 1 mol of a substance has a mass in grams equal to its formula mass. Multiplying moles by N_{A} counts atoms, molecules or ions; dividing a count by N_{A} gives moles.",
   "assumptions": [
-   "Count the particle you mean: 1 mol of H_{2}O has 2 mol of H atoms"
+   "Count the particle you mean: 1 mol of H_{2}O has 2 mol of H atoms and 3 mol of atoms in all",
+   "Moles come from mass via n = m/M with M in g/mol, so keep the mass in grams"
   ],
   "vars": [
    [
@@ -907,6 +917,10 @@
    [
     "n = m/M",
     "moles from mass"
+   ],
+   [
+    "P V = n R T",
+    "moles of a gas"
    ]
   ],
   "example": {
@@ -958,8 +972,9 @@
   "title": "Molarity: moles per litre of solution",
   "about": "Molar concentration is moles of solute per litre of solution (not of solvent). 1 M = 1 mol/L = 1000 mol/m^{3}.",
   "assumptions": [
-   "V is the final solution volume",
-   "Volume changes with temperature, so molarity does too (molality doesn't)"
+   "V is the final solution volume, not the volume of solvent added",
+   "Volume changes with temperature, so molarity does too (molality doesn't)",
+   "Millilitres must be converted to litres: 250 mL = 0.250 L"
   ],
   "vars": [
    [
@@ -1002,7 +1017,8 @@
   "title": "Molality: moles per kilogram of solvent",
   "about": "Molality divides moles of solute by the mass of solvent, not the volume of solution, so it doesn't change with temperature. Freezing point depression and boiling point elevation use it.",
   "assumptions": [
-   "m_{solvent} in kilograms, solvent only"
+   "m_{solvent} in kilograms, solvent only (not the solution's mass)",
+   "Not the same as molarity: for dilute water solutions they are close, otherwise not"
   ],
   "vars": [
    [
@@ -1046,6 +1062,7 @@
   "about": "Adding solvent doesn't change the moles of solute, so concentration times volume is the same before and after. Use any matching units for c and V.",
   "assumptions": [
    "Only solvent is added; no reaction",
+   "V_{2} is the final total volume, not the volume of water added",
    "Volumes are additive enough (fine for dilute aqueous solutions)"
   ],
   "vars": [
@@ -1088,12 +1105,11 @@
  },
  "A = ε l c": {
   "title": "Beer–Lambert law: absorbance and concentration",
-  "about": "Absorbance of light by a solution is proportional to the concentration of the absorbing species and the path length. It is how a spectrophotometer measures concentration.",
+  "about": "Absorbance of light by a solution is proportional to the concentration of the absorbing species and the path length. Each thin layer absorbs the same fraction of the light reaching it, so intensity falls exponentially and its log, the absorbance, grows linearly. It is how a spectrophotometer measures concentration.",
   "assumptions": [
    "Monochromatic light at a wavelength the species absorbs",
    "Dilute solutions (roughly A < 1); at high concentration the line bends",
-   "No scattering, fluorescence or chemical change with concentration",
-   "A = −log_{10}(I/I_{0}) = −log_{10} T"
+   "Absorbance is not percent transmittance: A = −log_{10} T, so 10% transmitted is A = 1"
   ],
   "vars": [
    [
@@ -1325,7 +1341,7 @@
   "assumptions": [
    "Fixed amount of gas in a constant volume",
    "Ideal gas behaviour",
-   "Absolute temperature (K) and absolute pressure"
+   "Absolute temperature (K) and absolute pressure: a tyre gauge reads gauge pressure, so add 101 kPa first"
   ],
   "vars": [
    [
@@ -1360,9 +1376,11 @@
  },
  "P_{tot} = Σ P_{i}": {
   "title": "Dalton's law of partial pressures",
-  "about": "In a mixture of gases each one pushes as if it were alone, and the total pressure is the sum. It is used to subtract water vapour from a gas collected over water.",
+  "about": "In a mixture of ideal gases the molecules don't interact, so each gas hits the walls as if it were alone, and the total pressure is the sum. It is used to subtract water vapour from a gas collected over water.",
   "assumptions": [
-   "Ideal gases that don't react"
+   "Ideal gases that don't react",
+   "Use partial pressures, not volumes, of the gases; all at the same temperature and in the same volume",
+   "Gas collected over water is saturated: subtract the vapour pressure at the water's temperature"
   ],
   "vars": [
    [
@@ -1380,6 +1398,10 @@
    [
     "P_{i} = x_{i} P_{tot}",
     "partial pressure from mole fraction"
+   ],
+   [
+    "P V = n R T",
+    "each gas obeys it alone"
    ]
   ],
   "example": {
@@ -1503,7 +1525,8 @@
   "about": "Lighter gases effuse (and diffuse) faster: the rate goes as one over the square root of molar mass, because at the same temperature molecules have the same average kinetic energy.",
   "assumptions": [
    "Effusion through a hole small compared to the mean free path; diffusion only roughly",
-   "Both gases at the same temperature and pressure"
+   "Both gases at the same temperature and pressure",
+   "The lighter gas is faster: M of the other gas goes on top"
   ],
   "vars": [
    [
@@ -1538,7 +1561,7 @@
  },
  "v_{rms} = √(3RT/M)": {
   "title": "Root-mean-square speed of gas molecules",
-  "about": "From kinetic theory, the typical speed of gas molecules depends only on temperature and molar mass. M must be in kg/mol for an answer in m/s.",
+  "about": "From kinetic theory: the average kinetic energy per molecule is (3/2)k_{B}T, so (1/2)m v_{rms}^{2} = (3/2)k_{B}T. Per mole this gives √(3RT/M). Lighter molecules move faster at the same temperature, which is why hydrogen escapes Earth's atmosphere.",
   "assumptions": [
    "Ideal gas with a Maxwell–Boltzmann distribution",
    "M in kg/mol (28 g/mol = 0.028 kg/mol)"
@@ -1688,7 +1711,8 @@
   "assumptions": [
    "Constant temperature and pressure",
    "ΔH and ΔS are taken as constant with temperature (fair over moderate ranges)",
-   "Spontaneous says nothing about how fast"
+   "Spontaneous says nothing about how fast",
+   "ΔH is usually in kJ/mol and ΔS in J/(mol·K): convert one before combining; T in kelvin"
   ],
   "vars": [
    [
@@ -1739,10 +1763,11 @@
  },
  "ΔG° = −R T ln(K)": {
   "title": "Standard free energy and the equilibrium constant",
-  "about": "A reaction's standard free energy change fixes its equilibrium constant. A large negative ΔG° means K ≫ 1 (products favoured); positive means K ≪ 1.",
+  "about": "A reaction's standard free energy change fixes its equilibrium constant. At equilibrium ΔG = ΔG° + RT ln Q = 0 with Q = K, which rearranges to this. A large negative ΔG° means K ≫ 1 (products favoured); positive means K ≪ 1. Every 5.7 kJ/mol at 298 K is a factor of 10 in K.",
   "assumptions": [
    "K is the thermodynamic constant (activities: concentrations over 1 M, pressures over 1 bar)",
-   "ΔG° in J/mol with R = 8.314 J/(mol·K); T in kelvin"
+   "ΔG° in J/mol with R = 8.314 J/(mol·K); a ΔG° in kJ/mol must be multiplied by 1000 first",
+   "T in kelvin"
   ],
   "vars": [
    [
@@ -1849,7 +1874,8 @@
   "assumptions": [
    "ΔH_{vap} constant over the range",
    "Vapour is ideal and the liquid volume is negligible",
-   "Far from the critical point"
+   "Far from the critical point",
+   "T in kelvin and ΔH_{vap} in J/mol (not kJ/mol) with R = 8.314 J/(mol·K)"
   ],
   "vars": [
    [
@@ -1942,11 +1968,11 @@
  },
  "K_{p} = K_{c} (RT)^{Δn}": {
   "title": "Converting between K_{p} and K_{c}",
-  "about": "For gas reactions, K written with partial pressures differs from K written with concentrations by (RT) raised to the change in moles of gas. When Δn = 0 they're equal.",
+  "about": "For gas reactions, K written with partial pressures differs from K written with concentrations because each pressure is P = (n/V)RT = cRT. Every gas factor brings one RT, so the leftover is (RT) to the change in moles of gas. When Δn = 0 they're equal.",
   "assumptions": [
-   "Δn = moles of gaseous products − moles of gaseous reactants",
-   "R = 0.08206 L·atm/(mol·K) for pressures in atm (0.08314 L·bar for bar)",
-   "Ideal gases"
+   "Δn = moles of gaseous products − moles of gaseous reactants (ignore solids and liquids)",
+   "R = 0.08206 L·atm/(mol·K) for pressures in atm (0.08314 L·bar for bar), not 8.314",
+   "Ideal gases; T in kelvin"
   ],
   "vars": [
    [
@@ -2080,7 +2106,8 @@
   "about": "pH is the negative log of the hydrogen (hydronium) ion concentration. Each unit is a factor of 10; 7 is neutral at 25 °C, below is acidic.",
   "assumptions": [
    "[H^{+}] in mol/L",
-   "Dilute solutions; activity ≈ concentration"
+   "Dilute solutions; activity ≈ concentration",
+   "For a weak acid [H^{+}] is not the acid's concentration; solve the K_{a} equilibrium first"
   ],
   "vars": [
    [
@@ -2117,7 +2144,9 @@
   "title": "pOH from hydroxide concentration",
   "about": "pOH is the negative log of the hydroxide ion concentration, the base-side twin of pH. For a strong base, [OH^{−}] comes straight from the base's concentration.",
   "assumptions": [
-   "[OH^{−}] in mol/L; dilute solutions"
+   "[OH^{−}] in mol/L; dilute solutions",
+   "For Ba(OH)_{2} and other bases with two OH^{−}, double the concentration first",
+   "pOH is not pH: a strong base has a small pOH and a large pH"
   ],
   "vars": [
    [
@@ -2178,7 +2207,7 @@
    ]
   ],
   "example": {
-   "problem": "A solution has pOH = 4.20. Find its pH and [H^{+}].",
+   "problem": "A cleaning solution has pOH = 4.20 at 25 °C. Find its pH and [H^{+}].",
    "steps": [
     "pH = 14 − 4.20 = 9.80",
     "[H^{+}] = 10^{−9.80} = 1.6 × 10^{−10} M"
@@ -2189,7 +2218,7 @@
  },
  "K_{a} K_{b} = K_{w} = 10^{−14}": {
   "title": "Conjugate acid–base pair constants",
-  "about": "For an acid and its conjugate base, K_{a} times K_{b} equals the water constant. A strong acid has a very weak conjugate base, and the reverse.",
+  "about": "For an acid and its conjugate base, adding the two dissociation reactions gives water's self-ionization, so their constants multiply to K_{w}. A strong acid has a very weak conjugate base, and the reverse.",
   "assumptions": [
    "At 25 °C; K_{w} changes with temperature",
    "The two constants belong to a conjugate pair (HA and A^{−})"
@@ -2382,7 +2411,7 @@
  },
  "2 ‖ 1/[A] = 1/[A]_{0} + k t ‖ 1/(k[A]_{0})": {
   "title": "Second-order integrated rate law and half-life",
-  "about": "In a second-order reaction (rate = k[A]^{2}), 1/[A] grows linearly with time. Each half-life is twice as long as the one before, since it depends on the starting concentration.",
+  "about": "In a second-order reaction (rate = k[A]^{2}), integrating d[A]/dt = −k[A]^{2} gives 1/[A] growing linearly with time. The rate falls fast as [A] drops, so each half-life is twice as long as the one before: it depends on the starting concentration, unlike first order.",
   "assumptions": [
    "Rate = k[A]^{2} (or k[A][B] with [A] = [B])",
    "Constant temperature",
@@ -2414,6 +2443,10 @@
    [
     "rate = k[A]^{2}",
     "the rate law"
+   ],
+   [
+    "ln([A]/[A]_{0}) = −k t",
+    "first order, to compare"
    ]
   ],
   "example": {
@@ -2628,10 +2661,11 @@
  },
  "ΔG = −n F E": {
   "title": "Free energy from cell voltage",
-  "about": "The electrical work a cell can do equals the drop in Gibbs free energy. A positive cell voltage means a negative ΔG: spontaneous.",
+  "about": "The electrical work a cell can do equals the drop in Gibbs free energy: moving nF coulombs of electrons through E volts does nFE joules of work. A positive cell voltage means a negative ΔG: spontaneous.",
   "assumptions": [
-   "n is the moles of electrons transferred in the balanced reaction",
-   "E in volts, F = 96 485 C/mol, gives ΔG in J/mol"
+   "n is the moles of electrons transferred in the balanced reaction, not the moles of product",
+   "E in volts, F = 96 485 C/mol, gives ΔG in J/mol; divide by 1000 for kJ/mol",
+   "E is intensive: it does not double when you double the equation, but n and ΔG do"
   ],
   "vars": [
    [
@@ -2798,7 +2832,8 @@
   "about": "The charge passed (It) divided by F gives moles of electrons; dividing by the electrons per ion and multiplying by molar mass gives the mass deposited or dissolved.",
   "assumptions": [
    "100 % current efficiency (no side reactions such as hydrogen evolution)",
-   "Constant current; otherwise use the total charge Q = ∫I dt"
+   "Constant current; otherwise use the total charge Q = ∫I dt",
+   "t in seconds, not minutes or hours; n is the ion's charge (2 for Cu^{2+})"
   ],
   "vars": [
    [
@@ -2909,7 +2944,8 @@
   "assumptions": [
    "Dilute solution; the solid that freezes out is pure solvent",
    "i is the van 't Hoff factor",
-   "b in mol/kg of solvent"
+   "b in mol/kg of solvent",
+   "i counts particles per formula unit: 2 for NaCl, 3 for CaCl_{2}, 1 for sugar"
   ],
   "vars": [
    [
@@ -3005,10 +3041,11 @@
  },
  "P = x P°": {
   "title": "Raoult's law: vapour pressure of a solution",
-  "about": "The vapour pressure of a solvent over a solution is its pure vapour pressure times its mole fraction. Adding solute lowers the solvent's mole fraction and so its vapour pressure.",
+  "about": "The vapour pressure of a solvent over a solution is its pure vapour pressure times its mole fraction. Solute particles take up part of the surface, so fewer solvent molecules escape. Lowering vapour pressure is what raises boiling points and lowers freezing points.",
   "assumptions": [
    "Ideal solution: solute and solvent attract alike (good for similar liquids and dilute solutions)",
-   "For two volatile liquids, apply it to each and add (Dalton)"
+   "x is the solvent's mole fraction; using the solute's gives the lowering instead",
+   "An ionic solute counts every ion: NaCl gives two particles"
   ],
   "vars": [
    [
@@ -3048,9 +3085,10 @@
  },
  "E = h c/λ": {
   "title": "Energy of a photon",
-  "about": "A photon's energy is Planck's constant times its frequency, c/λ. Shorter wavelengths carry more energy: ultraviolet breaks bonds, infrared only warms.",
+  "about": "A photon's energy is Planck's constant times its frequency, c/λ. Light comes in quanta, so a single photon must carry enough energy to break a bond or eject an electron: shorter wavelengths carry more, which is why ultraviolet burns and infrared only warms. A handy form: E (eV) ≈ 1240/λ (nm).",
   "assumptions": [
-   "Applies to one photon; multiply by N_{A} for a mole"
+   "Applies to one photon; multiply by N_{A} for a mole",
+   "λ in metres: 500 nm = 500 × 10^{−9} m"
   ],
   "vars": [
    [
@@ -3085,7 +3123,7 @@
    ],
    [
     "1 eV = 1.602 × 10^{−19} J",
-    ""
+    "converting joules to electron-volts"
    ]
   ],
   "example": {
@@ -3150,7 +3188,7 @@
  },
  "dN/dt = r N": {
   "title": "Exponential population growth (rate form)",
-  "about": "With unlimited resources a population grows at a rate proportional to its size. r is births minus deaths per individual per unit time.",
+  "about": "With unlimited resources each individual reproduces at the same per-capita rate, so a population grows at a rate proportional to its size: the bigger it is, the faster it grows. r is births minus deaths per individual per unit time; the solution is exponential.",
   "assumptions": [
    "Unlimited resources, no crowding",
    "Constant per-capita birth and death rates; no migration",
@@ -3201,7 +3239,8 @@
   "about": "The solution of dN/dt = rN: the population multiplies by e^{r} each unit of time. Bacteria in fresh medium, invasive species and early epidemics follow it until resources run short.",
   "assumptions": [
    "Same as dN/dt = rN: unlimited resources and constant r",
-   "r and t in matching time units"
+   "r and t in matching time units (per hour with hours)",
+   "r is a continuous rate, not a percent per step; use N_{0}λ^{t} for that"
   ],
   "vars": [
    [
@@ -3314,7 +3353,7 @@
    ],
    [
     "r",
-    "intrinsic growth rate",
+    "growth rate constant, as in y_{0}e^{rt}",
     "s^{−1}"
    ]
   ],
@@ -3380,10 +3419,11 @@
  },
  "D = 1 − Σ p_{i}^{2}": {
   "title": "Simpson's diversity index",
-  "about": "The chance that two individuals picked at random belong to different species. 0 means one species; values near 1 mean high diversity. Dominant species weigh heavily in it.",
+  "about": "The chance that two individuals picked at random belong to different species: Σp_{i}^{2} is the chance both are of the same one. 0 means one species; values near 1 mean high diversity. Dominant species weigh heavily in it, rare ones barely.",
   "assumptions": [
    "Sampling with replacement; for small samples use 1 − Σ n(n − 1)/(N(N − 1))",
-   "p_{i} = n_{i}/N"
+   "p_{i} = n_{i}/N",
+   "Some books call Σp_{i}^{2} itself D, where larger means less diverse; check which one is meant"
   ],
   "vars": [
    [
@@ -3422,7 +3462,8 @@
   "about": "With two alleles at a locus, the frequency of the dominant allele (p) and the recessive allele (q) add to one. Count alleles from genotypes: each homozygote has two copies, each heterozygote one.",
   "assumptions": [
    "Exactly two alleles at the locus",
-   "Diploid organisms: 2N alleles among N individuals"
+   "Diploid organisms: 2N alleles among N individuals",
+   "p and q are allele frequencies, not genotype frequencies; q is √(q^{2}) only under Hardy–Weinberg"
   ],
   "vars": [
    [
@@ -3589,11 +3630,11 @@
  },
  "R = h^{2} S": {
   "title": "Breeder's equation: response to selection",
-  "about": "The change in the mean of the next generation equals heritability times the selection differential (how far the chosen parents' mean is from the population mean).",
+  "about": "The change in the mean of the next generation equals heritability times the selection differential. Only the additive genetic part of the parents' advantage is passed on; the rest was environment or dominance luck, so the offspring regress back toward the population mean by the factor h^{2}.",
   "assumptions": [
    "One generation of selection",
    "h^{2} constant; environment unchanged",
-   "Additive genetics"
+   "Additive genetics; uses narrow-sense h^{2}, not broad-sense H^{2}"
   ],
   "vars": [
    [
@@ -3629,7 +3670,7 @@
  },
  "RF = recombinants/total": {
   "title": "Recombination frequency and map distance",
-  "about": "The share of offspring with a new combination of parental alleles, usually from a testcross. 1 % recombination is 1 map unit (centimorgan); genes on different chromosomes or far apart give 50 %.",
+  "about": "The share of offspring with a new combination of parental alleles, usually from a testcross. Crossing over is more likely the farther apart two genes lie, so RF works as a distance: 1% recombination is 1 map unit (centimorgan). Genes on different chromosomes or far apart give 50%.",
   "assumptions": [
    "Accurate for nearby genes; double crossovers hide recombination beyond about 20 cM",
    "RF never exceeds 0.5"
@@ -3764,7 +3805,7 @@
  },
  "k_{cat} = V_{max}/[E]": {
   "title": "Turnover number",
-  "about": "The number of substrate molecules one enzyme molecule converts per second when saturated. k_{cat}/K_{m} measures catalytic efficiency; the diffusion limit is about 10^{8}–10^{9} M^{−1}s^{−1}.",
+  "about": "The number of substrate molecules one enzyme molecule converts per second when saturated. V_{max} is reached when every enzyme is busy, so dividing by the enzyme concentration gives the rate per enzyme. k_{cat}/K_{m} measures catalytic efficiency; the diffusion limit is about 10^{8}–10^{9} M^{−1}s^{−1}.",
   "assumptions": [
    "[E] is the total concentration of active enzyme",
    "V_{max} and [E] in matching units"
@@ -3788,12 +3829,12 @@
   ],
   "related": [
    [
-    "k_{cat}/K_{m}",
-    "catalytic efficiency"
-   ],
-   [
     "v = V_{max} [S]/(K_{m} + [S])",
     "Michaelis–Menten"
+   ],
+   [
+    "K_{m,app} = K_{m} (1 + [I]/K_{i})",
+    "with a competitive inhibitor"
    ]
   ],
   "example": {
@@ -3810,7 +3851,8 @@
   "about": "A competitive inhibitor competes for the active site, so more substrate is needed for half-maximal rate: K_{m} appears larger by the factor (1 + [I]/K_{i}). V_{max} is unchanged, since enough substrate outcompetes it.",
   "assumptions": [
    "Purely competitive inhibition, reversible",
-   "K_{i} is the inhibitor's dissociation constant"
+   "K_{i} is the inhibitor's dissociation constant",
+   "Keep [I] and K_{i} in the same units (µM with µM); the ratio is unitless"
   ],
   "vars": [
    [
@@ -3838,6 +3880,10 @@
    [
     "v = V_{max} [S]/(K_{m,app} + [S])",
     "rate with the inhibitor"
+   ],
+   [
+    "v = V_{max} [S]/(K_{m} + [S])",
+    "Michaelis–Menten"
    ]
   ],
   "example": {
@@ -3958,10 +4004,11 @@
  },
  "E = (61.5 mV/z) log_{10}([X]_{out}/[X]_{in})": {
   "title": "Nernst potential at body temperature",
-  "about": "The Nernst equation with RT ln 10/F worked out at 37 °C: each tenfold concentration ratio is worth 61.5 mV for a singly charged ion.",
+  "about": "The Nernst equation with RT ln 10/F worked out at 37 °C: each tenfold concentration ratio is worth 61.5 mV for a singly charged ion. It is the membrane voltage at which an ion's diffusion down its gradient is exactly balanced by the electric pull back.",
   "assumptions": [
    "37 °C only (at 20 °C it is 58 mV)",
-   "Same assumptions as the full Nernst equation"
+   "Include the sign of z: for Cl^{−} (z = −1) the potential flips sign",
+   "Out over in, giving the inside potential relative to outside"
   ],
   "vars": [
    [
@@ -3984,6 +4031,10 @@
    [
     "E = (RT/(zF)) ln([X]_{out}/[X]_{in})",
     "any temperature"
+   ],
+   [
+    "V_{m} = (RT/F) ln((P_{K}[K^{+}]_{o} + P_{Na}[Na^{+}]_{o} + P_{Cl}[Cl^{−}]_{i})/(P_{K}[K^{+}]_{i} + P_{Na}[Na^{+}]_{i} + P_{Cl}[Cl^{−}]_{o}))",
+    "several ions at once (Goldman)"
    ]
   ],
   "example": {
@@ -4042,10 +4093,11 @@
  },
  "Ψ = Ψ_{s} + Ψ_{p}": {
   "title": "Water potential",
-  "about": "Water moves from higher to lower water potential. Solutes make Ψ_{s} negative; pressure (like turgor in a plant cell) adds Ψ_{p}. Pure water at atmospheric pressure is 0.",
+  "about": "Water potential is the free energy of water per volume, measured as a pressure. Water moves from higher to lower Ψ. Solutes dilute the water and make Ψ_{s} negative; pressure (like turgor in a plant cell) adds Ψ_{p}. Pure water at atmospheric pressure is 0, so most cells sit below zero.",
   "assumptions": [
-   "Ψ_{p} is 0 in an open beaker and positive in a turgid cell",
-   "Gravity and matric terms ignored (matter in tall trees and soils)"
+   "Ψ_{p} is 0 in an open beaker and positive in a turgid cell; negative (tension) in xylem",
+   "Gravity and matric terms ignored (matter in tall trees and soils)",
+   "Water flows toward the more negative Ψ, not the less negative"
   ],
   "vars": [
    [
@@ -4313,10 +4365,11 @@
  },
  "CO = HR × SV": {
   "title": "Cardiac output",
-  "about": "The volume of blood the heart pumps per minute is beats per minute times the volume ejected per beat. About 5 L/min at rest, up to 20–35 L/min in hard exercise.",
+  "about": "The volume of blood the heart pumps per minute: beats per minute times the volume ejected per beat. About 5 L/min at rest, up to 20–35 L/min in hard exercise, where both rate and stroke volume rise.",
   "assumptions": [
    "SV = end-diastolic volume − end-systolic volume",
-   "One ventricle; left and right are equal on average"
+   "One ventricle; left and right are equal on average",
+   "Watch units: mL per beat × beats per minute gives mL/min; divide by 1000 for L/min"
   ],
   "vars": [
    [
@@ -4359,7 +4412,8 @@
   "about": "The circulation's Ohm's law: pressure drop equals flow times resistance. Since venous pressure is near zero, the mean arterial pressure is cardiac output times total peripheral resistance.",
   "assumptions": [
    "Right atrial pressure ≈ 0 (else use MAP − CVP)",
-   "Steady, averaged flow"
+   "Steady, averaged flow",
+   "Units must match: L/min × mmHg·min/L gives mmHg"
   ],
   "vars": [
    [
@@ -4551,10 +4605,11 @@
   "try": "10 * exp(-ln(2)/4 * 8)"
  },
  "t_{1/2} = ln(2)/k": {
-  "title": "Elimination half-life",
-  "about": "The time for the drug concentration to halve, the same at any concentration in first-order elimination. After about 4–5 half-lives a drug is essentially gone, and repeated dosing reaches steady state.",
+  "title": "Half-life of exponential decay",
+  "about": "The time for a quantity decaying as y_{0}e^{−kt} to halve: a radioactive sample, a capacitor discharging, a drug cleared from the blood (first-order elimination). It is the same whatever the starting amount; after about 4–5 half-lives a drug is essentially gone, and repeated dosing reaches steady state.",
   "assumptions": [
-   "First-order elimination"
+   "First-order (exponential) decay at a constant rate k > 0",
+   "t_{1/2} comes out in the reciprocal of k's time unit"
   ],
   "vars": [
    [
@@ -4564,7 +4619,7 @@
    ],
    [
     "k",
-    "elimination rate constant",
+    "decay (elimination) rate constant",
     "s^{−1}"
    ]
   ],
@@ -4660,8 +4715,8 @@
     "with efficiency E"
    ],
    [
-    "ΔC_{t} = log_{2}(fold change)",
-    "qPCR"
+    "N = N_{0} 2^{t/g}",
+    "the same doubling, for bacteria"
    ]
   ],
   "example": {
@@ -4675,7 +4730,7 @@
  },
  "N = N_{0} 2^{t/g}": {
   "title": "Bacterial growth by generation time",
-  "about": "During exponential growth a culture doubles every generation time g, so after time t it has gone through t/g doublings.",
+  "about": "During exponential growth a culture doubles every generation time g, so after time t it has gone through t/g doublings and multiplied by 2^{t/g}. Ten doublings is about a thousandfold.",
   "assumptions": [
    "Exponential (log) phase only: not lag, stationary or death phase",
    "Constant g; t and g in the same units"
@@ -4721,5 +4776,137 @@
    "answer": "N ≈ 4.10 × 10^{6} cells"
   },
   "try": "1000 * 2^(240/20)"
+ },
+ "n_{B} = (b/a) n_{A}": {
+  "title": "Stoichiometry: moles of product from a mole ratio",
+  "about": "A balanced equation aA → bB says b moles of B form for every a moles of A. Convert grams to moles, scale by the coefficients, then convert back. With two reactants, work out the product each one could make: the limiting reagent is the one that gives less, and that amount is the theoretical yield.",
+  "assumptions": [
+   "The equation is balanced",
+   "The reaction runs to completion (the theoretical yield)"
+  ],
+  "vars": [
+   [
+    "n_{B}",
+    "moles of B formed or used",
+    "mol"
+   ],
+   [
+    "n_{A}",
+    "moles of A",
+    "mol"
+   ],
+   [
+    "a, b",
+    "coefficients of A and B in the balanced equation",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "n = m/M",
+    "moles from mass"
+   ],
+   [
+    "percent yield = 100 × actual/theoretical",
+    "percent yield"
+   ]
+  ],
+  "example": {
+   "problem": "N_{2} + 3H_{2} → 2NH_{3}. 28.0 g of N_{2} (28.02 g/mol) reacts with 9.0 g of H_{2} (2.016 g/mol). What mass of NH_{3} (17.03 g/mol) can form?",
+   "steps": [
+    "n(N_{2}) = 0.999 mol; n(H_{2}) = 4.46 mol",
+    "NH_{3} from N_{2}: (2/1) × 0.999 = 2.00 mol; from H_{2}: (2/3) × 4.46 = 2.98 mol",
+    "N_{2} is limiting: m = 2.00 mol × 17.03 g/mol"
+   ],
+   "answer": "m(NH_{3}) ≈ 34.0 g"
+  },
+  "try": "28.0 g / (28.02 g/mol) * 2 * 17.03 g/mol"
+ },
+ "c_{a} V_{a} = c_{b} V_{b}": {
+  "title": "Titration: moles of acid equal moles of base at equivalence",
+  "about": "At the equivalence point of a titration the base added has exactly neutralised the acid, so their moles c V match. Solve it for the unknown concentration. For other ratios (H_{2}SO_{4} with NaOH, say) scale by the coefficients: c_{a}V_{a}/a = c_{b}V_{b}/b.",
+  "assumptions": [
+   "1:1 reaction, as HCl with NaOH",
+   "Both volumes in the same unit"
+  ],
+  "vars": [
+   [
+    "c_{a}",
+    "acid concentration",
+    "mol/L"
+   ],
+   [
+    "V_{a}",
+    "acid volume",
+    "L"
+   ],
+   [
+    "c_{b}",
+    "base concentration",
+    "mol/L"
+   ],
+   [
+    "V_{b}",
+    "base volume to reach equivalence",
+    "L"
+   ]
+  ],
+  "related": [
+   [
+    "c = n/V",
+    "molarity"
+   ],
+   [
+    "pH = pK_{a} + log_{10}([A^{−}]/[HA])",
+    "buffer region of a weak-acid titration"
+   ]
+  ],
+  "example": {
+   "problem": "25.0 mL of HCl takes 18.4 mL of 0.100 M NaOH to reach the equivalence point. What is the HCl concentration?",
+   "steps": [
+    "c_{a} = 0.100 × 18.4/25.0"
+   ],
+   "answer": "c_{a} ≈ 0.0736 M"
+  },
+  "try": "0.100 * 18.4 mL / 25.0 mL"
+ },
+ "t_{d} ≈ 70/r": {
+  "title": "Rule of 70: doubling time from a percent growth rate",
+  "about": "A quick estimate of how long a population (or anything growing exponentially) takes to double: divide 70 by the growth rate in percent per unit time. It comes from t_{d} = ln(2)/r with ln 2 ≈ 0.693, and is close for rates under about 10%.",
+  "assumptions": [
+   "Steady exponential growth",
+   "r in percent per unit time; the answer is in that time unit"
+  ],
+  "vars": [
+   [
+    "t_{d}",
+    "doubling time",
+    "s"
+   ],
+   [
+    "r",
+    "growth rate, percent per unit time",
+    ""
+   ]
+  ],
+  "related": [
+   [
+    "t_{d} = ln(2)/r",
+    "exact, r as a fraction"
+   ],
+   [
+    "N = N_{0} e^{rt}",
+    "exponential growth"
+   ]
+  ],
+  "example": {
+   "problem": "A population grows at 3.5% per year. About how long does it take to double?",
+   "steps": [
+    "t_{d} ≈ 70/3.5",
+    "check: ln 2/0.035 = 19.8 years"
+   ],
+   "answer": "t_{d} ≈ 20 years"
+  },
+  "try": "70/3.5"
  }
 }

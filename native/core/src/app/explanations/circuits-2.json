@@ -411,7 +411,7 @@
  },
  "V_{T} = kT/q": {
   "title": "Thermal voltage",
-  "about": "The voltage scale of semiconductor physics, set by temperature: kT/q. It appears in the diode equation, BJT transconductance and small-signal resistances. About 25.9 mV at 300 K, often rounded to 25 or 26 mV.",
+  "about": "The voltage scale of semiconductor physics: the energy kT of thermal agitation per unit charge. Carriers must climb barriers of this order, so currents change by e for every V_{T} of bias. It appears in the diode equation, BJT transconductance and small-signal resistances. About 25.9 mV at 300 K, often rounded to 25 or 26 mV.",
   "assumptions": [
    "T is the junction temperature in kelvin, not the ambient in °C"
   ],
@@ -744,9 +744,10 @@
  },
  "α = β/(β + 1)": {
   "title": "Common-base current gain α",
-  "about": "α is the fraction of the emitter current that reaches the collector, I_{C}/I_{E}. It is just below 1, and a small change in α means a large change in β.",
+  "about": "α is the fraction of the emitter current that reaches the collector, I_{C}/I_{E}. Since I_{E} = I_{C} + I_{B} = I_{C}(1 + 1/β), it follows α = β/(β + 1). It sits just below 1, and a small change in α means a large change in β, which is why β varies so much between parts.",
   "assumptions": [
-   "Active region, as for β"
+   "Active region, as for β",
+   "In most designs take I_{C} ≈ I_{E}; the 1% difference rarely matters"
   ],
   "vars": [
    [
@@ -1037,7 +1038,8 @@
   "about": "How far the gate-source voltage is above threshold. It sets how strongly the channel conducts: the MOSFET is off when V_{ov} ≤ 0, and the drain current and transconductance grow with it.",
   "assumptions": [
    "NMOS (for PMOS use the magnitudes, |V_{GS}| − |V_{th}|)",
-   "V_{th} rises with source-body voltage (body effect) and falls with temperature"
+   "V_{th} rises with source-body voltage (body effect) and falls with temperature",
+   "Check saturation with V_{DS} ≥ V_{ov}, not V_{DS} ≥ V_{GS}"
   ],
   "vars": [
    [
@@ -1578,7 +1580,7 @@
  },
  "0 to 2^{n} − 1": {
   "title": "Range of an n-bit unsigned integer",
-  "about": "n bits give 2^{n} different patterns. Read as an unsigned number they cover 0 up to 2^{n} − 1. Adding past the top wraps around to 0 (overflow).",
+  "about": "n bits give 2^{n} different patterns, since each bit doubles the count. Read as an unsigned number they cover 0 up to 2^{n} − 1: the top is one less than 2^{n} because zero uses a pattern. Adding past the top wraps around to 0 (overflow).",
   "assumptions": [
    "Plain binary; each bit k has weight 2^{k}"
   ],
@@ -1694,9 +1696,11 @@
  },
  "f_{max} = 1/T_{clk}": {
   "title": "Maximum clock frequency",
-  "about": "The fastest clock a synchronous circuit can run at is the inverse of its shortest safe clock period, set by the critical path.",
+  "about": "The fastest clock a synchronous circuit can run at is the inverse of its shortest safe clock period. That period is set by the critical path: the slowest register-to-register route, which must launch, compute and settle before the next edge.",
   "assumptions": [
-   "T_{clk} is the minimum period from the setup constraint, including any skew and jitter margin"
+   "T_{clk} is the minimum period from the setup constraint, including clock skew and jitter margin",
+   "Use the worst-case (slow corner) delays, not typical ones",
+   "Hold time does not limit f_{max}; it is a separate check that holds at any frequency"
   ],
   "vars": [
    [
@@ -1717,10 +1721,10 @@
    ]
   ],
   "example": {
-   "problem": "A design's critical path needs a period of 880 ps. Find f_{max}.",
+   "problem": "A path has t_{cq} = 120 ps, 700 ps of logic and t_{su} = 60 ps. Find f_{max}.",
    "steps": [
-    "f_{max} = 1/(880 ps)",
-    "= 1.14 GHz"
+    "T_{clk} = 120 + 700 + 60 = 880 ps",
+    "f_{max} = 1/(880 ps) = 1.14 GHz"
    ],
    "answer": "f_{max} ≈ 1.14 GHz"
   },
@@ -2350,7 +2354,8 @@
   "title": "Wave speed, frequency and wavelength",
   "about": "An electromagnetic wave travels one wavelength each cycle, so its speed is frequency times wavelength. In vacuum the speed is c; in a cable or dielectric it is slower, v = c/√ε_{r}, and the wavelength shrinks with it.",
   "assumptions": [
-   "Vacuum (or air, to within 0.03 %)"
+   "Vacuum (or air, to within 0.03 %)",
+   "In a cable or on a PCB the wavelength is shorter by √ε_{r}; using c there oversizes antennas and stubs"
   ],
   "vars": [
    [
@@ -2490,7 +2495,8 @@
   "title": "Phase constant (wavenumber)",
   "about": "How many radians of phase a wave goes through per metre of travel. It turns a line's length into an electrical length βl, the angle that appears in the input-impedance formula.",
   "assumptions": [
-   "λ is the wavelength on the line or in the medium, not in free space unless the wave is in free space"
+   "λ is the wavelength on the line or in the medium, not in free space unless the wave is in free space",
+   "Lossless line; in a lossy line β is the imaginary part of γ = α + jβ"
   ],
   "vars": [
    [
@@ -2574,7 +2580,7 @@
  },
  "VSWR = (1 + |Γ|)/(1 − |Γ|)": {
   "title": "Voltage standing-wave ratio",
-  "about": "Incident and reflected waves add to a standing wave along the line. VSWR is the ratio of its maximum to minimum amplitude: 1 for a perfect match, growing without limit toward a short or open. It is easy to measure, so antennas are often specified by it.",
+  "about": "Incident and reflected waves add in phase at some points and cancel at others, a standing wave along the line. Its maximum is 1 + |Γ| and its minimum 1 − |Γ| times the incident amplitude, so VSWR is their ratio: 1 for a perfect match, growing without limit toward a short or open. It is easy to measure, so antennas are often specified by it (VSWR < 2 means under 11% of power reflected).",
   "assumptions": [
    "Lossless line between the load and where it is measured; loss makes VSWR look better than it is at the load"
   ],
@@ -2600,15 +2606,16 @@
     "reflection coefficient"
    ],
    [
-    "VSWR = Z_{L}/Z_{0}",
-    "real Z_{L} > Z_{0}"
+    "RL = −20 log_{10}|Γ|",
+    "return loss, the same in dB"
    ]
   ],
   "example": {
-   "problem": "A load has |Γ| = 0.2. Find the VSWR.",
+   "problem": "A 50 Ω antenna measures 75 Ω (resistive) at its feed. Find |Γ|, the VSWR and the fraction of power reflected.",
    "steps": [
-    "VSWR = (1 + 0.2)/(1 − 0.2) = 1.2/0.8",
-    "= 1.5"
+    "|Γ| = (75 − 50)/(75 + 50) = 0.2",
+    "VSWR = (1 + 0.2)/(1 − 0.2) = 1.5",
+    "Reflected power = |Γ|^{2} = 4%"
    ],
    "answer": "VSWR = 1.5"
   },
@@ -2676,10 +2683,11 @@
  },
  "C = εA/d": {
   "title": "Parallel-plate capacitance",
-  "about": "Two flat plates of area A separated by a gap d store charge in proportion to voltage. Capacitance grows with plate area and with the permittivity of the material between them, and falls as the gap widens.",
+  "about": "Two flat plates of area A separated by a gap d store charge in proportion to voltage. A voltage V sets up a field V/d in the gap, and the charge needed to make it is εA·V/d. Capacitance grows with plate area and with the permittivity of the material between them, and falls as the gap widens.",
   "assumptions": [
    "Gap small compared to the plate size, so fringing at the edges is negligible",
-   "Uniform, linear dielectric filling the gap"
+   "Uniform, linear dielectric filling the gap",
+   "ε = ε_{r}ε_{0}: forgetting ε_{0} gives an answer 10^{11} too big; convert cm^{2} and mm to m"
   ],
   "vars": [
    [
@@ -2894,7 +2902,8 @@
   "about": "A spinning armature cuts the field and generates a voltage proportional to speed, opposing the supply. This is what limits a motor's speed and current. With SI units, the same constant k is the torque per amp.",
   "assumptions": [
    "Constant field (permanent magnet or fixed field current)",
-   "k in V·s/rad equals k in N·m/A"
+   "k in V·s/rad equals k in N·m/A",
+   "ω in rad/s; datasheets often give k in V per 1000 rpm, which must be converted"
   ],
   "vars": [
    [
@@ -2939,7 +2948,7 @@
  },
  "τ = k I_{a}": {
   "title": "DC motor torque",
-  "about": "A DC motor's torque is proportional to its armature current. The constant is the same k as in the back EMF when SI units are used, since power in equals mechanical power out: EI_{a} = τω.",
+  "about": "A DC motor's torque is proportional to its armature current: each conductor in the field feels a force BIL. The constant is the same k as in the back EMF when SI units are used, since power in equals mechanical power out: EI_{a} = τω.",
   "assumptions": [
    "Constant field",
    "Ignores friction and armature reaction; the useful shaft torque is less by the friction torque"
@@ -3131,7 +3140,8 @@
   "about": "The fraction of input power that comes out as useful output. The rest is lost as heat in resistance, friction, core and switching losses.",
   "assumptions": [
    "Both powers in the same units, measured at the same operating point",
-   "0 ≤ η ≤ 1 for a passive device"
+   "0 ≤ η ≤ 1 for a passive device",
+   "For AC input use real power, P = V I cos θ, not the apparent V I"
   ],
   "vars": [
    [
@@ -3221,7 +3231,7 @@
  },
  "V_{out} = V_{in}/(1 − D)": {
   "title": "Boost converter (step-up)",
-  "about": "The inductor charges from the input while the switch is on and, when it opens, adds its voltage to the input to push current to the output. The output is always at least the input.",
+  "about": "The inductor charges from the input while the switch is on and, when it opens, adds its voltage to the input to push current to the output. In steady state the inductor's volt-seconds balance: V_{in}D = (V_{out} − V_{in})(1 − D), which gives V_{in}/(1 − D). The output is always at least the input.",
   "assumptions": [
    "Ideal components, steady state, continuous conduction",
    "Real boosts top out around 4–5× because the switch and inductor resistance make the gain fall as D → 1"
@@ -3367,8 +3377,9 @@
   "title": "Characteristic equation of a feedback loop",
   "about": "The closed-loop poles are the roots of 1 + G(s)H(s) = 0. They decide stability and the transient response: all roots in the left half-plane means stable; complex roots mean an oscillating, decaying response.",
   "assumptions": [
-   "Linear, time-invariant system with negative feedback",
-   "Clear the fractions first to get a polynomial in s"
+   "Linear, time-invariant system with negative feedback (positive feedback gives 1 − GH = 0)",
+   "Clear the fractions first to get a polynomial in s",
+   "It is the open-loop GH that goes in, but the roots are closed-loop poles; don't confuse them with the poles of G"
   ],
   "vars": [
    [
@@ -3459,7 +3470,9 @@
   "title": "Position (static) error constant",
   "about": "The open-loop DC gain: G(s) with s set to zero. It sets the steady-state error to a step. It is infinite when G has an integrator (type 1 or higher), giving zero step error.",
   "assumptions": [
-   "Unity feedback (with other H, form the equivalent unity-feedback G first)"
+   "Unity feedback (with other H, form the equivalent unity-feedback G first)",
+   "The closed loop must be stable, or the error never settles",
+   "The step error is 1/(1 + K_{p}), not 1/K_{p}"
   ],
   "vars": [
    [
@@ -3567,7 +3580,8 @@
   "title": "PID controller transfer function",
   "about": "The PID controller in the Laplace domain. The integral term is a pole at the origin, which makes the loop one type higher; the derivative term adds a zero that brings phase lead. Put s = jω to get its frequency response.",
   "assumptions": [
-   "Ideal form; a real derivative has a filter pole, K_{d}s/(τs + 1)"
+   "Ideal form; a real derivative has a filter pole, K_{d}s/(τs + 1)",
+   "Some texts use the standard form K_{p}(1 + 1/(T_{i}s) + T_{d}s), where K_{i} = K_{p}/T_{i} and K_{d} = K_{p}T_{d}; check which a tuning rule assumes"
   ],
   "vars": [
    [

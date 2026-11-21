@@ -873,3 +873,3060 @@ projectile motion	projectile
 projectile range	range
 ratio test	ratio test
 radius of convergence	radius of convergence
+# critic round 1: euler, complex numbers, taylor, vector calculus, precalculus, differential equations, numerical methods
+euler identity	Euler's identity
+de moivre	de Moivre
+demoivre	de Moivre
+hyperbolic cosine	cosh(x) =
+cosh	cosh
+polar form	rectangular = polar
+complex conjugate	complex conjugate
+argument of z	atan2
+roots of unity	nth roots
+nth root complex	nth roots
+complex log	complex log
+power reduction	power reduction
+product to sum	Product to sum
+double angle	double angle
+maclaurin	Maclaurin
+maclauren	Maclaurin
+taylor polynomial	Taylor
+lagrange remainder	Lagrange remainder
+small angle approximation	sin x ≈ x
+binomial series	binomial
+arctan series	arctan
+grad	gradient
+divergence	divergence
+curl	curl
+laplacian	Laplacian
+stokes theorem	Stokes
+greens theorem	Green's
+divergence theorem	divergence theorem
+gauss theorem	divergence theorem
+line integral	line integral
+work integral	line integral
+flux integral	flux integral
+surface integral	flux integral
+arc length	arc length
+spherical coordinates	spherical
+cylindrical coordinates	cylindrical
+conservative field	conservative
+irrotational	∇ × F = 0
+path independence	gradient theorem
+directional derivative	directional derivative
+completing the square	completing the square
+vieta	Vieta
+sum of cubes	sum of cubes
+factor theorem	factor theorem
+composite function	composition
+distance formula	distance formula
+geometric sequence	geometric sequence
+geometric series sum	geometric series sum
+zeta omega n	ζ
+critically damped	critical damping
+overdamped	real, distinct
+underdamped	underdamped
+indicial equation	indicial
+fixed point iteration	fixed-point
+linear interpolation	linear interpolation
+lagrange interpolation	Lagrange interpolating
+backward difference	backward difference
+jacobi iteration	Jacobi
+percent error	relative error
+quadratic convergence	order p
+runge	RK4
+eigen solution	eigen-solution
+taylr	Taylor
+gradiant	gradient
+# geometry, statistics, finance, computer science and machine learning (sheet critic, round 1)
+herons formula	Heron
+pythagorus	Pythagorean
+sector area	sector area
+arc len	arc length
+equilateral triangle	equilateral
+hexagon area	regular n-gon
+point to line distance	point to the line
+midpoint	midpoint
+cone surface area	slant side
+sphere volume	Volume of a sphere
+interior angles polygon	interior angle sum
+30 60 90	30-60-90
+population variance	population variance
+standard error	standard error of the mean
+covariance	covariance
+pearson	correlation coefficient
+regression intercept	regression intercept
+poisson	Poisson
+t interval	σ unknown
+z test	z test for a mean
+permutation	permutations
+littles law	Little's law
+gustafson	Gustafson
+twos complement	two's complement
+spanning tree edges	edges in a tree
+planar graph	planar graph
+open addressing	expected probes
+iron law	CPU time
+amat	average memory access time
+propagation delay	propagation delay
+tanh	hyperbolic tangent
+sigmoid derivative	derivative of the sigmoid
+transformer attention	attention
+log loss	binary cross-entropy
+svm	hinge loss
+gini	Gini impurity
+info gain	information gain
+adam	Adam
+momentum sgd	momentum
+min max scaling	min-max
+normalisation	min-max
+specificity	specificity
+rmse	root mean squared error
+r squared	coefficient of determination
+apy	effective annual rate
+rule of 72	rule of 72
+perpetuity	perpetuity
+gordon growth	growing perpetuity
+sharpe	Sharpe ratio
+wacc	cost of capital
+break even	break-even
+depreciation	straight-line depreciation
+cagr	compound annual growth rate
+real interest rate inflation	real rate
+loan balance	balance after k payments
+profit margin	profit margin
+sorting lower bound	comparison sorting
+merge sort	merge sort
+binary search	binary search
+ridge regression	ridge
+logistic regression	logistic regression
+euclidean distance	Euclidean distance
+bayes	Bayes
+variance of a sum	variance of a sum
+toricelli	Torricelli
+lotka voltera	Lotka
+stefan boltzman	Stefan
+mark recapture	mark-recapture
+mohrs circle center	Mohr
+noncompetitive inhibitor	noncompetitive
+view factor reciprocity	reciprocity
+henrys law	Henry
+# critic round 2, findability: precalculus, differential equations, numerical methods, taylor, vector calculus, euler, complex numbers
+slope formula	Slope of a line
+rise over run	rise over run
+slope intercept	slope-intercept
+y=mx+b	slope-intercept
+point slope form	point-slope
+perpendicular lines	Perpendicular slopes
+perpindicular	Perpendicular slopes
+negative reciprocal	Perpendicular slopes
+parallel lines slope	Perpendicular slopes
+distance between two points	Distance between two points
+midpoint formula	midpoint formula
+discriminant	Discriminant
+discrim	Discriminant
+b^2-4ac	Discriminant
+nature of roots	Discriminant
+axis of symmetry	axis of symmetry
+vertex form	vertex form
+difference of squares	difference of squares
+difference of cubes	difference of cubes
+pascals triangle	binomial theorem
+binomial expansion	binomial theorem
+remainder theorem	remainder
+synthetic division	remainder
+exponent rules	Product of powers
+product of powers	Product of powers
+quotient of powers	Quotient of powers
+power of a power	Power of a power
+negative exponent	Negative exponent
+fractional exponent	Fractional exponent
+rational exponent	Fractional exponent
+log definition	What a logarithm is
+log product rule	Log of a product
+log quotient rule	Quotient rule for logarithms
+log power rule	Log of a power
+change of base formula	change of base
+exponential decay	Exponential growth and decay
+half life exponential	Half-life of exponential decay
+doubling time	Doubling time
+function transformations	Transformations of a graph
+horizontal shift	Transformations of a graph
+even function	Even function
+odd function	Odd function
+composition of functions	composition
+inverse function	Inverse function
+difference quotient	difference quotient
+average rate of change	difference quotient
+polar to rectangular	x = r cos	precalculus
+rectangular to polar	Polar radius
+equation of a circle	Circle
+ellipse	Ellipse
+elipse	Ellipse
+foci of an ellipse	Foci of an ellipse
+foci hyperbola	Foci of a hyperbola
+asymptotes of hyperbola	Asymptotes
+asymtote	Asymptotes
+directrix	directrix
+focus of a parabola	parabola
+eccentricity conic	Eccentricity of a conic
+arithmetic sequence	arithmetic sequence
+arithmatic	arithmetic
+common difference	arithmetic sequence
+arithmetic series	arithmetic series sum
+common ratio	geometric sequence
+sum to infinity	infinite geometric
+infinite geometric series	infinite geometric
+integrating factor	differential equations · μ
+integrating factor	differential equations · μ	differential equations
+first order linear ode	First-order linear ODE
+linear first order differential equation	First-order linear ODE
+general solution first order	General solution of a linear first-order
+separable equation	Separation of variables for dy/dt
+seperable	Separation of variables for dy/dt
+newtons law of cooling ode	Newton's law of cooling as an ODE
+bernoulli ode	Bernoulli differential
+bernoulli differential equation	Bernoulli differential
+exact equation	Exact equation
+exact ode	Exact equation
+second order homogeneous	Homogeneous second-order
+constant coefficients	constant coefficient
+characteristic equation	characteristic (auxiliary)
+auxiliary equation	characteristic (auxiliary)
+charecteristic equation	characteristic (auxiliary)
+damped oscillator	Damped oscillator in standard form
+repeated root	repeated characteristic root
+distinct real roots	real, distinct
+complex roots ode	complex characteristic roots
+particular solution	yh + yp
+homogeneous plus particular	yh + yp
+wronskian	Wronskian
+wronskain	Wronskian
+variation of parameters	Variation of parameters
+variation of param	Variation of parameters
+exponential forcing	exponential forcing
+polynomial forcing	polynomial forcing
+sinusoidal forcing	sinusoidal forcing
+system of odes	Linear system of first-order ODEs
+phase plane	Linear system of first-order ODEs
+x' = Ax	Linear system of first-order ODEs
+eigenvector solution	Modal solution
+distinct eigenvalues ode	distinct eigenvalues
+heat equation	Heat (diffusion)
+diffusion equation	Heat (diffusion)
+wave equation	Wave equation
+vibrating string	Wave equation
+laplace equation	Laplace equation
+laplaces equation	Laplace equation
+dalembert	d'Alembert
+d'alembert solution	d'Alembert
+separation of variables pde	X(x) T(t)
+diff eq	differential equations
+newton raphson	Newton-Raphson
+newton rapson	Newton-Raphson
+newtons method	Newton-Raphson
+root finding	Newton-Raphson
+secant method	secant method
+bisection	bisection
+bisection error	Bisection method error bound
+lagrange polynomial	Lagrange interpolating
+interpolaton	interpolat
+least squares	normal equations
+normal equations	normal equations
+forward difference	forward difference
+central difference	central difference
+second derivative finite difference	second derivative, central
+midpoint rule	midpoint rule
+trapezoidal rule	trapezoid rule
+simpsons 1/3	Simpson's 1/3
+simpson's rule	Simpson's 1/3
+trapezoid error	trapezoid rule error
+forward euler	Euler (explicit
+heun	Heun
+rk2	Heun
+rk4	RK4 step
+runge kutta	RK4
+runge kuta	RK4
+k1 rk4	slope at the start
+lu decomposition	LU decomposition
+lu factorization	LU decomposition
+gaussian elimination	LU decomposition
+gauss seidel	Jacobi
+power method	power method
+power iteration	power method
+dominant eigenvalue	power method
+condition number	condition number
+ill conditioned	condition number
+absolute error	absolute error
+relative error	relative error
+order of convergence	order p
+rate of convergence	order p
+linearization	linear approximation
+tangent line approximation	linear approximation
+power series	Radius of convergence
+e^x series	Series for e^{x}
+exponential series	Series for e^{x}
+sine series	Series for sin x
+cosine series	Series for cos x
+tan series	Series for tan x
+sinh series	Series for sinh x
+cosh series	Series for cosh x
+1/(1-x)	1/(1 − x)
+alternating geometric series	Alternating geometric
+ln(1+x) series	ln(1 + x)
+log series	ln(1 + x)
+sqrt(1+x) series	√(1 + x)
+binomial approximation	binomial approximation
+small angle cosine	cos x ≈
+e^x approximation	First-order approximation of e^x
+taylor remainder	Lagrange remainder
+del operator	Gradient
+div F	divergence
+nabla dot	divergence
+nabla cross	curl
+curl of gradient	curl of a gradient
+div of curl	divergence of a curl
+product rule divergence	Product rule for divergence
+curl of curl	curl of a curl
+del squared	Laplacian
+arc length element	arc length element
+area element polar	dA = r dr
+jacobian polar	dA = r dr
+jacobian spherical	spherical
+fundamental theorem of line integrals	gradient theorem
+circulation	Green's
+greens theroem	Green's
+stoke's theorem	Stokes
+potential function	conservative
+conservative test 2d	2D test
+e^(i theta)	Euler's formula
+e^(i pi)	Euler's identity
+cos as exponentials	Cosine as complex exponentials
+sine from exponentials	Sine as complex exponentials
+conjugate exponentials	conjugate exponentials
+sinh	sinh(x) =
+hyperbolic sine	sinh(x) =
+cos(ix)	Cosine of an imaginary angle
+imaginary angle	imaginary angle
+angle addition	angle addition
+sum of angles formula	angle addition
+sin(a+b)	Sine of a sum
+cos double angle	Double angle for cosine
+sin double angle	Double angle for sine
+harmonic addition	harmonic addition
+amplitude phase form	harmonic addition
+pythagorean identity	Pythagorean identity
+product of cosines	Product of cosines
+product of sines	Product of sines
+exponential form complex	rectangular = polar
+argand diagram	rectangular = polar
+cis	rectangular = polar
+quarter turn	Quarter turn
+e^(j pi/2)	Quarter turn
+j squared	imaginary unit squared
+i^2	imaginary unit squared
+1/j	Reciprocal of j
+i or j	same imaginary unit
+magnitude of complex number	magnitude, modulus
+multiply complex numbers	Multiplying complex numbers
+divide complex numbers	Dividing complex numbers
+multiply polar form	Multiplying in polar form
+divide polar form	Dividing in polar form
+z times its conjugate	modulus squared
+real part	Re z
+imaginary part	Im z
+triangle inequality	Triangle inequality
+complex powers	Powers of a complex number
+(-1)^k	Integer multiples of π
+characteristic equation	characteristic (auxiliary)	differential equations
+gaussian elimination	LU decomposition	numerical methods
+least squares	normal equations	numerical methods
+half life	Half-life of exponential decay	precalculus
+eccentricity	Eccentricity of a conic	precalculus
+pythagorean identity	Pythagorean identity	euler
+magnitude	magnitude, modulus	complex numbers
+geometric series	1/(1 − x)	taylor series
+laplacian	Laplacian	vector calculus
+# critic round 2: fourier, CT and DT transform tables, laplace, z transform, linear algebra (unit circle is pictured, so unsearched)
+fourier series coefficients	Fourier series analysis (continuous time)
+fourier coefficient	Fourier series analysis
+a_k	Fourier series analysis
+fouier series	Fourier series
+analysis equation	Fourier series analysis	fourier
+fourier series discrete	Fourier series analysis (discrete time)
+DTFS	Fourier series analysis (discrete time)
+discrete time fourier series	Fourier series analysis (discrete time)
+fourier series synthesis	Fourier series synthesis (continuous time)
+synthesis equation	Fourier series synthesis	fourier
+exponential fourier series	Fourier series synthesis
+complex fourier series	Fourier series synthesis
+DT fourier series synthesis	Fourier series synthesis (discrete time)
+trig fourier series	Trigonometric Fourier series
+trigonometric fourier series	Trigonometric Fourier series
+sine cosine series	Trigonometric Fourier series
+amplitude phase form	Amplitude–phase
+cosine form fourier	Amplitude–phase
+DC term	DC term of the trig Fourier series
+average value fourier	DC term of the trig Fourier series
+A0	DC term	fourier
+cosine coefficients	Cosine coefficients
+A_k	Cosine coefficients	fourier
+ak fourier cos	Cosine coefficients
+sine coefficients	Sine coefficients
+B_k	Sine coefficients	fourier
+harmonic amplitude	Harmonic amplitude
+C_k	Harmonic amplitude	fourier
+harmonic phase	Harmonic phase
+phi_k	Harmonic phase	fourier
+trig to exponential coefficients	Exponential coefficients from trig
+convert trig to complex fourier	Exponential coefficients from trig
+conjugate symmetry	Conjugate symmetry of Fourier coefficients	fourier
+even function fourier	Even signals have only cosine terms
+even signal cosine only	Even signals have only cosine terms
+half range cosine	Even signals have only cosine terms
+odd function fourier	Odd signals have only sine terms
+odd signal sine only	Odd signals have only sine terms
+fourier series linearity	Linearity (Fourier series property)
+linearity	Linearity (Fourier series property)	fourier
+fourier series time shift	Time shift (Fourier series property)
+time shift	Time shift (Fourier series property)	fourier
+fourier series frequency shift	Frequency shift (Fourier series property)
+fourier series time reversal	Time reversal (Fourier series property)
+fourier series conjugation	Conjugation (Fourier series property)
+fourier series differentiation	Differentiation (Fourier series property)
+derivative	Differentiation (Fourier series property)	fourier
+fourier series integration	Integration (Fourier series property)
+periodic convolution	Periodic convolution
+circular convolution	Periodic convolution	fourier
+fourier series multiplication	Multiplication (Fourier series property)
+parseval fourier series	Parseval's relation for Fourier series
+parsevals	Parseval's relation for Fourier series	fourier
+average power fourier	Parseval's relation for Fourier series
+fourier transform	Continuous-time Fourier transform (analysis)
+CTFT	Continuous-time Fourier transform (analysis)
+continuous time fourier transform	Continuous-time Fourier transform (analysis)
+fourier tranform	Fourier transform
+fourier trans	Fourier transform
+inverse fourier transform	Inverse continuous-time Fourier transform
+inverse CTFT	Inverse continuous-time Fourier transform
+impulse fourier transform	Impulse and its transform	ct transform table
+dirac delta	Impulse and its transform	ct transform table
+delta function	Impulse and its transform	ct transform table
+delayed impulse	Delayed impulse and its transform	ct transform table
+shifted delta	Delayed impulse	ct transform table
+constant signal	Constant (DC) signal	ct transform table
+DC signal transform	Constant (DC) signal	ct transform table
+unit step	Unit step and its transform	ct transform table
+heaviside fourier	Unit step and its transform	ct transform table
+u(t)	Unit step and its transform	ct transform table
+sign function	Sign function and its transform
+signum	Sign function and its transform
+sgn	Sign function and its transform
+decaying exponential	Decaying exponential and its transform	ct transform table
+exponential fourier transform	Decaying exponential and its transform	ct transform table
+e^-at u(t)	Decaying exponential and its transform	ct transform table
+t e^-at	Ramped exponential	ct transform table
+ramped exponential	Ramped exponential
+repeated pole exponential	Repeated-pole exponential
+two sided exponential	Two-sided exponential
+laplacian distribution fourier	Two-sided exponential
+complex exponential	Complex exponential and its transform	ct transform table
+cosine fourier transform	Cosine and its transform
+cos transform	Cosine and its transform	ct transform table
+sine fourier transform	Sine and its transform
+sin transform	Sine and its transform	ct transform table
+rect pulse	Rectangular pulse and its transform
+rectangular pulse	Rectangular pulse and its transform
+box function	Rectangular pulse and its transform
+rect to sinc	Rectangular pulse and its transform
+sinc	Sinc pulse	ct transform table
+sinc function fourier	Sinc pulse
+ideal low pass	Sinc pulse	ct transform table
+ideal lowpass filter	Sinc pulse	ct transform table
+brick wall filter	Sinc pulse	ct transform table
+triangle pulse	Triangle pulse and its transform
+triangular pulse	Triangle pulse
+tri function	Triangle pulse
+gaussian fourier transform	Gaussian and its transform
+gaussian	Gaussian and its transform	ct transform table
+gausian	Gaussian and its transform	ct transform table
+periodic signal fourier transform	Transform of a periodic signal
+fourier transform of periodic	Transform of a periodic signal
+impulse train	Impulse train and its transform	ct transform table
+dirac comb	Impulse train and its transform
+sampling function	Impulse train	ct transform table
+linearity	Linearity (Fourier transform property)	ct transform table
+fourier transform linearity	Linearity (Fourier transform property)
+time shift	Time shift (Fourier transform property)	ct transform table
+time delay fourier	Time shift (Fourier transform property)
+frequency shift	Frequency shift (Fourier transform property)	ct transform table
+modulation property	Multiplication (modulation) property
+time scaling	Time scaling (Fourier transform property)	ct transform table
+x(at)	Time scaling (Fourier transform property)	ct transform table
+time reversal	Time reversal (Fourier transform property)	ct transform table
+conjugation	Conjugation (Fourier transform property)	ct transform table
+conjugate	Conjugation (Fourier transform property)	ct transform table
+differentiation	Differentiation (Fourier transform property)	ct transform table
+derivative fourier transform	Differentiation (Fourier transform property)
+integration	Integration (Fourier transform property)	ct transform table
+integral fourier transform	Integration (Fourier transform property)
+frequency differentiation	Multiplication by t (frequency differentiation)	ct transform table
+multiply by t	Multiplication by t	ct transform table
+convolution	Convolution property	ct transform table
+convolution theorem	Convolution property	ct transform table
+convolutoin	Convolution property	ct transform table
+convol	Convolution property	ct transform table
+multiplication property	Multiplication (modulation) property	ct transform table
+modulation	Multiplication (modulation) property	ct transform table
+duality	Duality	ct transform table
+dualty	Duality	ct transform table
+parseval	Parseval's relation (CT Fourier transform)	ct transform table
+parsevals theorem	Parseval's relation (CT Fourier transform)	ct transform table
+energy spectrum	Parseval's relation (CT Fourier transform)	ct transform table
+rayleigh energy theorem	Parseval's relation (CT Fourier transform)	ct transform table
+DTFT	Discrete-time Fourier transform (analysis)
+discrete time fourier transform	Discrete-time Fourier transform (analysis)
+discrete fourier transform definition	Discrete
+inverse DTFT	Inverse discrete-time Fourier transform
+unit sample	Unit sample and its transform (DTFT and z)	dt transform table
+kronecker delta	Unit sample and its transform	dt transform table
+discrete impulse	Unit sample and its transform	dt transform table
+delayed unit sample	Delayed unit sample and its DTFT	dt transform table
+shifted impulse	Delayed unit sample and its DTFT	dt transform table
+DC signal	Constant (DC) signal	dt transform table
+unit step	Unit step sequence and its DTFT	dt transform table
+u[n]	Unit step sequence and its DTFT	dt transform table
+geometric sequence DTFT	Geometric sequence and its DTFT
+a^n u[n]	Geometric sequence and its DTFT	dt transform table
+exponential sequence	Geometric sequence and its DTFT	dt transform table
+ramped geometric	Ramped geometric sequence
+(n+1) a^n	Ramped geometric sequence	dt transform table
+two sided geometric	Two-sided geometric sequence
+complex exponential	DT complex exponential	dt transform table
+cosine	DT cosine and its DTFT	dt transform table
+sine	DT sine and its DTFT	dt transform table
+rect pulse	DT rectangular pulse	dt transform table
+dirichlet kernel	DT rectangular pulse
+discrete rectangular pulse	DT rectangular pulse
+sinc	DT sinc	dt transform table
+ideal low pass	DT sinc	dt transform table
+impulse train	Discrete impulse train	dt transform table
+linearity	Linearity (DTFT property)	dt transform table
+DTFT linearity	Linearity (DTFT property)
+time shift	Time shift (DTFT property)	dt transform table
+DTFT time shift	Time shift (DTFT property)
+frequency shift	Frequency shift (DTFT property)	dt transform table
+time reversal	Time reversal (DTFT property)	dt transform table
+conjugation	Conjugation (DTFT property)	dt transform table
+first difference	First difference (DTFT property)	dt transform table
+difference	First difference (DTFT property)	dt transform table
+accumulation	Accumulation (DTFT property)	dt transform table
+running sum	Accumulation (DTFT property)	dt transform table
+frequency differentiation	Multiplication by n (DTFT property)	dt transform table
+multiply by n	Multiplication by n (DTFT property)	dt transform table
+convolution	Convolution property (DTFT)	dt transform table
+DTFT convolution	Convolution property (DTFT)
+multiplication	Multiplication (DTFT property)	dt transform table
+windowing	Multiplication (DTFT property)	dt transform table
+parseval	Parseval's relation (DTFT)	dt transform table
+DFT	Discrete Fourier transform (DFT)
+FFT	Discrete Fourier transform (DFT)
+discrete fourier transform	Discrete Fourier transform (DFT)
+fast fourier transform	Discrete Fourier transform (DFT)
+inverse DFT	Inverse discrete Fourier transform
+IDFT	Inverse discrete Fourier transform
+inverse FFT	Inverse discrete Fourier transform
+IFFT	Inverse discrete Fourier transform
+DFT bin	DFT bin frequencies
+frequency resolution	DFT bin frequencies
+bin spacing	DFT bin frequencies
+laplace transform	Laplace transform (one-sided definition)
+laplace	Laplace transform (one-sided definition)
+laplce	Laplace transform
+laplase transform	Laplace transform
+lapla	Laplace
+unilateral laplace	Laplace transform (one-sided definition)
+inverse laplace	Inverse Laplace transform
+inverse laplace transform	Inverse Laplace transform
+bromwich	Inverse Laplace transform
+impulse laplace	Impulse and its transform
+delta	Impulse and its transform	laplace
+delayed impulse	Laplace pair: delayed impulse	laplace
+unit step laplace	Laplace pair: unit step
+step	Laplace pair: unit step	laplace
+1/s	Laplace pair: unit step	laplace
+heaviside	unit step	laplace
+delayed step	Laplace pair: delayed unit step	laplace
+shifted step	Laplace pair: delayed unit step	laplace
+ramp	Laplace pair: unit ramp	laplace
+unit ramp laplace	Laplace pair: unit ramp
+1/s^2	Laplace pair: unit ramp	laplace
+power of t	Laplace pair: power of t	laplace
+t^n	Laplace pair: power of t	laplace
+n!/s^(n+1)	Laplace pair: power of t	laplace
+exponential	Laplace pair: decaying exponential	laplace
+e^-at	Laplace pair: decaying exponential	laplace
+first order rise	Laplace pair: first-order rise	laplace
+step response first order	Laplace pair: first-order rise	laplace
+repeated pole	Laplace pair: repeated real pole	laplace
+t e^-at	Laplace pair: repeated real pole	laplace
+double pole	Laplace pair: repeated real pole	laplace
+t^n e^-at	Laplace pair: pole of order n + 1	laplace
+higher order pole	Laplace pair: pole of order n + 1	laplace
+two poles	Laplace pair: two distinct real poles	laplace
+distinct real poles	Laplace pair: two distinct real poles	laplace
+partial fractions	Laplace pair: two distinct real poles	laplace
+sine laplace	Laplace pair: sine
+sin(wt)	Laplace pair: sine	laplace
+cosine laplace	Laplace pair: cosine
+t sin	Laplace pair: t times a sine	laplace
+t sin(wt)	Laplace pair: t times a sine	laplace
+resonance laplace	Laplace pair: t times a sine
+t cos	Laplace pair: t times a cosine	laplace
+damped sine	Laplace pair: damped sine	laplace
+e^-at sin	Laplace pair: damped sine	laplace
+damped sinusoid	Laplace pair: damped	laplace
+damped cosine	Laplace pair: damped cosine	laplace
+e^-at cos	Laplace pair: damped cosine	laplace
+sinh	Laplace pair: hyperbolic sine	laplace
+hyperbolic sine laplace	Laplace pair: hyperbolic sine
+cosh	Laplace pair: hyperbolic cosine	laplace
+hyperbolic cosine	Laplace pair: hyperbolic cosine	laplace
+linearity	Laplace property: linearity	laplace
+laplace linearity	Laplace property: linearity
+time shift	Laplace property: time shift	laplace
+second shifting theorem	Laplace property: time shift
+t-shifting	Laplace property: time shift	laplace
+delay	Laplace property: time shift	laplace
+frequency shift	Laplace property: frequency shift	laplace
+first shifting theorem	Laplace property: frequency shift
+s-shifting	Laplace property: frequency shift	laplace
+s shift	Laplace property: frequency shift	laplace
+time scaling	Laplace property: time scaling	laplace
+derivative	Laplace property: derivative	laplace
+laplace of derivative	Laplace property: derivative
+sF(s) - f(0)	Laplace property: derivative	laplace
+second derivative	Laplace property: second derivative	laplace
+laplace second derivative	Laplace property: second derivative
+nth derivative	Laplace property: nth derivative	laplace
+integral	Laplace property: integral	laplace
+laplace of integral	Laplace property: integral
+F(s)/s	Laplace property: integral	laplace
+multiply by t	Laplace property: multiplication by t	laplace
+derivative of transform	Laplace property: multiplication by t	laplace
+convolution	Laplace property: convolution	laplace
+laplace convolution	Laplace property: convolution
+initial value theorem	Initial value theorem	laplace
+IVT	Initial value theorem	laplace
+initial value	Initial value theorem	laplace
+final value theorem	Final value theorem	laplace
+FVT	Final value theorem	laplace
+final value	Final value theorem	laplace
+steady state value	Final value theorem	laplace
+z transform	z transform (two-sided definition)
+z-transform	z transform (two-sided definition)
+ztransform	z transform
+z tranform	z transform
+bilateral z transform	z transform (two-sided definition)
+unit circle z plane	The unit circle in the z-plane is the DTFT
+z = e^jw	The unit circle in the z-plane	z transform
+s plane to z plane	Mapping the s-plane to the z-plane
+z = e^sT	Mapping the s-plane to the z-plane
+pole mapping	Mapping the s-plane to the z-plane	z transform
+unit sample	Unit sample and its transform (DTFT and z)	z transform
+delta[n]	Unit sample and its transform (DTFT and z)	z transform
+delayed unit sample	z-transform pair: delayed unit sample	z transform
+z^-m	z-transform pair: delayed unit sample	z transform
+unit step	z-transform pair: unit step	z transform
+step z transform	z-transform pair: unit step
+ramp	z-transform pair: unit ramp	z transform
+n u[n]	z-transform pair: unit ramp	z transform
+causal exponential	z-transform pair: causal exponential	z transform
+a^n u[n]	z-transform pair: causal exponential	z transform
+geometric sequence	z-transform pair: causal exponential	z transform
+anticausal	z-transform pair: anticausal exponential	z transform
+left sided	z-transform pair: anticausal exponential	z transform
+anti-causal exponential	z-transform pair: anticausal exponential
+n a^n	z-transform pair: n times an exponential	z transform
+double pole	z-transform pair: n times an exponential	z transform
+cosine	z-transform pair: causal cosine	z transform
+cos z transform	z-transform pair: causal cosine
+sine	z-transform pair: causal sine	z transform
+damped cosine	z-transform pair: damped cosine	z transform
+r^n cos	z-transform pair: damped cosine	z transform
+damped sine	z-transform pair: damped sine	z transform
+ROC	z-transform pair	z transform
+region of convergence	z-transform pair	z transform
+linearity	z-transform property: linearity	z transform
+time shift	z-transform property: time shift	z transform
+z transform shift	z-transform property: time shift
+delay	z-transform property: time shift	z transform
+scaling in z	z-transform property: multiplication by a^{n}	z transform
+a^n x[n]	z-transform property: multiplication by a^{n}	z transform
+multiply by n	z-transform property: multiplication by n	z transform
+differentiation in z	z-transform property: multiplication by n	z transform
+time reversal	z-transform property: time reversal	z transform
+first difference	z-transform property: first difference	z transform
+accumulation	z-transform property: accumulation	z transform
+convolution	z-transform property: convolution	z transform
+z transform convolution	z-transform property: convolution
+initial value theorem	Initial value theorem (z transform)	z transform
+final value theorem	Final value theorem (z transform)	z transform
+z final value	Final value theorem (z transform)
+matrix multiplication	Matrix multiplication
+matrix product	Matrix multiplication
+matrix multiply	Matrix multiplication
+matrix multipication	Matrix multiplication
+matrix inverse	Matrix inverse
+inverse matrix	Matrix inverse
+invertible	Matrix inverse	linear algebra
+solve linear system	Solving a linear system with the inverse
+system of equations	Solving a linear system	linear algebra
+gaussian elimination	Gaussian elimination
+gauss elimination	Gaussian elimination
+row reduction	Gaussian elimination
+row reduce	Gaussian elimination
+row echelon	Gaussian elimination
+rref	Gaussian elimination
+gaussian elim	Gaussian elimination
+elimination	Gaussian elimination	linear algebra
+cramers rule	Cramer's rule
+cramer	Cramer's rule
+cramer's rule	Cramer's rule
+kramers rule	Cramer's rule
+determinant 2x2	Determinant of a 2 × 2 matrix
+2x2 determinant	Determinant of a 2 × 2 matrix
+det	Determinant	linear algebra
+determinate	Determinant	linear algebra
+inverse 2x2	Inverse of a 2 × 2 matrix
+2x2 inverse	Inverse of a 2 × 2 matrix
+inverse of 2 by 2 matrix	Inverse of a 2 × 2 matrix
+determinant 3x3	Determinant of a 3 × 3 matrix
+3x3 determinant	Determinant of a 3 × 3 matrix
+cofactor expansion	Determinant of a 3 × 3 matrix
+laplace expansion	Determinant of a 3 × 3 matrix
+transpose of a product	Transpose of a product
+transpose	Transpose of a product	linear algebra
+inverse of a product	Inverse of a product
+determinant of a product	Determinant of a product
+det(AB)	Determinant of a product
+determinant of transpose	Determinant of a transpose
+determinant of inverse	Determinant of an inverse
+scaled determinant	Determinant of a scaled matrix
+det(cA)	Determinant of a scaled matrix
+symmetric matrix	Symmetric matrix
+symetric	Symmetric matrix
+orthogonal matrix	Orthogonal matrix
+orthonormal matrix	Orthogonal matrix
+dot product	Dot product
+scalar product	Dot product
+inner product	Dot product
+dot prod	Dot product
+cross product	Cross product in components
+vector product	Cross product in components
+cross prod	Cross product
+magnitude of cross product	Magnitude of the cross product
+parallelogram area	Magnitude of the cross product
+scalar triple product	Scalar triple product
+triple product	Scalar triple product	linear algebra
+box product	Scalar triple product
+volume parallelepiped	Scalar triple product
+vector magnitude	Length (magnitude) of a vector
+norm	Length (magnitude) of a vector	linear algebra
+vector length	Length (magnitude) of a vector
+unit vector	Unit vector
+normalize	Unit vector	linear algebra
+angle between vectors	Angle between vectors
+cosine similarity	Angle between vectors
+vector projection	Vector projection
+projection	Vector projection	linear algebra
+proj	Vector projection	linear algebra
+eigenvalue	Eigenvalue equation	linear algebra
+eigenvector	Eigenvalue equation	linear algebra
+eigen value	Eigenvalue
+egienvalue	Eigenvalue	linear algebra
+eigenvalues	Eigenvalue	linear algebra
+characteristic equation	Characteristic equation for eigenvalues	linear algebra
+characteristic polynomial	Characteristic equation for eigenvalues
+eigenvalues 2x2	Eigenvalues of a 2 × 2 matrix
+2x2 eigenvalues	Eigenvalues of a 2 × 2 matrix
+diagonalization	Diagonalization
+diagonalize	Diagonalization
+eigendecomposition	Diagonalization
+trace	Trace equals the sum of the eigenvalues	linear algebra
+sum of eigenvalues	Trace equals the sum of the eigenvalues
+product of eigenvalues	Determinant equals the product of the eigenvalues
+rank nullity	Rank–nullity theorem
+rank-nullity theorem	Rank–nullity theorem
+nullity	Rank–nullity theorem
+rank	Rank–nullity theorem	linear algebra
+dimension theorem	Rank–nullity theorem	linear algebra
+least squares	Least squares: the normal equations	linear algebra
+normal equations	Least squares: the normal equations
+least squares matrix	Least squares: the normal equations
+A^T A	Least squares: the normal equations	linear algebra
+double sided exponential	Two-sided exponential
+phasor	Complex exponential and its transform	ct transform table
+1/(s + a)	Laplace pair: decaying exponential	laplace
+laplace of sin	Laplace pair: sine
+laplace of cos	Laplace pair: cosine
+linear system	Solving a linear system	linear algebra
+ROC	Laplace pair	laplace
+region of convergence laplace	Laplace pair
+laplace ROC	Laplace pair
+nonsingular	Matrix inverse
+pivot	Gaussian elimination	linear algebra
+back substitution	Gaussian elimination	linear algebra
+# geometry, statistics, finance, computer science and machine learning (sheet critic, round 2: findability)
+area of a circle	Area of a circle
+circle area	circle area
+pi r squared	Area of a circle
+circumference	circle circumference
+2 pi r	circle circumference
+perimeter of a circle	circle circumference
+sector	sector area
+area of a sector	sector area
+arc length	arc length
+s = r theta	arc length
+ellipse area	ellipse area
+area of an ellipse	ellipse area
+pi a b	ellipse area
+rectangle area	Area of a rectangle
+length times width	Area of a rectangle
+rectangle perimeter	rectangle perimeter
+perimeter	perimeter	geometry
+triangle area	Area of a triangle
+half base times height	Area of a triangle
+area of a triangle	Area of a triangle
+half ab sin c	two sides and the included angle
+sas area	two sides and the included angle
+heron	Heron
+semiperimeter	Heron
+herons	Heron
+equilateral	equilateral
+root 3 over 4	equilateral
+trapezoid	trapezoid
+trapezium area	trapezoid
+trapazoid	trapezoid
+parallelogram	parallelogram
+paralellogram	parallelogram
+regular polygon	regular n-gon
+n-gon area	regular n-gon
+pentagon area	regular n-gon
+box volume	box, rectangular prism
+rectangular prism	box, rectangular prism
+cuboid	box, rectangular prism
+prism volume	Volume of a prism
+volume of a prism	Volume of a prism
+cylinder volume	Volume of a cylinder
+volume of a cylinder	Volume of a cylinder
+pyramid volume	Volume of a pyramid
+pyramid	pyramid	geometry
+cone volume	Volume of a cone
+volume of a cone	Volume of a cone
+sphere volume	Volume of a sphere
+volume of a sphere	Volume of a sphere
+4/3 pi r cubed	Volume of a sphere
+box surface area	Surface area of a box
+surface area of a cuboid	Surface area of a box
+cylinder surface area	closed cylinder
+surface area cylinder	closed cylinder
+cone surface	slant side
+lateral area cone	slant side
+sphere surface area	Surface area of a sphere
+surface area of a sphere	Surface area of a sphere
+4 pi r squared	Surface area of a sphere
+pythagoras	Pythagorean
+pythagorean	Pythagorean
+hypotenuse	Pythagorean
+a2 + b2 = c2	Pythagorean
+cosine rule	law of cosines
+law of cosines	law of cosines
+law of cosine	law of cosines
+sine rule	law of sines
+law of sines	law of sines
+law of sine	law of sines
+angle sum	angle sum of a triangle
+angles in a triangle	angle sum of a triangle
+180 degrees triangle	angle sum of a triangle
+45 45 90	45-45-90
+isosceles right triangle	45-45-90
+special right triangles	30-60-90
+30-60-90	30-60-90
+interior angle sum	interior angle sum
+sum of interior angles	interior angle sum
+distance formula	Distance between two points
+distance between two points	Distance between two points
+3d distance	Distance between two points in 3D
+distance in 3d	Distance between two points in 3D
+midpoint formula	midpoint
+mid point	midpoint
+slope	slope	geometry
+slope formula	Slope of a line
+rise over run	Slope of a line
+gradient of a line	Slope of a line
+slope intercept	slope-intercept
+y = mx + b	slope-intercept
+point slope	point-slope
+point-slope form	point-slope
+perpendicular lines	perpendicular
+parallel lines	perpendicular
+negative reciprocal	perpendicular
+distance from point to line	point to the line
+equation of a circle	circle, centre
+circle equation	circle, centre
+mean	Sample mean	statistics
+average	mean, average	statistics
+x bar	Sample mean
+sample mean	Sample mean
+sample variance	sample variance
+variance	variance	statistics
+standard deviation	sample standard deviation
+std dev	standard deviation
+stdev	standard deviation
+standard deviaton	standard deviation
+sigma squared	population variance
+standard error of the mean	standard error of the mean
+sem	standard error of the mean
+z score	z-score
+zscore	z-score
+standard score	z-score
+covariance	covariance
+cov(x,y)	covariance
+covarience	covariance
+correlation	correlation coefficient
+correlation coefficient	correlation coefficient
+pearson r	correlation coefficient
+regression slope	regression slope
+least squares slope	regression slope
+line of best fit	least-squares regression
+best fit line	least-squares regression
+y intercept regression	regression intercept
+expected value	expected value
+expectation	expected value
+expected value discrete	expected value, discrete
+expected value continuous	expected value, continuous
+mean of a pdf	expected value, continuous
+var(x)	Variance from moments
+e[x^2] - e[x]^2	Variance from moments
+linearity of expectation	expectation is linear
+e[ax+b]	expectation is linear
+var(ax+b)	a shift adds no variance
+variance of a linear transformation	a shift adds no variance
+scaling a random variable	a shift adds no variance
+var(x+y)	Variance of a sum
+variance of sum	Variance of a sum
+variance of two random variables	Variance of a sum
+complement rule	complement
+complement	complement
+addition rule	addition rule
+union probability	addition rule
+p(a or b)	addition rule
+or probability	addition rule
+independent events	independent events
+multiplication rule	independent events
+p(a and b)	independent events
+intersection probability	independent events
+conditional probability	conditional probability
+p a given b	conditional probability
+given	conditional probability	statistics
+total probability	law of total probability
+law of total probability	law of total probability
+bayes theorem	Bayes
+bayes rule	Bayes
+bays theorem	Bayes
+posterior	Bayes
+permutations	permutations
+npr	permutations
+order matters	permutations
+combinations	combinations
+ncr	combinations
+n choose r	combinations
+choose	combinations	statistics
+binomial	Binomial distribution	statistics
+binomial distribution	Binomial distribution
+binomial mean	Binomial distribution
+poisson distribution	Poisson distribution
+poison distribution	Poisson distribution
+geometric distribution	Geometric distribution
+first success	Geometric distribution
+uniform distribution	uniform distribution
+uniform	uniform distribution	statistics
+exponential distribution	Exponential distribution
+memoryless	Exponential distribution
+normal distribution	Normal (Gaussian)
+gaussian	Normal (Gaussian)	statistics
+gaussian distribution	Normal (Gaussian)
+bell curve	Normal (Gaussian)
+normal pdf	Normal (Gaussian)
+confidence interval	Confidence interval for a mean
+ci mean	Confidence interval for a mean	statistics
+z interval	σ known
+t interval	σ unknown
+confidence interval t	σ unknown
+proportion confidence interval	Confidence interval for a proportion
+p hat	Confidence interval for a proportion	statistics
+sample size	sample size for a margin of error
+margin of error	margin of error
+critical value	Critical z
+90% confidence	90% confidence
+95% confidence	95% confidence
+1.96	95% confidence
+99% confidence	99% confidence
+2.576	99% confidence
+1.645	90% confidence
+z test	z test for a mean
+z statistic	z test
+hypothesis test	z test
+t test	t test
+t statistic	t test
+one sample t test	t test
+student t	t test
+chi square	chi-square
+chi squared	chi-square
+goodness of fit test	chi-square
+observed vs expected	chi-square
+68 95 99.7	within 1σ
+empirical rule	within 1σ
+within 2 standard deviations	within 2σ
+three sigma	within 3σ
+simple interest	simple interest
+prt	simple interest
+compound interest	compound interest
+compund interest	compound interest
+compounded monthly	compound interest
+continuous compounding	continuous compounding
+pert	continuous compounding
+effective annual rate	effective annual rate
+ear	effective annual rate
+annual percentage yield	effective annual rate
+cagr	compound annual growth rate
+growth rate	compound annual growth rate
+annual growth	compound annual growth rate
+rule of 72	rule of 72
+doubling time money	rule of 72
+real rate	real rate
+fisher equation	real rate
+inflation	real rate	finance
+present value	present value
+pv	present value	finance
+discount	present value, discounting	finance
+future value	future value
+fv	future value	finance
+continuous discounting	continuous discounting
+npv	net present value
+net present value	net present value
+discounted cash flow	net present value
+annuity future value	future value of an annuity
+fv annuity	future value of an annuity
+annuity present value	present value of an annuity
+pv annuity	present value of an annuity
+mortgage	loan or mortgage payment
+loan payment	loan or mortgage payment
+monthly payment	loan or mortgage payment
+amortisation	loan or mortgage payment
+remaining balance	balance after k payments
+perpetuity	perpetuity
+perpituity	perpetuity
+growing perpetuity	growing perpetuity
+dividend discount model	growing perpetuity
+roi	return on investment
+return on investment	return on investment
+capm	CAPM
+beta stock	CAPM
+stock beta	CAPM
+beta	CAPM	finance
+expected return	CAPM
+risk free rate	CAPM
+market risk premium	CAPM
+sharpe ratio	Sharpe ratio
+sharp ratio	Sharpe ratio
+wacc	cost of capital
+cost of capital	cost of capital
+bond price	bond price
+bond pricing	bond price
+coupon bond	bond price
+yield to maturity	bond price
+break-even	break-even
+breakeven	break-even
+break even point	break-even
+profit margin	profit margin
+margin	profit margin	finance
+depreciation	straight-line depreciation
+straight line depreciation	straight-line depreciation
+arithmetic series	arithmetic series
+sum of 1 to n	arithmetic series
+nested loops	arithmetic series
+geometric series powers of 2	geometric series: doubling
+sum of powers of two	geometric series: doubling
+2^n - 1	geometric series: doubling	computer science
+stirling	comparison sorting
+log n factorial	comparison sorting
+n log n lower bound	comparison sorting
+master theorem	master theorem
+divide and conquer	master theorem
+recurrence	master theorem
+master theorem case 1	case 1
+leaves dominate	case 1
+master theorem case 2	case 2
+master theorem case 3	case 3
+root dominates	case 3
+merge sort	merge sort
+mergesort	merge sort
+n log n	merge sort
+binary search	binary search
+log n search	binary search
+load factor	load factor
+hash table load factor	load factor
+expected probes	expected probes
+linear probing	expected probes
+birthday problem	birthday problem
+birthday paradox	birthday problem
+hash collision	birthday problem
+perfect binary tree	perfect binary tree
+binary tree nodes	perfect binary tree
+nodes in a binary tree	perfect binary tree
+tree edges	edges in a tree
+edges in a tree	edges in a tree
+complete graph	complete graph
+edges complete graph	complete graph
+k_n edges	complete graph
+handshake lemma	handshake lemma
+handshaking	handshake lemma
+sum of degrees	handshake lemma
+euler characteristic	planar graph
+v - e + f	planar graph
+bits	values in n bits	computer science
+2^n values	values in n bits
+how many bits	bits needed
+bits needed	bits needed
+unsigned range	unsigned integer range
+unsigned int	unsigned integer range
+signed range	two's complement
+two's complement	two's complement
+2s complement	two's complement
+shannon entropy	Shannon entropy
+entropy	Shannon entropy
+information entropy	Shannon entropy
+amdahl	Amdahl
+amdahls law	Amdahl
+parallel speedup	Amdahl
+speedup	Amdahl
+gustafsons law	Gustafson
+scaled speedup	Gustafson
+cpu time	CPU time
+cpi	CPU time
+clock rate	CPU time
+average memory access time	average memory access time
+cache miss	average memory access time
+miss penalty	average memory access time
+little's law	Little's law
+queueing	Little's law
+transmission delay	transmission delay
+propagation delay	propagation delay
+bandwidth delay product	bandwidth-delay
+bdp	bandwidth-delay
+nodal delay	total delay at one hop
+total delay	total delay at one hop
+queuing delay	total delay at one hop
+linear regression	linear regression model
+linear model	linear regression model
+y hat	linear regression model	machine learning
+normal equation	normal equation
+ols	normal equation
+least squares	normal equation
+ridge	ridge regression, closed form
+tikhonov	ridge regression, closed form
+logistic regression	logistic regression
+logistic	logistic	machine learning
+euclidean	Euclidean distance
+knn	Euclidean distance
+k means	Euclidean distance
+cosine similarity	cosine similarity
+cos sim	cosine similarity
+embeddings	cosine similarity
+sigmoid	sigmoid
+sigmoid function	sigmoid
+logistic function	sigmoid
+sigmoid derivative	derivative of the sigmoid
+derivative of sigmoid	derivative of the sigmoid
+tanh	hyperbolic tangent
+tanh activation	hyperbolic tangent
+relu	ReLU
+rectified linear unit	ReLU
+activation function	ReLU
+softmax	softmax
+soft max	softmax
+attention	attention
+self attention	attention
+qkv	attention
+transformer	attention
+mse	mean squared error
+mean squared error	mean squared error
+mean square error	mean squared error
+rmse	root mean squared error
+root mean square error	root mean squared error
+mae	mean absolute error
+mean absolute error	mean absolute error
+r squared	coefficient of determination
+r2	coefficient of determination
+coefficient of determination	coefficient of determination
+cross entropy	cross-entropy (categorical)
+categorical cross entropy	cross-entropy (categorical)
+crossentropy	cross-entropy
+binary cross entropy	binary cross-entropy
+bce	binary cross-entropy
+log loss	binary cross-entropy
+hinge	hinge loss
+hinge loss	hinge loss
+svm loss	hinge loss
+kl divergence	KL divergence
+kullback leibler	KL divergence
+relative entropy	KL divergence
+l2 regularization	L2 regularization
+weight decay	L2 regularization
+l1 regularization	L1 regularization
+lasso	L1 regularization
+regularization	regularization	machine learning
+gini impurity	Gini impurity
+gini index	Gini impurity
+decision tree	decision trees
+information gain	information gain
+gradient descent	gradient descent
+learning rate	gradient descent, learning rate
+sgd	gradient descent
+momentum	momentum
+adam	Adam
+adam optimizer	Adam
+standardization	standardization
+standardisation	standardization
+feature scaling	standardization
+min max	min-max
+min-max normalization	min-max
+normalization	min-max
+precision	precision
+recall	recall
+sensitivity	recall
+tpr	recall
+true positive rate	recall
+specificity	specificity
+tnr	specificity
+true negative rate	specificity
+false positive rate	false positive rate
+fpr	false positive rate
+roc	false positive rate
+f1	F1 score
+f1 score	F1 score
+f score	F1 score
+accuracy	accuracy
+confusion matrix	accuracy
+
+# the formulas page and the formula: sheets' names (sheet critic, round 2)
+geometry	area, volume, triangles
+geometry formulas	area, volume, triangles
+geometery	area, volume, triangles
+statistics	probability, distributions
+stats	probability, distributions
+probability	probability, distributions	formulas
+statistics and probability	probability, distributions
+computer science	recurrences, hashing
+comp sci	recurrences, hashing
+algorithms	recurrences, hashing
+machine learning	regression, activations
+deep learning	regression, activations
+neural networks	regression, activations
+finance	interest, present value
+financial math	interest, present value
+time value of money	present value
+self-attention	attention
+precision and recall	precision
+kullback-leibler	KL divergence
+fisher equation	real rate
+bond pricing	bond price
+information entropy	Shannon entropy
+birthday paradox	birthday problem
+gordon growth model	growing perpetuity
+lasso regression	L1 regularization
+amortization	loan or mortgage payment
+annuity	annuity
+weighted average cost of capital	cost of capital
+capital asset pricing model	CAPM
+mortgage payment	loan or mortgage payment
+continuous compounding	continuous compounding
+slope intercept form	slope-intercept
+midpoint formula	midpoint
+point slope form	point-slope
+r-squared	coefficient of determination
+root mean squared error	root mean squared error
+shapes	area, volume, triangles
+data structures	recurrences, hashing
+money	interest, present value
+ml	regression, activations
+# critic round 3: the unit circle's exact values, searched beside its picture
+sin 30	Unit circle at 30°
+cos pi/4	Unit circle at 45°
+tan 60 degrees	Unit circle at 60°
+sin 30 degrees	Unit circle at 30°
+cos 120	Unit circle at 120°
+sin 3pi/2	Unit circle at 270°
+tan pi/6	Unit circle at 30°
+cos 45	Unit circle at 45°
+sin 210	Unit circle at 210°
+unit circle 135	Unit circle at 135°
+degrees to radians	Degrees to radians
+point on unit circle	Point on the unit circle
+# sheet critic round 2, findability: physics, circuits, heat transfer, continuum mechanics, chemistry, biology, astronomy
+suvat	velocity after a time	physics
+kinematic equations	velocity after a time	physics
+v = v0 + at	velocity after a time
+final velocity	velocity after a time	physics
+position after time	position after a time	physics
+displacement constant acceleration	position after a time	physics
+v^2 = v0^2 + 2a dx	speed after a distance
+timeless equation	speed after a distance	physics
+average velocity distance	distance from average velocity	physics
+projectile range	Projectile range
+range of projectile	Projectile range
+projectle	Projectile	physics
+max height projectile	Maximum height of a projectile
+apex height	Maximum height of a projectile
+time of flight	Time of flight
+hang time	Time of flight
+newtons 2nd law	Newton's second law
+f=ma	Newton's second law
+friction	Coulomb (dry) friction	physics
+coefficient of friction	Coulomb (dry) friction
+mu static	Coulomb (dry) friction
+kinetic friction	Coulomb (dry) friction
+work done by a force	Work done by a constant force
+work	Work done by a constant force	physics
+work energy theorem	Work–energy
+kinetic energy	Translational kinetic energy	physics
+gravitational potential energy	Gravitational potential energy near
+mgh	Gravitational potential energy near
+power	Power	physics
+power force velocity	Power	physics
+momentum	Linear momentum	physics
+linear momentum	Linear momentum
+impulse	Impulse–momentum	physics
+impulse momentum	Impulse–momentum
+conservation of momentum	Conservation of momentum
+collision	Conservation of momentum	physics
+rolling without slipping	Rolling without slipping
+v = omega r	Rolling without slipping
+centripetal acceleration	Centripetal acceleration
+centripital	Centripetal	physics
+centripetal force	Centripetal force
+torque	Torque	physics
+torqe	Torque	physics
+tau = I alpha	Newton's second law for rotation
+angular acceleration	Newton's second law for rotation	physics
+angular momentum	Angular momentum of a rotating body	physics
+rotational kinetic energy	Rotational kinetic energy
+rotational ke	Rotational kinetic energy
+newtons law of gravitation	Newton's law of gravitation
+universal gravitation	Newton's law of gravitation
+gravity force	Newton's law of gravitation	physics
+surface gravity	surface gravity	physics
+little g	surface gravity	physics
+orbital speed	Circular orbital speed	physics
+orbital velocity	Circular orbital speed	physics
+escape velocity	Escape velocity	physics
+escape speed	Escape velocity	physics
+keplers third law	Kepler's third law	physics
+orbital period	Kepler's third law	physics
+hookes law	Hooke's law	physics
+spring force	Hooke's law	physics
+spring constant	Hooke's law	physics
+spring potential energy	Elastic potential energy of a spring
+elastic potential energy	Elastic potential energy of a spring
+simple harmonic motion	Simple harmonic motion
+shm	Simple harmonic motion
+natural frequency spring	Natural frequency of a mass on a spring	physics
+mass spring frequency	Natural frequency of a mass on a spring	physics
+period of a spring	Period of a mass on a spring
+mass spring period	Period of a mass on a spring
+pendulum period	Period of a simple pendulum
+pendulum	Period of a simple pendulum	physics
+pendelum	Period of a simple pendulum	physics
+pressure	Pressure	physics
+pressure force over area	Pressure	physics
+hydrostatic pressure	Pressure at a depth in a liquid	physics
+pressure at depth	Pressure at a depth in a liquid	physics
+rho g h	Pressure at a depth in a liquid	physics
+buoyant force	Archimedes	physics
+archimedes	Archimedes	physics
+bouyancy	Archimedes	physics
+continuity equation	Continuity: steady mass flow	physics
+mass flow rate	Continuity: steady mass flow	physics
+bernoulli	Bernoulli's equation	physics
+bernoullis equation	Bernoulli's equation	physics
+wave speed	Wave speed	physics
+v = f lambda	Wave speed	physics
+wavelength frequency	Wave speed	physics
+period frequency	Period and frequency	physics
+T = 1/f	Period and frequency
+wave on a string	Wave speed on a stretched string
+string tension wave speed	Wave speed on a stretched string
+harmonics string	Harmonics of a string
+standing waves	Harmonics of a string	physics
+open pipe	Harmonics of a string	physics
+closed pipe	pipe closed at one end
+doppler effect	Doppler effect for sound
+dopler	Doppler effect for sound
+decibels	Sound intensity level in decibels	physics
+sound level	Sound intensity level in decibels
+sound intensity	Intensity from a point source	physics
+inverse square law	inverse-square	physics
+index of refraction	Refractive index
+refractive index	Refractive index
+snells law	Snell's law of refraction
+snell	Snell's law of refraction
+refraction	Snell's law of refraction	physics
+critical angle	Critical angle
+total internal reflection	Critical angle
+thin lens equation	Thin lens
+lens equation	Thin lens
+mirror equation	Thin lens
+magnification	Lateral magnification	physics
+double slit	Double-slit
+diffraction grating	Double-slit
+youngs double slit	Double-slit
+specific heat	Sensible heat	physics
+mc delta t	Sensible heat	physics
+q=mcdt	Sensible heat
+latent heat	Latent heat
+heat of fusion	Latent heat	physics
+thermal expansion	Linear thermal expansion	physics
+linear expansion	Linear thermal expansion
+coefficient of thermal expansion	Linear thermal expansion	physics
+heat conduction	Fourier's law of heat conduction	physics
+thermal conductivity	Fourier's law of heat conduction	physics
+stefan boltzmann	Stefan–Boltzmann law (thermal radiation)	physics
+thermal radiation	Stefan–Boltzmann law (thermal radiation)	physics
+ideal gas law	Ideal gas law
+pv=nrt	Ideal gas law
+internal energy ideal gas	Internal energy of a monatomic
+monatomic gas	Internal energy of a monatomic
+rms speed	Root-mean-square speed
+vrms	Root-mean-square speed
+adiabatic	Reversible adiabatic	physics
+adiabatic process	Reversible adiabatic	physics
+pv^gamma	Reversible adiabatic
+first law of thermodynamics	First law of thermodynamics	physics
+first law thermo	First law of thermodynamics	physics
+delta u = q - w	First law of thermodynamics
+entropy	Entropy change	physics
+entropy change	Entropy change	physics
+isobaric work	Work at constant pressure	physics
+P dV work	Work at constant pressure	physics
+isothermal work	Work in an isothermal
+isothermal	Work in an isothermal	physics
+thermal efficiency	Thermal efficiency of a heat engine	physics
+heat engine efficiency	Thermal efficiency of a heat engine
+carnot efficiency	Carnot efficiency
+carnot	Carnot efficiency	physics
+coulombs law	Coulomb's law	physics
+coulomb	Coulomb's law	physics
+electric field point charge	Electric field of a point charge
+electric field	Electric field of a point charge	physics
+electric potential	Electric potential of a point charge	physics
+voltage of a point charge	Electric potential of a point charge
+electric potential energy	Electric potential energy
+U = qV	Electric potential energy
+field from potential	Electric field from potential
+E = -dV/dx	Electric field from potential
+parallel plate capacitor	parallel-plate capacitor	physics
+capacitance	parallel-plate capacitor	physics
+capacitor energy	Energy stored in a capacitor	physics
+energy stored in capacitor	Energy stored in a capacitor	physics
+ohms law	Ohm's law	physics
+electrical power	Electrical power in a resistor	physics
+power in a resistor	Electrical power in a resistor
+i^2 r	Electrical power in a resistor
+resistivity	Resistance from resistivity
+resistance of a wire	Resistance from resistivity
+drift velocity	drift velocity
+drift speed	drift velocity
+lorentz force	Lorentz force	physics
+magnetic force on a charge	Magnetic force on a moving charge
+qvb	Magnetic force on a moving charge
+cyclotron radius	Radius of a charged particle
+radius in magnetic field	Radius of a charged particle
+force on a wire	current-carrying wire
+ILB	current-carrying wire
+magnetic field of a wire	long straight wire
+biot savart wire	long straight wire
+solenoid field	inside a solenoid
+solenoid	inside a solenoid	physics
+magnetic flux	Magnetic flux	physics
+faradays law	Faraday's law of induction	physics
+induced emf	Faraday's law of induction
+lenz	Faraday's law of induction	physics
+gauss law	Gauss's law (Maxwell's first	physics
+gausss law	Gauss's law (Maxwell's first	physics
+gauss law magnetism	Gauss's law for magnetism
+no monopoles	Gauss's law for magnetism
+curl of E	Faraday's law (Maxwell's third
+amperes law	Ampère–Maxwell law
+ampere maxwell	Ampère–Maxwell law
+maxwells equations	Maxwell's	physics
+lorentz factor	Lorentz factor
+gamma relativity	Lorentz factor
+time dilation	Time dilation
+length contraction	Length contraction
+e=mc^2	Mass–energy equivalence
+mass energy	Mass–energy equivalence
+energy momentum relation	energy–momentum relation
+photon energy	Photon energy	physics
+E = hf	Photon energy
+planck	Photon energy	physics
+photon wavelength energy	Energy of a photon	physics
+de broglie	de Broglie wavelength
+debroglie	de Broglie wavelength
+matter wave	de Broglie wavelength
+photoelectric effect	Photoelectric effect
+work function	Photoelectric effect
+uncertainty principle	Heisenberg
+heisenberg	Heisenberg
+hydrogen energy levels	Energy levels of the hydrogen atom	physics
+bohr model	Energy levels of the hydrogen atom	physics
+schrodinger	Schrödinger
+schrodinger equation	Schrödinger
+radioactive decay	Radioactive decay law
+decay constant	Radioactive decay law	physics
+half life	Half-life	physics
+halflife	Half-life	physics
+binding energy	Nuclear binding energy
+mass defect	Nuclear binding energy
+ohms law	Ohm's law	circuits
+v=ir	Ohm's law
+power dissipated	Electrical power in a resistor	circuits
+power resistor	Electrical power in a resistor	circuits
+kcl	Kirchhoff's current law
+kirchhoffs current law	Kirchhoff's current law
+kirchoff	Kirchhoff	circuits
+kvl	Kirchhoff's voltage law
+kirchhoffs voltage law	Kirchhoff's voltage law
+voltage divider	Voltage divider
+voltage devider	Voltage divider
+current divider	Current divider
+resistors in parallel	Resistors in series and in parallel
+parallel resistors	Resistors in series and in parallel
+series resistance	Resistors in series and in parallel	circuits
+equivalent resistance	Resistors in series and in parallel	circuits
+inductors in series	Inductors in series and in parallel
+capacitors in series	Capacitors in series and in parallel
+capacitors in parallel	Capacitors in series and in parallel
+wheatstone bridge	Wheatstone bridge
+wheatstone	Wheatstone bridge
+delta to wye	Delta-to-wye
+delta wye	Delta-to-wye	circuits
+wye to delta	Wye-to-delta
+y delta	Wye-to-delta	circuits
+star delta transformation	Delta-to-wye	circuits
+thevenin	Thévenin voltage	circuits
+thevenin voltage	Thévenin voltage
+open circuit voltage	Thévenin voltage
+thevenin resistance	Thévenin resistance
+thevinin	Thévenin	circuits
+norton current	Norton current
+short circuit current	Norton current
+norton resistance	Norton resistance
+norton equivalent	Norton	circuits
+source transformation	Source transformation
+Q = CV	Charge on a capacitor
+capacitor charge	Charge on a capacitor
+capacitor current	Capacitor current
+i = C dv/dt	Capacitor current
+inductor voltage	Inductor voltage
+v = L di/dt	Inductor voltage
+capacitor energy	Energy stored in a capacitor	circuits
+inductor energy	Energy stored in an inductor
+energy in an inductor	Energy stored in an inductor
+rc time constant	RC time constant
+tau = rc	RC time constant
+rl time constant	RL time constant
+time constant	RC time constant	circuits
+step response first order	First-order step response
+rc circuit charging	First-order step response	circuits
+transient response	First-order step response	circuits
+sinusoid	Sinusoidal voltage	circuits
+sinusoidal voltage	Sinusoidal voltage
+phasor	Phasor form	circuits
+phasor form	Phasor form
+angular frequency	Angular frequency	circuits
+omega = 2 pi f	Angular frequency
+rms	RMS value of a sine wave	circuits
+rms voltage	RMS value of a sine wave
+root mean square	RMS value	circuits
+rms of a waveform	RMS value of any periodic waveform
+impedance of a resistor	Impedance of a resistor
+impedance of an inductor	Impedance of an inductor
+inductor impedance	Impedance of an inductor
+capacitor impedance	Impedance of a capacitor
+impedance	Impedance	circuits
+reactance	Impedance	circuits
+ohms law phasors	Ohm's law for phasors
+V = IZ	Ohm's law for phasors
+series rlc impedance	Impedance of a series RLC
+admittance	Admittance
+susceptance	Admittance
+conductance	Admittance	circuits
+inductive reactance	Inductive reactance
+capacitive reactance	Capacitive reactance
+xc	Capacitive reactance
+xl	Inductive reactance
+real power	Real (average) AC power
+average power	Real (average) AC power	circuits
+ac power	Real (average) AC power	circuits
+average power peak values	Average AC power from peak values
+reactive power	Reactive power
+var	Reactive power	circuits
+complex power	Complex power
+apparent power	Complex power
+power factor	Power factor
+pf	Power factor	circuits
+lagging power factor	Power factor
+maximum power transfer	Maximum power transfer	circuits
+max power transfer	Maximum power transfer	circuits
+conjugate match	Maximum power transfer (AC)
+matched load	Maximum power delivered to a matched load
+three phase	three-phase	circuits
+3 phase power	Balanced three-phase power
+three phase power	Balanced three-phase power
+line voltage wye	Wye line voltage
+wye line current	Wye line current
+delta line voltage	Delta line voltage
+delta line current	Delta line current
+phase voltage	Wye line voltage	circuits
+transformer	Ideal transformer voltage ratio	circuits
+turns ratio	Ideal transformer voltage ratio
+transformer current	Ideal transformer current ratio
+reflected impedance	Impedance reflected through a transformer
+referred impedance	Impedance reflected through a transformer
+resonant frequency	LC resonant frequency
+resonance	LC resonant frequency	circuits
+omega 0	LC resonant frequency	circuits
+lc circuit	LC resonant frequency	circuits
+neper frequency	Neper frequency of a series	circuits
+alpha series rlc	Neper frequency of a series RLC
+neper frequency parallel	Neper frequency of a parallel RLC
+damping ratio	Damping ratio	circuits
+zeta	Damping ratio	circuits
+natural roots	Natural roots of an RLC
+characteristic roots rlc	Natural roots of an RLC
+overdamped underdamped	Natural roots of an RLC	circuits
+damped frequency	Damped natural frequency	circuits
+omega d	Damped natural frequency	circuits
+quality factor	Quality factor of a series RLC	circuits
+q factor	Quality factor of a series RLC	circuits
+quality factor parallel	Quality factor of a parallel RLC
+bandwidth	Bandwidth of a resonant circuit	circuits
+second order transfer function	Standard second-order transfer function
+second order system	Standard second-order transfer function	circuits
+percent overshoot	Percent overshoot
+overshoot	Percent overshoot	circuits
+%os	Percent overshoot
+peak time	Peak time
+settling time	Settling time
+setling time	Settling time
+rise time	Rise time
+low pass filter	RC low-pass filter
+lowpass	RC low-pass	circuits
+high pass filter	RC high-pass filter
+highpass	RC high-pass	circuits
+cutoff frequency	RC cutoff frequency	circuits
+corner frequency	RC cutoff frequency	circuits
+rl cutoff	RL filter cutoff frequency
+rl filter	RL filter cutoff frequency
+bode plot	Transfer function magnitude in decibels	circuits
+magnitude in db	Transfer function magnitude in decibels
+gain in db	Transfer function magnitude in decibels
+-3 db	First-order corner	circuits
+3db	First-order corner	circuits
+20 db per decade	Bode slope
+bode slope	Bode slope
+virtual short	Virtual short
+ideal op amp	Virtual short	circuits
+golden rules op amp	Virtual short
+op amp input current	No current into an ideal op amp
+inverting amplifier	Inverting op amp gain
+inverting op amp	Inverting op amp gain
+non inverting amplifier	Non-inverting op amp gain
+noninverting	Non-inverting op amp gain
+voltage follower	Voltage follower
+unity gain buffer	Voltage follower
+buffer	Voltage follower	circuits
+summing amplifier	Inverting summing amplifier
+summer op amp	Inverting summing amplifier
+difference amplifier	Difference amplifier
+differential amplifier	Difference amplifier
+integrator	Op-amp integrator	circuits
+op amp integrator	Op-amp integrator
+differentiator	Op-amp differentiator	circuits
+gain bandwidth product	Gain-bandwidth product
+gbw	Gain-bandwidth product
+slew rate	Slew rate
+cmrr	Common-mode rejection ratio
+common mode rejection	Common-mode rejection ratio
+diode equation	Shockley diode equation
+shockley	Shockley diode equation
+diode current	Shockley diode equation	circuits
+thermal voltage	Thermal voltage
+vt	Thermal voltage	circuits
+diode small signal resistance	Diode small-signal resistance
+half wave rectifier	Half-wave rectifier
+full wave rectifier	Full-wave rectifier
+rectifier	rectifier	circuits
+ripple voltage	ripple voltage
+ripple	ripple voltage	circuits
+bjt current gain	BJT current gain
+beta	BJT current gain	circuits
+hfe	BJT current gain
+emitter current	BJT terminal currents
+alpha bjt	Common-base current gain
+common base	Common-base current gain
+bjt collector current	BJT collector current vs base-emitter
+transconductance bjt	BJT transconductance
+gm	transconductance	circuits
+r pi	BJT small-signal input resistance
+early effect	Output resistance from the Early effect
+early voltage	Output resistance from the Early effect
+common emitter gain	Common-emitter amplifier gain
+common emitter	Common-emitter amplifier gain	circuits
+overdrive voltage	MOSFET overdrive voltage
+mosfet saturation current	MOSFET drain current in saturation
+square law	MOSFET drain current in saturation
+mosfet	MOSFET	circuits
+saturation condition	Condition for MOSFET saturation
+triode region	MOSFET drain current in the triode region
+linear region mosfet	MOSFET drain current in the triode region
+mosfet transconductance	MOSFET transconductance
+channel length modulation	MOSFET output resistance
+common source amplifier	Common-source amplifier gain
+common source	Common-source amplifier gain	circuits
+cmos power	CMOS dynamic
+dynamic power	CMOS dynamic
+switching power	CMOS dynamic
+de morgan	De Morgan	circuits
+demorgans	De Morgan	circuits
+xor	Exclusive OR
+exclusive or	Exclusive OR
+unsigned range	Range of an n-bit unsigned
+n bit unsigned	Range of an n-bit unsigned
+twos complement range	two's-complement integer
+signed integer range	two's
+setup time	Setup-time constraint
+clock period	Setup-time constraint	circuits
+max clock frequency	Maximum clock frequency
+fmax	Maximum clock frequency	circuits
+lsb	Converter resolution
+adc resolution	Converter resolution
+dac output	DAC output
+dac	DAC output	circuits
+adc snr	Ideal ADC signal-to-noise
+quantization noise	Ideal ADC signal-to-noise
+6.02n	Ideal ADC signal-to-noise
+nyquist	Nyquist sampling criterion	circuits
+sampling rate	Nyquist sampling criterion	circuits
+aliasing	Aliased frequency
+alias frequency	Aliased frequency
+decibels power	Decibels from a power ratio
+db power ratio	Decibels from a power ratio
+db voltage	Decibels from a voltage ratio
+voltage gain db	Decibels from a voltage ratio
+dbm	Power in dBm
+johnson noise	Thermal (Johnson–Nyquist) noise
+thermal noise	Thermal (Johnson–Nyquist) noise	circuits
+noise power	Available thermal noise power
+ktb	Available thermal noise power
+noise factor	Noise factor
+noise figure	Noise factor
+shannon capacity	Shannon channel capacity
+channel capacity	Shannon channel capacity
+friis	Friis transmission
+free space path loss	Friis transmission
+c = f lambda	Wave speed, frequency and wavelength	circuits
+characteristic impedance	Characteristic impedance of a lossless line
+z0	Characteristic impedance	circuits
+transmission line	Characteristic impedance of a lossless line	circuits
+phase velocity	Phase velocity on a lossless line
+phase constant	Phase constant
+wavenumber	Phase constant	circuits
+reflection coefficient	Reflection coefficient at a load
+gamma	Reflection coefficient	circuits
+vswr	Voltage standing-wave ratio
+standing wave ratio	Voltage standing-wave ratio
+input impedance transmission line	Input impedance of a lossless line
+quarter wave transformer	Input impedance of a lossless line
+parallel plate capacitance	Parallel-plate capacitance	circuits
+solenoid inductance	Inductance of a long solenoid
+inductance of a coil	Inductance of a long solenoid
+skin depth	Skin depth
+skin effect	Skin depth
+dc motor	DC motor armature voltage	circuits
+armature voltage	DC motor armature voltage
+back emf	Back EMF
+motor torque constant	DC motor torque
+shaft power	Mechanical power of a rotating shaft	circuits
+mechanical power	Mechanical power of a rotating shaft	circuits
+synchronous speed	Synchronous speed
+rpm poles	Synchronous speed
+slip	Slip of an induction motor
+induction motor	Slip of an induction motor	circuits
+efficiency	Efficiency	circuits
+buck converter	Buck converter
+step down converter	Buck converter
+boost converter	Boost converter
+step up	Boost converter	circuits
+buck boost	Buck-boost converter
+duty cycle	Buck converter	circuits
+closed loop transfer function	Closed-loop transfer function
+feedback	Closed-loop transfer function	circuits
+G/(1+GH)	Closed-loop transfer function
+characteristic equation feedback	Characteristic equation of a feedback loop
+1 + GH = 0	Characteristic equation of a feedback loop
+steady state error	Steady-state error to a step	circuits
+steady state error ramp	Steady-state error to a ramp
+position error constant	Position (static) error constant
+kp	Position (static) error constant	circuits
+velocity error constant	Velocity error constant
+kv	Velocity error constant	circuits
+pid	PID controller in the time domain	circuits
+pid controller	PID controller in the time domain
+pid transfer function	PID controller transfer function
+fouriers law	Fourier's law: heat conducted	heat transfer
+fourier law conduction	Fourier's law: heat conducted
+conduction	Fourier's law: heat conducted	heat transfer
+plane wall conduction	Steady conduction through a plane wall
+steady conduction	Steady conduction through a plane wall
+heat flux	Heat flux	heat transfer
+q double prime	Heat flux
+newtons law of cooling	Newton's law of cooling: convection	heat transfer
+convection	Newton's law of cooling: convection	heat transfer
+convection coefficient	Newton's law of cooling: convection
+h A delta T	Newton's law of cooling: convection
+radiation exchange	Net radiation between a surface	heat transfer
+net radiation	Net radiation between a surface
+emissivity	Net radiation between a surface	heat transfer
+thermal resistance	Heat flow through a thermal resistance	heat transfer
+thermal circuit	Heat flow through a thermal resistance
+conduction resistance	Conduction resistance of a plane wall
+r value	Conduction resistance of a plane wall
+cylinder thermal resistance	Thermal resistance of a cylinder
+pipe wall resistance	Thermal resistance of a cylinder
+ln(r2/r1)	Thermal resistance of a cylinder
+spherical shell resistance	Thermal resistance of a spherical shell
+sphere conduction	Thermal resistance of a spherical shell
+convection resistance	Convection resistance
+1/hA	Convection resistance
+overall heat transfer coefficient	Overall heat transfer coefficient
+composite wall	Overall heat transfer coefficient
+UA	Overall heat transfer coefficient	heat transfer
+critical radius	Critical radius of insulation
+critical insulation thickness	Critical radius of insulation
+thermal diffusivity	Thermal diffusivity
+alpha = k/rho cp	Thermal diffusivity
+biot number	Biot number
+biot	Biot number
+biot lumped	Biot number
+fourier number	Fourier number
+dimensionless time	Fourier number
+lumped capacitance	Lumped-capacity cooling
+lumped capacity	Lumped-capacity cooling
+transient cooling	Lumped-capacity cooling
+time constant lumped	Thermal time constant of a lumped body
+thermal time constant	Thermal time constant
+fin parameter	Fin parameter
+fin parameter m	Fin parameter
+fin heat transfer	Heat rate of a fin
+fin heat rate	Heat rate of a fin
+fin efficiency	Fin efficiency
+nusselt number	Nusselt number
+nusselt	Nusselt number
+nusselt numbr	Nusselt number
+reynolds number	Reynolds number: laminar or turbulent	heat transfer
+laminar or turbulent	Reynolds number: laminar or turbulent
+prandtl number	Prandtl number
+prandtl	Prandtl number
+grashof	Grashof number
+grashoff	Grashof number
+natural convection	Grashof number	heat transfer
+free convection	Grashof number	heat transfer
+rayleigh number	Rayleigh number
+Ra = Gr Pr	Rayleigh number
+laminar pipe constant wall temperature	constant wall temperature
+nu = 3.66	constant wall temperature
+laminar pipe constant heat flux	Laminar pipe flow, constant heat flux
+nu = 4.36	Laminar pipe flow, constant heat flux
+dittus boelter	Dittus–Boelter
+ditus	Dittus–Boelter
+turbulent pipe flow	Dittus–Boelter	heat transfer
+forced convection pipe	Dittus–Boelter
+laminar flat plate	Laminar flat plate, average
+flat plate laminar nusselt	Laminar flat plate, average
+turbulent flat plate	Turbulent flat plate
+energy balance	Energy balance on a flowing stream	heat transfer
+m dot cp delta T	Energy balance on a flowing stream
+heat exchanger	Heat exchanger rate	heat transfer
+Q = UA dTlm	Heat exchanger rate
+lmtd	Log mean temperature difference
+log mean temperature difference	Log mean temperature difference
+log mean	Log mean temperature difference
+counterflow	counterflow	heat transfer
+ntu	Number of transfer units
+number of transfer units	Number of transfer units
+effectiveness ntu	Number of transfer units	heat transfer
+qmax	Maximum possible heat transfer
+c min	Maximum possible heat transfer	heat transfer
+maximum heat transfer	Maximum possible heat transfer
+effectiveness	Heat exchanger effectiveness	heat transfer
+heat exchanger effectiveness	Heat exchanger effectiveness
+counterflow effectiveness	Effectiveness of a counterflow
+blackbody	Blackbody emissive power
+emissive power	Blackbody emissive power
+sigma T^4	Blackbody emissive power	heat transfer
+wiens law	Wien's displacement law	heat transfer
+wien displacement	Wien's displacement law
+peak wavelength	Wien's displacement law	heat transfer
+absorptivity reflectivity transmissivity	Absorbed, reflected and transmitted
+alpha + rho + tau = 1	Absorbed, reflected and transmitted
+kirchhoffs law radiation	Kirchhoff's law of thermal radiation
+gray surface	Kirchhoff's law of thermal radiation
+view factor	View factor	heat transfer
+reciprocity	View factor reciprocity	heat transfer
+shape factor	View factor	heat transfer
+summation rule	View factor summation rule
+normal stress	Normal stress: axial force	continuum mechanics
+axial stress	Normal stress: axial force	continuum mechanics
+sigma = F/A	Normal stress: axial force
+engineering stress	Normal stress: axial force
+shear stress	Average shear stress	continuum mechanics
+average shear stress	Average shear stress
+normal strain	Normal strain
+strain	Normal strain	continuum mechanics
+engineering strain	Normal strain
+shear strain	Shear strain: sideways slide
+gamma shear strain	Shear strain: sideways slide
+cauchy formula	Cauchy's formula
+traction vector	Cauchy's formula
+traction	Cauchy's formula	continuum mechanics
+stress tensor symmetry	Symmetry of the stress tensor
+symmetric stress	Symmetry of the stress tensor
+cauchy equation of motion	Cauchy's equation of motion
+equilibrium equations	Cauchy's equation of motion	continuum mechanics
+small strain tensor	Small-strain tensor
+strain displacement	Small-strain tensor
+infinitesimal strain	Small-strain tensor
+hydrostatic stress	Mean (hydrostatic) pressure	continuum mechanics
+mean stress	Mean (hydrostatic) pressure
+deviatoric stress	Deviatoric stress
+stress deviator	Deviatoric stress
+dilatation	Dilatation
+volumetric strain	Dilatation
+stress transformation	Stress transformation: normal	continuum mechanics
+rotated plane stress	Stress transformation	continuum mechanics
+shear stress transformation	Stress transformation: shear
+principal stresses	Principal stresses in plane stress	continuum mechanics
+principle stress	Principal stresses in plane stress
+sigma 1	Principal stresses in plane stress	continuum mechanics
+max shear stress	Maximum in-plane shear stress	continuum mechanics
+maximum in plane shear	Maximum in-plane shear stress
+tau max	Maximum in-plane shear stress	continuum mechanics
+principal angle	Principal angle
+principal planes	Principal angle
+theta p	Principal angle
+mohrs circle	Mohr's circle	continuum mechanics
+mohr circle	Mohr's circle	continuum mechanics
+mohrs	Mohr's circle	continuum mechanics
+von mises	Von Mises equivalent stress
+vonmises	Von Mises
+von mises sigma tau	Von Mises stress for combined
+equivalent stress	Von Mises	continuum mechanics
+tresca	Tresca
+maximum shear stress theory	Tresca
+factor of safety	Factor of safety against yield
+fos	Factor of safety
+safety factor	Factor of safety
+stress concentration	Stress concentration factor
+kt	Stress concentration factor	continuum mechanics
+hookes law	Hooke's law in one dimension	continuum mechanics
+youngs modulus	Hooke's law in one dimension	continuum mechanics
+sigma = E epsilon	Hooke's law in one dimension
+shear modulus hooke	Hooke's law in shear
+tau = G gamma	Hooke's law in shear
+poissons ratio	Poisson's ratio
+poisson	Poisson's ratio
+poisons ratio	Poisson's ratio
+generalized hookes law	Generalised Hooke's law
+3d hookes law	Generalised Hooke's law
+thermal strain	Generalised Hooke's law	continuum mechanics
+shear strain from shear stress	Shear strain from shear stress
+lame	Lamé	continuum mechanics
+lame form	Hooke's law in Lamé form
+shear modulus	Shear modulus from Young's	continuum mechanics
+shear modulus from E and nu	Shear modulus from Young's
+bulk modulus	Bulk modulus
+lame constant	Lamé's first constant
+lambda lame	Lamé's first constant
+newtons law of viscosity	Newton's law of viscosity
+viscosity	Newton's law of viscosity	continuum mechanics
+newtonian fluid	Newtonian fluid	continuum mechanics
+summation convention	Summation convention
+einstein notation	Summation convention
+index notation	Summation convention	continuum mechanics
+kronecker delta	Kronecker delta
+levi civita	Cross product with the permutation symbol
+permutation symbol	Cross product with the permutation symbol
+epsilon delta identity	The ε–δ identity
+e-d identity	The ε–δ identity
+tensor rotation	Rotating a second-order tensor
+tensor transformation	Rotating a second-order tensor
+divergence theorem index	Divergence theorem in index form
+characteristic equation stress	Characteristic equation for principal stresses
+eigenvalues of stress	Characteristic equation for principal stresses
+stress invariants	stress invariant	continuum mechanics
+first invariant	First stress invariant
+second invariant	Second stress invariant
+third invariant	Third stress invariant
+I1	First stress invariant	continuum mechanics
+axial deformation	Elongation of an axially loaded bar
+PL/AE	Elongation of an axially loaded bar
+elongation	Elongation of an axially loaded bar
+axial stiffness	Axial stiffness of a bar
+k = AE/L	Axial stiffness of a bar
+thermal expansion bar	Free thermal expansion of a bar
+thermal deformation	Free thermal expansion of a bar
+thermal stress	Thermal stress in a fully restrained	continuum mechanics
+restrained bar heated	Thermal stress in a fully restrained
+strain energy	Strain energy in an axially loaded	continuum mechanics
+equilibrium	Force equilibrium	continuum mechanics
+sum of forces	Force equilibrium	continuum mechanics
+compatibility	Compatibility for statically	continuum mechanics
+statically indeterminate	Compatibility for statically
+load sharing	Load sharing between two parallel
+hoop stress	Hoop stress
+pressure vessel	Hoop stress	continuum mechanics
+thin walled cylinder	Hoop stress
+longitudinal stress pressure vessel	Axial stress in a thin-walled cylinder
+axial stress cylinder	Axial stress in a thin-walled cylinder
+spherical pressure vessel	Wall stress in a thin-walled sphere
+torsion formula	Torsion formula
+torsion	Torsion formula	continuum mechanics
+torsional shear stress	Torsion formula	continuum mechanics
+Tc/J	Maximum torsional shear stress
+max shear stress shaft	Maximum torsional shear stress
+angle of twist	Angle of twist of a circular shaft
+TL/GJ	Angle of twist of a circular shaft
+torsional stiffness	Torsional stiffness
+shaft power	Power transmitted by a rotating shaft	continuum mechanics
+P = T omega	Power transmitted by a rotating shaft	continuum mechanics
+polar moment of inertia	Polar moment of inertia of a solid	continuum mechanics
+J solid shaft	Polar moment of inertia of a solid
+hollow shaft	Polar moment of inertia of a hollow
+polar moment hollow	Polar moment of inertia of a hollow
+thin walled tube torsion	thin-walled closed tube (Bredt)
+bredt	Bredt
+twist thin walled tube	Angle of twist of a thin-walled
+flexure formula	Flexure formula
+bending stress	Flexure formula
+My/I	Flexure formula
+section modulus	section modulus
+Mc/I	Maximum bending stress
+transverse shear	Transverse shear stress
+VQ/It	Transverse shear stress
+shear formula	Transverse shear stress
+shear flow	Shear flow
+q = VQ/I	Shear flow
+max shear rectangular beam	Maximum shear stress in a rectangular
+3V/2A	Maximum shear stress in a rectangular
+max shear circular beam	Maximum shear stress in a solid circular
+shear diagram	Load–shear relation	continuum mechanics
+load shear relation	Load–shear relation
+dV/dx = -w	Load–shear relation
+moment diagram	Shear–moment relation	continuum mechanics
+dM/dx = V	Shear–moment relation
+beam deflection	Moment–curvature	continuum mechanics
+elastic curve	Moment–curvature
+moment curvature	Moment–curvature
+EI v'' = M	Moment–curvature
+fourth order beam equation	Fourth-order beam equation
+euler buckling	Euler buckling load
+buckling	Euler buckling load	continuum mechanics
+critical load column	Euler buckling load
+critical buckling stress	Critical buckling stress
+slenderness ratio	Critical buckling stress
+radius of gyration	Radius of gyration of a section	continuum mechanics
+second moment of area rectangle	Second moment of area of a rectangle
+bh^3/12	Second moment of area of a rectangle
+area moment of inertia	Second moment of area	continuum mechanics
+moment of inertia circle	Second moment of area of a solid circle	continuum mechanics
+pi d^4/64	Second moment of area of a solid circle
+hollow circle moment of inertia	hollow circle (tube)
+tube second moment	hollow circle (tube)
+parallel axis theorem	Parallel axis theorem	continuum mechanics
+cantilever end load deflection	Cantilever with an end load
+cantilever deflection	Cantilever with an end load	continuum mechanics
+PL^3/3EI	Cantilever with an end load
+cantilever uniform load	Cantilever with a uniform load
+cantilever distributed load	Cantilever with a uniform load
+wL^4/8EI	Cantilever with a uniform load
+cantilever moment	Cantilever with an end couple	continuum mechanics
+cantilever end couple	Cantilever with an end couple
+simply supported center load	Simply supported beam with a centre load
+simply supported beam point load	Simply supported beam with a centre load
+PL^3/48EI	Simply supported beam with a centre load
+simply supported uniform load	Simply supported beam with a uniform load
+5wL^4/384EI	Simply supported beam with a uniform load
+cantilever slope	End slope of a cantilever with an end load
+end slope cantilever uniform	End slope of a cantilever with a uniform load
+slope simply supported center	End slope of a simply supported beam with a centre load
+slope simply supported uniform	End slope of a simply supported beam with a uniform load
+hydrostatic pressure gradient	Hydrostatic pressure gradient
+dp/dz	Hydrostatic pressure gradient
+hydrostatic pressure	Pressure at a depth	continuum mechanics
+buoyancy	Archimedes	continuum mechanics
+force on submerged plate	Hydrostatic force on a submerged
+submerged surface	Hydrostatic force on a submerged
+bernoulli	Bernoulli's equation	continuum mechanics
+continuity incompressible	Continuity for incompressible flow
+A1 v1 = A2 v2	Continuity for incompressible flow
+torricelli	Torricelli's law
+tank draining	Torricelli's law
+drag force	Drag force
+drag coefficient	Drag force
+air resistance	Drag force
+lift force	Lift force
+lift coefficient	Lift force
+reynolds number pipe	Reynolds number	continuum mechanics
+reynolds	Reynolds number	continuum mechanics
+poiseuille	Hagen–Poiseuille
+hagen poiseuille	Hagen–Poiseuille
+laminar pipe flow rate	Hagen–Poiseuille
+darcy weisbach	Darcy–Weisbach
+head loss	Darcy–Weisbach	continuum mechanics
+major losses	Darcy–Weisbach
+friction factor	Laminar friction factor	continuum mechanics
+f = 64/Re	Laminar friction factor
+moody	Darcy–Weisbach	continuum mechanics
+minor losses	Minor losses
+loss coefficient	Minor losses
+hydraulic diameter	Hydraulic diameter
+pump power	Pump (hydraulic) power
+hydraulic power	Pump (hydraulic) power
+reynolds transport theorem	Reynolds transport theorem
+rtt	Reynolds transport theorem
+control volume mass	Conservation of mass for a control volume
+conservation of mass	Conservation of mass for a control volume	continuum mechanics
+momentum control volume	Linear momentum equation for a control volume
+linear momentum equation	Linear momentum equation for a control volume
+angular momentum control volume	Angular momentum equation for a control volume
+energy equation control volume	Energy equation for a control volume
+mass flow rate	Continuity: steady mass flow	continuum mechanics
+steady flow momentum	Steady-flow momentum equation
+momentum flux	Steady-flow momentum equation	continuum mechanics
+steady flow energy equation	Steady-flow energy equation
+sfee	Steady-flow energy equation
+continuity equation	Continuity equation at a point	continuum mechanics
+navier stokes	Navier–Stokes
+navier-stokes	Navier–Stokes
+navier stokes equation	Navier–Stokes
+moles	Moles from mass	chemistry
+moles from grams	Moles from mass
+n = m/M	Moles from mass
+molar mass	Moles from mass	chemistry
+grams to moles	Moles from mass
+stoichiometry	Moles from mass	chemistry
+avogadro	Number of particles from moles
+avogadros number	Number of particles from moles
+number of molecules	Number of particles from moles
+mass percent	Mass percent
+percent composition	Mass percent
+percent yield	Percent yield
+theoretical yield	Percent yield
+molarity	Molarity
+molarty	Molarity
+concentration	Molarity	chemistry
+molality	Molality
+mole fraction	Mole fraction	chemistry
+dilution	Dilution	chemistry
+m1v1	Dilution
+c1v1	Dilution
+beer lambert	Beer–Lambert
+beers law	Beer–Lambert
+absorbance	Beer–Lambert
+ideal gas law	Ideal gas law	chemistry
+pv = nrt	Ideal gas law
+gas density	Density of an ideal gas
+molar mass of a gas	Density of an ideal gas
+combined gas law	Combined gas law
+boyles law	Boyle's law
+boyle	Boyle's law
+charles law	Charles's law
+charless law	Charles's law
+gay lussac	Gay-Lussac's law
+gay lusac	Gay-Lussac's law
+daltons law	Dalton's law
+partial pressures	Dalton's law	chemistry
+partial pressure mole fraction	Partial pressure from mole fraction
+van der waals	van der Waals
+real gas	van der Waals
+vanderwaals	van der Waals
+grahams law	Graham's law
+effusion	Graham's law
+rms speed gas	Root-mean-square speed	chemistry
+calorimetry	Heat to change a temperature
+mcat	Heat to change a temperature	chemistry
+q=mcdt	Heat to change a temperature	chemistry
+specific heat capacity	Heat to change a temperature	chemistry
+bond enthalpy	Enthalpy change from bond energies
+bond energies	Enthalpy change from bond energies
+hess law	Hess's law
+hesss law	Hess's law
+enthalpy of formation	Hess's law
+heat of formation	Hess's law
+delta h	Hess's law	chemistry
+enthalpy	Hess's law	chemistry
+standard entropy change	Standard entropy change
+entropy	Standard entropy change	chemistry
+delta s	Standard entropy change	chemistry
+gibbs free energy	Gibbs free energy: will it happen
+gibbs	Gibbs free energy	chemistry
+spontaneous	Gibbs free energy: will it happen
+delta g	Gibbs free energy	chemistry
+dG = dH - TdS	Gibbs free energy: will it happen
+delta g and k	Standard free energy and the equilibrium constant
+-RT ln K	Standard free energy and the equilibrium constant
+delta g nonstandard	Free energy away from standard
+clausius clapeyron	Clausius–Clapeyron
+clausius	Clausius–Clapeyron
+vapor pressure temperature	Clausius–Clapeyron
+heat of vaporization	Clausius–Clapeyron
+equilibrium constant	Equilibrium constant (law of mass action)	chemistry
+law of mass action	Equilibrium constant
+kc	Equilibrium constant	chemistry
+kp kc	Converting between K
+kp to kc	Converting between K
+reaction quotient	Reaction quotient
+le chatelier	Reaction quotient
+q vs k	Reaction quotient
+van t hoff	Van 't Hoff
+vant hoff	Van 't Hoff
+henrys law	Henry's law
+gas solubility	Henry's law
+ksp	Solubility product
+solubility product	Solubility product
+ph	pH from hydrogen ion	chemistry
+pH = -log H	pH from hydrogen ion
+poh	pOH from hydroxide
+ph + poh = 14	pH and pOH add to 14
+ka	Acid dissociation constant	chemistry
+acid dissociation constant	Acid dissociation constant
+pka	Acid dissociation constant	chemistry
+weak acid ph	Weak acid pH shortcut
+ice table weak acid	Weak acid pH shortcut
+ka kb = kw	Conjugate acid–base pair
+kw	Conjugate acid–base pair	chemistry
+kb	Conjugate acid–base pair	chemistry
+henderson hasselbalch	Henderson–Hasselbalch
+henderson	Henderson–Hasselbalch
+buffer ph	Henderson–Hasselbalch
+zero order	Zero-order integrated rate law
+zeroth order half life	Zero-order integrated rate law
+first order rate law	First-order integrated rate law
+first order half life	First-order integrated rate law	chemistry
+second order rate law	Second-order integrated rate law
+second order kinetics	Second-order integrated rate law
+integrated rate law	integrated rate law	chemistry
+rate law	Rate law	chemistry
+reaction order	Rate law	chemistry
+arrhenius	Arrhenius equation
+arrhenius equation	Arrhenius equation
+arhenius	Arrhenius	chemistry
+activation energy	Arrhenius	chemistry
+arrhenius two temperatures	Arrhenius at two temperatures
+arrhenius plot	Arrhenius plot
+cell potential	Standard cell potential	chemistry
+standard cell potential	Standard cell potential
+E cell	Standard cell potential	chemistry
+delta g nfe	Free energy from cell voltage
+free energy cell potential	Free energy from cell voltage
+cell potential equilibrium constant	Standard cell potential and the equilibrium constant
+nernst	Nernst equation	chemistry
+nernst equation	Nernst equation	chemistry
+nerst	Nernst equation	chemistry
+nernst 0.0592	Nernst equation at 25
+electrolysis	Faraday's law of electrolysis
+electroplating	Faraday's law of electrolysis
+faradays law electrolysis	Faraday's law of electrolysis
+boiling point elevation	Boiling point elevation
+freezing point depression	Freezing point depression
+colligative	Boiling point elevation	chemistry
+osmotic pressure	Osmotic pressure
+van t hoff factor	Osmotic pressure	chemistry
+raoults law	Raoult's law
+raoult	Raoult's law
+vapour pressure solution	Raoult's law
+photon energy wavelength	Energy of a photon	chemistry
+c = lambda nu	Speed, wavelength and frequency of light
+speed of light wavelength frequency	Speed, wavelength and frequency of light
+hydrogen energy levels	Energy levels of the hydrogen atom	chemistry
+bohr	Energy levels of the hydrogen atom	chemistry
+rydberg	Rydberg
+rydberg equation	Rydberg
+hydrogen spectrum	Rydberg
+formal charge	Formal charge
+lewis structure	Formal charge
+exponential growth	Exponential population growth	biology
+dN/dt = rN	Exponential population growth
+population growth	population growth	biology
+exponential growth equation	Exponential growth over time	biology
+N = N0 e^rt	Exponential growth over time
+logistic growth	Logistic population growth
+carrying capacity	Logistic population growth
+logistic	Logistic population growth	biology
+geometric growth	Geometric (discrete)
+discrete growth	Geometric (discrete)
+doubling time	Doubling time	biology
+rule of 70	Doubling time	biology
+mark recapture	Mark-recapture
+lincoln petersen	Mark-recapture
+capture recapture	Mark-recapture
+lotka volterra	Lotka–Volterra	biology
+predator prey	Lotka–Volterra	biology
+prey equation	Lotka–Volterra: prey
+predator equation	Lotka–Volterra: predators
+npp	Net primary productivity
+net primary productivity	Net primary productivity
+gpp	Net primary productivity
+gross primary productivity	Net primary productivity
+trophic efficiency	Trophic
+10 percent rule	Trophic
+ecological efficiency	Trophic
+shannon diversity	Shannon diversity index
+shannon index	Shannon diversity index
+shannon wiener	Shannon diversity index
+simpson index	Simpson's diversity index
+simpsons diversity	Simpson's diversity index
+biodiversity	diversity index	biology
+allele frequency	Allele frequencies
+p + q = 1	Allele frequencies
+hardy weinberg	Hardy–Weinberg
+hardy-weinberg	Hardy–Weinberg
+hardy wienberg	Hardy–Weinberg
+genotype frequency	Hardy–Weinberg
+p^2 + 2pq + q^2	Hardy–Weinberg
+chi square	Chi-square goodness-of-fit
+chi squared	Chi-square goodness-of-fit
+goodness of fit	Chi-square goodness-of-fit
+gametes	Number of gamete types
+number of gametes	Number of gamete types
+heritability	Narrow-sense heritability
+narrow sense heritability	Narrow-sense heritability
+h^2	Narrow-sense heritability	biology
+breeders equation	Breeder's equation
+response to selection	Breeder's equation
+selection differential	Breeder's equation
+recombination frequency	Recombination frequency
+map distance	Recombination frequency
+centimorgan	Recombination frequency
+michaelis menten	Michaelis–Menten
+michaelis	Michaelis–Menten
+enzyme kinetics	Michaelis–Menten
+km vmax	Michaelis–Menten	biology
+lineweaver burk	Lineweaver–Burk
+double reciprocal	Lineweaver–Burk
+turnover number	Turnover number
+kcat	Turnover number
+competitive inhibition	competitive inhibitor
+competitive inhibitor	competitive inhibitor
+noncompetitive inhibition	Noncompetitive inhibition
+hill equation	Hill equation
+cooperativity	Hill equation
+hill coefficient	Hill equation
+nernst potential	Nernst equilibrium potential	biology
+equilibrium potential	Nernst equilibrium potential
+nernst	Nernst equilibrium potential	biology
+nernst body temperature	Nernst potential at body temperature
+nernst 61	Nernst potential at body temperature
+goldman	Goldman
+ghk	Goldman
+resting membrane potential	Goldman
+membrane potential	Goldman	biology
+ficks law	Fick's first law
+fick	Fick's first law
+diffusion	Fick's first law	biology
+surface area to volume	Surface area to volume
+sa:v	Surface area to volume
+water potential	Water potential
+psi	Water potential	biology
+solute potential	Solute potential
+photosynthesis	Photosynthesis
+cellular respiration	Cellular respiration
+respiration equation	Cellular respiration
+atp hydrolysis	ATP hydrolysis
+atp	ATP hydrolysis	biology
+q10	Q_{10} temperature coefficient
+temperature coefficient	Q_{10} temperature coefficient
+respiratory quotient	Respiratory quotient
+rq	Respiratory quotient
+cardiac output	Cardiac output
+heart rate stroke volume	Cardiac output
+stroke volume	Stroke volume
+ejection fraction	Ejection fraction
+mean arterial pressure	Mean arterial pressure	biology
+map	Mean arterial pressure	biology
+tpr	Mean arterial pressure
+blood pressure	Mean arterial pressure from a cuff
+map from systolic diastolic	Mean arterial pressure from a cuff
+poiseuilles law	Poiseuille	biology
+blood flow	Poiseuille's law: flow through a tube	biology
+bmi	Body mass index
+body mass index	Body mass index
+drug elimination	First-order drug elimination
+first order elimination	First-order drug elimination
+half life drug	Half-life	biology
+half life	Half-life	biology
+volume of distribution	Volume of distribution
+vd	Volume of distribution	biology
+clearance	Drug clearance
+loading dose	Loading dose
+pharmacokinetics	drug	biology
+dilution	Dilution	biology
+c1v1 = c2v2	Dilution
+beer lambert	Beer–Lambert	biology
+pcr	PCR amplification
+pcr cycles	PCR amplification
+bacterial growth	Bacterial growth by generation time
+generation time	Bacterial growth by generation time
+magnification	Magnification	biology
+microscope magnification	Magnification	biology
+keplers third law	Kepler's third law	astronomy
+kepler	Kepler's third law	astronomy
+keplers 3rd law	Kepler's third law	astronomy
+p^2 = a^3	Kepler's third law in solar units
+kepler au years	Kepler's third law in solar units
+binary star mass	Kepler's third law for a binary
+binary stars	Kepler's third law for a binary
+orbital velocity	Circular orbital speed	astronomy
+circular orbit	Circular orbital speed	astronomy
+escape velocity	Escape velocity	astronomy
+vis viva	Vis-viva
+visviva	Vis-viva
+orbital speed ellipse	Vis-viva
+periapsis	Periapsis and apoapsis
+perihelion	Periapsis and apoapsis
+apoapsis	Periapsis and apoapsis
+aphelion	Periapsis and apoapsis
+eccentricity	Periapsis and apoapsis	astronomy
+surface gravity	surface gravity	astronomy
+schwarzschild radius	Schwarzschild
+schwarzchild	Schwarzschild
+black hole	Schwarzschild
+event horizon	Schwarzschild
+luminosity	a star's luminosity	astronomy
+stellar luminosity	a star's luminosity
+stefan boltzmann star	a star's luminosity
+wiens law	Wien's displacement law	astronomy
+peak wavelength star	Wien's displacement law
+star temperature	Wien's displacement law	astronomy
+flux	Flux: the inverse-square law	astronomy
+apparent brightness	Flux: the inverse-square law
+inverse square law	Flux: the inverse-square law	astronomy
+magnitude	Apparent magnitude scale	astronomy
+apparent magnitude	Apparent magnitude scale
+pogson	Pogson
+magnitude difference	Apparent magnitude scale
+distance modulus	Distance modulus
+absolute magnitude	Distance modulus
+distance modulus parsecs	Distance modulus
+mass luminosity	Mass–luminosity
+mass luminosity relation	Mass–luminosity
+main sequence lifetime	Main-sequence lifetime
+stellar lifetime	Main-sequence lifetime
+lifetime of a star	Main-sequence lifetime
+parallax	Parallax distance
+parsec	Parallax distance
+distance to a star	Parallax distance
+small angle formula	Small-angle formula
+angular size	Small-angle formula
+angular diameter	Small-angle formula
+hubbles law	Hubble's law
+hubble	Hubble's law	astronomy
+hubble constant	Hubble's law
+hubble time	Hubble time
+age of the universe	Hubble time
+redshift	Redshift	astronomy
+red shift	Redshift	astronomy
+z = delta lambda / lambda	Redshift
+recession velocity	Recession speed from redshift
+v = cz	Recession speed from redshift
+1 + z	Redshift as a stretch
+cosmological redshift	Redshift as a stretch	astronomy
+rayleigh criterion	Rayleigh criterion
+diffraction limit	Rayleigh criterion
+angular resolution	Rayleigh criterion
+resolving power	Rayleigh criterion
+telescope magnification	Telescope magnification
+eyepiece focal length	Telescope magnification
+light gathering power	Light-gathering power
+aperture	Light-gathering power	astronomy
+complement rule	Complement rule
+probability of at least one	Complement rule
+law of total probability	Law of total probability
+sample size margin of error	Sample size for a margin of error
+confidence interval proportion	Confidence interval for a proportion
+relu activation	ReLU
+harmonic mean precision recall	F1 score
+# round 4 exam walkthrough: geometry, statistics, finance, computer science, machine learning
+area of a circle	circle area	geometry
+sector area	sector area
+chord length	chord length
+length of a chord	Chord length
+annulus	annulus
+area of a washer	annulus
+rhombus area	rhombus
+kite	rhombus or kite
+frustum	frustum
+volume of a bucket	frustum
+volume of a cone	Volume of a cone	geometry
+volume of a sphere	Volume of a sphere
+surface area cylinder	closed cylinder
+exterior angle	exterior angle
+interior angle sum	interior angle sum
+similar triangles	similar figures
+scale factor area	similar figures
+inscribed angle	Inscribed angle
+heron	Heron
+law of cosines	law of cosines
+midpoint	midpoint	geometry
+distance between two points	distance	geometry
+standard deviation	sample standard deviation	statistics
+interquartile range	interquartile range
+iqr	interquartile range
+outlier	interquartile range
+box plot	interquartile range
+empirical rule	68.27%
+68 95 99.7	68.27%
+one proportion z test	z test for a proportion
+proportion hypothesis test	z test for a proportion
+two sample t test	two-sample t test
+welch	two-sample t test
+difference of means	two-sample t test
+compare two means	two-sample t test
+t test	t test	statistics
+critical value 95	95% confidence	statistics
+z star	95% confidence
+confidence interval mean	Confidence interval for a mean	statistics
+bayes	Bayes
+binomial probability	Binomial	statistics
+expected value	expected value	statistics
+chi square test	chi-square
+simple interest	simple interest	finance
+compound interest monthly	compound interest
+mortgage payment	loan or mortgage payment
+amortization	loan or mortgage payment
+remaining balance	balance after k payments
+annuity due	annuity due
+payments at the start	annuity due
+irr	internal rate of return
+internal rate of return	internal rate of return
+payback period	payback period
+npv	net present value	finance
+portfolio variance	two-asset portfolio variance
+portfolio return	portfolio expected return
+diversification	two-asset portfolio variance
+current yield	current yield
+bond price	bond price	finance
+yield to maturity	bond price
+declining balance	declining-balance
+double declining	declining-balance
+straight line depreciation	straight-line depreciation
+break even	break-even
+dividend discount	growing perpetuity
+capm	CAPM	finance
+big o	master theorem	computer science
+master theorem	master theorem	computer science
+merge sort	merge sort
+binary search	binary search
+harmonic series	harmonic series
+coupon collector	harmonic series
+chaining	chaining
+separate chaining	chaining
+open addressing	open addressing
+load factor	load factor
+cache sets	number of sets
+set associative	number of sets
+tag bits	tag bits
+index bits	tag bits
+offset bits	tag bits
+amat	average memory access time
+mips	millions of instructions per second
+cpi	CPU time
+amdahl	Amdahl
+stop and wait	stop-and-wait
+utilization	stop-and-wait	computer science
+shannon capacity	Shannon capacity	computer science
+transmission delay	transmission delay
+propagation delay	propagation delay
+two's complement	two's complement
+naive bayes	naive Bayes
+svm margin	SVM margin
+support vector machine	SVM
+k means	k-means
+kmeans	k-means
+elbow method	k-means
+pca	PCA
+explained variance	PCA
+principal component	PCA
+conv output size	convolution output size
+cnn output	convolution output size
+padding stride	convolution output size
+bias variance	bias-variance
+overfitting	bias-variance
+gradient of log loss	gradient for one example
+backprop	gradient for one example
+gini	Gini impurity
+information gain	information gain
+entropy decision tree	entropy, decision trees	machine learning
+gradient descent	gradient descent	machine learning
+precision recall	precision	machine learning
+f1	F1 score
+cross entropy	cross-entropy	machine learning
+# critic round 4, exam walkthrough: precalculus, differential equations, numerical methods, taylor, vector calculus, euler, complex numbers
+horizontal asymptote	asymptotes: vertical	precalculus
+vertical asymptote	asymptotes: vertical	precalculus
+rational function	Rational function
+asymptotes of a rational function	Rational function
+absolute value inequality	absolute value inequality
+abs inequality	absolute value inequality	precalculus
+soh cah toa	SOH CAH TOA
+sohcahtoa	SOH CAH TOA
+right triangle trig	SOH CAH TOA	precalculus
+opposite over hypotenuse	SOH CAH TOA
+amplitude period phase shift	sinusoid graph
+period of sine	sinusoid graph	precalculus
+phase shift	sinusoid graph	precalculus
+midline	sinusoid graph
+law of sines	law of sines	precalculus
+law of cosines	law of cosines	precalculus
+compound interest	compound interest	precalculus
+continuously compounded	continuous compounding	precalculus
+half life	half-life	precalculus
+degrees to radians	degrees to radians	precalculus
+mixing tank	mixing tank
+brine tank	mixing tank
+salt in a tank	mixing tank
+rate in minus rate out	mixing tank
+logistic equation	logistic growth	differential equations
+carrying capacity	logistic growth
+newtons law of cooling	Newton's law of cooling
+separable	separable
+integrating factor	integrating factor
+reduction of order	reduction of order
+second solution	reduction of order
+laplace of derivative	Laplace transform of a derivative	differential equations
+laplace transform of y'	Laplace transform of a derivative
+laplace of second derivative	Laplace transform of a second	differential equations
+laplace initial value problem	Laplace transform of a derivative	differential equations
+heaviside step forcing	step (Heaviside) forcing
+unit step function laplace	step (Heaviside) forcing	differential equations
+second shifting theorem	Step forcing
+dirac delta	impulse (Dirac delta)	differential equations
+impulse forcing	impulse (Dirac delta)
+spring mass damper	mass-spring-damper	differential equations
+mechanical vibrations	mass-spring-damper	differential equations
+overdamped	damping ratio	differential equations
+underdamped	damping ratio	differential equations
+critically damped	critical damping	differential equations
+damping ratio zeta	damping ratio	differential equations
+phase portrait	2 × 2: both < 0 stable node	differential equations
+saddle node spiral	2 × 2: both < 0 stable node	differential equations
+eigenvalues of a system	characteristic equation of the system	differential equations
+undetermined coefficients	Undetermined coefficients	differential equations
+variation of parameters	variation of parameters
+characteristic equation	characteristic (auxiliary) equation	differential equations
+bisection iterations	iterations needed for a tolerance
+how many iterations bisection	iterations needed for a tolerance
+newton's method system	Newton for a system
+newton raphson jacobian	Newton for a system
+divided difference	divided difference, first order
+newton interpolating polynomial	Newton's divided-difference
+newton divided differences	Newton's divided-difference
+simpson's 3/8	Simpson's 3/8 rule
+simpson 3/8 rule	Simpson's 3/8 rule
+simpsons rule error	Simpson's rule error
+simpson error bound	Simpson's rule error
+gauss quadrature	Gauss-Legendre quadrature
+gaussian quadrature	Gauss-Legendre quadrature
+gauss legendre	Gauss-Legendre quadrature
+gauss seidel	Gauss-Seidel
+gauss-seidel iteration	Gauss-Seidel
+seidel	Gauss-Seidel	numerical methods
+jacobi method	Jacobi iteration
+rk4	RK4 step	numerical methods
+runge kutta	RK4	numerical methods
+eulers method	Euler (explicit, forward)	numerical methods
+trapezoidal rule	trapezoid rule	numerical methods
+trapezoid error	trapezoid rule error
+taylor polynomial	Taylor polynomial
+nth degree taylor polynomial	Taylor polynomial
+taylor inequality	Taylor's inequality
+taylors inequality	Taylor's inequality
+taylor error bound	Taylor's inequality	taylor series
+alternating series estimate	alternating series estimate
+alternating series error	alternating series estimate
+alternating series remainder	alternating series estimate
+root test	root test
+p series	p-series
+p-series test	p-series
+harmonic series	p-series	taylor series
+divergence test	divergence (nth-term) test	taylor series
+nth term test	divergence (nth-term) test
+test for divergence	divergence (nth-term) test	taylor series
+interval of convergence	radius of convergence	taylor series
+ratio test	ratio test
+maclaurin series of e^x	Series for e^{x}	taylor series
+arctan series	arctan	taylor series
+tangent plane	tangent plane
+linear approximation two variables	tangent plane	vector calculus
+lagrange multipliers	Lagrange multipliers
+lagrange multiplier	Lagrange multipliers
+constrained optimization	Lagrange multipliers
+maximum rate of change	directional derivative	vector calculus
+directional derivative	directional derivative
+scalar line integral	scalar line integral
+line integral ds	scalar line integral	vector calculus
+mass of a wire	scalar line integral
+surface area parametric	surface area of a parametric surface
+surface area	surface area of a parametric surface	vector calculus
+flux through graph	flux up through a graph
+flux integral	flux	vector calculus
+greens theorem area	area from Green's theorem
+area green	area from Green's theorem	vector calculus
+spherical coordinates	spherical coordinates	vector calculus
+rho phi theta	spherical coordinates	vector calculus
+jacobian	Jacobian: change of variables	vector calculus
+change of variables	Jacobian: change of variables	vector calculus
+work line integral	line integral, work	vector calculus
+stokes theorem	Stokes' theorem
+divergence theorem	divergence theorem
+conservative field	conservative	vector calculus
+potential function	then F = ∇f	vector calculus
+double angle cos	cos(2A)	euler
+cos 2a	cos(2A)	euler
+2cos^2 - 1	Double angle for cosine
+sum to product	sum to product
+beats	sum to product, beats
+cos a + cos b	sum to product
+cosh^2 - sinh^2	Hyperbolic Pythagorean
+hyperbolic identity	Hyperbolic Pythagorean identity
+sum of sinusoids	harmonic addition	euler
+eulers formula	Euler's formula	euler
+cos in terms of exponentials	Cosine as complex exponentials	euler
+product to sum	Product	euler
+de moivre	de Moivre	euler
+powers of j	powers of j
+j^4	powers of j	complex numbers
+i^3	powers of j	complex numbers
+eulers formula	Euler's formula	complex numbers
+rectangular to polar	rectangular = polar	complex numbers
+polar form	rectangular = polar	complex numbers
+cube roots of a complex number	nth roots	complex numbers
+roots of unity	nth roots	complex numbers
+divide complex numbers	divide	complex numbers
+complex conjugate	complex conjugate	complex numbers
+modulus	magnitude, modulus	complex numbers
+argument of z	angle, argument	complex numbers
+complex log	complex log	complex numbers
+# critic round 4: an exam walkthrough of fourier, the CT and DT tables, laplace, z transform, unit circle and linear algebra
+fourier series square wave	Fourier series of a square wave
+square wave	Fourier series of a square wave	fourier
+square wave harmonics	Fourier series of a square wave
+gibbs phenomenon	Fourier series of a square wave
+pulse train fourier series	Fourier coefficients of a periodic pulse train
+rectangular pulse train	Fourier coefficients of a periodic pulse train
+duty cycle	Fourier coefficients of a periodic pulse train	fourier
+triangle wave	Fourier series of a triangle wave	fourier
+triangle wave fourier series	Fourier series of a triangle wave
+sawtooth	Fourier series of a sawtooth wave	fourier
+sawtooth wave fourier	Fourier series of a sawtooth wave
+impulse train fourier series	Fourier coefficients of an impulse train
+fourier series lti system	Fourier series through an LTI system
+filtered square wave	Fourier series through an LTI system
+periodic input to lti system	Fourier series through an LTI system
+output fourier coefficients	Fourier series through an LTI system
+frequency response differential equation	Frequency response from a differential equation
+frequency response	Frequency response from a differential equation	ct transform table
+sinusoidal steady state	Sinusoidal steady-state output of an LTI system	ct transform table
+lti response to cosine	Sinusoidal steady-state output of an LTI system
+damped cosine fourier transform	CT Fourier pair: damped cosine
+damped sine fourier transform	CT Fourier pair: damped sine
+modulation property	Modulation property (AM)
+amplitude modulation	Modulation property (AM)
+multiply by cosine	Modulation property (AM)	ct transform table
+impulse sampling	Impulse sampling in frequency
+sampling spectrum	Impulse sampling in frequency
+aliasing	Impulse sampling in frequency	ct transform table
+dtft rectangular window	DTFT of a rectangular window
+dtft of a window	DTFT of a rectangular window
+dtft windowed sequence	DT modulation: a windowed cosine
+windowed cosine	DT modulation: a windowed cosine
+dtft windowed sinusoid	DT modulation: a windowed cosine
+spectral leakage	DTFT of a rectangular window
+difference equation frequency response	Frequency response from a difference equation
+fir filter frequency response	Frequency response from a difference equation
+digital frequency	Discrete-time frequency of a sampled signal
+rad/sample	Discrete-time frequency of a sampled signal
+upsampling	Time expansion (upsampling)
+zero insertion	Time expansion (upsampling)
+zero padding	The DFT samples the DTFT
+dft vs dtft	The DFT samples the DTFT
+partial fraction expansion	Partial fractions for an inverse Laplace transform
+inverse laplace partial fractions	Partial fractions for an inverse Laplace transform
+partial fractions	Partial fractions for an inverse Laplace transform	laplace
+cover up method	Cover-up rule (residue at a simple pole)
+coverup rule	Cover-up rule (residue at a simple pole)
+heaviside cover up	Cover-up rule (residue at a simple pole)
+residue	Cover-up rule (residue at a simple pole)	laplace
+repeated root partial fractions	Partial fractions with a repeated pole
+repeated pole partial fractions	Partial fractions with a repeated pole
+complete the square laplace	Completing the square for complex poles
+complex poles inverse laplace	Completing the square for complex poles
+complex conjugate poles	Completing the square for complex poles	laplace
+transfer function	Transfer function	laplace
+stability poles	Transfer function	laplace
+laplace periodic function	Laplace transform of a periodic function
+periodic function laplace	Laplace transform of a periodic function
+piecewise laplace	Laplace of a function switched on at t = a
+piecewise function laplace transform	Laplace of a function switched on at t = a
+solve ode laplace	s F(s) − f(0)	laplace
+roc right sided	Right-sided (causal) sequence: region of convergence
+roc causal	Right-sided (causal) sequence: region of convergence
+causal sequence roc	Right-sided (causal) sequence: region of convergence
+roc left sided	Left-sided sequence: region of convergence
+anticausal roc	Left-sided sequence: region of convergence
+two sided roc	Two-sided sequence: region of convergence
+roc annulus	Two-sided sequence: region of convergence
+roc ring	Two-sided sequence: region of convergence
+possible rocs	Two-sided sequence: region of convergence
+stability unit circle	Stability of a causal system from its poles
+poles inside unit circle	Stability of a causal system from its poles
+bibo stable z transform	Stability of a causal system from its poles
+inverse z transform	Inverse z transform by partial fractions
+inverse z partial fractions	Inverse z transform by partial fractions
+z transform partial fractions	Inverse z transform by partial fractions
+cover up z transform	Cover-up rule for the z transform
+difference equation transfer function	Transfer function from a difference equation
+h(z)	Transfer function from a difference equation	z transform
+unilateral z transform	One-sided z transform of a delay
+initial conditions z transform	One-sided z transform of a delay
+one sided z transform	One-sided z transform of a delay
+finite length sequence z transform	Z pair: length-N rectangular window
+moving average z transform	Z pair: length-N rectangular window
+reference angle	Reference angle
+ref angle	Reference angle
+related acute angle	Reference angle
+sin(pi - x)	Supplementary angles have the same sine
+supplementary angle	Supplementary angles have the same sine
+cos(pi - x)	Supplementary angles have opposite cosines
+period of sine	Periodicity of sine and cosine
+periodicity	Periodicity of sine and cosine	unit circle
+coterminal angle	Periodicity of sine and cosine
+arcsin range	Range of arcsin
+range of arccos	Range of arccos
+arctan range	Range of arctan
+inverse trig range	Range of arcsin
+principal value	Range of arcsin	unit circle
+sin^-1	Range of arcsin	unit circle
+cosecant	Cosecant, the reciprocal of sine	unit circle
+secant	Secant, the reciprocal of cosine	unit circle
+cotangent	Cotangent, the reciprocal of tangent	unit circle
+csc	Cosecant, the reciprocal of sine	unit circle
+negative angle	sin(−x) = −sin x	unit circle
+even odd trig	cos(−x) = cos x	unit circle
+1 + tan^2	Pythagorean identity for tan and sec	unit circle
+eigenvalues 3x3	Characteristic polynomial of a 3 × 3 matrix
+characteristic polynomial 3x3	Characteristic polynomial of a 3 × 3 matrix
+eigenvalues of a 3 by 3	Characteristic polynomial of a 3 × 3 matrix
+eigenvectors	Finding eigenvectors	linear algebra
+find eigenvector	Finding eigenvectors
+eigenvector null space	Finding eigenvectors
+triangular matrix eigenvalues	Eigenvalues of a triangular matrix
+matrix power	Matrix powers by diagonalization
+a^k	Matrix powers by diagonalization	linear algebra
+matrix exponential	Matrix exponential by diagonalization
+e^at	Matrix exponential by diagonalization	linear algebra
+svd	Singular value decomposition (SVD)
+singular values	Singular value decomposition (SVD)
+singular value decomposition	Singular value decomposition (SVD)
+adjugate	Inverse by the adjugate (cofactors)
+inverse 3x3	Inverse by the adjugate (cofactors)
+cofactor matrix	Inverse by the adjugate (cofactors)
+consistent system	When A x = b has a solution
+augmented matrix	When A x = b has a solution
+no solution	When A x = b has a solution	linear algebra
+least squares	Least squares: the normal equations	linear algebra
+least squares solution	Least-squares solution	linear algebra
+projection matrix	Projection onto the column space
+project onto column space	Projection onto the column space
+gram schmidt	Gram–Schmidt orthogonalization
+gramschmidt	Gram–Schmidt orthogonalization
+orthonormal basis	Gram–Schmidt orthogonalization	linear algebra
+qr factorization	QR factorization
+qr decomposition	QR factorization
+# critic round 5: precalculus to complex numbers
+solve ode laplace	Laplace transform of a derivative
+solve ode laplace	Laplace transform of a derivative	differential equations
+laplace ode	Laplace transform of a derivative
+solve ode laplace second order	Laplace transform of a second
+critically damped	Critical damping coefficient	differential equations
+trace determinant eigenvalues	2 × 2: both < 0 stable node	differential equations
+ode solvers	Euler
+# critic round 4, an exam walkthrough: physics, circuits, heat transfer, continuum mechanics, chemistry, biology, astronomy
+projectile from a cliff	y = y0 + v0 sin(θ) t	physics
+projectile launched from height	y = y0 + v0 sin(θ) t	physics
+horizontal velocity projectile	x = v0 cos(θ) t	physics
+projectile range	R = v02 sin(2θ)/g	physics
+time of flight	time of flight	physics
+max height projectile	maximum height	physics
+orbit period	Kepler's third law	physics
+orbital period	Kepler's third law
+satellite period	Kepler's third law	physics
+escape velocity	escape velocity	physics
+elastic collision	momentum conserved	physics
+pendulum period	simple pendulum	physics
+resistors in parallel	1/R = 1/R1 + 1/R2	physics
+resistors in series	R = R1 + R2	physics
+rc charging	RC charging	physics
+capacitor charging	RC charging	physics
+inclined plane friction	friction	physics
+rolling without slipping	rolling	physics
+banked curve	banked curve	physics
+snells law	Snell's law	physics
+lens equation	thin lens	physics
+rlc step response	underdamped	circuits
+underdamped rlc	underdamped	circuits
+overdamped	overdamped	circuits
+critically damped rlc	critically damped	circuits
+characteristic equation rlc	s2 + (R/L) s + 1/(LC) = 0	circuits
+series rlc	series RLC	circuits
+damping ratio	damping ratio	circuits
+resonant frequency	resonance	circuits
+op amp gain	inverting	circuits
+inverting amplifier	inverting	circuits
+non inverting amplifier gain	non-inverting	circuits
+noninverting	non-inverting	circuits
+voltage follower	buffer	circuits
+rc time constant	RC time constant	circuits
+capacitor voltage step response	step response	circuits
+thevenin	Thévenin	circuits
+power factor	power factor	circuits
+percent overshoot	overshoot	circuits
+fin heat loss	fin heat rate	heat transfer
+fin heat transfer	fin heat rate	heat transfer
+infinite fin	infinitely long	heat transfer
+fin efficiency	fin efficiency	heat transfer
+fin effectiveness	fin effectiveness	heat transfer
+corrected fin length	corrected length	heat transfer
+convective tip	corrected length	heat transfer
+lmtd	log mean temperature difference	heat transfer
+log mean temperature difference	log mean	heat transfer
+counterflow heat exchanger	counterflow	heat transfer
+parallel flow heat exchanger	parallel flow	heat transfer
+heat exchanger effectiveness	effectiveness	heat transfer
+ntu	number of transfer units	heat transfer
+lumped capacitance	lumped	heat transfer
+biot number	Biot	heat transfer
+composite wall	resistances in series	heat transfer
+insulated pipe	cylinder (pipe) wall	heat transfer
+critical radius of insulation	critical insulation radius	heat transfer
+heat generation	heat generation	heat transfer
+dittus boelter	Dittus-Boelter	heat transfer
+pipe outlet temperature	outlet temperature	heat transfer
+natural convection	natural convection	heat transfer
+radiation between two surfaces	two-surface	heat transfer
+view factor	view factor	heat transfer
+bending stress	σmax = Mc/I	continuum mechanics
+flexure formula	σ = −My/I	continuum mechanics
+mohrs circle	Mohr	continuum mechanics
+mohr circle radius	Mohr	continuum mechanics
+principal stress	principal stresses	continuum mechanics
+max shear stress	τmax	continuum mechanics
+neutral axis	centroid	continuum mechanics
+centroid of composite section	centroid	continuum mechanics
+combined loading	combined	continuum mechanics
+axial and bending	combined	continuum mechanics
+moment of inertia rectangle	bh3/12	continuum mechanics
+parallel axis theorem	parallel axis	continuum mechanics
+beam deflection	deflection	continuum mechanics
+cantilever deflection	Cantilever	continuum mechanics
+torsion	τ = Tρ/J	continuum mechanics
+angle of twist	angle of twist	continuum mechanics
+euler buckling	buckling	continuum mechanics
+hoop stress	hoop	continuum mechanics
+von mises	von Mises	continuum mechanics
+factor of safety	factor of safety	continuum mechanics
+stoichiometry	mole ratio	chemistry
+limiting reagent	mole ratio	chemistry
+mole ratio	mole ratio	chemistry
+theoretical yield	mole ratio	chemistry
+percent yield	percent yield	chemistry
+equilibrium constant	aA + bB	chemistry
+kc	aA + bB	chemistry
+kp	Kp = Kc	chemistry
+ice table	aA + bB	chemistry
+titration	titration	chemistry
+equivalence point	titration	chemistry
+buffer ph	Henderson-Hasselbalch	chemistry
+ideal gas	ideal gas law	chemistry
+gibbs free energy	Gibbs free energy	chemistry
+nernst equation	Nernst	chemistry
+half life first order	ln(2)/k	chemistry
+arrhenius	Arrhenius	chemistry
+rule of 70	rule of 70	biology
+rule of 70	rule of 70
+hardy weinberg	Hardy-Weinberg	biology
+chi square	chi-square	biology
+logistic growth	logistic	biology
+michaelis menten	Michaelis-Menten	biology
+carrying capacity	carrying capacity	biology
+mark recapture	mark-recapture	biology
+population doubling time	doubling time	biology
+water potential	water potential	biology
+nernst potential	Nernst	biology
+orbit period	Kepler's third law	astronomy
+orbital period years au	Kepler's third law, years and AU	astronomy
+synodic period	synodic	astronomy
+orbital energy	orbital energy	astronomy
+absolute magnitude luminosity	luminosity	astronomy
+distance modulus	distance modulus	astronomy
+parallax	parallax	astronomy
+hubble	Hubble's law	astronomy
+wien	Wien	astronomy
+escape speed	escape velocity	astronomy
+binary star mass	binary stars	astronomy
+angular resolution	Rayleigh	astronomy
+mohr's circle	Mohr	continuum mechanics
+sigma = p/a + mc/i	combined	continuum mechanics
+infinite fin	infinitely long
+lmtd counterflow	counterflow
+two surface radiation	two-surface	heat transfer
+rlc step response	RLC
+op amp gain	amplifier gain
+stoichiometry	mole ratio
+titration	titration
+synodic period	synodic
+fin heat loss	fin heat rate
+all sin tan cos	Reference angle	unit circle
+fourier series lti output	Fourier series through an LTI system
+filtered square wave	Fourier series through an LTI system
+z transform stability	Stability of a causal system from its poles	z transform
+ε-NTU	counterflow
+epsilon ntu	counterflow
+effectiveness-NTU method	counterflow
+e-ntu	counterflow
+radiation shield	parallel plates
+boiling condensing effectiveness	boil
+limiting reagent	mole ratio

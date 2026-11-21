@@ -1081,14 +1081,14 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         [sheet] + (allSheets?() ?? []).filter { $0.id != sheet.id }
     }
 
-    /// the rows of the sheets not in the index yet, with their texts; a picture's section isn't searched
+    /// the rows of the sheets not in the index yet, with their texts; a picture isn't searched, the rows beside it are
     private static func unindexed(_ sheets: [IdentitySheet], skip: Set<String>) -> [(RowRef, SheetSearch.RowText, [String])] {
         var out: [(RowRef, SheetSearch.RowText, [String])] = []
         var ids = skip
         for sheet in sheets where ids.insert(sheet.id).inserted {
-            for (s, section) in sheet.sections.enumerated() where !section.groups.contains(where: { $0.items.contains(where: \.figure) }) {
+            for (s, section) in sheet.sections.enumerated() {
                 for (g, group) in section.groups.enumerated() {
-                    for (i, item) in group.items.enumerated() where !item.copy.isEmpty {
+                    for (i, item) in group.items.enumerated() where !item.copy.isEmpty && !item.figure {
                         out.append((RowRef(sheet: sheet.id, section: s, group: g, item: i), rowText(item), [sheet.title, section.title, group.title]))
                     }
                 }
@@ -1203,7 +1203,9 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         var matched = false
         let isFigure: (IdentitySheet.Section) -> Bool = { $0.groups.contains { $0.items.contains(where: \.figure) } }
         if !searching {
-            shown = sheet.sections.enumerated().map { s in
+            // a sheet with a picture shows the picture alone; its other rows come up in a search
+            let pictured = sheet.sections.contains(where: isFigure)
+            shown = sheet.sections.enumerated().filter { !pictured || isFigure($0.element) }.map { s in
                 (s.element.title, sheet, s.offset, true, s.element, s.element.groups.indices.map { ($0, Array(s.element.groups[$0].items.indices)) })
             }
         } else {

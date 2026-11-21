@@ -85,11 +85,12 @@
   },
   "T(n) = a T(n/b) + f(n)": {
     "title": "Divide-and-conquer recurrence (master theorem form)",
-    "about": "A recursive algorithm that splits a problem of size n into a pieces of size n/b and does f(n) extra work satisfies this recurrence. The master theorem solves it by comparing f(n) with n^{log_{b} a}, the number of leaves in the recursion tree.",
+    "about": "A recursive algorithm that splits a problem of size n into a pieces of size n/b and does f(n) extra work satisfies this recurrence. Draw the recursion tree: level i has a^{i} calls each costing f(n/b^{i}), and there are n^{log_{b} a} leaves. The master theorem compares f(n) with n^{log_{b} a}: whichever grows faster sets the total, and if they match every level costs the same, which adds a log n factor.",
     "assumptions": [
       "The subproblems are all the same size n/b, with a ≥ 1 and b > 1",
-      "f(n) is asymptotically positive; floors and ceilings in n/b don't change the result",
-      "There are gaps between the three cases (e.g. f(n) = n^{log_{b} a}/log n); then the master theorem says nothing and you use a recursion tree or Akra–Bazzi"
+      "The exponent is log_{b} a (log base b of a), not log_{a} b",
+      "f(n) is asymptotically positive; floors and ceilings in n/b don’t change the result",
+      "There are gaps between the three cases (e.g. f(n) = n^{log_{b} a}/log n); then use a recursion tree or Akra–Bazzi"
     ],
     "vars": [
       [
@@ -133,14 +134,16 @@
       ]
     ],
     "example": {
-      "problem": "Merge sort splits into 2 halves and merges in linear time. Solve T(n) = 2T(n/2) + n.",
+      "problem": "Merge sort splits into 2 halves and merges in linear time: T(n) = 2T(n/2) + n. Find its order, and estimate the steps for n = 1024.",
       "steps": [
-        "a = 2, b = 2, so n^{log_{2} 2} = n^{1}",
-        "f(n) = n = Θ(n^{1}): case 2, levels equal",
-        "T(n) = Θ(n log n)"
+        "a = 2, b = 2, so n^{log_{2} 2} = n",
+        "f(n) = n = Θ(n): case 2, every level costs the same",
+        "T(n) = Θ(n log n)",
+        "n = 1024: log_{2} 1024 = 10 levels of about 1024 steps each"
       ],
-      "answer": "T(n) = Θ(n log n)"
-    }
+      "answer": "T(n) = Θ(n log n); about 10,240 steps for n = 1024"
+    },
+    "try": "1024 log(1024, 2)"
   },
   "T(n) = Θ(n^{log_{b} a})": {
     "title": "Master theorem case 1: the leaves dominate",
@@ -250,15 +253,16 @@
       ]
     ],
     "example": {
-      "problem": "Binary search does one comparison and recurses on half: T(n) = T(n/2) + 1. Find its order, and the number of levels for n = 1,000,000.",
+      "problem": "A divide-and-conquer matrix routine makes 4 half-size calls and does n^{2} extra work: T(n) = 4T(n/2) + n^{2}. Find its order, and estimate the work for n = 1024.",
       "steps": [
-        "a = 1, b = 2: n^{log_{2} 1} = n^{0} = 1",
-        "f(n) = 1 = Θ(1): case 2",
-        "T(n) = Θ(log n); levels ≈ log_{2}(10^{6}) ≈ 19.9, so about 20 comparisons"
+        "a = 4, b = 2: n^{log_{2} 4} = n^{2}",
+        "f(n) = n^{2} = Θ(n^{2}): case 2, each of the log_{2} n levels costs about n^{2}",
+        "T(n) = Θ(n^{2} log n)",
+        "n = 1024: 1024^{2} × 10"
       ],
-      "answer": "Θ(log n), about 20 comparisons"
+      "answer": "Θ(n^{2} log n); about 1.05 × 10^{7} steps for n = 1024"
     },
-    "try": "log(1000000, 2)"
+    "try": "1024^2 * log(1024, 2)"
   },
   "T(n) = Θ(f(n))": {
     "title": "Master theorem case 3: the root's work dominates",
@@ -310,15 +314,17 @@
       ]
     ],
     "example": {
-      "problem": "Solve T(n) = 2T(n/2) + n^{2}.",
+      "problem": "Solve T(n) = 2T(n/2) + n^{2}, and add up the levels for n = 1024.",
       "steps": [
         "a = 2, b = 2: n^{log_{2} 2} = n",
         "f(n) = n^{2} = Ω(n^{1 + ε}) with ε = 1",
         "Regularity: 2(n/2)^{2} = n^{2}/2 ≤ (1/2) n^{2}, c = 1/2 < 1",
-        "Case 3: T(n) = Θ(n^{2})"
+        "Case 3: T(n) = Θ(n^{2})",
+        "Level i costs n^{2}/2^{i}: a geometric series, so the total stays under 2n^{2} and the root’s n^{2} dominates"
       ],
-      "answer": "T(n) = Θ(n^{2})"
-    }
+      "answer": "T(n) = Θ(n^{2}); for n = 1024 the levels add to 2,096,128 ≈ 2n^{2}"
+    },
+    "try": "sum(1024^2/2^i, i, 0, 10)"
   },
   "α = n/m": {
     "title": "Hash table load factor",
@@ -358,9 +364,9 @@
       "problem": "A hash table with open addressing has 1024 slots holding 750 keys. Find α and the expected probes for an unsuccessful search.",
       "steps": [
         "α = 750/1024 = 0.732",
-        "Probes ≈ 1/(1 − 0.732) = 3.73"
+        "Probes ≈ 1/(1 − 750/1024) = 3.74"
       ],
-      "answer": "α ≈ 0.732, about 3.73 probes"
+      "answer": "α ≈ 0.732, about 3.74 probes"
     },
     "try": "1/(1 - 750/1024)"
   },
@@ -764,7 +770,7 @@
     },
     "try": "4000 km / (2e8 m/s) to ms"
   },
-  "B = R RTT": {
+  "BDP = R RTT": {
     "title": "Bandwidth-delay product",
     "about": "The amount of data in flight on a link: the rate times the round-trip time. A sender's window (TCP window, buffer) must be at least this big to keep the link fully used.",
     "assumptions": [
@@ -773,7 +779,7 @@
     ],
     "vars": [
       [
-        "B",
+        "BDP",
         "bandwidth-delay product (data in flight)",
         "bit"
       ],
@@ -855,7 +861,7 @@
   },
   "w = (X^{T} X)^{−1} X^{T} y": {
     "title": "Normal equation: least-squares weights",
-    "about": "The weights that minimise the squared error of a linear model, found in one step from the data matrix X and targets y, without gradient descent.",
+    "about": "The weights that minimise the squared error of a linear model, found in one step from the data matrix X and targets y, without gradient descent. Setting the gradient of ‖Xw − y‖^{2} to zero gives X^{T}X w = X^{T}y: the leftover error must be perpendicular to every feature column. In code, solve that system rather than forming the inverse.",
     "assumptions": [
       "X^{T} X must be invertible: more examples than features and no feature an exact combination of others; otherwise use the pseudo-inverse or ridge regression",
       "Add a column of ones to X to fit the bias",
@@ -896,11 +902,12 @@
         "w = (1/6)(5·9 − 3·13, −3·9 + 3·13) = (1/6)(6, 12) = (1, 2)"
       ],
       "answer": "w_{0} = 1, w_{1} = 2, so y = 1 + 2x"
-    }
+    },
+    "try": "inv([1, 0; 1, 1; 1, 2]^T [1, 0; 1, 1; 1, 2]) [1, 0; 1, 1; 1, 2]^T [1; 3; 5]"
   },
   "σ(z) = 1/(1 + e^{−z})": {
     "title": "Sigmoid (logistic) function",
-    "about": "The sigmoid squashes any real number into (0, 1), so it turns a linear score into a probability in logistic regression and binary classifiers. σ(0) = 1/2.",
+    "about": "The sigmoid squashes any real number into (0, 1), so it turns a linear score into a probability in logistic regression and binary classifiers. It is the inverse of the log-odds: z = ln(p/(1 − p)), so z = 0 means even odds (σ = 1/2) and each +1 in z multiplies the odds by e.",
     "assumptions": [
       "Saturates for large |z|: its gradient σ(1 − σ) vanishes, which slows training of deep networks (ReLU avoids this)",
       "For large negative z compute it as e^{z}/(1 + e^{z}) to avoid overflow"
@@ -989,7 +996,7 @@
   },
   "ReLU(z) = max(0, z)": {
     "title": "ReLU (rectified linear unit)",
-    "about": "ReLU passes positive inputs unchanged and zeroes negative ones. It is the default activation in deep networks because it is cheap and its gradient doesn't vanish for positive inputs.",
+    "about": "ReLU passes positive inputs unchanged and zeroes negative ones. Stacking layers of it gives a network made of many flat pieces that can bend to fit any shape. It is the default activation in deep networks because it is cheap and its gradient is exactly 1 for positive inputs, so it doesn’t vanish the way the sigmoid’s does.",
     "assumptions": [
       "Not differentiable at 0; the gradient there is taken as 0 (or 1)",
       "A unit whose input stays negative gets zero gradient and stops learning ('dying ReLU'); Leaky ReLU max(αz, z) keeps a small slope"
@@ -1017,18 +1024,18 @@
       ]
     ],
     "example": {
-      "problem": "A layer's pre-activations are (−2, 0.5, 3). What does ReLU output?",
+      "problem": "A neuron has weights (0.4, −0.2) and bias 0.1. What does it output for the inputs (3, 1) and (1, 4)?",
       "steps": [
-        "max(0, −2) = 0",
-        "max(0, 0.5) = 0.5",
-        "max(0, 3) = 3"
+        "(3, 1): z = 1.2 − 0.2 + 0.1 = 1.1, so ReLU = 1.1",
+        "(1, 4): z = 0.4 − 0.8 + 0.1 = −0.3, so ReLU = 0"
       ],
-      "answer": "(0, 0.5, 3)"
-    }
+      "answer": "1.1 and 0"
+    },
+    "try": "max(0, 0.4*1 - 0.2*4 + 0.1)"
   },
   "MSE = (1/n) Σ (y_{i} − ŷ_{i})^{2}": {
     "title": "Mean squared error",
-    "about": "The average of the squared differences between targets and predictions. It is the standard loss for regression; squaring punishes large errors heavily.",
+    "about": "The average of the squared differences between targets and predictions: the standard loss for regression. Squaring makes every error count positive and punishes large errors heavily; a model trained on it predicts the mean of y. Judge it on held-out data: a low training MSE with a high validation MSE means overfitting.",
     "assumptions": [
       "Sensitive to outliers; mean absolute error is more robust",
       "Its units are the target's units squared; RMSE = √MSE is back in the target's units",
@@ -1174,7 +1181,7 @@
   },
   "L + λ ‖w‖^{2}": {
     "title": "L2 regularization (weight decay, ridge)",
-    "about": "Adding λ times the squared length of the weight vector to the loss pulls weights toward zero, which reduces overfitting. Larger λ means simpler, smoother models.",
+    "about": "Adding λ times the squared length of the weight vector to the loss pulls the weights toward zero. Large weights let a model bend to fit the noise in its training data; penalising them trades a little training error for a smoother model that does better on new data (less overfitting).",
     "assumptions": [
       "The bias is usually left out of ‖w‖^{2}",
       "Features should be on similar scales, since the penalty treats every weight alike",
@@ -1228,10 +1235,11 @@
   },
   "w ← w − η ∇L": {
     "title": "Gradient descent update",
-    "about": "Each step moves the weights a small distance against the gradient of the loss, the direction of steepest decrease. Repeated, it walks downhill to a minimum.",
+    "about": "The gradient points uphill, so a small step against it lowers the loss fastest. Repeated, it walks downhill to a minimum; the learning rate η sets the step size.",
     "assumptions": [
       "η too large overshoots and diverges; too small crawls",
       "Finds a local minimum; only a convex loss guarantees the global one",
+      "Scale the features first, or the loss surface is a long narrow valley and the steps zigzag",
       "Stochastic gradient descent uses the gradient on a mini-batch, a noisy but cheap estimate"
     ],
     "vars": [
@@ -1274,9 +1282,10 @@
   },
   "P = TP/(TP + FP)": {
     "title": "Precision",
-    "about": "Of everything the model flagged positive, the fraction that really is. High precision means few false alarms.",
+    "about": "Of everything the model flagged positive, the fraction that really is: ‘when it says yes, how often is it right?’. High precision means few false alarms, which matters when acting on a false alarm is costly.",
     "assumptions": [
       "Undefined when the model flags nothing (TP + FP = 0)",
+      "Don’t mix it up with recall: precision divides by what was flagged, recall by what really is positive",
       "Trades off against recall: raising the decision threshold usually raises precision and lowers recall"
     ],
     "vars": [
@@ -1304,6 +1313,10 @@
       [
         "F_{1} = 2PR/(P + R)",
         "their harmonic mean"
+      ],
+      [
+        "A = (TP + TN)/(TP + TN + FP + FN)",
+        "accuracy"
       ]
     ],
     "example": {
@@ -1318,7 +1331,7 @@
   },
   "R = TP/(TP + FN)": {
     "title": "Recall (sensitivity, true positive rate)",
-    "about": "Of all the real positives, the fraction the model caught. High recall means few misses, which matters for screening and fraud detection.",
+    "about": "Of all the real positives, the fraction the model caught: ‘of what it should find, how much did it find?’. High recall means few misses, which matters for screening, fraud and safety faults, where a miss is costly.",
     "assumptions": [
       "Undefined if there are no real positives",
       "Trades off against precision; flagging everything gives recall 1"
@@ -1346,7 +1359,11 @@
         "precision"
       ],
       [
-        "TN/(TN + FP)",
+        "F_{1} = 2PR/(P + R)",
+        "their harmonic mean"
+      ],
+      [
+        "TNR = TN/(TN + FP)",
         "specificity"
       ]
     ],
@@ -1362,7 +1379,7 @@
   },
   "F_{1} = 2PR/(P + R)": {
     "title": "F1 score",
-    "about": "The harmonic mean of precision and recall, a single score that is high only when both are. It is preferred over accuracy for imbalanced classes.",
+    "about": "The harmonic mean of precision and recall: a single score that is high only when both are. The harmonic mean is pulled toward the smaller value, so P = 1 with R = 0.1 scores 0.18, where the plain average would say 0.55. Preferred over accuracy for imbalanced classes.",
     "assumptions": [
       "Weights precision and recall equally; F_{β} weights recall β times as much",
       "Ignores true negatives"
@@ -1407,9 +1424,10 @@
   },
   "A = (TP + TN)/(TP + TN + FP + FN)": {
     "title": "Accuracy",
-    "about": "The fraction of all predictions that are correct. Simple, but misleading when one class is rare.",
+    "about": "The fraction of all predictions that are correct. Simple, but misleading when one class is rare: always compare it with the baseline of predicting the commonest class.",
     "assumptions": [
-      "With imbalanced classes a trivial model scores high: always predicting 'not fraud' is 99% accurate if 1% is fraud. Use precision, recall or F1 there"
+      "With imbalanced classes a trivial model scores high: always predicting ‘not fraud’ is 99% accurate if 1% is fraud. Use precision, recall or F1 there",
+      "Measure it on held-out data; training accuracy flatters an overfit model"
     ],
     "vars": [
       [
@@ -1440,8 +1458,16 @@
     ],
     "related": [
       [
-        "1 − A",
-        "error rate"
+        "P = TP/(TP + FP)",
+        "precision"
+      ],
+      [
+        "R = TP/(TP + FN)",
+        "recall"
+      ],
+      [
+        "F_{1} = 2PR/(P + R)",
+        "F1 score"
       ],
       [
         "(TPR + TNR)/2",
@@ -1459,8 +1485,8 @@
     "try": "(45 + 930)/(45 + 930 + 5 + 20)"
   },
   "cos(θ) = (a · b)/(|a| |b|)": {
-    "title": "Cosine similarity",
-    "about": "The cosine of the angle between two vectors: 1 when they point the same way, 0 when perpendicular, −1 when opposite. It compares text embeddings and documents regardless of their length.",
+    "title": "Angle between vectors (cosine similarity)",
+    "about": "The cosine of the angle between two vectors: 1 when they point the same way, 0 when perpendicular, −1 when opposite. Take acos of it for the angle itself (between two forces or members); in machine learning the same number, called cosine similarity, compares text embeddings regardless of their length.",
     "assumptions": [
       "Neither vector may be zero",
       "Ignores magnitude: (1, 1) and (5, 5) have similarity 1",
@@ -1489,6 +1515,10 @@
       ]
     ],
     "related": [
+      [
+        "θ = acos((a · b)/(|a| |b|))",
+        "the angle itself"
+      ],
       [
         "1 − cos(θ)",
         "cosine distance"
@@ -1826,10 +1856,10 @@
   },
   "L = 4π R^{2} σ T^{4}": {
     "title": "Stefan–Boltzmann law: a star's luminosity",
-    "about": "A star's total power output is its surface area times σT^{4}. Doubling the temperature multiplies the luminosity by 16; with L and T known, it gives the star's radius.",
+    "about": "A star's total power output is its surface area times σT^{4}, the flux from each square metre of a black body. Doubling the temperature multiplies the luminosity by 16; with L and T known, it gives the star's radius, which is how giants are recognized.",
     "assumptions": [
-      "The star radiates as a black body; T is the effective (surface) temperature",
-      "Spherical star of radius R"
+      "The star radiates as a black body; T is the effective (surface) temperature in kelvin",
+      "Spherical star of radius R (radius, not diameter)"
     ],
     "vars": [
       [
@@ -2020,7 +2050,8 @@
     "assumptions": [
       "p in arcseconds gives d in parsecs",
       "Small angles; reliable out to a few thousand parsecs with Gaia",
-      "1 pc = 3.086 × 10^{16} m = 3.26 light-years"
+      "1 pc = 3.086 × 10^{16} m = 3.26 light-years",
+      "p in arcseconds, not milliarcseconds (divide mas by 1000 first)"
     ],
     "vars": [
       [
@@ -2152,9 +2183,9 @@
   },
   "A = P(1 + r t)": {
     "title": "Simple interest",
-    "about": "With simple interest you earn interest only on the original principal, so the balance grows by the same amount each period. Used for short-term loans, bonds' accrued interest and some car loans.",
+    "about": "Simple interest is paid only on the original principal, never on past interest, so the balance grows by the same P r every period: a straight line, not a curve. Used for short-term loans, bonds’ accrued interest and some car loans.",
     "assumptions": [
-      "r and t use the same time unit (annual rate with years)",
+      "r and t in the same time unit: 6% a year for 18 months is t = 1.5, not 18",
       "Interest is not reinvested"
     ],
     "vars": [
@@ -2202,10 +2233,11 @@
   },
   "A = P(1 + r/n)^{n t}": {
     "title": "Compound interest",
-    "about": "Interest added n times a year earns interest itself, so the balance grows exponentially. More frequent compounding helps a little, approaching continuous compounding.",
+    "about": "Each compounding period multiplies the balance by (1 + r/n), and there are n t periods, so interest earns interest and the balance grows exponentially. More frequent compounding helps only a little, approaching P e^{rt}.",
     "assumptions": [
-      "The rate r is a nominal annual rate, compounded n times per year, held constant",
-      "No deposits or withdrawals in between (add an annuity for those)"
+      "r is the nominal annual rate; r/n is the rate per period (6% compounded monthly is 0.5% a month, not 6%)",
+      "The exponent counts periods, n t, not years",
+      "Constant rate, with no deposits or withdrawals in between (add an annuity for those)"
     ],
     "vars": [
       [
@@ -2261,7 +2293,7 @@
   },
   "A = P e^{r t}": {
     "title": "Continuous compounding",
-    "about": "The limit of compounding infinitely often. It is the natural model for exponential growth and decay, and the form used in derivative pricing.",
+    "about": "The limit of compounding infinitely often: (1 + r/n)^{n t} → e^{rt} as n → ∞. It is the natural model for exponential growth and decay, and the form used in derivative pricing.",
     "assumptions": [
       "r is the continuously compounded annual rate, constant",
       "Only slightly more than daily compounding in practice"
@@ -2355,9 +2387,9 @@
   },
   "PV = FV/(1 + r)^{n}": {
     "title": "Present value",
-    "about": "A sum received n periods from now is worth less today, because today's money could be invested at rate r. Discounting brings future cash back to today's value.",
+    "about": "A sum received n periods from now is worth less today, because today’s money could be invested at rate r. Discounting is FV = PV(1 + r)^{n} run backwards: it brings future cash back to today’s value.",
     "assumptions": [
-      "r is the discount rate per period and n the number of periods",
+      "r is the discount rate per period and n the number of periods: monthly periods at 6% a year are r = 0.005, n = 12 × years",
       "A single lump sum; a stream of payments needs NPV or the annuity formulas"
     ],
     "vars": [
@@ -2405,9 +2437,9 @@
   },
   "NPV = Σ C_{t}/(1 + r)^{t}": {
     "title": "Net present value",
-    "about": "The sum of all cash flows, each discounted back to today. A project with positive NPV earns more than the discount rate and adds value.",
+    "about": "The sum of all cash flows, each discounted back to today. Discounting at r compares the project with simply investing the money at r, so a positive NPV means the project earns more than r and adds value.",
     "assumptions": [
-      "C_{0} is usually the (negative) initial investment at t = 0",
+      "C_{0} is usually the (negative) initial investment at t = 0 and is not discounted; spreadsheet NPV() starts at t = 1, so add C_{0} separately",
       "Cash flows at the end of each period, with a constant discount rate",
       "The rate at which NPV = 0 is the internal rate of return (IRR)"
     ],
@@ -3502,7 +3534,7 @@
   },
   "f(at), a > 0 ‖ (1/a) F(s/a)": {
     "title": "Laplace property: time scaling",
-    "about": "Speeding a signal up by a factor a stretches its transform by a in s and scales it by 1/a.",
+    "about": "Speeding a signal up by a factor a stretches its transform by a in s and scales it by 1/a. It follows by putting τ = at in the integral. A common mistake is writing F(as).",
     "assumptions": [
       "One-sided transform: only t ≥ 0 counts, so every pair stands for f(t) u(t)",
       "a > 0; a negative a would reverse time, which the one-sided transform can't represent"
@@ -3809,7 +3841,7 @@
   },
   "f(0⁺) = lim_{s→∞} s F(s)": {
     "title": "Initial value theorem",
-    "about": "The value just after t = 0 can be read from the transform's behaviour at large s, without inverting it. A quick check on a partial-fraction answer.",
+    "about": "As s → ∞, e^{−st} kills everything but the first instant, so s F(s) sees only f(0⁺). Read the starting value from the transform without inverting it; a quick check on a partial-fraction answer. A common mistake is using it on an improper F(s), which has an impulse at 0.",
     "assumptions": [
       "F(s) must be strictly proper (numerator degree below denominator's); otherwise f has an impulse at 0 and the limit doesn't exist",
       "Gives f(0⁺), which differs from f(0⁻) if f jumps at 0"
@@ -3840,16 +3872,15 @@
     "example": {
       "problem": "Find f(0⁺) for F(s) = (2s + 3)/(s^{2} + 3s + 2).",
       "steps": [
-        "sF = (2s^{2} + 3s)/(s^{2} + 3s + 2)",
-        "As s → ∞, sF → 2",
-        "Check: F = 1/(s + 1) + 1/(s + 2), f = e^{−t} + e^{−2t}, f(0) = 2"
+        "s F(s) = (2s^{2} + 3s)/(s^{2} + 3s + 2) → 2 as s → ∞ (ratio of leading coefficients)",
+        "Check: F = 1/(s + 1) + 1/(s + 2), f = e^{−t} + e^{−2t}, f(0) = 2 ✓"
       ],
       "answer": "f(0⁺) = 2"
     }
   },
   "f(∞) = lim_{s→0} s F(s)": {
     "title": "Final value theorem",
-    "about": "The steady-state value of f can be read from the transform near s = 0. It gives steady-state error and DC gain in control.",
+    "about": "The steady-state value of f can be read from the transform near s = 0. It gives steady-state error and DC gain in control. A common mistake is applying it when f doesn't settle (a pole in the right half-plane or on the jω axis other than s = 0).",
     "assumptions": [
       "Only if f settles: every pole of sF(s) is in the open left half-plane",
       "It gives wrong answers otherwise: for F = 1/(s^{2} + 1) (sin t) it returns 0, though sin t never settles"
@@ -4403,7 +4434,7 @@
   },
   "x[n] ∗ h[n] ‖ X(z) H(z)": {
     "title": "z-transform property: convolution",
-    "about": "Convolving two sequences multiplies their transforms. A digital filter's output is Y(z) = H(z)X(z), and multiplying polynomials in z^{−1} is convolving their coefficients.",
+    "about": "Convolving two sequences multiplies their transforms. A digital filter's output is Y(z) = H(z)X(z), and multiplying polynomials in z^{−1} is convolving their coefficients. A common mistake is forgetting the ROC: it is at least the overlap of the two.",
     "assumptions": [
       "ROC contains at least the intersection of the two ROCs (larger if poles cancel)",
       "Convolution: y[n] = Σ_{k} x[k] h[n − k]"
@@ -4458,7 +4489,10 @@
   "δ(t − a), a ≥ 0 ‖ e^{−as}": {
     "title": "Laplace pair: delayed impulse",
     "about": "An impulse at t = a transforms to the pure delay factor e^{−as}. It models a sudden kick or hammer blow at a known time.",
-    "assumptions": [],
+    "assumptions": [
+      "a ≥ 0: an impulse before t = 0 lies outside the one-sided transform",
+      "ROC: every s"
+    ],
     "vars": [
       [
         "a",
@@ -4471,7 +4505,16 @@
         "1/s"
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "δ(t) ↔ 1",
+        "a = 0"
+      ],
+      [
+        "f(t − a) u(t − a) ↔ e^{−as} F(s)",
+        "time-shift property"
+      ]
+    ],
     "example": {
       "problem": "Find the transform of 5δ(t − 2).",
       "steps": [
@@ -4482,19 +4525,31 @@
   },
   "u(t − a), a ≥ 0 ‖ e^{−as}/s": {
     "title": "Laplace pair: delayed unit step (Heaviside)",
-    "about": "A step switched on at t = a. Use it to write piecewise inputs: a pulse from a to b is u(t − a) − u(t − b).",
-    "assumptions": [],
+    "about": "A step switched on at t = a. Use it to write piecewise inputs: a pulse from a to b is u(t − a) − u(t − b). A common mistake is writing f(t) u(t − a) and transforming it as e^{−as}F(s); the function must be shifted too, f(t − a)u(t − a).",
+    "assumptions": [
+      "a ≥ 0",
+      "ROC Re(s) > 0"
+    ],
     "vars": [
       [
         "a",
         "switch-on time, ≥ 0",
         "s"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
       ]
     ],
     "related": [
       [
-        "f(t − a) u(t − a), a ≥ 0 ‖ e^{−as} F(s)",
+        "f(t − a) u(t − a) ↔ e^{−as} F(s)",
         "time-shift property"
+      ],
+      [
+        "u(t) ↔ 1/s",
+        "a = 0"
       ]
     ],
     "example": {
@@ -4508,67 +4563,127 @@
   },
   "1 − e^{−at} ‖ a/(s(s + a))": {
     "title": "Laplace pair: first-order rise to 1",
-    "about": "The step response of a first-order system with time constant 1/a, such as an RC circuit charging.",
-    "assumptions": [],
+    "about": "The step response of a first-order system with time constant 1/a, such as an RC circuit charging. A common mistake is dropping the a on top: 1/(s(s + a)) is (1 − e^{−at})/a.",
+    "assumptions": [
+      "a > 0, so the response settles at 1",
+      "ROC Re(s) > 0"
+    ],
     "vars": [
       [
         "a",
         "rate, 1/τ",
         "1/s"
+      ],
+      [
+        "t",
+        "time",
+        "s"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Invert 5/(s(s + 5)).",
-      "steps": [
-        "a = 5"
+    "related": [
+      [
+        "a/(s(s + a)) = 1/s − 1/(s + a)",
+        "its partial fractions"
       ],
-      "answer": "1 − e^{−5t}"
-    }
+      [
+        "f(∞) = lim_{s→0} s F(s)",
+        "it settles at a/a = 1"
+      ]
+    ],
+    "example": {
+      "problem": "Invert 5/(s(s + 5)) and evaluate at t = 0.2 s (one time constant).",
+      "steps": [
+        "a = 5, so f(t) = 1 − e^{−5t}",
+        "f(0.2) = 1 − e^{−1} = 0.632"
+      ],
+      "answer": "f = 1 − e^{−5t}; f(0.2) ≈ 0.632"
+    },
+    "try": "1 - e^-1"
   },
   "(e^{−at} − e^{−bt})/(b − a) ‖ 1/((s + a)(s + b))": {
     "title": "Laplace pair: two distinct real poles",
-    "about": "Inverts a product of two first-order factors without a full partial-fraction expansion.",
+    "about": "Partial fractions give 1/((s + a)(s + b)) = (1/(b − a))(1/(s + a) − 1/(s + b)), and each term is an exponential. It inverts two first-order factors in one step. A common mistake is the order: (b − a) goes with e^{−at} − e^{−bt}; swapping one flips the sign.",
     "assumptions": [
-      "a ≠ b; for a = b use t e^{−at}"
+      "a ≠ b; for a = b use t e^{−at}",
+      "ROC Re(s) > max(−a, −b)"
     ],
     "vars": [
       [
         "a, b",
         "pole locations, −a and −b, with a ≠ b",
         "1/s"
+      ],
+      [
+        "t",
+        "time",
+        "s"
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "e^{−at} ↔ 1/(s + a)",
+        "each term"
+      ],
+      [
+        "t e^{−at} ↔ 1/(s + a)^{2}",
+        "the a = b case"
+      ]
+    ],
     "example": {
-      "problem": "Invert 1/((s + 1)(s + 3)).",
+      "problem": "Invert 1/((s + 1)(s + 3)) and evaluate at t = 1 s.",
       "steps": [
         "a = 1, b = 3",
-        "(e^{−t} − e^{−3t})/2"
+        "f(t) = (e^{−t} − e^{−3t})/2",
+        "f(1) = (0.3679 − 0.0498)/2 = 0.159"
       ],
-      "answer": "(e^{−t} − e^{−3t})/2"
-    }
+      "answer": "(e^{−t} − e^{−3t})/2; f(1) ≈ 0.159"
+    },
+    "try": "(e^-1 - e^-3)/2"
   },
   "t sin(ωt) ‖ 2ωs/(s^{2} + ω^{2})^{2}": {
     "title": "Laplace pair: t times a sine",
     "about": "A sine whose envelope grows linearly: the response of an undamped oscillator driven at resonance. Comes from −d/ds of the sine pair.",
-    "assumptions": [],
+    "assumptions": [
+      "One-sided: stands for t sin(ωt) u(t)",
+      "ROC Re(s) > 0"
+    ],
     "vars": [
       [
         "ω",
         "angular frequency",
         "rad/s"
+      ],
+      [
+        "t",
+        "time",
+        "s"
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "t f(t) ↔ −dF/ds",
+        "the rule behind it"
+      ],
+      [
+        "t cos(ωt) ↔ (s^{2} − ω^{2})/(s^{2} + ω^{2})^{2}",
+        "the cosine version"
+      ]
+    ],
     "example": {
-      "problem": "Invert s/(s^{2} + 4)^{2}.",
+      "problem": "Invert s/(s^{2} + 4)^{2} and evaluate at t = 1 s.",
       "steps": [
         "ω = 2: 2ωs = 4s",
-        "so s/(s² + 4)² is (1/4) t sin(2t)"
+        "so s/(s^{2} + 4)^{2} is (1/4) t sin(2t)",
+        "At t = 1: sin(2)/4 = 0.227"
       ],
-      "answer": "(t/4) sin(2t)"
-    }
+      "answer": "(t/4) sin(2t); 0.227 at t = 1"
+    },
+    "try": "sin(2 rad)/4"
   },
   "t cos(ωt) ‖ (s^{2} − ω^{2})/(s^{2} + ω^{2})^{2}": {
     "title": "Laplace pair: t times a cosine",
@@ -4606,8 +4721,10 @@
   },
   "a f(t) + b g(t) ‖ a F(s) + b G(s)": {
     "title": "Laplace property: linearity",
-    "about": "The transform of a weighted sum is the weighted sum of the transforms; use it to transform term by term.",
-    "assumptions": [],
+    "about": "The defining integral is linear, so the transform of a weighted sum is the weighted sum of the transforms; transform term by term with the table. A common mistake is transforming a product as a product: the transform of f g is not F G (F G is the transform of the convolution).",
+    "assumptions": [
+      "Both transforms exist; the ROC is at least the overlap of theirs"
+    ],
     "vars": [
       [
         "a, b",
@@ -4615,19 +4732,33 @@
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Transform 3 + 2e^{−t}.",
-      "steps": [
-        "3/s + 2/(s + 1)"
+    "related": [
+      [
+        "f(t) ∗ g(t) ↔ F(s) G(s)",
+        "what F G really is"
       ],
-      "answer": "3/s + 2/(s + 1)"
-    }
+      [
+        "u(t) ↔ 1/s",
+        "a constant 3 is 3u(t)"
+      ]
+    ],
+    "example": {
+      "problem": "Transform 3 + 2e^{−t}, and evaluate it at s = 1.",
+      "steps": [
+        "3/s + 2/(s + 1)",
+        "At s = 1: 3 + 1"
+      ],
+      "answer": "3/s + 2/(s + 1); 4 at s = 1"
+    },
+    "try": "3/1 + 2/(1 + 1)"
   },
   "d^{n}f/dt^{n} ‖ s^{n} F(s) − Σ_{k=1}^{n} s^{n−k} f^{(k−1)}(0)": {
     "title": "Laplace property: nth derivative",
-    "about": "Each derivative multiplies by s and subtracts the initial conditions, which is how an ODE becomes algebra.",
-    "assumptions": [],
+    "about": "Integrating by parts n times trades each derivative for a factor s and drops an initial value, which is how an ODE becomes algebra. A common mistake is pairing the powers wrongly: s^{n−1} goes with f(0), and s^{0} with f^{(n−1)}(0).",
+    "assumptions": [
+      "f and its first n − 1 derivatives are known at 0⁻",
+      "f is of exponential order"
+    ],
     "vars": [
       [
         "n",
@@ -4638,9 +4769,23 @@
         "f^{(k)}(0)",
         "kth derivative at t = 0",
         ""
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "df/dt ↔ s F(s) − f(0)",
+        "n = 1"
+      ],
+      [
+        "d^{2}f/dt^{2} ↔ s^{2} F(s) − s f(0) − f′(0)",
+        "n = 2"
+      ]
+    ],
     "example": {
       "problem": "Transform y′′′ with y(0) = 1 and y′(0) = y′′(0) = 0.",
       "steps": [
@@ -4652,15 +4797,32 @@
   "z = e^{jω}": {
     "title": "The unit circle in the z-plane is the DTFT",
     "about": "On |z| = 1 the z transform becomes the DTFT: X(e^{jω}) = X(z) at z = e^{jω}. So the DTFT exists when the ROC includes the unit circle.",
-    "assumptions": [],
+    "assumptions": [
+      "Valid only if the ROC of X(z) includes the unit circle |z| = 1",
+      "ω = 0 is z = 1 (DC); ω = π is z = −1 (the highest frequency)"
+    ],
     "vars": [
       [
+        "z",
+        "complex variable",
+        ""
+      ],
+      [
         "ω",
-        "frequency",
+        "DT frequency",
         "rad/sample"
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "X(z) = Σ x[n] z^{−n}",
+        "z transform"
+      ],
+      [
+        "X(e^{jω}) = Σ x[n] e^{−jωn}",
+        "DTFT"
+      ]
+    ],
     "example": {
       "problem": "Get the DTFT of a^{n}u[n] (|a| < 1) from its z transform.",
       "steps": [
@@ -4672,9 +4834,17 @@
   },
   "z = e^{sT}": {
     "title": "Mapping the s-plane to the z-plane",
-    "about": "Sampling every T seconds maps a pole at s to one at z = e^{sT}. The left half-plane goes inside the unit circle, so stable stays stable.",
-    "assumptions": [],
+    "about": "Sampling every T seconds maps a pole at s to one at z = e^{sT}. The left half-plane goes inside the unit circle, so stable stays stable. A common mistake is mapping with z = 1 + sT; that is only Euler's first-order approximation.",
+    "assumptions": [
+      "The jω axis maps onto |z| = 1 and the left half-plane inside it",
+      "s and s + j2π/T map to the same z: that is aliasing"
+    ],
     "vars": [
+      [
+        "z",
+        "complex variable",
+        ""
+      ],
       [
         "s",
         "complex frequency",
@@ -4686,7 +4856,16 @@
         "s"
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "z = e^{jω}",
+        "the unit circle is the DTFT"
+      ],
+      [
+        "X(z) = Σ_{n=−∞}^{∞} x[n] z^{−n}",
+        "the z transform"
+      ]
+    ],
     "example": {
       "problem": "A pole at s = −10 is sampled at T = 0.01 s. Where is it in z?",
       "steps": [
@@ -4698,48 +4877,94 @@
   },
   "δ[n − m] ‖ z^{−m}": {
     "title": "z-transform pair: delayed unit sample",
-    "about": "A sample at n = m is m delays: z^{−m}. Every FIR filter is a sum of these.",
-    "assumptions": [],
+    "about": "A sample at n = m is m delays: z^{−m}. Every FIR filter is a sum of these. A common mistake is z^{+m} for a delay; delays carry negative powers.",
+    "assumptions": [
+      "m an integer",
+      "ROC every z except 0 for m > 0, except ∞ for m < 0"
+    ],
     "vars": [
       [
         "m",
         "delay in samples",
         ""
+      ],
+      [
+        "z",
+        "complex variable",
+        ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Transform h[n] = δ[n] + 2δ[n − 1] + δ[n − 2].",
-      "steps": [
-        "1 + 2z^{−1} + z^{−2}"
+    "related": [
+      [
+        "δ[n] ↔ 1",
+        "m = 0"
       ],
-      "answer": "(1 + z^{−1})^{2}"
-    }
+      [
+        "x[n − n_{o}] ↔ z^{−n_{o}} X(z)",
+        "the time-shift property"
+      ]
+    ],
+    "example": {
+      "problem": "Transform h[n] = δ[n] + 2δ[n − 1] + δ[n − 2], and find its DC gain H(1).",
+      "steps": [
+        "1 + 2z^{−1} + z^{−2} = (1 + z^{−1})^{2}",
+        "At z = 1: 1 + 2 + 1"
+      ],
+      "answer": "(1 + z^{−1})^{2}; H(1) = 4"
+    },
+    "try": "1 + 2 + 1"
   },
   "n u[n] ‖ z^{−1}/(1 − z^{−1})^{2}": {
     "title": "z-transform pair: unit ramp",
-    "about": "The sampled ramp 0, 1, 2, …; a double pole at z = 1.",
-    "assumptions": [],
+    "about": "The sampled ramp 0, 1, 2, …: apply n x[n] ↔ −z dX/dz to u[n] ↔ 1/(1 − z^{−1}). It has a double pole at z = 1, as t ↔ 1/s^{2} has a double pole at s = 0. A common mistake is 1/(1 − z^{−1})^{2}, which is (n + 1)u[n].",
+    "assumptions": [
+      "ROC |z| > 1",
+      "The double pole on the unit circle makes it unbounded, as the ramp is"
+    ],
     "vars": [
       [
         "n",
         "sample index",
         ""
+      ],
+      [
+        "z",
+        "complex variable",
+        ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Write the ramp transform with positive powers of z.",
-      "steps": [
-        "multiply top and bottom by z²"
+    "related": [
+      [
+        "n x[n] ↔ −z dX/dz",
+        "how it is derived"
       ],
-      "answer": "z/(z − 1)^{2}"
-    }
+      [
+        "u[n] ↔ 1/(1 − z^{−1})",
+        "the step it comes from"
+      ],
+      [
+        "t ↔ 1/s^{2}",
+        "Laplace twin"
+      ]
+    ],
+    "example": {
+      "problem": "Write the ramp transform with positive powers of z, and check it at z = 2.",
+      "steps": [
+        "multiply top and bottom by z^{2}: z/(z − 1)^{2}",
+        "At z = 2: 2/1 = 2",
+        "Series: Σ n 2^{−n} = 0.5 + 0.5 + 0.375 + … = 2"
+      ],
+      "answer": "z/(z − 1)^{2}; 2 at z = 2"
+    },
+    "try": "sum(n*2^-n, n, 0, 200)"
   },
   "r^{n} cos(ω_{o}n) u[n] ‖ (1 − r cos(ω_{o}) z^{−1})/(1 − 2r cos(ω_{o}) z^{−1} + r^{2} z^{−2})": {
     "title": "z-transform pair: damped cosine",
-    "about": "A cosine decaying by r each sample; its poles are at z = re^{±jω_{o}}. The response of a resonant digital filter.",
-    "assumptions": [],
+    "about": "A cosine decaying by r each sample; its poles are at z = re^{±jω_{o}}. The response of a resonant digital filter. A common mistake is putting the poles at r and ω_{o} in rectangular form; they are re^{±jω_{o}}.",
+    "assumptions": [
+      "ROC |z| > r",
+      "Stable when r < 1; r = 1 is the undamped cosine"
+    ],
     "vars": [
       [
         "r",
@@ -4752,19 +4977,33 @@
         "rad/sample"
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "r^{n} sin(ω_{o}n) u[n] ↔ r sin(ω_{o}) z^{−1}/(1 − 2r cos(ω_{o}) z^{−1} + r^{2} z^{−2})",
+        "same poles"
+      ],
+      [
+        "cos(ω_{o}n) u[n] ↔ (1 − cos(ω_{o}) z^{−1})/(1 − 2cos(ω_{o}) z^{−1} + z^{−2})",
+        "r = 1"
+      ]
+    ],
     "example": {
       "problem": "Where are the poles for r = 0.9, ω_{o} = π/4?",
       "steps": [
-        "z = 0.9e^{±jπ/4}"
+        "z = 0.9e^{±jπ/4} = 0.9 cos(π/4) ± j 0.9 sin(π/4)",
+        "= 0.636 ± 0.636j"
       ],
       "answer": "0.636 ± 0.636j"
-    }
+    },
+    "try": "0.9 cos(pi/4 rad)"
   },
   "r^{n} sin(ω_{o}n) u[n] ‖ r sin(ω_{o}) z^{−1}/(1 − 2r cos(ω_{o}) z^{−1} + r^{2} z^{−2})": {
     "title": "z-transform pair: damped sine",
-    "about": "A sine decaying by r each sample; same poles as the damped cosine.",
-    "assumptions": [],
+    "about": "Write sin(ω_{o}n) as (e^{jω_{o}n} − e^{−jω_{o}n})/(2j): two geometric sequences (re^{±jω_{o}})^{n} with poles at z = re^{±jω_{o}}. Same poles as the damped cosine; only the numerator differs. A common mistake is r^{2} in the numerator; it is r once.",
+    "assumptions": [
+      "ROC |z| > r",
+      "Stable when r < 1; r = 1 is the undamped sine"
+    ],
     "vars": [
       [
         "r",
@@ -4777,20 +5016,33 @@
         "rad/sample"
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Find the denominator for r = 0.5, ω_{o} = π/2.",
-      "steps": [
-        "cos(π/2) = 0",
-        "1 + 0.25z^{−2}"
+    "related": [
+      [
+        "r^{n} cos(ω_{o}n) u[n] ↔ (1 − r cos(ω_{o}) z^{−1})/(1 − 2r cos(ω_{o}) z^{−1} + r^{2} z^{−2})",
+        "same poles"
       ],
-      "answer": "1 + 0.25z^{−2}"
-    }
+      [
+        "a^{n} u[n] ↔ 1/(1 − az^{−1})",
+        "each half, a = re^{±jω_{o}}"
+      ]
+    ],
+    "example": {
+      "problem": "Find X(z) for r = 0.5, ω_{o} = π/2, and x[3].",
+      "steps": [
+        "cos(π/2) = 0, sin(π/2) = 1: X = 0.5z^{−1}/(1 + 0.25z^{−2})",
+        "Expand: 0.5z^{−1} − 0.125z^{−3} + …",
+        "Directly: x[3] = 0.5^{3} sin(3π/2) = −0.125"
+      ],
+      "answer": "0.5z^{−1}/(1 + 0.25z^{−2}); x[3] = −0.125"
+    },
+    "try": "0.5^3 sin(3 pi/2 rad)"
   },
   "a x[n] + b y[n] ‖ a X(z) + b Y(z)": {
     "title": "z-transform property: linearity",
-    "about": "The transform of a weighted sum is the weighted sum of the transforms; the ROC is at least the overlap of the two.",
-    "assumptions": [],
+    "about": "The defining sum is linear, so the transform of a weighted sum is the weighted sum of the transforms; the ROC is at least the overlap of the two. A common mistake is assuming the ROC can't grow: a pole can cancel and widen it.",
+    "assumptions": [
+      "ROC at least the intersection of the two ROCs"
+    ],
     "vars": [
       [
         "a, b",
@@ -4798,19 +5050,32 @@
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Transform 2u[n] − δ[n].",
-      "steps": [
-        "2/(1 − z^{−1}) − 1"
+    "related": [
+      [
+        "x[n] ∗ h[n] ↔ X(z) H(z)",
+        "what a product of transforms is"
       ],
-      "answer": "(1 + z^{−1})/(1 − z^{−1})"
-    }
+      [
+        "u[n] ↔ 1/(1 − z^{−1})",
+        "a piece to combine"
+      ]
+    ],
+    "example": {
+      "problem": "Transform 2u[n] − δ[n], and evaluate it at z = 2.",
+      "steps": [
+        "2/(1 − z^{−1}) − 1 = (1 + z^{−1})/(1 − z^{−1})",
+        "At z = 2: 1.5/0.5"
+      ],
+      "answer": "(1 + z^{−1})/(1 − z^{−1}); 3 at z = 2"
+    },
+    "try": "2/(1 - 1/2) - 1"
   },
   "x[n] − x[n − 1] ‖ (1 − z^{−1}) X(z)": {
     "title": "z-transform property: first difference",
-    "about": "The discrete derivative multiplies by (1 − z^{−1}), a zero at z = 1 that blocks DC.",
-    "assumptions": [],
+    "about": "The delayed copy transforms to z^{−1}X(z), so the difference is (1 − z^{−1})X(z): a zero at z = 1 that blocks DC, the discrete derivative. A common mistake is writing (z − 1)X(z); that is one sample ahead.",
+    "assumptions": [
+      "ROC at least that of X(z), except possibly z = 0"
+    ],
     "vars": [
       [
         "X(z)",
@@ -4818,7 +5083,16 @@
         ""
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "Σ_{k=−∞}^{n} x[k] ↔ X(z)/(1 − z^{−1})",
+        "the inverse"
+      ],
+      [
+        "x[n − n_{o}] ↔ z^{−n_{o}} X(z)",
+        "n_{o} = 1"
+      ]
+    ],
     "example": {
       "problem": "Find the first difference of u[n] from transforms.",
       "steps": [
@@ -4829,8 +5103,10 @@
   },
   "Σ_{k=−∞}^{n} x[k] ‖ X(z)/(1 − z^{−1})": {
     "title": "z-transform property: accumulation",
-    "about": "A running sum divides by (1 − z^{−1}): a pole at z = 1, the discrete integrator.",
-    "assumptions": [],
+    "about": "A running sum is x convolved with u[n], whose transform is 1/(1 − z^{−1}); so accumulating divides by (1 − z^{−1}), a pole at z = 1: the discrete integrator. A common mistake is keeping X's ROC; the new one must also exclude |z| ≤ 1.",
+    "assumptions": [
+      "ROC at least the overlap of X's ROC with |z| > 1"
+    ],
     "vars": [
       [
         "X(z)",
@@ -4838,18 +5114,30 @@
         ""
       ]
     ],
-    "related": [],
-    "example": {
-      "problem": "Find the running sum of δ[n].",
-      "steps": [
-        "1/(1 − z^{−1})"
+    "related": [
+      [
+        "u[n] ↔ 1/(1 − z^{−1})",
+        "x = δ[n]"
       ],
-      "answer": "u[n]"
-    }
+      [
+        "x[n] − x[n − 1] ↔ (1 − z^{−1}) X(z)",
+        "the inverse"
+      ]
+    ],
+    "example": {
+      "problem": "Find the transform of the running sum of 0.5^{n}u[n], and where it settles.",
+      "steps": [
+        "1/((1 − 0.5z^{−1})(1 − z^{−1}))",
+        "Final value: (z − 1) times it at z → 1 = 1/(1 − 0.5) = 2",
+        "Check: 1 + 0.5 + 0.25 + … = 2"
+      ],
+      "answer": "1/((1 − 0.5z^{−1})(1 − z^{−1})); settles at 2"
+    },
+    "try": "sum(0.5^k, k, 0, 200)"
   },
   "x[0] = lim_{z→∞} X(z)": {
     "title": "Initial value theorem (z transform)",
-    "about": "For a causal sequence, letting z grow kills every z^{−n} term but the first, leaving x[0].",
+    "about": "For a causal sequence, letting z grow kills every z^{−n} term but the first, leaving x[0]. A common mistake is multiplying by (z − 1) as in the final value theorem; here it is X(z) alone.",
     "assumptions": [
       "x[n] = 0 for n < 0"
     ],
@@ -4860,18 +5148,28 @@
         ""
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "x[∞] = lim_{z→1} (z − 1) X(z)",
+        "final value"
+      ],
+      [
+        "f(0⁺) = lim_{s→∞} s F(s)",
+        "Laplace version"
+      ]
+    ],
     "example": {
       "problem": "Find x[0] for X(z) = (2 − z^{−1})/(1 − 0.5z^{−1}).",
       "steps": [
-        "z → ∞: z^{−1} → 0"
+        "z → ∞: z^{−1} → 0, so X → 2/1",
+        "Check by long division: 2 + 0z^{−1} + …"
       ],
       "answer": "x[0] = 2"
     }
   },
   "x[∞] = lim_{z→1} (z − 1) X(z)": {
     "title": "Final value theorem (z transform)",
-    "about": "Gives where a causal sequence settles, without inverting. Only valid if it settles: every pole of (z − 1)X(z) inside the unit circle.",
+    "about": "Gives where a causal sequence settles, without inverting. Only valid if it settles: every pole of (z − 1)X(z) inside the unit circle. A common mistake is using it on an oscillating or growing x; the number it returns then means nothing.",
     "assumptions": [
       "x[n] causal",
       "poles of (z − 1)X(z) inside |z| = 1"
@@ -4883,7 +5181,16 @@
         ""
       ]
     ],
-    "related": [],
+    "related": [
+      [
+        "x[0] = lim_{z→∞} X(z)",
+        "initial value"
+      ],
+      [
+        "f(∞) = lim_{s→0} s F(s)",
+        "Laplace version"
+      ]
+    ],
     "example": {
       "problem": "A system with H(z) = 0.2/(1 − 0.8z^{−1}) gets a unit step. Where does the output settle?",
       "steps": [
@@ -4891,7 +5198,8 @@
         "(z − 1)Y(z) at z = 1 is H(1) · 1 = 0.2/0.2"
       ],
       "answer": "1"
-    }
+    },
+    "try": "0.2/(1 - 0.8)"
   },
   "f(t) = (1/2πj) ∫_{σ−j∞}^{σ+j∞} F(s) e^{st} ds": {
     "title": "Inverse Laplace transform (Bromwich integral)",
@@ -4937,5 +5245,656 @@
       "answer": "f(1) ≈ 0.2325"
     },
     "try": "e^-1 - e^-2"
+  },
+  "F(s) = A_{1}/(s − p_{1}) + A_{2}/(s − p_{2}) + …": {
+    "title": "Partial fractions for an inverse Laplace transform",
+    "about": "Write a proper rational F(s) as a sum of simple terms, one per pole, then invert each from the table: A/(s − p) ↔ A e^{pt}. This is the standard route for an inverse Laplace transform and for solving an ODE.",
+    "assumptions": [
+      "F proper (numerator degree below denominator); divide first if not",
+      "Distinct poles here; repeated and complex poles have their own rows"
+    ],
+    "vars": [
+      [
+        "p_{i}",
+        "poles of F",
+        "s^{−1}"
+      ],
+      [
+        "A_{i}",
+        "residues",
+        ""
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "A_{i} = [(s − p_{i}) F(s)]_{s = p_{i}}",
+        "finding each A"
+      ],
+      [
+        "e^{−at} ↔ 1/(s + a)",
+        "inverting each term"
+      ]
+    ],
+    "example": {
+      "problem": "Find f(t) for F(s) = (s + 3)/((s + 1)(s + 2)), and f(1).",
+      "steps": [
+        "A_{1} = (−1 + 3)/(−1 + 2) = 2, A_{2} = (−2 + 3)/(−2 + 1) = −1",
+        "f(t) = 2e^{−t} − e^{−2t}",
+        "f(1) = 2e^{−1} − e^{−2}"
+      ],
+      "answer": "f(t) = 2e^{−t} − e^{−2t}, f(1) ≈ 0.6004"
+    },
+    "try": "2 e^-1 - e^-2"
+  },
+  "A_{i} = [(s − p_{i}) F(s)]_{s = p_{i}}": {
+    "title": "Cover-up rule (residue at a simple pole)",
+    "about": "To find the coefficient of 1/(s − p_{i}), cancel that factor from the denominator and set s = p_{i} in what is left. It works for complex poles too, giving complex-conjugate residues.",
+    "assumptions": [
+      "p_{i} a simple (unrepeated) pole",
+      "F proper"
+    ],
+    "vars": [
+      [
+        "A_{i}",
+        "residue at p_{i}",
+        ""
+      ],
+      [
+        "p_{i}",
+        "pole",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "A_{r−k} = (1/k!) [d^{k}/ds^{k} ((s − p)^{r} F(s))]_{s = p}",
+        "repeated poles"
+      ],
+      [
+        "F(s) = A_{1}/(s − p_{1}) + A_{2}/(s − p_{2}) + …",
+        "the expansion"
+      ]
+    ],
+    "example": {
+      "problem": "F(s) = 10/(s(s + 5)). Find the residues and f(t).",
+      "steps": [
+        "at s = 0: 10/(0 + 5) = 2",
+        "at s = −5: 10/(−5) = −2",
+        "f(t) = 2 − 2e^{−5t}"
+      ],
+      "answer": "A = 2 and −2; f(t) = 2 − 2e^{−5t}"
+    },
+    "try": "10/(-5)"
+  },
+  "A_{r−k} = (1/k!) [d^{k}/ds^{k} ((s − p)^{r} F(s))]_{s = p}": {
+    "title": "Partial fractions with a repeated pole",
+    "about": "A pole p of order r needs r terms A_{1}/(s − p) + … + A_{r}/(s − p)^{r}. Multiply by (s − p)^{r}; the value at s = p gives A_{r}, and each further derivative (over k!) gives the next one down. A_{j}/(s − p)^{j} inverts to A_{j} t^{j−1} e^{pt}/(j − 1)!.",
+    "assumptions": [
+      "k = 0, 1, …, r − 1",
+      "F proper"
+    ],
+    "vars": [
+      [
+        "r",
+        "order of the pole",
+        ""
+      ],
+      [
+        "p",
+        "repeated pole",
+        "s^{−1}"
+      ],
+      [
+        "A_{j}",
+        "coefficient of 1/(s − p)^{j}",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "t e^{−at} ↔ 1/(s + a)^{2}",
+        "inverting the squared term"
+      ],
+      [
+        "t^{n} e^{−at} ↔ n!/(s + a)^{n+1}",
+        "higher powers"
+      ]
+    ],
+    "example": {
+      "problem": "F(s) = (s + 3)/(s + 1)^{2}. Find f(t) and f(1).",
+      "steps": [
+        "(s + 1)^{2} F = s + 3: at s = −1, A_{2} = 2",
+        "its derivative is 1, so A_{1} = 1",
+        "f(t) = e^{−t} + 2t e^{−t}, f(1) = 3e^{−1}"
+      ],
+      "answer": "f(t) = (1 + 2t) e^{−t}, f(1) ≈ 1.1036"
+    },
+    "try": "3 e^-1"
+  },
+  "s^{2} + bs + c = (s + b/2)^{2} + (c − b^{2}/4)": {
+    "title": "Completing the square for complex poles",
+    "about": "When s^{2} + bs + c has complex roots (b^{2} < 4c), write it as (s + a)^{2} + ω^{2} with a = b/2 and ω = √(c − b^{2}/4). Then split the numerator into (s + a) and a constant and use the damped cosine and sine pairs.",
+    "assumptions": [
+      "b^{2} < 4c; otherwise factor into real poles"
+    ],
+    "vars": [
+      [
+        "a",
+        "b/2, the decay rate",
+        "s^{−1}"
+      ],
+      [
+        "ω",
+        "√(c − b^{2}/4), the damped frequency",
+        "rad/s"
+      ]
+    ],
+    "related": [
+      [
+        "e^{−at} cos(ωt) ↔ (s + a)/((s + a)^{2} + ω^{2})",
+        "the cosine part"
+      ],
+      [
+        "e^{−at} sin(ωt) ↔ ω/((s + a)^{2} + ω^{2})",
+        "the sine part"
+      ]
+    ],
+    "example": {
+      "problem": "Invert F(s) = (s + 3)/(s^{2} + 2s + 5) and evaluate at t = π/4.",
+      "steps": [
+        "s^{2} + 2s + 5 = (s + 1)^{2} + 4: a = 1, ω = 2",
+        "s + 3 = (s + 1) + 2, so f = e^{−t} cos 2t + e^{−t} sin 2t",
+        "at t = π/4: e^{−π/4}(0 + 1)"
+      ],
+      "answer": "f(t) = e^{−t}(cos 2t + sin 2t), f(π/4) ≈ 0.4559"
+    },
+    "try": "e^(-pi/4)"
+  },
+  "H(s) = Y(s)/X(s)": {
+    "title": "Transfer function",
+    "about": "The ratio of the output transform to the input transform with every initial condition zero. Its poles give the natural response; the system is stable when all poles have negative real part. Y(s) = H(s)X(s), and h(t) is the inverse transform of H.",
+    "assumptions": [
+      "LTI system, zero initial conditions",
+      "Stable: every pole in the left half-plane"
+    ],
+    "vars": [
+      [
+        "H(s)",
+        "transfer function",
+        ""
+      ],
+      [
+        "Y(s), X(s)",
+        "output and input transforms",
+        ""
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "f(t) ∗ g(t) ↔ F(s) G(s)",
+        "why Y = HX"
+      ],
+      [
+        "f(∞) = lim_{s→0} s F(s)",
+        "steady state from Y(s)"
+      ]
+    ],
+    "example": {
+      "problem": "An RC low-pass has RC dy/dt + y = x with R = 1 kΩ and C = 1 µF. Find H(s) and its pole.",
+      "steps": [
+        "RC sY + Y = X, so H = 1/(RC s + 1)",
+        "pole at s = −1/RC"
+      ],
+      "answer": "H = 1/(0.001 s + 1), pole at s = −1000 s^{−1}: stable"
+    },
+    "try": "-1/(1000 * 1e-6)"
+  },
+  "F(s) = (1/(1 − e^{−sT})) ∫_{0}^{T} f(t) e^{−st} dt": {
+    "title": "Laplace transform of a periodic function",
+    "about": "For f repeating every T, transform one period and divide by 1 − e^{−sT}; the factor sums the geometric series of delayed copies. Used for square-wave or sawtooth inputs in ODE problems.",
+    "assumptions": [
+      "f(t + T) = f(t) for t ≥ 0"
+    ],
+    "vars": [
+      [
+        "T",
+        "period",
+        "s"
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "f(t − a) u(t − a) ↔ e^{−as} F(s)",
+        "each delayed copy"
+      ],
+      [
+        "u(t) − u(t − a) ↔ (1 − e^{−as})/s",
+        "one pulse"
+      ]
+    ],
+    "example": {
+      "problem": "f = 1 for 0 < t < 1, 0 for 1 < t < 2, repeating (T = 2). Find F(1).",
+      "steps": [
+        "∫_{0}^{1} e^{−st} dt = (1 − e^{−s})/s",
+        "F = (1 − e^{−s})/(s(1 − e^{−2s})) = 1/(s(1 + e^{−s}))",
+        "F(1) = 1/(1 + e^{−1})"
+      ],
+      "answer": "F(1) ≈ 0.7311"
+    },
+    "try": "1/(1 + e^-1)"
+  },
+  "g(t) u(t − a), a ≥ 0 ‖ e^{−as} ℒ{g(t + a)}": {
+    "title": "Laplace of a function switched on at t = a",
+    "about": "For a piecewise function, write each piece as g(t) u(t − a). The shift theorem needs the function written in t − a; this form skips that: transform g(t + a) and multiply by e^{−as}.",
+    "assumptions": [
+      "a ≥ 0"
+    ],
+    "vars": [
+      [
+        "a",
+        "switch-on time",
+        "s"
+      ],
+      [
+        "g",
+        "the function that switches on",
+        ""
+      ],
+      [
+        "s",
+        "complex frequency σ + jω",
+        "s^{−1}"
+      ]
+    ],
+    "related": [
+      [
+        "f(t − a) u(t − a) ↔ e^{−as} F(s)",
+        "the same theorem, other form"
+      ],
+      [
+        "u(t − a) ↔ e^{−as}/s",
+        "g = 1"
+      ]
+    ],
+    "example": {
+      "problem": "Find ℒ{t u(t − 2)} and its value at s = 1.",
+      "steps": [
+        "g(t + 2) = t + 2, ℒ{t + 2} = 1/s^{2} + 2/s",
+        "F = e^{−2s}(1/s^{2} + 2/s)",
+        "F(1) = 3e^{−2}"
+      ],
+      "answer": "F(s) = e^{−2s}(1/s^{2} + 2/s), F(1) ≈ 0.406"
+    },
+    "try": "3 e^-2"
+  },
+  "u[n] − u[n − N] ‖ (1 − z^{−N})/(1 − z^{−1})": {
+    "title": "Z pair: length-N rectangular window",
+    "about": "N ones starting at n = 0. The sum 1 + z^{−1} + … + z^{−(N−1)} is a finite geometric series, so the ROC is every z but 0. Its zeros are the N-th roots of unity except z = 1: it is the moving-average (boxcar) FIR filter, times N.",
+    "assumptions": [
+      "ROC all z ≠ 0 (finite length)"
+    ],
+    "vars": [
+      [
+        "N",
+        "window length",
+        "samples"
+      ],
+      [
+        "z",
+        "complex variable",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "u[n] ↔ 1/(1 − z^{−1})",
+        "the step it is built from"
+      ],
+      [
+        "x[n − n_{o}] ↔ z^{−n_{o}} X(z)",
+        "the delayed step"
+      ]
+    ],
+    "example": {
+      "problem": "Evaluate the length-4 window's X(z) at z = 2.",
+      "steps": [
+        "(1 − 2^{−4})/(1 − 2^{−1}) = 1 + 0.5 + 0.25 + 0.125"
+      ],
+      "answer": "1.875"
+    },
+    "try": "(1 - 2^-4)/(1 - 2^-1)"
+  },
+  "|z| > max|p_{i}|": {
+    "title": "Right-sided (causal) sequence: region of convergence",
+    "about": "A right-sided sequence converges outside a circle through its largest pole: the ROC is everything beyond the outermost pole, out to ∞. The same X(z) can belong to several sequences; the ROC picks which, so always state it.",
+    "assumptions": [
+      "x[n] = 0 for n < some N₀",
+      "The ROC never contains a pole"
+    ],
+    "vars": [
+      [
+        "p_{i}",
+        "poles of X(z)",
+        ""
+      ],
+      [
+        "z",
+        "complex variable",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "a^{n} u[n] ↔ 1/(1 − az^{−1})",
+        "|z| > |a|"
+      ],
+      [
+        "|z| < min|p_{i}|",
+        "the left-sided case"
+      ],
+      [
+        "|p_{i}| < 1 for every pole",
+        "stable too"
+      ]
+    ],
+    "example": {
+      "problem": "X(z) = 1/((1 − 0.5z^{−1})(1 − 2z^{−1})) and x is causal. Find the ROC; is x stable?",
+      "steps": [
+        "Poles at 0.5 and 2: outside the outer one",
+        "|z| > 2 misses the unit circle"
+      ],
+      "answer": "ROC |z| > 2; not stable"
+    }
+  },
+  "|z| < min|p_{i}|": {
+    "title": "Left-sided sequence: region of convergence",
+    "about": "A left-sided (anti-causal) sequence converges inside a circle through its smallest pole. Each term A/(1 − pz^{−1}) then inverts to −A p^{n} u[−n − 1].",
+    "assumptions": [
+      "x[n] = 0 for n > some N₁"
+    ],
+    "vars": [
+      [
+        "p_{i}",
+        "poles of X(z)",
+        ""
+      ],
+      [
+        "z",
+        "complex variable",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "−a^{n} u[−n − 1] ↔ 1/(1 − az^{−1})",
+        "|z| < |a|"
+      ],
+      [
+        "|z| > max|p_{i}|",
+        "the right-sided case"
+      ]
+    ],
+    "example": {
+      "problem": "X(z) = 1/((1 − 0.5z^{−1})(1 − 2z^{−1})) is left-sided. Find the ROC.",
+      "steps": [
+        "Inside the inner pole at 0.5"
+      ],
+      "answer": "ROC |z| < 0.5"
+    }
+  },
+  "r_{1} < |z| < r_{2}": {
+    "title": "Two-sided sequence: region of convergence",
+    "about": "A two-sided sequence converges in a ring between two adjacent poles. Poles inside the ring give right-sided terms (p^{n} u[n]); poles outside give left-sided terms (−p^{n} u[−n − 1]). With N distinct pole radii there are N + 1 possible ROCs.",
+    "assumptions": [
+      "Bounded by poles; contains none"
+    ],
+    "vars": [
+      [
+        "r_{1}, r_{2}",
+        "radii of adjacent poles",
+        ""
+      ],
+      [
+        "z",
+        "complex variable",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "a^{n} u[n] ↔ 1/(1 − az^{−1})",
+        "pole inside the ring"
+      ],
+      [
+        "−a^{n} u[−n − 1] ↔ 1/(1 − az^{−1})",
+        "pole outside the ring"
+      ]
+    ],
+    "example": {
+      "problem": "X(z) = 1/((1 − 0.5z^{−1})(1 − 2z^{−1})) with ROC 0.5 < |z| < 2. Find x[−1].",
+      "steps": [
+        "A_{1} = −1/3 at 0.5, A_{2} = 4/3 at 2",
+        "x = −(1/3)(0.5)^{n} u[n] − (4/3) 2^{n} u[−n − 1]",
+        "x[−1] = −(4/3)(2^{−1})"
+      ],
+      "answer": "x[−1] ≈ −0.6667 (stable: the ring holds |z| = 1)"
+    },
+    "try": "-(4/3)/2"
+  },
+  "|p_{i}| < 1 for every pole": {
+    "title": "Stability of a causal system from its poles",
+    "about": "An LTI system is stable when its ROC contains the unit circle. For a causal system (ROC outside the outermost pole) that means every pole of H(z) lies strictly inside the unit circle.",
+    "assumptions": [
+      "Causal system; poles of H(z) after cancelling common factors"
+    ],
+    "vars": [
+      [
+        "p_{i}",
+        "poles of H(z)",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "|z| > max|p_{i}|",
+        "causal ROC"
+      ],
+      [
+        "z = e^{sT}",
+        "left half-plane maps inside the unit circle"
+      ]
+    ],
+    "example": {
+      "problem": "H(z) has denominator z^{2} − z + 0.5. Is the causal system stable?",
+      "steps": [
+        "Poles 0.5 ± 0.5j, |p| = √(0.25 + 0.25) = √0.5"
+      ],
+      "answer": "|p| ≈ 0.7071 < 1: stable"
+    },
+    "try": "sqrt(0.5)"
+  },
+  "X(z) = Σ A_{i}/(1 − p_{i} z^{−1})": {
+    "title": "Inverse z transform by partial fractions",
+    "about": "Expand X(z) in powers of z^{−1}, one term per pole, then invert each with the ROC: right-sided gives A_{i} p_{i}^{n} u[n]. (Or expand X(z)/z in z and multiply back by z; both give the same answer.)",
+    "assumptions": [
+      "Distinct poles; numerator degree in z^{−1} below the denominator's (else divide first)",
+      "ROC |z| > max|p_{i}| for the causal answer"
+    ],
+    "vars": [
+      [
+        "A_{i}",
+        "residues",
+        ""
+      ],
+      [
+        "p_{i}",
+        "poles",
+        ""
+      ],
+      [
+        "z",
+        "complex variable",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "A_{i} = [(1 − p_{i} z^{−1}) X(z)]_{z = p_{i}}",
+        "finding each A"
+      ],
+      [
+        "a^{n} u[n] ↔ 1/(1 − az^{−1})",
+        "inverting each term"
+      ]
+    ],
+    "example": {
+      "problem": "Causal X(z) = 1/((1 − 0.5z^{−1})(1 − 0.25z^{−1})). Find x[n] and x[2].",
+      "steps": [
+        "A_{1} = 1/(1 − 0.25/0.5) = 2, A_{2} = 1/(1 − 0.5/0.25) = −1",
+        "x[n] = (2(0.5)^{n} − (0.25)^{n}) u[n]",
+        "x[2] = 0.5 − 0.0625"
+      ],
+      "answer": "x[2] = 0.4375"
+    },
+    "try": "2*0.5^2 - 0.25^2"
+  },
+  "A_{i} = [(1 − p_{i} z^{−1}) X(z)]_{z = p_{i}}": {
+    "title": "Cover-up rule for the z transform",
+    "about": "Cancel the factor (1 − p_{i} z^{−1}) and set z = p_{i} in the rest. Note that z^{−1} becomes 1/p_{i}, a common slip.",
+    "assumptions": [
+      "p_{i} a simple pole"
+    ],
+    "vars": [
+      [
+        "A_{i}",
+        "residue",
+        ""
+      ],
+      [
+        "p_{i}",
+        "pole",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "X(z) = Σ A_{i}/(1 − p_{i} z^{−1})",
+        "the expansion"
+      ],
+      [
+        "A_{i} = [(s − p_{i}) F(s)]_{s = p_{i}}",
+        "the Laplace version"
+      ]
+    ],
+    "example": {
+      "problem": "X(z) = 1/((1 − 0.5z^{−1})(1 − 0.25z^{−1})). Find A at the pole 0.5.",
+      "steps": [
+        "cover (1 − 0.5z^{−1}): 1/(1 − 0.25z^{−1}) at z = 0.5"
+      ],
+      "answer": "A_{1} = 2"
+    },
+    "try": "1/(1 - 0.25/0.5)"
+  },
+  "H(z) = Y(z)/X(z) = (Σ b_{k} z^{−k})/(Σ a_{k} z^{−k})": {
+    "title": "Transfer function from a difference equation",
+    "about": "Each delay y[n − k] becomes z^{−k}Y(z), so a linear difference equation gives H(z) as a ratio of polynomials in z^{−1}. Its poles decide stability; on the unit circle it is the frequency response; H(1) is the DC gain.",
+    "assumptions": [
+      "LTI, zero initial conditions",
+      "a₀ = 1 by convention"
+    ],
+    "vars": [
+      [
+        "H(z)",
+        "transfer function",
+        ""
+      ],
+      [
+        "a_{k}, b_{k}",
+        "output and input coefficients",
+        ""
+      ],
+      [
+        "z",
+        "complex variable",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "x[n − n_{o}] ↔ z^{−n_{o}} X(z)",
+        "the shift it uses"
+      ],
+      [
+        "Response ‖ H(e^{jω}) = (Σ b_{k} e^{−jωk})/(Σ a_{k} e^{−jωk})",
+        "z = e^{jω}"
+      ],
+      [
+        "|p_{i}| < 1 for every pole",
+        "stability"
+      ]
+    ],
+    "example": {
+      "problem": "y[n] − 0.5y[n − 1] = x[n] + x[n − 1]. Find H(z) and its DC gain.",
+      "steps": [
+        "H = (1 + z^{−1})/(1 − 0.5z^{−1})",
+        "at z = 1: 2/0.5"
+      ],
+      "answer": "DC gain 4"
+    },
+    "try": "(1 + 1)/(1 - 0.5)"
+  },
+  "x[n − 1] ‖ z^{−1} X(z) + x[−1]": {
+    "title": "One-sided z transform of a delay",
+    "about": "The unilateral transform starts at n = 0, so delaying by one brings in the initial condition x[−1]. Use it to solve a difference equation with given initial values (the z analogue of sF(s) − f(0)).",
+    "assumptions": [
+      "One-sided transform X(z) = Σ_{n=0}^{∞} x[n] z^{−n}",
+      "Two delays: z^{−2}X + z^{−1}x[−1] + x[−2]"
+    ],
+    "vars": [
+      [
+        "x[−1]",
+        "initial condition",
+        ""
+      ],
+      [
+        "z",
+        "complex variable",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "x[n − n_{o}] ↔ z^{−n_{o}} X(z)",
+        "the two-sided shift"
+      ],
+      [
+        "df/dt ↔ s F(s) − f(0)",
+        "the Laplace analogue"
+      ]
+    ],
+    "example": {
+      "problem": "y[n] − 0.5y[n − 1] = 0 with y[−1] = 2. Find y[n] and y[3].",
+      "steps": [
+        "Y − 0.5(z^{−1}Y + 2) = 0, so Y = 1/(1 − 0.5z^{−1})",
+        "y[n] = 0.5^{n} u[n]"
+      ],
+      "answer": "y[3] = 0.125"
+    },
+    "try": "0.5^3"
   }
 }

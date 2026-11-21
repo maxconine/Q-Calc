@@ -879,6 +879,10 @@ fn snap(x: f64) -> f64 {
 /// `3 + j4`, `3 - 4i`, `j`: the real part first, a coefficient of 1 left out.
 fn rectangular(re: f64, im: f64, j: bool, sig: f64) -> String {
     let (re, im) = chopped(re, im);
+    // a part that shows as 0 is round-off (`e^(jπ) + 1` leaves 1.2e-16 j): dropped, not shown as `j0`
+    let shows_zero = |x: f64| x != 0.0 && format_number(snap(x.abs()), sig) == "0";
+    let re = if shows_zero(re) { 0.0 } else { re };
+    let im = if shows_zero(im) { 0.0 } else { im };
     let size = im.abs();
     let imag = if (size - 1.0).abs() < 1e-12 {
         if j { "j".to_string() } else { "i".to_string() }
