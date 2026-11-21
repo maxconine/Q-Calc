@@ -1,6 +1,6 @@
 # games/: the native games
 
-Pong, connect 4, ultimate tic-tac-toe, crack, equal, 24 / countdown, ember & frost and trails, each in a game
+Pong, connect 4, ultimate tic-tac-toe, crack, equal, 24 / countdown, ember & frost, trails and slots, each in a game
 window of its own, in a process of its own (`qcalc.exe --game <kind>`, process.rs), drawn with Direct2D over the
 core's rules, computers and online sessions (`qcalc_core::games`, called directly; the spec is
 native/mac/Sources/Games). Nothing here borrows `App`, and nothing of the bar starts in a game's process (no
@@ -22,6 +22,8 @@ saves and relay link, and closing it ends the process, so the bar's process neve
 | `process.rs` | the bar's `open` (bring the kind's window forward, or start `--game <kind>`), the game process's `child_main` (its own mutex per kind, the window, the loop) | GameWindowController.swift |
 | `canvas.rs` | the web's Canvas 2D context over Direct2D (paths in device space, gradients, dashes, clips, lighter and destination-out, text, offscreen canvases), for ember and trails | Canvas2D.swift |
 | `pong.rs` `connect4.rs` `ultimate.rs` `crack.rs` `equal.rs` `numbers.rs` `trails.rs` | the games | the panels |
+| `slots.rs` | slots: no lobby (`GameDef::direct`, lobby.rs), the core's reel paths sampled into keyframes at a spin or press; frames only while a reel moves | Slots/SlotsPanel.swift |
+| `speech.rs` | what a reader hears of the drawn boards; each game's `Play::parts` and `env.say` go to UI Automation (uia.rs) from mod.rs | Shell/GameSpeech.swift, PuzzleSpeech.swift |
 | `ember/` | ember & frost: the panel (`mod.rs`), the renderer (`draw.rs` `things.rs` `players.rs` `fx.rs`), the synth over WASAPI (`sound.rs`, only while ember plays) | Ember/ |
 
 ## The window

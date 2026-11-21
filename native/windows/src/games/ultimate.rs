@@ -16,10 +16,12 @@ use qcalc_core::games::ultimate_session::{UltimateSession, UtView};
 use super::connect4::status_over;
 use super::gfx::{Align, Font, Hit, Rect, Ui};
 use super::keys::GameKey;
+use super::speech::{self, UtOwner};
 use super::svg::{self, Poly};
 use super::theme::{Rgba, ease_out, m};
 use super::widgets as w;
-use super::{Env, GameDef, Play};
+use super::{Env, GameDef, Part, Play};
+use crate::uia::Role;
 
 const SKILLS: [(&str, UtSkill); 3] = [
     ("easy", UtSkill::Easy),
@@ -248,6 +250,45 @@ impl Ultimate {
             }
         }
         self.view = v;
+    }
+
+    /// The board for a reader: each small board's marks and outcome, then where the next move goes.
+    fn spoken(&self) -> String {
+        let s = &self.view.state;
+        let role = self.role;
+        let cells: Vec<Option<bool>> = s.cells.iter().map(|c| c.map(|w| w == role)).collect();
+        let boards: Vec<Option<UtOwner>> = s
+            .boards
+            .iter()
+            .map(|b| match b {
+                None => None,
+                Some(BoardMark::Draw) => Some(UtOwner::Draw),
+                Some(BoardMark::Won(w)) if *w == role => Some(UtOwner::Mine),
+                Some(BoardMark::Won(_)) => Some(UtOwner::Theirs),
+            })
+            .collect();
+        let board = speech::ut_board(&cells, &boards, "you", &self.peer);
+        let next = speech::ut_next(s.forced, is_over(s));
+        if next.is_empty() {
+            board
+        } else {
+            format!("{board}. {next}")
+        }
+    }
+
+    /// The cell the keys just moved to, spoken as connect 4 speaks its held column.
+    fn speak_cursor(&self, env: &mut Env) {
+        let s = &self.view.state;
+        let mark = s.cells.get(self.cursor).copied().flatten().map(|w| {
+            if w == self.role {
+                "you".to_string()
+            } else {
+                self.peer.clone()
+            }
+        });
+        let ok = can_play(s, self.cursor as f64, self.role);
+        env.say
+            .push(speech::ut_cell(self.cursor, mark.as_deref(), ok));
     }
 
     fn my_turn(&self) -> bool {
@@ -648,6 +689,7 @@ impl Play for Ultimate {
                 (grid_col(self.cursor) + dc) % 9,
             );
             self.aiming = true;
+            self.speak_cursor(env);
         } else if let Some(n) = n {
             if let Some(zone) = state.forced.or(self.picked) {
                 self.cursor = zone * 9 + n;
@@ -656,6 +698,7 @@ impl Play for Ultimate {
                 self.cursor = n * 9 + CENTRE;
             }
             self.aiming = true;
+            self.speak_cursor(env);
         } else if k.key == "Backspace" {
             self.picked = None;
         } else if k.key == "Enter" || k.key == " " {
@@ -674,6 +717,19 @@ impl Play for Ultimate {
             return false;
         }
         true
+    }
+
+    fn parts(&self) -> Vec<Part> {
+        let b = self.board;
+        vec![
+            Part::new(
+                1,
+                Role::Text,
+                &self.status(),
+                Rect::new(b.x, b.y - 24.0, b.w, 20.0),
+            ),
+            Part::new(2, Role::Text, "board", b).value(&self.spoken()),
+        ]
     }
 
     fn pointer(&mut self, _id: u32, x: f32, y: f32, press: bool, env: &mut Env) {

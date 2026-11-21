@@ -13,7 +13,8 @@ use super::keys::GameKey;
 use super::store::GameStore;
 use super::theme::{Rgba, m};
 use super::widgets::{self as w, Run};
-use super::{Env, GameDef, Play};
+use super::{Env, GameDef, Part, Play, speech};
+use crate::uia::Role;
 
 const SECONDS_24: f64 = 60.0;
 const SECONDS_COUNTDOWN: f64 = 45.0;
@@ -108,6 +109,9 @@ struct Numbers {
     caret: usize,
     note: String,
     now: f64,
+    /// where the last frame drew the tiles (and whether each is used) and the entry, for a reader
+    tiles_at: Vec<(Rect, String, bool)>,
+    field_at: Rect,
 }
 
 impl Numbers {
@@ -128,6 +132,8 @@ impl Numbers {
             caret: 0,
             note: String::new(),
             now: env.date(),
+            tiles_at: Vec::new(),
+            field_at: Rect::default(),
         }
     }
 
@@ -391,8 +397,11 @@ impl Play for Numbers {
         };
         let n = r.nums.len() as f32;
         let mut tx = cx - (n * tile_w + (n - 1.0) * m::SP2) / 2.0;
+        self.tiles_at.clear();
         for (i, v) in r.nums.iter().enumerate() {
             let rect = Rect::new(tx, yy, tile_w, 44.0);
+            self.tiles_at
+                .push((rect, num(*v), taken.get(i).copied().unwrap_or(false)));
             let was = ui.set_alpha(if taken.get(i).copied().unwrap_or(false) {
                 0.3
             } else {
@@ -440,6 +449,7 @@ impl Play for Numbers {
         yy += 3.0 + m::SP2;
         // the entry
         let field = Rect::new(cx - 160.0, yy, 320.0, 34.0);
+        self.field_at = field;
         ui.round(field, m::RADIUS_S, c.bg_tape);
         ui.ring(
             field,
@@ -637,6 +647,24 @@ impl Play for Numbers {
 
     fn ticks(&self) -> bool {
         self.round.over.is_none()
+    }
+
+    fn parts(&self) -> Vec<Part> {
+        let mut out: Vec<Part> = self
+            .tiles_at
+            .iter()
+            .enumerate()
+            .map(|(i, (r, n, used))| {
+                Part::new(
+                    1 + i as i32,
+                    Role::Button,
+                    &speech::numbers_tile(n, *used),
+                    *r,
+                )
+            })
+            .collect();
+        out.push(Part::new(50, Role::Edit, "your expression", self.field_at).value(&self.text));
+        out
     }
 
     /// The clock; when it runs out, countdown takes what's typed if it's a legal answer.

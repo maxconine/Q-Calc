@@ -72,6 +72,11 @@ impl Lobby {
     pub fn attach(&mut self, env: &mut Env) {
         let s = self.state.clone();
         self.set(s, env);
+        // no lobby (slots): the game is on from the start, while the shell stays in the lobby's mode, where esc
+        // has no screen to step back to and closes the game
+        if self.def.direct() && self.play.is_none() {
+            self.play = Some((self.def.local)(0, env));
+        }
     }
 
     pub fn set(&mut self, next: LobbyState, env: &mut Env) {
@@ -81,7 +86,7 @@ impl Lobby {
                 (&was, &self.state),
                 (LobbyState::Game { .. }, LobbyState::Game { .. })
             );
-        if !same_game {
+        if !same_game && !self.def.direct() {
             if let Some(mut p) = self.play.take() {
                 p.closing(env);
             }
@@ -264,7 +269,8 @@ impl Lobby {
         if matches!(
             self.state,
             LobbyState::Game { .. } | LobbyState::Local { .. }
-        ) {
+        ) || self.def.direct()
+        {
             return self.play.as_mut().is_some_and(|p| p.key(k, env));
         }
         if !k.down || !k.plain() || k.key == "Escape" {
@@ -301,6 +307,10 @@ impl Lobby {
     /// The lobby's screens, or the game it started; returns the height drawn from y.
     pub fn paint(&mut self, ui: &mut Ui, x: f32, y: f32, width: f32, env: &mut Env) -> f32 {
         match self.state.clone() {
+            _ if self.def.direct() => match &mut self.play {
+                Some(p) => p.paint(ui, x, y, width, env),
+                None => 0.0,
+            },
             LobbyState::Local { .. } => match &mut self.play {
                 Some(p) => p.paint(ui, x, y, width, env),
                 None => 0.0,

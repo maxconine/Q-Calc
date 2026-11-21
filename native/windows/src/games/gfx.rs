@@ -18,12 +18,12 @@ use windows::Win32::Graphics::Direct2D::{
     D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT, D2D1_ELLIPSE, D2D1_EXTEND_MODE_CLAMP,
     D2D1_FACTORY_OPTIONS, D2D1_FACTORY_TYPE_SINGLE_THREADED, D2D1_FEATURE_LEVEL_DEFAULT,
     D2D1_GAMMA_2_2, D2D1_HWND_RENDER_TARGET_PROPERTIES, D2D1_LINE_JOIN_ROUND,
-    D2D1_PRESENT_OPTIONS_IMMEDIATELY, D2D1_QUADRATIC_BEZIER_SEGMENT,
-    D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES, D2D1_RENDER_TARGET_PROPERTIES,
-    D2D1_RENDER_TARGET_TYPE_SOFTWARE, D2D1_RENDER_TARGET_USAGE_NONE, D2D1_ROUNDED_RECT,
-    D2D1_STROKE_STYLE_PROPERTIES, D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE, D2D1CreateFactory,
-    ID2D1DeviceContext, ID2D1Factory, ID2D1Factory1, ID2D1HwndRenderTarget, ID2D1RenderTarget,
-    ID2D1SolidColorBrush, ID2D1StrokeStyle,
+    D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES, D2D1_PRESENT_OPTIONS_IMMEDIATELY,
+    D2D1_QUADRATIC_BEZIER_SEGMENT, D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES,
+    D2D1_RENDER_TARGET_PROPERTIES, D2D1_RENDER_TARGET_TYPE_SOFTWARE, D2D1_RENDER_TARGET_USAGE_NONE,
+    D2D1_ROUNDED_RECT, D2D1_STROKE_STYLE_PROPERTIES, D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE,
+    D2D1CreateFactory, ID2D1DeviceContext, ID2D1Factory, ID2D1Factory1, ID2D1HwndRenderTarget,
+    ID2D1RenderTarget, ID2D1SolidColorBrush, ID2D1StrokeStyle,
 };
 use windows::Win32::Graphics::Direct3D::D3D_DRIVER_TYPE_HARDWARE;
 use windows::Win32::Graphics::Direct3D11::{
@@ -988,6 +988,39 @@ impl Ui<'_> {
         };
         // SAFETY: inside a draw
         unsafe { self.rt.FillEllipse(&e, &brush) };
+    }
+
+    /// `r` filled top to bottom through `stops` (position in 0–1 of its height, colour), as a CSS
+    /// linear-gradient does (slots' shaded rows).
+    pub fn vgradient(&self, r: Rect, stops: &[(f32, Rgba)]) {
+        let a = self.alpha;
+        let stops: Vec<D2D1_GRADIENT_STOP> = stops
+            .iter()
+            .map(|&(p, c)| D2D1_GRADIENT_STOP {
+                position: p,
+                color: color(c.opacity(a)),
+            })
+            .collect();
+        // SAFETY: the stops outlive the call; plain resource creation on a live target
+        let Ok(coll) = (unsafe {
+            self.rt
+                .CreateGradientStopCollection(&stops, D2D1_GAMMA_2_2, D2D1_EXTEND_MODE_CLAMP)
+        }) else {
+            return;
+        };
+        let props = D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES {
+            startPoint: Vector2 { X: r.x, Y: r.y },
+            endPoint: Vector2 {
+                X: r.x,
+                Y: r.bottom(),
+            },
+        };
+        // SAFETY: as above
+        let Ok(brush) = (unsafe { self.rt.CreateLinearGradientBrush(&props, None, &coll) }) else {
+            return;
+        };
+        // SAFETY: inside a draw
+        unsafe { self.rt.FillRectangle(&d2d_rect(r), &brush) };
     }
 
     // ---- the CSS pieces

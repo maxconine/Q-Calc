@@ -200,5 +200,5 @@ retries run out does the tray say which launcher likely holds the chord.
 ## Known gaps (next agents)
 
 The games ember & frost and trails (win-games2; the games list says they aren't in yet); Mica / acrylic backdrop;
-UI Automation for the sheets and the games' insides (their windows are named only) and the line's caret and selection as a text pattern;
+UI Automation for the sheets (the games' boards are parts with values, `Play::parts`, but no Invoke pattern) and the line's caret and selection as a text pattern;
 a fade on showing (the Mac's 0.1 s: a flip swap chain can't be a layered window, so it needs DirectComposition).

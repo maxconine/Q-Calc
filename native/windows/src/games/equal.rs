@@ -13,7 +13,8 @@ use super::gfx::{Align, Font, Hit, Rect, Ui};
 use super::keys::GameKey;
 use super::theme::{Rgba, ease, keyframes, m};
 use super::widgets as w;
-use super::{Env, GameDef, Play};
+use super::{Env, GameDef, Part, Play, speech};
+use crate::uia::Role;
 
 pub static DEF: GameDef = GameDef {
     kind: "equal",
@@ -41,6 +42,15 @@ const ACT_PRACTICE: u32 = 101;
 const ACT_NEXT: u32 = 102;
 const ACT_DAILY_TAB: u32 = 200;
 const ACT_PRACTICE_TAB: u32 = 201;
+
+/// A core mark as a reader hears it.
+fn spoken(m: Mark) -> speech::Mark {
+    match m {
+        Mark::Hit => speech::Mark::Hit,
+        Mark::Near => speech::Mark::Near,
+        Mark::Miss => speech::Mark::Miss,
+    }
+}
 
 fn glyph(c: char) -> char {
     match c {
@@ -71,6 +81,10 @@ struct Equal {
     fresh_at: f64,
     copied: bool,
     t0: Instant,
+    /// what the last frame drew, for a reader: the switch, the rows and the keypad's keys (window DIPs)
+    tabs_at: Vec<(Rect, &'static str, bool)>,
+    rows_at: Vec<(Rect, String)>,
+    keys_at: Vec<(Rect, String, Option<Mark>)>,
 }
 
 impl Equal {
@@ -87,6 +101,9 @@ impl Equal {
             fresh_at: -10.0,
             copied: false,
             t0: Instant::now(),
+            tabs_at: Vec::new(),
+            rows_at: Vec::new(),
+            keys_at: Vec::new(),
         }
     }
 
@@ -213,7 +230,17 @@ impl Equal {
         self.copied = true;
     }
 
-    fn colors(dark: bool) -> (Rgba, Rgba, Rgba) {
+    /// The marks' fills; under a contrast theme darker, so their white letters read (4.9:1 and up) and a miss
+    /// stays whole (the Mac's Increase Contrast colours).
+    fn colors(dark: bool, contrast: bool) -> (Rgba, Rgba, Rgba) {
+        if contrast {
+            let pick = |l: u32, d: u32| Rgba::hex(if dark { d } else { l }, 1.0);
+            return (
+                pick(0x1f7a47, 0x2c7a4c),
+                pick(0x8a6a00, 0x8c6d14),
+                pick(0x636366, 0x545458),
+            );
+        }
         if dark {
             (
                 Rgba::hex(0x3f9e64, 1.0),
@@ -229,8 +256,8 @@ impl Equal {
         }
     }
 
-    fn fill(mark: Mark, dark: bool) -> Rgba {
-        let (hit, near, miss) = Self::colors(dark);
+    fn fill(mark: Mark, dark: bool, contrast: bool) -> Rgba {
+        let (hit, near, miss) = Self::colors(dark, contrast);
         match mark {
             Mark::Hit => hit,
             Mark::Near => near,
@@ -283,11 +310,13 @@ impl Equal {
         let seg_h = sizes[0].1 + 4.0 + 4.0;
         let right = x + width + m::SP2 - esc_w - (m::SP3 - m::SP2);
         let seg = Rect::new(right - seg_w, y + (h - seg_h) / 2.0, seg_w, seg_h);
+        self.tabs_at.clear();
         ui.round(seg, m::RADIUS_S, c.fill_track());
         let mut sx = seg.x + 2.0;
         for ((t, p, act), (tw, th)) in labels.iter().zip(&sizes) {
             let on = self.practice_mode == *p;
             let r = Rect::new(sx, seg.y + 2.0, tw + 2.0 * m::SP2, th + 4.0);
+            self.tabs_at.push((r, t, on));
             if on {
                 ui.control_shadow(r, 4.0);
                 ui.round(r, 4.0, c.control);
@@ -314,6 +343,7 @@ impl Equal {
         let guesses = self.guesses();
         let over = self.over();
         let answer = self.answer();
+        self.rows_at.clear();
         let (tw, th, gap) = (32.0, 34.0, 5.0);
         let row_w = LEN as f32 * tw + (LEN as f32 - 1.0) * gap;
         let f = Font::digits(m::FS_ROW, true);
@@ -362,7 +392,7 @@ impl Equal {
                 let hh = th * squash;
                 let tile = Rect::new(x, yy + (th - hh) / 2.0, tw, hh);
                 match mark {
-                    Some(mk) => ui.round(tile, m::RADIUS_S, Self::fill(mk, dark)),
+                    Some(mk) => ui.round(tile, m::RADIUS_S, Self::fill(mk, dark, c.contrast)),
                     None => {
                         let (ring, wd) = if ch.is_some() {
                             (c.ink.mix(0.4, Rgba::CLEAR), 1.5)
@@ -389,6 +419,18 @@ impl Equal {
                 }
                 x += tw + gap;
             }
+            let spoken_marks: Option<Vec<speech::Mark>> = marks
+                .as_ref()
+                .map(|ms| ms.iter().map(|m| spoken(*m)).collect());
+            self.rows_at.push((
+                Rect::new(cx - row_w / 2.0, yy, row_w, th),
+                speech::equal_row(
+                    r,
+                    &text.iter().collect::<String>(),
+                    spoken_marks.as_deref(),
+                    current,
+                ),
+            ));
             yy += th + if r + 1 < TRIES { gap } else { 0.0 };
         }
         yy - y
@@ -399,6 +441,7 @@ impl Equal {
         let cx = x + width / 2.0;
         let guesses = self.guesses();
         let marks = key_marks(&guesses, &self.answer());
+        self.keys_at.clear();
         let left = TRIES - guesses.len();
         let mut yy = y;
         let line = if self.note.is_empty() {
@@ -440,9 +483,17 @@ impl Equal {
             for ((label, act, mark, _), kw) in keys.iter().zip(&widths) {
                 let r = Rect::new(kx, yy, *kw, 30.0);
                 let hover = ui.hover(r);
-                let was = ui.set_alpha(if *mark == Some(Mark::Miss) { 0.7 } else { 1.0 });
+                // under a contrast theme a miss stays whole; in dark it sinks (the page's dark, muted letters, an
+                // edge, no shadow), as a 70% grey was hardly apart from an unused key
+                let sunk = *mark == Some(Mark::Miss) && c.contrast && dark;
+                let faded = *mark == Some(Mark::Miss) && !c.contrast;
+                let was = ui.set_alpha(if faded { 0.7 } else { 1.0 });
                 match mark {
-                    Some(mk) => ui.round(r, m::RADIUS_S, Self::fill(*mk, dark)),
+                    _ if sunk => {
+                        ui.round(r, m::RADIUS_S, c.page);
+                        ui.outline(r, m::RADIUS_S, 1.0, c.line);
+                    }
+                    Some(mk) => ui.round(r, m::RADIUS_S, Self::fill(*mk, dark, c.contrast)),
                     None => {
                         ui.control_shadow(r, m::RADIUS_S);
                         ui.round(
@@ -462,10 +513,22 @@ impl Equal {
                     f,
                     r.x + (r.w - lw) / 2.0,
                     r.y + (r.h - lh) / 2.0,
-                    if mark.is_some() { Rgba::WHITE } else { c.ink },
+                    if sunk {
+                        c.muted
+                    } else if mark.is_some() {
+                        Rgba::WHITE
+                    } else {
+                        c.ink
+                    },
                 );
                 ui.set_alpha(was);
                 ui.hit(r, Hit::Act(*act));
+                let name = match *act {
+                    ACT_BACK => "delete".to_string(),
+                    ACT_ENTER => "enter".to_string(),
+                    a => char::from_u32(a).map_or_else(String::new, speech::char_word),
+                };
+                self.keys_at.push((r, name, *mark));
                 kx += kw + 5.0;
             }
             yy += 30.0 + 5.0;
@@ -572,6 +635,7 @@ impl Play for Equal {
         }
         let dark = ui.c.dark;
         let mut yy = y;
+        self.keys_at.clear();
         yy += self.head(ui, x, yy, width);
         yy += m::SP3;
         yy += self.grid(ui, x + width / 2.0, yy, dark);
@@ -583,6 +647,26 @@ impl Play for Equal {
         };
         let _ = Align::Left;
         yy - y
+    }
+
+    fn parts(&self) -> Vec<Part> {
+        let mut out = Vec::new();
+        for (i, (r, t, on)) in self.tabs_at.iter().enumerate() {
+            let mut p = Part::new(1 + i as i32, Role::RadioButton, t, *r);
+            p.selected = Some(*on);
+            out.push(p);
+        }
+        for (i, (r, line)) in self.rows_at.iter().enumerate() {
+            out.push(Part::new(100 + i as i32, Role::Text, line, *r));
+        }
+        for (i, (r, name, mark)) in self.keys_at.iter().enumerate() {
+            let p = Part::new(200 + i as i32, Role::Button, name, *r);
+            out.push(match mark {
+                Some(mk) => p.value(spoken(*mk).word()),
+                None => p,
+            });
+        }
+        out
     }
 
     fn key(&mut self, k: &GameKey, env: &mut Env) -> bool {

@@ -13,7 +13,7 @@ use super::keys::GameKey;
 use super::store::GameStore;
 use super::theme::{Rgba, ease, ease_out, keyframes, m};
 use super::widgets as w;
-use super::{Env, GameDef, Play};
+use super::{Env, GameDef, Part, Play};
 
 pub static DEF: GameDef = GameDef {
     kind: "crack",
@@ -355,5 +355,19 @@ impl Play for Crack {
 
     fn idle(&self) -> bool {
         false
+    }
+
+    /// The dial is a button whose press is a tap (the page's role="button").
+    fn parts(&self) -> Vec<Part> {
+        let state = match self.s.phase {
+            CrackPhase::Clear => format!("level {} cracked", self.s.level),
+            CrackPhase::Fail => "missed".into(),
+            _ => format!("level {}, {} to go", self.s.level, self.s.left),
+        };
+        vec![
+            Part::new(1, crate::uia::Role::Button, "dial", self.dial)
+                .value(&state)
+                .help("space taps"),
+        ]
     }
 }

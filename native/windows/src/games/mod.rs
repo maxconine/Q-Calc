@@ -23,6 +23,8 @@ mod pong;
 mod process;
 mod relay;
 mod shell;
+mod slots;
+mod speech;
 mod store;
 mod svg;
 mod theme;
@@ -56,8 +58,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
     KillTimer, LoadCursorW, MINMAXINFO, RegisterClassExW, SW_SHOW, SWP_FRAMECHANGED,
     SWP_NOACTIVATE, SWP_NOZORDER, SendMessageW, SetForegroundWindow, SetTimer, SetWindowLongPtrW,
     SetWindowPos, SetWindowTextW, ShowWindow, WA_INACTIVE, WINDOW_STYLE, WM_ACTIVATE, WM_CHAR,
-    WM_CLOSE, WM_DESTROY, WM_DPICHANGED, WM_ERASEBKGND, WM_GETMINMAXINFO, WM_KEYDOWN, WM_KEYUP,
-    WM_LBUTTONDBLCLK, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE, WM_PAINT, WM_SETICON,
+    WM_CLOSE, WM_DESTROY, WM_DPICHANGED, WM_ERASEBKGND, WM_GETMINMAXINFO, WM_GETOBJECT, WM_KEYDOWN,
+    WM_KEYUP, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE, WM_PAINT, WM_SETICON,
     WM_SETTINGCHANGE, WM_SIZE, WM_SYSCHAR, WM_SYSKEYDOWN, WM_SYSKEYUP, WM_TIMER, WNDCLASSEXW,
     WS_CAPTION, WS_EX_APPWINDOW, WS_MINIMIZEBOX, WS_OVERLAPPED, WS_OVERLAPPEDWINDOW, WS_POPUP,
     WS_SYSMENU, WS_VISIBLE,
@@ -114,6 +116,47 @@ pub trait Play {
     fn release(&mut self) {}
     /// It's going (back to the lobby, or the window closed).
     fn closing(&mut self, _env: &mut Env) {}
+    /// What a screen reader is told of its insides (UI Automation, uia.rs): its drawn boards as named parts with
+    /// values, in window DIPs from the last frame. News as it happens goes to `env.say`.
+    fn parts(&self) -> Vec<Part> {
+        Vec::new()
+    }
+}
+
+/// One part of a game's insides for a reader (uia.rs's `Node`, in window DIPs).
+pub struct Part {
+    pub id: i32,
+    pub role: crate::uia::Role,
+    pub name: String,
+    pub value: Option<String>,
+    pub help: String,
+    pub rect: Rect,
+    /// a radio button's or tab's choice
+    pub selected: Option<bool>,
+}
+
+impl Part {
+    pub fn new(id: i32, role: crate::uia::Role, name: &str, rect: Rect) -> Part {
+        Part {
+            id,
+            role,
+            name: name.into(),
+            value: None,
+            help: String::new(),
+            rect,
+            selected: None,
+        }
+    }
+
+    pub fn value(mut self, v: &str) -> Part {
+        self.value = Some(v.into());
+        self
+    }
+
+    pub fn help(mut self, h: &str) -> Part {
+        self.help = h.into();
+        self
+    }
 }
 
 /// Starts a game over the link: its side, the other side's name.
@@ -153,8 +196,15 @@ pub struct GameDef {
     pub own_head: bool,
 }
 
+impl GameDef {
+    /// No lobby (slots): one player, no options, no link; the window opens on the game, and esc closes it.
+    pub fn direct(&self) -> bool {
+        self.options.is_empty() && self.together.is_empty() && self.online.is_none()
+    }
+}
+
 /// The games, in the order the games list shows them. Ember & frost and trails slot in here (README.md).
-pub static GAMES: [&GameDef; 8] = [
+pub static GAMES: [&GameDef; 9] = [
     &pong::DEF,
     &connect4::DEF,
     &ultimate::DEF,
@@ -163,6 +213,7 @@ pub static GAMES: [&GameDef; 8] = [
     &numbers::DEF,
     &ember::DEF,
     &trails::DEF,
+    &slots::DEF,
 ];
 
 fn no_sub(_: &GameStore) -> String {
@@ -222,6 +273,8 @@ pub struct Env {
     pub clipboard: Option<String>,
     /// full screen's area, while it's on
     pub stage: Option<Stage>,
+    /// news for a screen reader (a point scored, a spin's result), said once as a notification
+    pub say: Vec<String>,
 }
 
 impl Env {
@@ -484,6 +537,7 @@ fn create(kind: &str, t0: Option<i64>, spot: Option<BarSpot>) -> windows::core::
         toggle_fullscreen: false,
         clipboard: None,
         stage: None,
+        say: Vec::new(),
     };
     let mut win = Win {
         hwnd,
@@ -624,6 +678,12 @@ fn hi(v: isize) -> i32 {
 }
 
 unsafe extern "system" fn proc_(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> LRESULT {
+    if msg == WM_GETOBJECT
+        && let Some(r) = crate::uia::get_object(hwnd, wp, lp, reader_tree)
+    {
+        return r;
+    }
+    let mut said = Vec::new();
     let out = WIN.with(|c| {
         let mut slot = c.try_borrow_mut().ok()?;
         let win = slot.as_mut().filter(|w| w.hwnd == hwnd)?;
@@ -632,9 +692,11 @@ unsafe extern "system" fn proc_(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) ->
             // a frame repaints only when something moves (next_frame), never because it was painted
             win.settle(msg != WM_PAINT);
         }
+        said = std::mem::take(&mut win.env.say);
         Some(r)
     });
     run_ops();
+    reader_news(hwnd, msg, &said);
     match out {
         Some(Some(r)) => r,
         _ if msg == WM_PAINT => {
@@ -644,6 +706,64 @@ unsafe extern "system" fn proc_(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) ->
         }
         // SAFETY: the default for our window
         _ => unsafe { DefWindowProcW(hwnd, msg, wp, lp) },
+    }
+}
+
+/// The game window for UI Automation (uia.rs's source): its title, and the game's parts (`Play::parts`) in screen
+/// pixels. None while the window is busy (the last tree is used).
+fn reader_tree(hwnd: HWND) -> Option<crate::uia::Tree> {
+    WIN.with(|c| {
+        let slot = c.try_borrow().ok()?;
+        let win = slot.as_ref().filter(|w| w.hwnd == hwnd)?;
+        let mut origin = POINT::default();
+        // SAFETY: our window, a live out point
+        let _ = unsafe { windows::Win32::Graphics::Gdi::ClientToScreen(hwnd, &mut origin) };
+        let s = f64::from(win.gfx.scale());
+        let parts = win
+            .lobby
+            .play
+            .as_ref()
+            .map(|p| p.parts())
+            .unwrap_or_default();
+        Some(crate::uia::Tree {
+            name: win.lobby.def.title.into(),
+            nodes: parts
+                .into_iter()
+                .map(|p| crate::uia::Node {
+                    id: p.id,
+                    role: p.role,
+                    name: p.name,
+                    value: p.value,
+                    help: p.help,
+                    selected: p.selected,
+                    rect: [
+                        f64::from(origin.x) + f64::from(p.rect.x) * s,
+                        f64::from(origin.y) + f64::from(p.rect.y) * s,
+                        f64::from(p.rect.w) * s,
+                        f64::from(p.rect.h) * s,
+                    ],
+                    ..crate::uia::Node::default()
+                })
+                .collect(),
+        })
+    })
+}
+
+/// After a message, outside the borrow: a reader hears the game's news (a notification) and its parts' new
+/// values. Nothing unless a UIA client has asked this window for its provider.
+fn reader_news(hwnd: HWND, msg: u32, said: &[String]) {
+    if msg == WM_DESTROY {
+        crate::uia::forget(hwnd);
+        return;
+    }
+    if !crate::uia::provided(hwnd) {
+        return;
+    }
+    if !said.is_empty() {
+        crate::uia::notify(hwnd, &said.join(". "));
+    }
+    if msg == WM_PAINT && crate::uia::listening() {
+        crate::uia::changed(hwnd, None);
     }
 }
 
@@ -1411,6 +1531,15 @@ mod tests {
         assert_eq!(hint("crack").as_deref(), Some("↵ crack the safe"));
         assert_eq!(hint("countdown").as_deref(), Some("↵ play 24 or countdown"));
         assert_eq!(hint("connect 4").as_deref(), Some("↵ play connect 4"));
-        assert_eq!(list().len(), 8);
+        assert_eq!(list().len(), 9);
+        assert_eq!(command("slot machine"), Some("slots"));
+        assert_eq!(hint("slots").as_deref(), Some("↵ play slots"));
+        assert!(
+            GAMES
+                .iter()
+                .filter(|g| g.direct())
+                .map(|g| g.kind)
+                .eq(["slots"])
+        );
     }
 }
