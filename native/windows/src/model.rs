@@ -368,6 +368,10 @@ impl BarModel {
                     app.text_changed();
                     crate::tour::after_commit(app, &typed, committed);
                 } else {
+                    // a line with no answer (a note to self) is kept as typed, a note row (history.rs)
+                    if offer.is_none() && crate::history::save_note(m, &app.engine, &typed) {
+                        return;
+                    }
                     m.hint = Some(result.hint.unwrap_or_else(|| {
                         "nothing to save yet · finish the line, or esc to close".into()
                     }));
@@ -411,7 +415,7 @@ impl BarModel {
         self.move_selection_now(up);
         // a reader hears the row ↑ ↓ land on, while the keys stay on the line
         if let Some(r) = self.selected.and_then(|i| self.rows.rows.get(i)) {
-            crate::a11y::announce(&format!("{} = {}", r.expr, r.display));
+            crate::a11y::announce(&crate::history::spoken(r));
         }
     }
 
@@ -515,6 +519,10 @@ impl BarModel {
         if ctrl && !mods.shift && vk == 0x43 && self.field.has_selection() {
             crate::answer::copy_selection(self);
             return Outcome::Handled;
+        }
+        // a picked tape row's keys: ↵ with Shift / Ctrl / Alt, Ctrl+Alt+C, Ctrl+↓, Backspace / Delete (history.rs)
+        if let Some(outcome) = crate::history::key_down(self, vk, mods, engine) {
+            return outcome;
         }
         if let Some(action) = self.keybinds.action(mods, vk) {
             return self.perform(action, engine);
@@ -684,7 +692,7 @@ impl BarModel {
             KeyAction::Clear => {
                 self.selected = None;
                 self.tape_open = false;
-                self.hint = Some("history cleared".into());
+                crate::history::cleared(self);
                 return Outcome::ClearHistory;
             }
         }
