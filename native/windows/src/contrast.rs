@@ -108,6 +108,16 @@ pub fn or(fixed: Color, system: Color) -> Color {
     if on() { system } else { fixed }
 }
 
+/// A grey faded to `alpha` (the completion ghost, the squiggle, the placeholder, the stale answer), or whole while
+/// a contrast theme is on, where a faded grey text reads too faintly (the Mac's `Theme.mutedFaded`, QA item 90).
+pub fn faded(muted: Color, alpha: f32) -> Color {
+    if on() {
+        muted
+    } else {
+        with_alpha(muted, alpha)
+    }
+}
+
 /// Q Calc's theme, or the contrast theme's colours while one is on.
 pub fn apply(theme: Theme) -> Theme {
     let on = active();

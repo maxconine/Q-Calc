@@ -9,6 +9,7 @@ mod a11y;
 mod autostart;
 mod commands;
 mod edge;
+mod exact_text;
 mod exponent;
 mod hotkey;
 mod keys;

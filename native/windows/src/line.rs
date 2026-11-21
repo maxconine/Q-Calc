@@ -41,6 +41,10 @@ pub struct LineState {
     pub deco_for: String,
     /// the rest of the word being typed, drawn after the caret; Tab or → takes it
     pub completion: Option<String>,
+    /// the line `completion` is for: a letter of the ghost typed eats it at once (GhostRules `rest`, QA item 57)
+    completion_for: String,
+    /// a word the caret ends inside the line, completed there (GhostRules `MidGhost`, QA item 64)
+    pub mid: Option<MidGhost>,
     /// d/dt letters moved by hand (TimeLetters.tsx); sent as EvalOptions.timeVarying
     pub time_varying: HashMap<String, bool>,
     /// the answer one SI prefix up or down (Alt+↑ / Alt+↓), until the line changes
@@ -74,6 +78,102 @@ pub struct LineState {
     pub sel_seen: (String, usize, usize),
 }
 
+/// The completion drawn inside the line, at a word the caret ends there, for the line it was worked out for.
+#[derive(Clone, Debug, PartialEq)]
+pub struct MidGhost {
+    /// UTF-16 offset
+    pub at: u32,
+    pub text: String,
+    pub line: String,
+}
+
+// ---- the faint helpers as the text changes (GhostRules.swift, pure) ----
+
+/// What's left of the completion ghost after an edit: its rest when the new text only typed its next letters (`sq`
+/// + `rt`, then `sqr` + `t`), none otherwise (the engine's answer brings the next one).
+pub fn ghost_rest(ghost: Option<String>, old: &str, new: &str) -> Option<String> {
+    let ghost = ghost.filter(|g| !g.is_empty())?;
+    let typed = new.strip_prefix(old).filter(|t| !t.is_empty())?;
+    let n = typed.chars().count();
+    if ghost.chars().count() <= n {
+        return None;
+    }
+    let head: String = ghost.chars().take(n).collect();
+    (head.to_lowercase() == typed.to_lowercase()).then(|| ghost.chars().skip(n).collect())
+}
+
+/// A Typst line between two `$` signs (`$sqrt(2$`, not `$10 + (2`): its grey `)` is drawn and typed inside the
+/// closing `$` (QA item 64).
+pub fn typst_line(text: &str) -> bool {
+    let trimmed = text.trim_matches(' ');
+    text.ends_with('$')
+        && text.matches('$').count() == 2
+        && trimmed.starts_with('$')
+        && trimmed.chars().count() > 2
+}
+
+/// Where a word typed mid-line can complete (QuickInput's `completionAt`): a caret (UTF-16) inside the line with
+/// no letter, digit or `_` after it and a letter before it, so `2 sq|(9)` completes as `2 sq|` does. None at the end
+/// (the ghost after the text takes that) or inside a word.
+pub fn mid_word_end(units: &[u16], caret: usize) -> Option<usize> {
+    if caret == 0 || caret >= units.len() {
+        return None;
+    }
+    let next = units[caret];
+    let word =
+        next < 0x80 && (char::from(next as u8).is_ascii_alphanumeric() || next == u16::from(b'_'));
+    // a word ends here only after a letter (a completion is the rest of one)
+    let letter = char::from_u32(u32::from(units[caret - 1])).is_some_and(char::is_alphabetic);
+    (!word && letter).then_some(caret)
+}
+
+/// The completion at a mid-line word end: `sq|(9)` already has its paren, so `rt(` ghosts `rt`; none when nothing
+/// is left.
+pub fn mid_completion(completed: &str, units: &[u16], at: usize) -> Option<String> {
+    let mut rest = completed.to_string();
+    if units.get(at) == Some(&u16::from(b'(')) && rest.ends_with('(') {
+        rest.pop();
+    }
+    (!rest.is_empty()).then_some(rest)
+}
+
+/// The line's grey parens counted on the UI thread on every edit (inferParens, as QuickInput draws them on each
+/// render), so a typed `)` never shows `(2))` while the answer is on its way; none on a `message …` line.
+fn paren_counts(text: &str) -> (usize, usize) {
+    if text.trim_start().to_lowercase().starts_with("message") {
+        return (0, 0);
+    }
+    let f = qcalc_core::parens::infer_parens(text);
+    (f.leading, f.trailing)
+}
+
+/// The caret moved or the line changed: the completion at a word the caret ends inside the line (the Mac's
+/// `caretMoved`), worked out with the names the line was last answered with. Only a caret alone, after a letter,
+/// with no word character after it, asks `completion_for`; a stacked line has none (its pieces draw no gap).
+fn mid_ghost(m: &BarModel) -> Option<MidGhost> {
+    let f = &m.field;
+    if f.has_selection() || f.caret_at_end() || !f.stacks().is_empty() || m.selected.is_some() {
+        return None;
+    }
+    let text = f.text();
+    let units: Vec<u16> = text.encode_utf16().collect();
+    let at = mid_word_end(&units, f.to_utf16(f.caret()) as usize)?;
+    let names = m
+        .line
+        .deco
+        .as_ref()
+        .map(|d| d.names.clone())
+        .unwrap_or_default();
+    let prefix = String::from_utf16_lossy(&units[..at]);
+    let completed = qcalc_core::app::completion::completion_for(&prefix, &names);
+    let rest = mid_completion(&completed, &units, at)?;
+    Some(MidGhost {
+        at: at as u32,
+        text: rest,
+        line: text.to_string(),
+    })
+}
+
 // ---- on the engine thread, with the live answer ----
 
 /// QuickInput.tsx's decorations for `typed`: inferParens, unitSpans, knownWordSpans; and the completion (the
@@ -90,8 +190,16 @@ pub fn decorate(
     let (units, words) = if message {
         (Vec::new(), Vec::new())
     } else {
+        // the line's colours as its hover names read them: a clock line's zones alike, its am/pm plain
+        // (QA item 105, core `unit_colours`)
+        let spans = qcalc_core::app::word_names::unit_colours(
+            typed,
+            &variables,
+            &functions,
+            context.ans.is_some(),
+        );
         (
-            qcalc_core::app::unit_spans::unit_spans(typed, &variables, &functions)
+            spans
                 .into_iter()
                 .map(|s| (s.start as u32, s.end as u32))
                 .collect(),
@@ -120,16 +228,16 @@ pub fn decorate(
                 .map(|(a, b)| (a as u32, b as u32))
                 .collect()
         },
-    };
-    let mut completion = answer.completion.clone().filter(|c| !c.is_empty());
-    if completion.is_none() {
-        let names = qcalc_core::app::completion::CompletionNames {
+        names: qcalc_core::app::completion::CompletionNames {
             variables,
             functions,
             ans: context.ans.is_some(),
             contacts: Vec::new(),
-        };
-        let c = qcalc_core::app::completion::completion_for(typed, &names);
+        },
+    };
+    let mut completion = answer.completion.clone().filter(|c| !c.is_empty());
+    if completion.is_none() {
+        let c = qcalc_core::app::completion::completion_for(typed, &deco.names);
         completion = (!c.is_empty()).then_some(c);
     }
     (deco, completion)
@@ -150,6 +258,7 @@ pub fn landed(m: &mut BarModel, typed: &str, deco: Decorations, completion: Opti
     });
     m.line.deco_for = typed.to_string();
     m.line.completion = completion;
+    m.line.completion_for = typed.to_string();
     let blank = m.live.as_ref().is_none_or(|a| a.display.is_empty());
     m.line.squiggle_for = (blank && !typed.trim().is_empty()).then(|| typed.to_string());
     m.touch();
@@ -160,12 +269,20 @@ pub fn text_changed(m: &mut BarModel) {
     m.line.prefix_shown = None;
     m.line.prefix_value = None;
     m.line.unit_offer = None;
-    m.line.completion = None;
-    m.line.squiggle_for = None;
-    if let Some(d) = &mut m.line.deco {
-        d.squiggle = None;
-        d.offer = None;
+    // the ghost follows each key: a letter of it typed eats it, any other edit drops it (GhostRules `rest`)
+    let text = m.field.text();
+    let old = std::mem::replace(&mut m.line.completion_for, text.to_string());
+    m.line.completion = ghost_rest(m.line.completion.take(), &old, text);
+    if m.line.mid.as_ref().is_some_and(|g| g.line != text) {
+        m.line.mid = None;
     }
+    m.line.squiggle_for = None;
+    let (leading, trailing) = paren_counts(text);
+    let d = m.line.deco.get_or_insert_with(Decorations::default);
+    d.squiggle = None;
+    d.offer = None;
+    d.leading = leading;
+    d.trailing = trailing;
     if !m.field.text().is_empty() {
         m.line.rotation = onboarding::dismiss_rotation(m.line.rotation);
         m.line.example = None;
@@ -289,6 +406,18 @@ pub fn key_down(m: &mut BarModel, vk: u32, mods: Mods, engine: &EngineThread) ->
         m.text_changed(engine);
         return Some(Outcome::Handled);
     }
+    // a word the caret ends inside the line takes its completion there, Tab or → (QA item 64)
+    if (vk == RIGHT || vk == TAB)
+        && let Some(g) = m.line.mid.take()
+        && g.line == m.field.text()
+        && !m.field.has_selection()
+        && m.field.to_utf16(m.field.caret()) == g.at
+    {
+        m.field.insert(&g.text);
+        m.field.break_run();
+        m.text_changed(engine);
+        return Some(Outcome::Handled);
+    }
     let at_end = m.field.caret_at_end();
     if ((vk == RIGHT && at_end) || (vk == TAB && !mods.shift)) && m.selected.is_none() {
         if at_end && let Some(rest) = m.line.completion.clone() {
@@ -341,6 +470,24 @@ pub fn parens_filled(text: &str, caret: usize) -> Option<(String, usize)> {
 pub fn lead_filled(text: &str, caret: usize, ghost: &str) -> Option<(String, usize)> {
     if text.trim().is_empty() || text.trim_start().to_lowercase().starts_with("message") {
         return None;
+    }
+    // a Typst line between `$` signs takes its `)` inside the closing `$`, where the engine reads it (core
+    // `fill_typed`; `$sqrt(2$)` was blank), the caret kept by the same character
+    if ghost.is_empty() && typst_line(text) {
+        let filled = qcalc_core::parens::fill_typed(text);
+        if filled == text {
+            return None;
+        }
+        let (first, last) = (text.find('$')?, text.rfind('$')?);
+        let lead = qcalc_core::parens::infer_parens(&text[first + 1..last]).leading;
+        let at = if caret >= text.len() {
+            filled.len()
+        } else if caret <= first {
+            caret
+        } else {
+            caret + lead
+        };
+        return Some((filled, at));
     }
     let fill = qcalc_core::parens::infer_parens(text);
     if fill.leading + fill.trailing == 0 && ghost.is_empty() {
@@ -734,9 +881,18 @@ pub fn after(app: &mut crate::app::App) {
     });
     let (a, b) = m.field.selection();
     let seen = (a, b, hash);
+    let changed = seen != m.line.seen;
+    m.line.seen = seen;
+    if changed {
+        let mid = mid_ghost(m);
+        if mid != m.line.mid {
+            // drawn by this message's paint: the caret or the line changed with it
+            m.line.mid = mid;
+            m.touch();
+        }
+    }
+    let m = &mut app.model;
     let l = &mut m.line;
-    let changed = seen != l.seen;
-    l.seen = seen;
     // SAFETY: timers on our own bar window
     unsafe {
         if shown && focused {
@@ -859,6 +1015,12 @@ mod paint {
             deco,
             chained: m.chained && !m.field.text().is_empty(),
             completion: m.line.completion.as_deref(),
+            mid: m
+                .line
+                .mid
+                .as_ref()
+                .filter(|g| g.line == m.field.text())
+                .map(|g| (g.at, g.text.as_str())),
             placeholder: &placeholder,
             caret_on: m.line.caret_on || !focused,
             angle_mark: if m.settings.angle_mode == "rad" {
@@ -886,7 +1048,7 @@ mod paint {
                     &l,
                     composer.right() - size::GUTTER - w * 0.45,
                     field.y,
-                    with_alpha(c.theme.muted, 0.7),
+                    crate::contrast::faded(c.theme.muted, 0.7),
                 );
             }
         }
@@ -1001,6 +1163,64 @@ mod tests {
         assert_eq!(parens_filled("2+3", 3), None);
         assert_eq!(parens_filled("", 0), None);
         assert_eq!(parens_filled("message bob (", 13), None);
+        // a Typst line takes its `)` inside the closing `$` (QA item 57)
+        assert_eq!(parens_filled("$sqrt(2$", 8), Some(("$sqrt(2)$".into(), 9)));
+        assert_eq!(parens_filled("$sqrt(2$", 7), Some(("$sqrt(2)$".into(), 7)));
+    }
+
+    /// GhostRules.swift's checks (Mac test-input.sh, QA items 57 and 64).
+    #[test]
+    fn the_ghost_and_grey_parens_follow_each_key() {
+        // a letter of the ghost typed eats it at once; anything else drops it
+        assert_eq!(
+            ghost_rest(Some("rt(".into()), "sq", "sqr").as_deref(),
+            Some("t(")
+        );
+        assert_eq!(
+            ghost_rest(Some("rt(".into()), "sq", "sqR").as_deref(),
+            Some("t(")
+        );
+        assert_eq!(ghost_rest(Some("rt(".into()), "sq", "sqx"), None);
+        assert_eq!(ghost_rest(Some("rt(".into()), "sq", "s"), None);
+        assert_eq!(ghost_rest(Some("t".into()), "sqr", "sqrt"), None);
+        assert_eq!(ghost_rest(None, "sq", "sqr"), None);
+        // counted on each edit: a typed `)` closes at once
+        assert_eq!(paren_counts("(2"), (0, 1));
+        assert_eq!(paren_counts("(2)"), (0, 0));
+        assert_eq!(paren_counts("2)"), (1, 0));
+        assert_eq!(paren_counts("message bob (hi"), (0, 0));
+        // a Typst line between two `$`
+        assert!(typst_line("$sqrt(2$"));
+        assert!(!typst_line("$10 + (2"));
+        assert!(!typst_line("$$"));
+        assert!(!typst_line("2$ + 3$ + $"));
+    }
+
+    #[test]
+    fn a_word_completes_mid_line() {
+        let u = |s: &str| s.encode_utf16().collect::<Vec<u16>>();
+        // `2 sq|(9)`: a word ends at the caret
+        assert_eq!(mid_word_end(&u("2 sq(9)"), 4), Some(4));
+        // inside a word, at the end, or after no letter: none
+        assert_eq!(mid_word_end(&u("2 sqr(9)"), 4), None);
+        assert_eq!(mid_word_end(&u("2 sq"), 4), None);
+        assert_eq!(mid_word_end(&u("2 + 3"), 2), None);
+        // its `(` already there: `rt(` ghosts `rt`
+        assert_eq!(
+            mid_completion("rt(", &u("2 sq(9)"), 4).as_deref(),
+            Some("rt")
+        );
+        assert_eq!(mid_completion("(", &u("2 sq(9)"), 4), None);
+        assert_eq!(
+            mid_completion("rt(", &u("2 sq + 1"), 4).as_deref(),
+            Some("rt(")
+        );
+        let names = qcalc_core::app::completion::CompletionNames::default();
+        let completed = qcalc_core::app::completion::completion_for("2 sq", &names);
+        assert_eq!(
+            mid_completion(&completed, &u("2 sq(9)"), 4).as_deref(),
+            Some("rt")
+        );
     }
 
     #[test]
