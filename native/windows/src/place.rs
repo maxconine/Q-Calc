@@ -83,6 +83,34 @@ pub fn fit(area: Area, x: f64, y: f64, width: f64, height: f64) -> (f64, f64) {
     )
 }
 
+// displays changed with the bar up (BarPlacement.swift `isOffScreen`): whether `frame` lies wholly inside one of
+// the work areas
+pub fn inside_any(frame: Area, areas: &[Area]) -> bool {
+    areas.iter().any(|a| {
+        frame.x >= a.x
+            && frame.y >= a.y
+            && frame.right() <= a.right()
+            && frame.bottom() <= a.bottom()
+    })
+}
+
+// the monitor a frame is mostly on, by overlap (BarPlacement.swift `mostlyOn`); none when it touches none (its
+// display unplugged)
+pub fn mostly_on(frame: Area, screens: &[Area]) -> Option<usize> {
+    let mut best: Option<(usize, f64)> = None;
+    for (i, s) in screens.iter().enumerate() {
+        let w = frame.right().min(s.right()) - frame.x.max(s.x);
+        let h = frame.bottom().min(s.bottom()) - frame.y.max(s.y);
+        if w <= 0.0 || h <= 0.0 {
+            continue;
+        }
+        if best.is_none_or(|(_, area)| w * h > area) {
+            best = Some((i, w * h));
+        }
+    }
+    best.map(|(i, _)| i)
+}
+
 // centred, with the composer TOP of the way down; `anchor` is the composer's distance below the window top
 pub fn centred(area: Area, width: f64, anchor: f64) -> (f64, f64) {
     (
@@ -694,5 +722,53 @@ mod tests {
             ROOM,
         );
         assert_eq!(right, (1140.0, 808.0));
+    }
+
+    // test-placement.sh's checks, for Windows' frames (px, y down)
+    #[test]
+    fn a_bar_left_by_a_display_change_is_found_and_pulled_back() {
+        let laptop = Area {
+            x: 1920.0,
+            y: 0.0,
+            width: 1280.0,
+            height: 760.0,
+        };
+        let screens = [PRIMARY, laptop];
+        let bar = Area {
+            x: 600.0,
+            y: 300.0,
+            width: 1000.0,
+            height: 72.0,
+        };
+        assert!(inside_any(bar, &screens));
+        assert_eq!(mostly_on(bar, &screens), Some(0));
+        // hanging over the edge onto the laptop: mostly on the laptop
+        let over = Area { x: 1800.0, ..bar };
+        assert!(!inside_any(over, &screens));
+        assert_eq!(mostly_on(over, &screens), Some(1));
+        // the big display unplugged: on none
+        assert_eq!(mostly_on(bar, &[laptop]), None);
+        // the taskbar grew: inside the screen but not its work area any more
+        let shorter = Area {
+            height: 340.0,
+            ..PRIMARY
+        };
+        assert!(!inside_any(bar, &[shorter]));
+        assert_eq!(
+            fit(shorter, bar.x, bar.y, bar.width, bar.height),
+            (600.0, 268.0)
+        );
+        // touching only an edge is on neither
+        let beyond = Area { x: 3200.0, ..bar };
+        assert_eq!(mostly_on(beyond, &screens), None);
+    }
+
+    #[test]
+    fn the_width_fits_the_screen_it_opens_on() {
+        // dragged out to 1800 on a 1920 display, then shown on a 1280-wide laptop at 100%
+        assert_eq!(fitted_width(1800.0, 1920.0), 1800.0);
+        assert_eq!(fitted_width(1800.0, 1280.0), 1240.0);
+        // never under the standard width, even on a screen too narrow for it
+        assert_eq!(fitted_width(1800.0, 600.0), MIN_WIDTH);
     }
 }

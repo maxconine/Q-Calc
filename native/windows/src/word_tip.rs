@@ -330,4 +330,46 @@ mod tests {
                 .any(|w| w.2 == "least common denominator")
         );
     }
+
+    /// The name over `word` in `text`, as the line's hover shows it.
+    fn name_of(text: &str, word: &str) -> Option<String> {
+        let at = text.find(word)?;
+        let start = text[..at].encode_utf16().count() as u32;
+        let end = start + word.encode_utf16().count() as u32;
+        named(text, &[], &[], None, false)
+            .into_iter()
+            .find(|w| w.0 == start && w.1 == end)
+            .map(|w| w.2)
+    }
+
+    // QA item 66 (core tests/hover_tips.rs) as the Windows line names them
+    #[test]
+    fn tonights_words_and_clock_lines_are_named() {
+        let has = |text: &str, word: &str, part: &str| {
+            let n = name_of(text, word).unwrap_or_default();
+            assert!(n.contains(part), "{word} in {text}: {n:?}");
+        };
+        has("deg(pi)", "deg", "degrees");
+        has("rad(180)", "rad", "radians");
+        has("sinc(1)", "sinc", "sinc");
+        has("det([1 2; 3 4])", "det", "determinant");
+        has("8.314 J/(mol K) * 300 K", "mol", "mole");
+        has("10 Ω || 20 Ω", "||", "parallel");
+        // a clock line: `pm` is no picometer, the zones are named
+        assert!(
+            name_of("3pm est in pst", "pm").is_none_or(|n| !n.contains("picometer")),
+            "{:?}",
+            name_of("3pm est in pst", "pm")
+        );
+        has("3pm est in pst", "pst", "Pacific");
+        has("3pm est in pst", "est", "Eastern");
+        // another unit in the line keeps pm a length
+        has("5 pm to nm", "pm", "picometer");
+        // and an answer's unit is named as the line's are
+        let unit = crate::answer::unit_name("kJ/mol").unwrap_or_default();
+        assert!(
+            unit.contains("kilojoule") && unit.contains("mole"),
+            "{unit}"
+        );
+    }
 }
