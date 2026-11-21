@@ -57,6 +57,8 @@ pub enum Role {
     ComboBox,
     /// with `selected`: a page of a window
     Tab,
+    /// a link in a text (a sheet explanation's Related formulas)
+    Link,
 }
 
 impl Role {
@@ -70,6 +72,7 @@ impl Role {
             Role::RadioButton => UIA_RadioButtonControlTypeId,
             Role::ComboBox => UIA_ComboBoxControlTypeId,
             Role::Tab => UIA_TabItemControlTypeId,
+            Role::Link => UIA_HyperlinkControlTypeId,
         }
     }
 }

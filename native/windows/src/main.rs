@@ -110,7 +110,11 @@ mod share_debug;
 mod share_drop;
 #[cfg(windows)]
 mod share_keys;
+#[cfg(windows)]
+mod sheet_explain;
+mod sheet_match;
 mod sheet_page;
+mod sheet_search;
 #[cfg(windows)]
 mod sheets;
 #[cfg(windows)]
