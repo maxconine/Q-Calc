@@ -2022,7 +2022,7 @@ impl<'v> Parser<'v> {
         }
         // Euler's number where a term starts with a bare e (`20 kg * (1 - e^-1)`, `20 V * e^(-1)`), unless e is a
         // variable; after an amount it's still the electron charge (`5 e to C`), which parse_unit_ref reads there
-        if self.word_at(self.i, "e") && !self.vars.contains_key("e") {
+        if self.at(self.i) == Some('e') && self.word_at(self.i, "e") && !self.vars.contains_key("e") {
             self.i += 1;
             let euler = Qty::plain(std::f64::consts::E);
             return Some(match self.parse_unit_ref() {
