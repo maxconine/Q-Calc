@@ -14,7 +14,10 @@ fn matrix_calls_without_a_grid_stay_quick() {
             std::hint::black_box(evaluate_sheet(&[line.to_string()], &o));
         }
         let ms = t.elapsed().as_secs_f64() * 1e3;
-        assert!(ms < 400.0, "{line}: 100 evaluations took {ms:.0} ms");
+        assert!(
+            ms < 400.0 * ci_slack() as f64,
+            "{line}: 100 evaluations took {ms:.0} ms"
+        );
     }
 }
 
@@ -25,4 +28,13 @@ fn list_statistics_still_answer() {
     assert_eq!(show("sum([1, 2, 3])"), "6");
     assert_eq!(show("mean([1, 2, 3])"), "2");
     assert_eq!(show("size([1 2; 3 4])"), "[2 2]");
+}
+
+// shared CI runners are several times slower than a dev Mac; time limits get 5x there (answers are still checked)
+fn ci_slack() -> u128 {
+    if std::env::var_os("CI").is_some() {
+        5
+    } else {
+        1
+    }
 }

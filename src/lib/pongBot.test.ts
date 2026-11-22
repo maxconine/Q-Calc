@@ -118,7 +118,8 @@ describe('the computer, by level', () => {
     expect(easy).toBeLessThan(normal!)
     expect(normal).toBeLessThan(hard!)
     expect(easy).toBeGreaterThan(1)
-  })
+    // 900 simulated rallies: about 1 s here, over 5 s on a shared CI runner
+  }, 30_000)
 })
 
 // how many times, on average, the computer returns the ball before it misses
