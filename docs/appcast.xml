@@ -6,6 +6,14 @@
     <description>Q Calc updates</description>
     <language>en</language>
     <item>
+      <title>Version 3.0.3</title>
+      <pubDate>Sun, 22 Nov 2026 01:17:08 +0000</pubDate>
+      <sparkle:version>3.0.3</sparkle:version>
+      <sparkle:shortVersionString>3.0.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
+      <enclosure url="https://github.com/maxconine/Q-Calc/releases/download/v3.0.3/Q-Calc-3.0.3-apple-silicon.zip" sparkle:edSignature="fDYhHylM56sHbB2I82KqeaUFpSw9031oRHAHWfO/53VpLRuw0V7dYsk872L6PpPOUHaNpuccYyPFfy8QhY5BCw==" length="21929746" type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 3.0.2</title>
       <pubDate>Mon, 09 Nov 2026 09:14:19 +0000</pubDate>
       <sparkle:version>3.0.2</sparkle:version>
