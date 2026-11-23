@@ -127,3 +127,18 @@ fn date_arithmetic_leftovers() {
     assert_eq!(say("march 3 - 2"), "");
     assert_eq!(say("tomorrow in tokyo"), "");
 }
+
+#[test]
+fn a_span_worked_out_on_the_line() {
+    // were blank: a span was only ever `number unit`
+    assert_eq!(say("now + (.8*2hr)"), "5:36 am");
+    assert_eq!(say("now + 0.8*2 hr"), "5:36 am");
+    assert_eq!(say("now + 2hr*.8"), "5:36 am");
+    assert_eq!(say("now - 90/60 hr"), "2:30 am");
+    assert_eq!(say("9:00 + (.8*2hr)"), "10:36 am");
+    assert_eq!(say("today + (2*3 days)"), "Wed 2 Dec 2026");
+    assert_eq!(say("now + 1/3 hr"), "4:20 am");
+    // not whole minutes, or two units in one product: still no answer
+    assert_eq!(say("now + 0.01*2 hr"), "");
+    assert_eq!(say("now + 2hr*3min"), "");
+}

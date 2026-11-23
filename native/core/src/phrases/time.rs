@@ -243,6 +243,10 @@ pub fn parse_span(s: &str) -> Option<Span> {
     static SPLIT: Lazy = Lazy::new(|| js_re(r"\s*(?:,|\band\b)\s*|\s+(?=\d)", ""));
     static PART: Lazy = Lazy::new(|| js_re(r"^(\d+(?:\.\d+)?|a|an|one)\s*([a-z]+)$", ""));
     let t = js_trim(s);
+    // native only: a span worked out on the line, `.8*2hr`, `2hr*.8`, `(2 * 3) days`, `90/60 hr`
+    if let Some(span) = worked_span(t) {
+        return Some(span);
+    }
     let mut parts = Vec::new();
     let mut last = 0;
     for m in SPLIT.find_iter(t).flatten() {
@@ -284,6 +288,109 @@ pub fn parse_span(s: &str) -> Option<Span> {
         return None;
     }
     Some(span)
+}
+
+/// native only: numbers multiplied and divided, in brackets or not, with one span unit among them: `.8*2hr` is
+/// 96 min, `2hr*.8` too, `(2 * 3) days` 6 days. A plain `4 hr 10 min` is left to `parse_span`'s own reading.
+fn worked_span(t: &str) -> Option<Span> {
+    if !t.contains(['*', '/', '(']) {
+        return None;
+    }
+    let start = t.find(|c: char| c.is_ascii_alphabetic())?;
+    let len = t[start..]
+        .find(|c: char| !c.is_ascii_alphabetic())
+        .unwrap_or(t.len() - start);
+    let word = &t[start..start + len];
+    if t[start + len..].contains(|c: char| c.is_ascii_alphabetic()) {
+        return None;
+    }
+    let (key, per) = span_unit(word)?;
+    // the unit stands for 1, so `2hr*.8` is 2*1*.8 hours; a unit glued to a number (`2hr`) multiplies it
+    let rest = format!("{}{}", &t[..start], &t[start + len..]);
+    let rest = js_trim(&rest);
+    let value = if rest.is_empty() {
+        1.0
+    } else {
+        let mut p = Arith {
+            s: rest.as_bytes(),
+            i: 0,
+        };
+        let v = p.product()?;
+        p.space();
+        (p.i == p.s.len()).then_some(v)?
+    };
+    let add = value * per;
+    // whole minutes, days or months, allowing for float noise (1/3 hr is 20 min)
+    let whole = add.round();
+    if !add.is_finite() || (add - whole).abs() > 1e-9 * whole.abs().max(1.0) {
+        return None;
+    }
+    let mut span = Span::default();
+    match key {
+        SpanKey::Minutes => span.minutes = whole,
+        SpanKey::Days => span.days = whole,
+        SpanKey::Months => span.months = whole,
+    }
+    Some(span)
+}
+
+/// numbers with `*`, `/`, brackets and juxtaposition (`2 (3)`), for `worked_span`
+struct Arith<'a> {
+    s: &'a [u8],
+    i: usize,
+}
+
+impl Arith<'_> {
+    fn space(&mut self) {
+        while self.s.get(self.i) == Some(&b' ') {
+            self.i += 1;
+        }
+    }
+    fn product(&mut self) -> Option<f64> {
+        let mut v = self.factor()?;
+        loop {
+            self.space();
+            match self.s.get(self.i) {
+                Some(b'*') => {
+                    self.i += 1;
+                    v *= self.factor()?;
+                }
+                Some(b'/') => {
+                    self.i += 1;
+                    v /= self.factor()?;
+                }
+                // a number or bracket right after another, where the unit was taken out (`2 (3)`, `.8*2 `)
+                Some(c) if c.is_ascii_digit() || *c == b'.' || *c == b'(' => v *= self.factor()?,
+                _ => return Some(v),
+            }
+        }
+    }
+    fn factor(&mut self) -> Option<f64> {
+        self.space();
+        if self.s.get(self.i) == Some(&b'(') {
+            self.i += 1;
+            let v = self.product()?;
+            self.space();
+            if self.s.get(self.i) != Some(&b')') {
+                return None;
+            }
+            self.i += 1;
+            return Some(v);
+        }
+        let from = self.i;
+        while self
+            .s
+            .get(self.i)
+            .is_some_and(|c| c.is_ascii_digit() || *c == b'.')
+        {
+            self.i += 1;
+        }
+        let text = std::str::from_utf8(&self.s[from..self.i]).ok()?;
+        if text.is_empty() || text == "." {
+            return None;
+        }
+        text.parse::<f64>().ok()
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
