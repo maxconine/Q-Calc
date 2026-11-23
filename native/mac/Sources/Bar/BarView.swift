@@ -134,6 +134,8 @@ struct BarView: View {
         }
         // the one-time line on what's end-to-end encrypted (Messages/ShareViews.swift)
         PrivacyNoticeLine()
+        // a newer Q Calc, once Sparkle has found one (UpdateNotice.swift); not during the tutorial
+        if model.tourLine == nil { UpdateNoticeLine() }
         if let typeset = model.typeset {
             MathPreview(typeset: typeset)
                 .frame(maxWidth: .infinity)

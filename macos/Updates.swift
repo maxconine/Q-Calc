@@ -43,6 +43,9 @@ final class Updates: NSObject, ObservableObject, SPUUpdaterDelegate, SPUStandard
 
     func updater(_ updater: SPUUpdater, willInstallUpdateOnQuit item: SUAppcastItem, immediateInstallationBlock: @escaping () -> Void) -> Bool {
         installNow = immediateInstallationBlock
+        #if QCALC_NATIVE
+        DispatchQueue.main.async { UpdateNotice.shared.found(item.displayVersionString, ready: true) }
+        #endif
         quietTimer?.invalidate()
         let timer = Timer(timeInterval: min(60, Self.quietSeconds), repeats: true) { [weak self] _ in self?.installIfQuiet() }
         timer.tolerance = timer.timeInterval / 2
@@ -67,6 +70,31 @@ final class Updates: NSObject, ObservableObject, SPUUpdaterDelegate, SPUStandard
     private static var idleSeconds: TimeInterval {
         CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: CGEventType(rawValue: ~0)!)
     }
+
+    #if QCALC_NATIVE
+    // the bar's update line (native/mac/Sources/Bar/UpdateNotice.swift) says what sparkle found; a failed or
+    // offline check calls neither, so the line stays as it was
+    func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
+        DispatchQueue.main.async { UpdateNotice.shared.found(item.displayVersionString) }
+    }
+
+    func updaterDidNotFindUpdate(_ updater: SPUUpdater) {
+        DispatchQueue.main.async { UpdateNotice.shared.upToDate() }
+    }
+
+    /// the line's button: a downloaded update installs and relaunches now, else sparkle's own window shows it
+    func installOrShow() {
+        if let installNow {
+            quietTimer?.invalidate()
+            quietTimer = nil
+            self.installNow = nil
+            installNow()
+            return
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        controller?.checkForUpdates(nil)
+    }
+    #endif
 
     // menu bar apps get a log warning without this; sparkle still decides when its own alerts show
     var supportsGentleScheduledUpdateReminders: Bool { true }

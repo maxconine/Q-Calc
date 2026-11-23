@@ -143,6 +143,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "ask": overlay.model.cards.insert(BannerCard(id: "dev\(Int.random(in: 0...9999))", from: arg.isEmpty ? "sam" : arg, text: "", ask: true), at: 0)
         case "note": CornerNotes.shared.post(from: arg.isEmpty ? "max" : arg, body: "lunch at noon? bring the 4.2 m tape")
         case "noteask": CornerNotes.shared.post(from: arg.isEmpty ? "sam" : arg, ask: true)
+        // update:<version> / updateready:<version> is sparkle finding it (UpdateNotice.swift); uptodate clears it
+        case "update": UpdateNotice.shared.found(arg)
+        case "updateready": UpdateNotice.shared.found(arg, ready: true)
+        case "uptodate": UpdateNotice.shared.upToDate()
         case "snap": DevSnapshot.writeAll(to: arg)
         case "clear": overlay.model.clearHistory(); overlay.model.text = ""; overlay.model.hint = nil
         case "hover": overlay.model.edgeFocus = arg != "off"

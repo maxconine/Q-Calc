@@ -16,7 +16,7 @@ headless_only=0 only=()
 for a in "$@"; do [[ "$a" == --headless ]] && headless_only=1 || only+=("$a"); done
 wanted() { (( ${#only} == 0 )) || (( ${only[(Ie)$1]} )); }
 
-headless=(cards compat12 contrast eggs games input placement puzzles share stacked tape tour)
+headless=(cards compat12 contrast eggs games input placement puzzles share stacked tape tour update)
 macos_tests=(dictionary:DictionaryLookup math:MathEval messages:MessageInbox overlay:OverlayHealth rates:ECBRates
   sheet_match:SheetMatch sheet_place:SheetPlace)
 self_copying=(first-run game-drive sheet-links sys)
