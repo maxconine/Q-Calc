@@ -11,7 +11,9 @@
 #   zsh native/mac/build.sh --release    # Q Calc's own bundle id, name, hotkey and Sparkle key (not for side-by-side use)
 #   zsh native/mac/build.sh --package    # a release, then the zips the release workflow publishes, one per architecture:
 #                                        # native/mac/dist/Q-Calc-<version>-apple-silicon.zip (appcast.xml) and -intel.zip
-#                                        # (appcast-intel.xml), each thinned to its own code, as macos/build.sh --package's
+#                                        # (appcast-intel.xml), each thinned to its own code, as macos/build.sh --package's,
+#                                        # and a drag-to-Applications disk image of each (…-apple-silicon.dmg, -intel.dmg;
+#                                        # dmg/make-dmg.sh)
 #
 # Inputs it finds by itself, or from the environment:
 #   QCALC_SPARKLE_DIR  a Sparkle-2.10.0 release folder (default macos/vendor/Sparkle-2.10.0, fetched like macos/build.sh)
@@ -46,7 +48,7 @@ for arg in "$@"; do
     --release) RELEASE=1 ;;
     --package) PACKAGE=1; RELEASE=1 ;;
     --arch=*) ARCHS=("${arg#--arch=}") ;;
-    -h|--help) sed -n '2,16p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,18p' "$0"; exit 0 ;;
     *) echo "Unknown option: $arg" >&2; exit 1 ;;
   esac
 done
@@ -199,6 +201,9 @@ if (( PACKAGE )); then
     rm -f "$zip_path"
     ditto -c -k --norsrc --keepParent "$thin" "$zip_path"
     echo "Packaged $zip_path ($(du -h "$zip_path" | cut -f1), $feed)"
+    # the download people open by hand: a disk image whose window says to drag Q Calc to Applications (the zips
+    # stay for Sparkle and Homebrew)
+    zsh "$MAC/dmg/make-dmg.sh" "$thin" "$MAC/dist/Q-Calc-$APP_VERSION-$label.dmg"
   done
 fi
 if (( RUN )); then

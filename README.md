@@ -214,6 +214,8 @@ Or:
 /bin/zsh -c "$(curl -fsSL https://raw.githubusercontent.com/maxconine/Q-Calc/main/macos/install.sh)"
 ```
 
+Or download `Q-Calc-<version>-apple-silicon.dmg` (or `-intel.dmg`) from the [latest release](https://github.com/maxconine/Q-Calc/releases/latest), open it and drag **Q Calc** to **Applications**. Because the app isn't notarized, macOS blocks the first open: click **Done**, then **Open Anyway** in **System Settings → Privacy & Security** (on macOS 14 and earlier, right-click Q Calc in Applications and choose **Open**). Or run `xattr -dr com.apple.quarantine "/Applications/Q Calc.app"` once.
+
 > [!NOTE]
 > By using Q Calc, you acknowledge that it's not notarized.
 >

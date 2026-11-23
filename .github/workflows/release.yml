@@ -58,7 +58,8 @@ jobs:
         working-directory: native
         run: cargo test -p qcalc-core
 
-      - name: Build zip
+      # the zips (Sparkle and Homebrew) and a drag-to-Applications disk image of each (native/mac/dmg)
+      - name: Build zips and disk images
         run: zsh native/mac/build.sh --package
 
       # one zip per architecture: each carries only its own code, and each has its own update feed
@@ -82,10 +83,12 @@ jobs:
           INTEL_ZIP: ${{ steps.sha.outputs.intel_zip }}
         run: |
           TAG="v${VERSION}"
+          ARM_DMG="native/mac/dist/Q-Calc-${VERSION}-apple-silicon.dmg"
+          INTEL_DMG="native/mac/dist/Q-Calc-${VERSION}-intel.dmg"
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$ARM_ZIP" "$INTEL_ZIP" --clobber
+            gh release upload "$TAG" "$ARM_DMG" "$INTEL_DMG" "$ARM_ZIP" "$INTEL_ZIP" --clobber
           else
-            gh release create "$TAG" "$ARM_ZIP" "$INTEL_ZIP" \
+            gh release create "$TAG" "$ARM_DMG" "$INTEL_DMG" "$ARM_ZIP" "$INTEL_ZIP" \
               --title "Q Calc ${VERSION}" \
               --generate-notes
           fi
