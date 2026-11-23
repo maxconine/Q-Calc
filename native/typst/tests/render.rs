@@ -334,3 +334,20 @@ fn an_ans_chip_compiles_and_keeps_its_blue_in_dark_mode() {
     }
 }
 
+
+#[test]
+fn an_ans_chip_sits_on_the_line() {
+    use qcalc_core::app::typst_math::TYPST_PREAMBLE;
+    // the chip's number rode above the `2` after it (its pill room lifted the baseline)
+    let r = Renderer::with_macros(TYPST_PREAMBLE);
+    let opts = RenderOptions { pixel_per_pt: 2.0, max_width_pt: 0.0, max_height_pt: 0.0, color: LIGHT };
+    let img = r.render(&doc("anschip(2) quad 2"), &opts).unwrap();
+    let (w, h) = (img.width as usize, img.height as usize);
+    let px = |x: usize, y: usize| &img.rgba[(y * w + x) * 4..(y * w + x) * 4 + 4];
+    let blue = |p: &[u8]| p[3] > 200 && p[2] > 0xa0 && p[0] < 0x80;
+    let ink = |p: &[u8]| p[3] > 200 && p[0] < 0x60 && p[2] < 0x60;
+    let chip_cols: Vec<bool> = (0..w).map(|x| (0..h).any(|y| blue(px(x, y)))).collect();
+    let bottom = |inside: bool| (0..h).rev().find(|&y| (0..w).any(|x| chip_cols[x] == inside && ink(px(x, y)))).unwrap();
+    let (chip, after) = (bottom(true), bottom(false));
+    assert!(chip.abs_diff(after) <= 1, "chip's 2 ends at {chip}px, the next 2 at {after}px");
+}
