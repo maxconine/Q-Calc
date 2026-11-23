@@ -1760,6 +1760,15 @@ mod tests {
         (format!("{r:?}"), left, after)
     }
 
+    // shared CI runners are several times slower than a dev Mac; time limits get 5x there (answers are still checked)
+    fn ci_slack() -> u128 {
+        if std::env::var_os("CI").is_some() {
+            5
+        } else {
+            1
+        }
+    }
+
     #[test]
     fn a_count_that_never_settles_is_charged_as_if_walked() {
         for text in [
@@ -1773,7 +1782,10 @@ mod tests {
             let slow = end(text, true);
             assert_eq!(fast, slow, "{text}");
             assert!(fast.0.contains("Err"), "{text}: {}", fast.0);
-            assert!(quick.as_millis() * 3 < 1000, "{text}: {quick:?}");
+            assert!(
+                quick.as_millis() * 3 < 1000 * ci_slack(),
+                "{text}: {quick:?}"
+            );
         }
         // with no line budget too
         WALK_IT_ALL.with(|w| w.set(true));

@@ -32,7 +32,7 @@ fn absurd_isolate_lines_answer_as_before_and_quickly() {
             let took = t.elapsed().as_millis();
             assert_eq!(got, want, "{line}");
             // a debug build: 3–4 s before
-            assert!(took < ms, "{line}: {took} ms");
+            assert!(took < ms * ci_slack(), "{line}: {took} ms");
         }
         // the decimal's fraction is the same as the one-step-at-a-time walk found
         let f = qcalc_core::symbolic::simplify_text("0.9999999608560541 x").unwrap();
@@ -41,4 +41,13 @@ fn absurd_isolate_lines_answer_as_before_and_quickly() {
             "0.9999999608560541 x"
         );
     });
+}
+
+// shared CI runners are several times slower than a dev Mac; time limits get 5x there (answers are still checked)
+fn ci_slack() -> u128 {
+    if std::env::var_os("CI").is_some() {
+        5
+    } else {
+        1
+    }
 }

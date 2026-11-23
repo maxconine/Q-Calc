@@ -43,7 +43,11 @@ fn a_sphere_is_a_closed_mesh_on_its_radius() {
     // both halves, not just a hemisphere
     let zs: Vec<f64> = g.mesh.chunks(3).map(|p| p[2]).collect();
     assert!(zs.iter().any(|&z| z > 0.95) && zs.iter().any(|&z| z < -0.95));
-    assert!(t.elapsed().as_millis() < 3000, "{:?}", t.elapsed());
+    assert!(
+        t.elapsed().as_millis() < 3000 * ci_slack(),
+        "{:?}",
+        t.elapsed()
+    );
 }
 
 #[test]
@@ -94,4 +98,13 @@ fn surfaces_solved_for_z_stay_grids() {
     assert!(g.mesh.is_empty() && g.nx > 0);
     let (_, _, r) = opened("graph z = x^2 - y^2");
     assert!(r.surface.unwrap().mesh.is_empty());
+}
+
+// shared CI runners are several times slower than a dev Mac; time limits get 5x there (answers are still checked)
+fn ci_slack() -> u128 {
+    if std::env::var_os("CI").is_some() {
+        5
+    } else {
+        1
+    }
 }

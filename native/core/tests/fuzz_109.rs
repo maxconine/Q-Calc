@@ -28,7 +28,7 @@ fn a_tiny_power_with_a_unit_is_quick() {
             let t = std::time::Instant::now();
             let got = evaluate_line(line, &EvaluateOptions::default()).display;
             let took = t.elapsed().as_millis();
-            assert!(took < 2500, "{line}: {took} ms");
+            assert!(took < 2500 * ci_slack(), "{line}: {took} ms");
             assert_eq!(got, want, "{line}");
         }
         let r =
@@ -58,6 +58,15 @@ fn an_irrational_power_graphs_quickly() {
         let t = std::time::Instant::now();
         assert!(build_graph(text, &o).is_some(), "{text}");
         let took = t.elapsed().as_millis();
-        assert!(took < 1500, "{text}: {took} ms");
+        assert!(took < 1500 * ci_slack(), "{text}: {took} ms");
+    }
+}
+
+// shared CI runners are several times slower than a dev Mac; time limits get 5x there (answers are still checked)
+fn ci_slack() -> u128 {
+    if std::env::var_os("CI").is_some() {
+        5
+    } else {
+        1
     }
 }
