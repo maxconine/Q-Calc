@@ -398,6 +398,8 @@ pub fn extra(app: &crate::app::App, cmd: &str) -> Option<serde_json::Value> {
             Some(serde_json::json!({ "ok": true }))
         }
         "wordTip" => Some(crate::word_tip::debug(app)),
+        // the tape's state and its cells' places on screen (history.rs)
+        "tape" => Some(crate::history::debug(app)),
         // a key with modifiers held, through the bar's handler (stacked_layout.rs)
         _ if cmd.starts_with("mkey ") => Some(crate::stacked_layout::debug_key(cmd)),
         // update-e2e.ps1: the update loop's state and the Updates page's line; "update check" / "update install"
@@ -456,8 +458,8 @@ pub fn force_mods(names: Option<&str>) {
         shift: has("shift"),
         win: has("win"),
     };
-    // asked for twice in one key-down (commands.rs, then the model)
-    FORCED.with(|f| f.set(Some((mods, 2))));
+    // asked for three times in one key-down (sheets.rs, commands.rs, then the model)
+    FORCED.with(|f| f.set(Some((mods, 3))));
 }
 
 /// The forced modifiers for the key-down being handled, if the pipe pressed it.

@@ -98,6 +98,9 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `sheets.rs` | the periodic table and the formula sheets, no-activate windows beside the bar: the sheets' one window a page at a time (back / forward, Open in New Window), typeset rows, the hover box and copy on press, the filter field; `close_front` for Ctrl+W, `bar_key` for Ctrl+[ / Ctrl+], `debug` for the pipe's `sheet…` commands |
 | `sheet_page.rs` | a formula sheet's page, pure (tested): which sheet a page shows, the Typst documents its cells are, the filter, the layout, what a point boxes and copies, a window's pages |
 | `sheets_typst.rs` | the formula sheets' cells compiled on the Typst thread before a page shows, drawn as Direct2D geometry in the theme's ink |
+| `sheet_search.rs` | the sheets' search (SheetSearch.swift), pure: a vocabulary of folded, squeezed, Greek-spelled words, tiers per query word, ranked rows; the Mac's 3,900-query recall set as an ignored test. Built over every sheet on a thread of its own when a formula sheet opens (sheet_page.rs `Catalog`, sheets.rs `start_index`), dropped with the last one |
+| `sheet_match.rs` | which row an explanation's Related formula is (SheetMatch.swift), pure: tiers from the same characters to the same right side under another name |
+| `sheet_explain.rs` | a row's explanation beside it after a click (ExplanationView): its text set and wrapped here, the equation the sheet's typeset cells, Related links (Tab / ↵, Back, Try it in the bar), UI Automation hyperlinks; a no-activate popup made per showing |
 | `messaging.rs` | messages through the relay: the `message` line, the cards under the bar, the name; registers settings' Messages page (`set_messages_hook`) |
 | `threads.rs` | message threads under the cards (`messages`, `messages <name>`): the history (`messages.json`), the list, a thread's lines with Copy / Save / Retry, its reply line and 📎, Trust New Key and the safety code; the one-time privacy notice |
 | `share_drop.rs` | the bar as an OLE drop target once messaging is in use: the hint while files are dragged over the bar or a thread |
@@ -200,5 +203,5 @@ retries run out does the tray say which launcher likely holds the chord.
 ## Known gaps (next agents)
 
 The games ember & frost and trails (win-games2; the games list says they aren't in yet); Mica / acrylic backdrop;
-UI Automation for the sheets and the games' insides (their windows are named only) and the line's caret and selection as a text pattern;
+UI Automation for the sheets (the games' boards are parts with values, `Play::parts`, but no Invoke pattern) and the line's caret and selection as a text pattern;
 a fade on showing (the Mac's 0.1 s: a flip swap chain can't be a layered window, so it needs DirectComposition).

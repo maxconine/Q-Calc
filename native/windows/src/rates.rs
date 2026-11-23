@@ -18,6 +18,9 @@ use crate::engine::Lane;
 use crate::qlog;
 
 const FIRST_WAIT: Duration = Duration::from_secs(5);
+/// a failed try (offline, the ECB down, a captive portal's page) is tried again this soon, not a day later
+/// (the Mac's ECBRates `retry`); cached rates are kept meanwhile
+pub const RETRY_S: f64 = 30.0 * 60.0;
 
 struct WinHttp;
 
@@ -45,6 +48,17 @@ pub fn next_wait(cache: &Cache, now: f64) -> Duration {
     Duration::from_secs_f64(due_in.clamp(60.0, DAY_S))
 }
 
+/// After a try at `now` that brought nothing usable: due again after `RETRY_S`, not a day (ECBRates `failed`).
+pub fn failed(cache: &mut Cache, now: f64) {
+    cache.checked = cache.checked.min(now - DAY_S + RETRY_S);
+}
+
+/// Whether the check just made (`before` to `after`) asked the ECB and got nothing: `checked` moved, `fetched`
+/// didn't.
+pub fn fetch_failed(before: &Cache, after: &Cache) -> bool {
+    after.checked != before.checked && after.fetched == before.fetched
+}
+
 pub fn start() {
     let Some(path) = crate::store::config_dir().map(|d| d.join("rates.json")) else {
         return;
@@ -53,7 +67,13 @@ pub fn start() {
         std::thread::sleep(FIRST_WAIT);
         loop {
             let before = Cache::load(&path);
-            let (cache, changed) = rates::refresh(&path, now_s(), &WinHttp, now_s);
+            let started = now_s();
+            let (mut cache, changed) = rates::refresh(&path, started, &WinHttp, now_s);
+            if fetch_failed(&before, &cache) {
+                failed(&mut cache, started);
+                let _ = cache.save(&path);
+                qlog!("rates: no rates from the ECB; trying again in 30 minutes");
+            }
             if cache.checked != before.checked {
                 qlog!(
                     "rates: checked; {} currencies dated {}{}",
@@ -96,5 +116,31 @@ mod tests {
         // overdue, or a clock gone backwards: soon, but never a busy loop
         assert_eq!(next_wait(&cache, at + 2.0 * DAY_S), Duration::from_secs(60));
         assert_eq!(next_wait(&Cache::default(), at), Duration::from_secs(60));
+    }
+
+    #[test]
+    fn a_failed_fetch_is_tried_again_in_half_an_hour() {
+        let at = 1_790_000_000.0;
+        let before = Cache {
+            checked: at - 2.0 * DAY_S,
+            fetched: at - 2.0 * DAY_S,
+            ..Cache::default()
+        };
+        let mut after = Cache {
+            checked: at,
+            ..before.clone()
+        };
+        assert!(fetch_failed(&before, &after));
+        failed(&mut after, at);
+        assert_eq!(next_wait(&after, at), Duration::from_secs_f64(RETRY_S));
+        // a fetch that worked waits the day
+        let ok = Cache {
+            checked: at,
+            fetched: at + 1.0,
+            ..before.clone()
+        };
+        assert!(!fetch_failed(&before, &ok));
+        // not asked (not due): nothing failed
+        assert!(!fetch_failed(&before, &before));
     }
 }

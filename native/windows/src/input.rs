@@ -36,6 +36,8 @@ pub struct Decorations {
     /// each trig argument that gets a faint `°` / ` rad` (core `angle_spans`): (where it starts, where its mark
     /// goes)
     pub angles: Vec<(u32, u32)>,
+    /// the user's names the line was answered with, for a word completed mid-line (line.rs `mid_ghost`)
+    pub names: qcalc_core::app::completion::CompletionNames,
 }
 
 impl Decorations {
@@ -248,6 +250,16 @@ impl Field {
         self.undo.run = None;
     }
 
+    /// The undo step the line is at takes the selection `a..b` (bytes) and ends its run: the edit after it is its
+    /// own step, and undo back to here selects `a..b` again (Undo.swift `markSelection`).
+    fn mark_undo_selection(&mut self, a: usize, b: usize) {
+        if self.undo.current.value == self.text {
+            self.undo.current.start = self.to_utf16(a) as usize;
+            self.undo.current.end = self.to_utf16(b) as usize;
+        }
+        self.break_run();
+    }
+
     /// Replaces the whole line (a history insert, a commit's new input, an accepted offer); its own undo step.
     pub fn set_text(&mut self, text: &str) {
         if text == self.text {
@@ -348,6 +360,8 @@ impl Field {
         }
         let (a, b) = self.selection();
         if let Some((t, s, e)) = crate::text_rules::wrap(&self.text, a, b, c) {
+            // its own step, and undo selects what was wrapped again (wrapSelection, Undo.swift `markSelection`)
+            self.mark_undo_selection(a, b);
             self.text = t;
             self.anchor = s;
             self.caret = e;
@@ -1074,6 +1088,9 @@ mod view {
         /// the faint `ans` a chained line continues from
         pub chained: bool,
         pub completion: Option<&'a str>,
+        /// a word the caret ends inside the line, completed there: (UTF-16 offset, its rest); the line after it moves
+        /// aside for it (QA item 64)
+        pub mid: Option<(u32, &'a str)>,
         /// the empty bar's rotating example (or "Calculate")
         pub placeholder: &'a str,
         /// the caret's blink phase: false draws no caret this frame
@@ -1310,7 +1327,12 @@ mod view {
                 if !ghost.is_empty()
                     && let Some(l) = self.ghost(c, &ghost, r.h)
                 {
-                    c.text_plain(&l, r.x + lead_w, r.y + dy, with_alpha(t.muted, 0.75));
+                    c.text_plain(
+                        &l,
+                        r.x + lead_w,
+                        r.y + dy,
+                        crate::contrast::faded(t.muted, 0.75),
+                    );
                     let w = measure(&l).0;
                     self.ans_rect = Some(Rect::new(r.x + lead_w, r.y, w, r.h));
                     lead_w += w;
@@ -1329,7 +1351,7 @@ mod view {
                     if !roots.is_empty() {
                         hide_signs(c, &l, &roots);
                     }
-                    c.text_plain(&l, r.x, r.y, with_alpha(t.muted, 0.8));
+                    c.text_plain(&l, r.x, r.y, crate::contrast::faded(t.muted, 0.8));
                     let base = r.y + stacked::baseline(&l);
                     for &(a, b) in &roots {
                         root(
@@ -1340,7 +1362,7 @@ mod view {
                             base,
                             (a, b),
                             x.placeholder,
-                            with_alpha(t.muted, 0.8),
+                            crate::contrast::faded(t.muted, 0.8),
                         );
                     }
                 }
@@ -1366,17 +1388,48 @@ mod view {
             let ghost = x
                 .completion
                 .filter(|_| field.caret_at_end() && self.composition.is_none());
-            // keep the caret (and a composition) in sight, with a little room past it
+            let trailing = deco.map_or(0, |d| d.trailing);
+            // one gap in the line, the text after it moved right: the IME's composition at the caret, else a word's
+            // completion where the caret ends it mid-line, else a `$…$` line's grey `)`s before its closing `$`
+            // (QA item 64): (UTF-16 offset, its text's layout or none for the composition, width)
+            let plain_line = geom.is_none() && !field.has_selection();
+            let mid = x
+                .mid
+                .filter(|&(at, _)| plain_line && at == caret16 && at < len16);
+            let dollar = (plain_line
+                && trailing > 0
+                && deco.is_some_and(|d| d.leading == 0)
+                && crate::line::typst_line(field.text()))
+            .then(|| len16 - 1);
+            let gap: Option<(u32, Option<IDWriteTextLayout>, f32)> = if self.composition.is_some() {
+                Some((caret16, None, comp_w))
+            } else if let Some((at, rest)) = mid {
+                self.ghost(c, rest, r.h).map(|l| {
+                    let gw = measure(&l).0;
+                    (at, Some(l), gw)
+                })
+            } else if let Some(at) = dollar {
+                self.ghost(c, &")".repeat(trailing), r.h).map(|l| {
+                    let gw = measure(&l).0;
+                    (at, Some(l), gw)
+                })
+            } else {
+                None
+            };
+            let (gap_at, gap_w) = gap.as_ref().map_or((u32::MAX, 0.0), |g| (g.0, g.2));
+            // the caret after the gap moves with the text; at the gap it stands before it
+            let caret = caret + if caret16 > gap_at { gap_w } else { 0.0 };
+            // keep the caret (and a composition or a ghost at it) in sight, with a little room past it
             let room = 4.0;
-            let want = caret + comp_w;
+            let want = caret + if caret16 == gap_at { gap_w } else { 0.0 };
             if want - self.scroll > r.w - room {
                 self.scroll = want - r.w + room;
             }
             if caret - self.scroll < 0.0 {
                 self.scroll = caret;
             }
-            if w + comp_w - self.scroll < r.w - room {
-                self.scroll = (w + comp_w - r.w + room).max(0.0);
+            if w + gap_w - self.scroll < r.w - room {
+                self.scroll = (w + gap_w - r.w + room).max(0.0);
             }
             let x0 = r.x - self.scroll;
             self.text_x = x0;
@@ -1389,12 +1442,19 @@ mod view {
                         g.span(a, b),
                         g.band(a, b).unwrap_or((r.h * 0.5 - 18.0 + dy, 36.0)),
                     ),
-                    None => ((xat(a), xat(b)), (r.h * 0.5 - 15.0, 30.0)),
+                    None => (
+                        (
+                            xat(a) + if a >= gap_at { gap_w } else { 0.0 },
+                            xat(b) + if b > gap_at { gap_w } else { 0.0 },
+                        ),
+                        (r.h * 0.5 - 15.0, 30.0),
+                    ),
                 };
                 c.fill_round(Rect::new(x0 + xa, r.y + top, xb - xa, h), 3.0, t.selection);
             }
-            // a composition opens a gap at the caret: the text after it moves right
-            let split = self.composition.is_some().then_some(caret);
+            // a composition (or a ghost) opens a gap: the text after it moves right
+            let split = gap.as_ref().map(|g| xat(g.0));
+            let comp_w = gap_w;
             let draw = |color: Color, from: f32, to: f32| {
                 if let Some(g) = &geom {
                     g.draw(c, &layout, x0, r.y, r.h, color);
@@ -1456,13 +1516,7 @@ mod view {
             if let Some(g) = &geom {
                 g.decorate(c, x0, r.y);
             }
-            let shift = |p: u32| {
-                if split.is_some() && p >= caret16 {
-                    comp_w
-                } else {
-                    0.0
-                }
-            };
+            let shift = |p: u32| if p >= gap_at { gap_w } else { 0.0 };
             // a root's sign and the bar over what it takes, one stroke
             // (the baseline asked of the layout only for a line with a root)
             let base = if roots.is_empty() {
@@ -1488,11 +1542,22 @@ mod view {
                 .then(|| crate::stacked::limit_slot(field.limits(), caret16 as usize))
                 .flatten();
             let moved = Rect::new(r.x, r.y + dy, r.w, r.h);
-            let limit_caret = self.limits(c, field, &xat, x0, moved, (in_limit, caret16));
+            let xat_moved = |p: u32| xat(p) + shift(p);
+            let limit_caret = self.limits(c, field, &xat_moved, x0, moved, (in_limit, caret16));
             if let Some(d) = deco {
                 // .quick-squiggle: a wavy line, muted at 70%, under where a blank answer stops reading
-                if let Some((a, b)) = d.squiggle {
-                    let (xa, xb) = (xat(a), xat(b));
+                // none where it ends at a completion ghost shown after it: the ghost already says what the word
+                // becomes (GhostRules `squiggle`, QA items 64 and 105)
+                let ghost_at = if ghost.is_some() {
+                    Some(len16)
+                } else {
+                    mid.map(|m| m.0)
+                };
+                if let Some((a, b)) = d.squiggle.filter(|s| Some(s.1) != ghost_at) {
+                    let (xa, xb) = (
+                        xat(a) + shift(a),
+                        xat(b) + if b > gap_at { gap_w } else { 0.0 },
+                    );
                     squiggle(
                         c,
                         x0 + xa,
@@ -1501,7 +1566,7 @@ mod view {
                         geom.as_ref()
                             .filter(|g| !g.xs.is_empty() && !field.stacks().is_empty())
                             .map_or(r.y + r.h * 0.5 + 13.0, |g| r.y + g.squiggle_y(a, b, r.h)),
-                        with_alpha(t.muted, 0.7),
+                        crate::contrast::faded(t.muted, 0.7),
                     );
                 }
                 // the unit offered after its number, muted, in the gap opened for it
@@ -1511,7 +1576,7 @@ mod view {
                     && let Some(l) = self.ghost(c, text, r.h)
                 {
                     let ow = measure(&l).0;
-                    let end = xat(*at);
+                    let end = xat(*at) + if *at > gap_at { gap_w } else { 0.0 };
                     c.text_plain(&l, x0 + end - ow, r.y + dy, t.muted);
                     offer_at = Some((*at, ow));
                 }
@@ -1527,12 +1592,22 @@ mod view {
                     }
                 }
             }
+            // the ghost in the gap: a mid-line completion's rest, or a `$…$` line's `)`s
+            if let Some((at, Some(l), _)) = &gap {
+                let faded = if mid.is_some() { 0.8 } else { 1.0 };
+                c.text_plain(
+                    l,
+                    x0 + xat(*at),
+                    r.y + dy,
+                    crate::contrast::faded(t.muted, faded),
+                );
+            }
             // after the end: the completion's rest (caret at the end), then the inferred `)`s
             let mut tail = x0 + w + comp_w;
             if let Some(g) = ghost
                 && let Some(l) = self.ghost(c, g, r.h)
             {
-                c.text_plain(&l, tail, r.y + dy, with_alpha(t.muted, 0.8));
+                c.text_plain(&l, tail, r.y + dy, crate::contrast::faded(t.muted, 0.8));
                 tail += measure(&l).0;
             }
             // an angle mark for an argument still open at the end of the line
@@ -1543,8 +1618,8 @@ mod view {
                 c.text_plain(&l, tail, r.y + dy, t.muted);
                 tail += measure(&l).0;
             }
-            let trailing = deco.map_or(0, |d| d.trailing);
             if trailing > 0
+                && dollar.is_none()
                 && !field.text().is_empty()
                 && let Some(l) = self.ghost(c, &")".repeat(trailing), r.h)
             {
@@ -2117,6 +2192,60 @@ mod tests {
         assert_eq!(f.text(), "1 +2 *3");
         assert!(f.undo());
         assert_eq!(f.text(), "");
+    }
+
+    /// Mac test-input.sh's undo runs (20 Nov 2026, QA item 71): a paste, a cut, a completion and a wrap are each
+    /// their own step; a typed `[` joins the run and undo / redo put the caret back where it landed.
+    #[test]
+    fn undo_steps_for_paste_cut_completions_and_brackets() {
+        // `12`, then `+34` pasted at once: one Ctrl+Z leaves `12`
+        let mut f = typed("12");
+        f.paste("+34");
+        assert_eq!(f.text(), "12+34");
+        assert!(f.undo());
+        assert_eq!(f.text(), "12");
+        // typing after a paste starts a run of its own
+        let mut f = typed("1");
+        f.paste("+2");
+        f.char16(u16::from(b'3'));
+        assert!(f.undo());
+        assert_eq!(f.text(), "1+2");
+        // a cut likewise, and typing after it
+        let mut f = typed("1+2");
+        f.left(false, true);
+        assert_eq!(f.cut().as_deref(), Some("2"));
+        f.char16(u16::from(b'5'));
+        assert!(f.undo());
+        assert_eq!(f.text(), "1+");
+        assert!(f.undo());
+        assert_eq!(f.text(), "1+2");
+        // a completion taken (line.rs inserts it and ends the run): ⌘Z takes only it
+        let mut f = typed("sq");
+        f.insert("rt(");
+        f.break_run();
+        assert!(f.undo());
+        assert_eq!(f.text(), "sq");
+        // `v=[1 2`: the `[` joins the run, and redo puts the caret back inside the brackets
+        let mut f = typed("v=[1 2");
+        assert_eq!(f.text(), "v=[1 2]");
+        assert!(f.undo());
+        assert_eq!(f.text(), "");
+        assert!(f.redo());
+        assert_eq!(f.text(), "v=[1 2]");
+        assert_eq!(f.caret(), "v=[1 2".len());
+        // a wrap is its own step after typing, and undo selects what was wrapped again
+        let mut f = typed("2+3");
+        f.left(false, true);
+        f.left(false, true);
+        f.char16(u16::from(b'('));
+        assert_eq!(f.text(), "2(+3)");
+        f.end(false);
+        f.char16(u16::from(b'1'));
+        assert!(f.undo());
+        assert_eq!(f.text(), "2(+3)");
+        assert!(f.undo());
+        assert_eq!(f.text(), "2+3");
+        assert_eq!(f.selected_text(), "+3");
     }
 
     #[test]

@@ -55,6 +55,8 @@ impl Rgba {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Colors {
     pub dark: bool,
+    /// a contrast theme is on (contrast.rs): the games' own colours go darker where text sits on them
+    pub contrast: bool,
     pub bg: Rgba,
     pub bg_tape: Rgba,
     pub ink: Rgba,
@@ -71,6 +73,7 @@ impl Colors {
         let pick = |l: u32, d: u32| Rgba::hex(if dark { d } else { l }, 1.0);
         Colors {
             dark,
+            contrast: false,
             bg: pick(0xffffff, 0x2c2c2e),
             bg_tape: pick(0xf5f5f7, 0x252527),
             ink: pick(0x1d1d1f, 0xf5f5f7),
@@ -102,6 +105,7 @@ impl Colors {
         };
         Colors {
             dark: t.dark,
+            contrast: true,
             bg: c(t.bg),
             bg_tape: c(t.bg_tape),
             ink: c(t.ink),

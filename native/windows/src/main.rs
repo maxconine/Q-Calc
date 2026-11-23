@@ -7,8 +7,10 @@
 #[cfg(windows)]
 mod a11y;
 mod autostart;
+mod card_rules;
 mod commands;
 mod edge;
+mod exact_text;
 mod exponent;
 mod hotkey;
 mod keys;
@@ -18,6 +20,7 @@ mod perf;
 mod place;
 mod stacked;
 mod store;
+mod tape_rules;
 mod text_rules;
 mod tour;
 
@@ -107,7 +110,11 @@ mod share_debug;
 mod share_drop;
 #[cfg(windows)]
 mod share_keys;
+#[cfg(windows)]
+mod sheet_explain;
+mod sheet_match;
 mod sheet_page;
+mod sheet_search;
 #[cfg(windows)]
 mod sheets;
 #[cfg(windows)]
@@ -116,6 +123,8 @@ mod sheets_typst;
 mod stacked_layout;
 #[cfg(windows)]
 mod stacked_text;
+#[cfg(windows)]
+mod surfaces;
 #[cfg(windows)]
 mod systems;
 #[cfg(windows)]

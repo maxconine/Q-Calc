@@ -56,6 +56,7 @@ use crate::engine::{Lane, done};
 use crate::graph::*;
 use crate::graph_settings::{self as gs, Check, FieldId, GraphPrefs, Seg};
 use crate::graph3d::{self, Cube, Frame, Line, P2, P3, Piece, Plane, Scene};
+use crate::later;
 use crate::model::{BarModel, now_ms};
 use crate::render::{Canvas, Color, Gfx, Rect, Theme, caret_x, measure, size, with_alpha};
 
@@ -954,7 +955,7 @@ fn geo(gfx: &Gfx, g: &GraphState, width: f32) -> Option<Rc<Geo>> {
     push(Btn::Add, "\u{E710}", &icon, 11.0, false, true)?;
     push(Btn::ZoomIn, "\u{E8A3}", &icon, 11.0, false, true)?;
     push(Btn::ZoomOut, "\u{E71F}", &icon, 11.0, false, true)?;
-    if g.kind() == Kind::Surface && g.main().is_some_and(|p| p.ok()) {
+    if g.kind() == Kind::Surface && g.main().is_some_and(|p| p.ok() && !p.mesh()) {
         push(
             Btn::Contour,
             "contour",
@@ -1121,7 +1122,7 @@ fn geo(gfx: &Gfx, g: &GraphState, width: f32) -> Option<Rc<Geo>> {
         let w = h * SVG_W / sh;
         geo.svg = Some(Rect::new(x0, y, w, h));
         y += h;
-        if g.sample.is_some() {
+        if g.sample.is_some() && g.lists_points() {
             y += 8.0;
             let several = !g.layers.is_empty();
             let mut section = |title: &str,
@@ -1463,6 +1464,7 @@ pub fn paint(c: &Canvas, g: &GraphState, r: Rect) {
             );
         }
     }
+    paint_tip(c, g, r);
 }
 
 /// A rounded rect's edge.
@@ -2504,6 +2506,11 @@ fn base_3d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs) {
                 let (fill, mesh) = cs[usize::from(*level).min(cs.len() - 1)];
                 p.poly(pts, Some(fill), Some((mesh, 0.5)));
             }
+            Piece::Triangle(pts, level, layer) => {
+                let cs = colours.entry(*layer).or_insert_with(|| shades(*layer));
+                let (fill, _) = cs[usize::from(*level).min(cs.len() - 1)];
+                p.poly(pts, Some(fill), Some((fill, 0.5)));
+            }
             Piece::Segment(a, b, kind) => {
                 let (col, w) = match kind {
                     Line::Minor => (minor, 0.5),
@@ -2800,8 +2807,8 @@ pub fn click(app: &mut App, x: f32, y: f32, double: bool) -> bool {
             Btn::View3D => set_3d(m, e, true),
             Btn::Contour => set_3d(m, e, false),
             Btn::Add => add_layer(m, e),
-            Btn::ZoomOut => zoom(m, e, 1.25, 0.5),
-            Btn::ZoomIn => zoom(m, e, 0.8, 0.5),
+            Btn::ZoomOut => zoom(m, e, 1.25, 0.5, 0.5),
+            Btn::ZoomIn => zoom(m, e, 0.8, 0.5, 0.5),
             Btn::Wrench | Btn::Export => {
                 if let Some(g) = &mut m.graph {
                     if h.btn == Btn::Wrench {
@@ -3034,6 +3041,7 @@ pub fn mouse_move(app: &mut App, x: f32, y: f32) -> bool {
         g.hover = Some((x - r.x, y - r.y));
         g.pointer = pointer;
     }
+    hover_tip(app, Some((x - r.x, y - r.y)));
     app.model.touch();
     match pointer {
         Some(p) => readout(app, p),
@@ -3045,6 +3053,104 @@ pub fn mouse_move(app: &mut App, x: f32, y: f32) -> bool {
         }
     }
     true
+}
+
+/// The hover label's text for a head button (HeadIcon's tips).
+fn btn_tip(b: Btn) -> &'static str {
+    match b {
+        Btn::View3D => "Drag to orbit, wheel to zoom, Shift + drag to pan",
+        Btn::Contour => "Level curves, seen from above",
+        Btn::ZoomOut => "Zoom out",
+        Btn::ZoomIn => "Zoom in",
+        Btn::Add => "Add an equation",
+        Btn::Export => "Export a picture of the graph",
+        Btn::Wrench => "Graph settings",
+        Btn::Reset => "Reset view",
+    }
+}
+
+/// What has a hover label under `at` (panel DIPs): a head button, an equation from the bar's `;` in the settings
+/// (edited there, not here), an added equation's remove button.
+fn tip_target(geo: &Geo, at: (f32, f32)) -> Option<(Rect, &'static str)> {
+    let (x, y) = at;
+    if let Some(h) = geo.head.iter().find(|h| h.enabled && h.rect.contains(x, y)) {
+        return Some((h.rect, btn_tip(h.btn)));
+    }
+    for e in &geo.eqs {
+        if let Some(rm) = e.remove.filter(|rm| rm.contains(x, y)) {
+            return Some((rm, "Remove"));
+        }
+        if e.index > 0 && e.field.is_none() && e.rect.contains(x, y) {
+            return Some((e.rect, "After a ; in the bar: edit it there"));
+        }
+    }
+    None
+}
+
+thread_local! {
+    /// when a hover label was last on screen: the next shows at once within 5 s of it (HoverTip.warm)
+    static TIP_LAST: std::cell::Cell<Option<Instant>> = const { std::cell::Cell::new(None) };
+}
+
+/// The bar's hover label over the panel (HoverTip, in place of a system tooltip): after a 0.6 s rest under what's
+/// hovered, at once while one showed in the last 5 s, gone the moment the pointer leaves it.
+fn hover_tip(app: &mut App, at: Option<(f32, f32)>) {
+    let target = at.and_then(|a| cached_geo(app).and_then(|geo| tip_target(&geo, a)));
+    let Some(g) = &mut app.model.graph else {
+        return;
+    };
+    let current = g.tip;
+    if current.is_some() && current.map(|t| t.0) == target.map(|t| t.0) {
+        return;
+    }
+    if current.is_some() {
+        TIP_LAST.with(|t| t.set(Some(Instant::now())));
+        g.tip = None;
+    }
+    later::cancel("graph-tip");
+    let Some(target) = target else {
+        return;
+    };
+    let warm = TIP_LAST
+        .with(|t| t.get())
+        .is_some_and(|t| t.elapsed().as_secs_f32() < 5.0);
+    if warm {
+        g.tip = Some(target);
+        return;
+    }
+    later::after("graph-tip", 600, move |app| {
+        let now = cached_geo(app)
+            .zip(app.model.graph.as_ref().and_then(|g| g.hover))
+            .and_then(|(geo, h)| tip_target(&geo, h));
+        if now.is_some_and(|t| t.0 == target.0)
+            && let Some(g) = &mut app.model.graph
+        {
+            g.tip = Some(target);
+            app.model.touch();
+        }
+    });
+}
+
+/// The hover label: the word tip's ink pill with the background's colour for text, under what's hovered (above it
+/// when the panel has no room below), kept inside the panel.
+fn paint_tip(c: &Canvas, g: &GraphState, r: Rect) {
+    let Some((at, text)) = g.tip else {
+        return;
+    };
+    let t = c.theme;
+    let Some(l) = c.gfx.layout(text, &c.gfx.fonts.caption, 0.0, 15.0) else {
+        return;
+    };
+    let (w, _) = measure(&l);
+    let (pw, ph) = (w + 14.0, 23.0);
+    let mut y = r.y + at.bottom() + 4.0;
+    if y + ph > r.bottom() {
+        y = r.y + at.y - 4.0 - ph;
+    }
+    let x = (r.x + at.x).min(r.right() - pw - 2.0).max(r.x + 2.0);
+    let pill = Rect::new(x, y, pw, ph);
+    c.fill_round(pill, size::RADIUS_S, t.ink);
+    c.text(&l, pill.x + 7.0, pill.y + 4.0, t.bg);
 }
 
 fn to_svg_from(g: &GraphState, panel: Option<Rect>, x: f32, y: f32) -> Option<P2> {
@@ -3098,6 +3204,20 @@ fn readout(app: &mut App, p: P2) {
         };
         let [x, y, z] = sc.0.data(cube_p);
         g.reading = Some(Reading::Surface { x, y, z, layer });
+        // an implicit surface (`x^2 + y^2 + z^2 = 1`) has no one z over (x, y): the mesh's own point under the
+        // pointer (asking the engine gave a z off the surface, inside a torus's hole)
+        let mesh = if layer == 0 {
+            g.implicit_surface()
+        } else {
+            g.layers
+                .get(layer - 1)
+                .and_then(|l| g.layer_plot(l))
+                .is_some_and(Plot::mesh)
+        };
+        if mesh {
+            app.engine.cancel(Lane::GraphReadout);
+            return;
+        }
         let input = if layer == 0 {
             g.input()
         } else {
@@ -3239,6 +3359,10 @@ pub fn leave(app: &mut App) -> bool {
     if BENCH_POINTER.with(|b| b.get()) {
         return false;
     }
+    if app.model.graph.as_ref().is_some_and(|g| g.tip.is_some()) {
+        app.model.touch();
+    }
+    hover_tip(app, None);
     let Some(g) = &mut app.model.graph else {
         return false;
     };
@@ -3295,6 +3419,7 @@ pub fn wheel(app: &mut App, horizontal: bool, wp: WPARAM, lp: LPARAM) -> bool {
                 &app.engine,
                 (-notches * 0.2).clamp(-0.5, 0.5).exp(),
                 0.5,
+                0.5,
             );
         }
         return true;
@@ -3316,7 +3441,9 @@ pub fn wheel(app: &mut App, horizontal: bool, wp: WPARAM, lp: LPARAM) -> bool {
     let k = if ctrl { 0.01 } else { 0.002 };
     let factor = (px * k).clamp(-0.5, 0.5).exp();
     let at = f64::from((v.0 - PAD_LEFT) / PLOT_W);
-    zoom(&mut app.model, &app.engine, factor, at);
+    // and y about the pointer too (its fraction up the plot), so the point under it stays put
+    let at_y = f64::from((PAD_TOP + PLOT_H - v.1) / PLOT_H);
+    zoom(&mut app.model, &app.engine, factor, at, at_y);
     true
 }
 

@@ -246,6 +246,16 @@ pub fn taskbar_dark() -> bool {
     status.is_err() || light == 0
 }
 
+/// The icon's tooltip, which is also its name to Narrator (the Mac's status item reads `Q Calc`, or
+/// `Q Calc, no shortcut set` when the shortcut is taken; App.swift `refreshStatusItem`).
+pub fn tip(no_shortcut: bool) -> &'static str {
+    if no_shortcut {
+        "Q Calc, no shortcut set"
+    } else {
+        "Q Calc"
+    }
+}
+
 fn copy_into(dst: &mut [u16], s: &str) {
     let wide: Vec<u16> = s.encode_utf16().take(dst.len() - 1).collect();
     dst[..wide.len()].copy_from_slice(&wide);
@@ -257,6 +267,8 @@ pub struct Tray {
     msg: u32,
     icon: Option<HICON>,
     pub added: bool,
+    /// no shortcut opens the bar: the tooltip says so
+    no_shortcut: bool,
 }
 
 impl Tray {
@@ -266,6 +278,7 @@ impl Tray {
             msg,
             icon: None,
             added: false,
+            no_shortcut: false,
         }
     }
 
@@ -298,7 +311,7 @@ impl Tray {
         d.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
         d.uCallbackMessage = self.msg;
         d.hIcon = self.make_icon();
-        copy_into(&mut d.szTip, "Q Calc");
+        copy_into(&mut d.szTip, tip(self.no_shortcut));
         // SAFETY: d is a live, sized struct
         unsafe {
             let _ = Shell_NotifyIconW(NIM_DELETE, &d);
@@ -307,6 +320,23 @@ impl Tray {
             let _ = Shell_NotifyIconW(NIM_SETVERSION, &d);
         }
         self.added
+    }
+
+    /// After every message (app.rs `after`): whether any shortcut is registered now; the tooltip follows, touched
+    /// only when that changes.
+    pub fn set_no_shortcut(&mut self, none: bool) {
+        if none == self.no_shortcut {
+            return;
+        }
+        self.no_shortcut = none;
+        if !self.added {
+            return;
+        }
+        let mut d = self.data();
+        d.uFlags = NIF_TIP;
+        copy_into(&mut d.szTip, tip(none));
+        // SAFETY: as above
+        let _ = unsafe { Shell_NotifyIconW(NIM_MODIFY, &d) };
     }
 
     /// The taskbar changed colour.
@@ -425,6 +455,12 @@ mod tests {
             ..MenuState::default()
         };
         assert_eq!(items(&keyed)[0].1, "Show Q Calc\tAlt+Space");
+    }
+
+    #[test]
+    fn the_icon_is_named_and_says_when_no_shortcut_works() {
+        assert_eq!(tip(false), "Q Calc");
+        assert_eq!(tip(true), "Q Calc, no shortcut set");
     }
 
     #[test]

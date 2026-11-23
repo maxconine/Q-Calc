@@ -57,6 +57,8 @@ pub enum Role {
     ComboBox,
     /// with `selected`: a page of a window
     Tab,
+    /// a link in a text (a sheet explanation's Related formulas)
+    Link,
 }
 
 impl Role {
@@ -70,6 +72,7 @@ impl Role {
             Role::RadioButton => UIA_RadioButtonControlTypeId,
             Role::ComboBox => UIA_ComboBoxControlTypeId,
             Role::Tab => UIA_TabItemControlTypeId,
+            Role::Link => UIA_HyperlinkControlTypeId,
         }
     }
 }
@@ -329,6 +332,17 @@ pub fn changed(hwnd: HWND, now: Option<Tree>) {
 
 /// Has a reader say `text` (a notification from the window's root), e.g. a mode toggled or a card arriving.
 pub fn notify(hwnd: HWND, text: &str) {
+    notify_as(hwnd, text, false);
+}
+
+/// Whether notifications reach a reader on this Windows (1709 onward).
+pub fn notifies() -> bool {
+    crate::compat::uia_notification().is_some()
+}
+
+/// `notify`, or with `polite` at the normal priority, each one replacing the last still waiting (the live answer,
+/// so a key's echo isn't cut off and a reader isn't left reading old answers).
+pub fn notify_as(hwnd: HWND, text: &str, polite: bool) {
     let key = hwnd.0 as isize;
     let Some(source) = with_kept(|w| w.get(&key).map(|k| k.source)) else {
         return;
@@ -341,13 +355,18 @@ pub fn notify(hwnd: HWND, text: &str) {
         return;
     };
     let root: IRawElementProviderSimple = Root { hwnd: key, source }.into();
-    let (text, activity) = (BSTR::from(text.trim()), BSTR::from("qcalc"));
+    let (processing, activity) = if polite {
+        (NotificationProcessing_MostRecent, "qcalc-answer")
+    } else {
+        (NotificationProcessing_ImportantAll, "qcalc")
+    };
+    let (text, activity) = (BSTR::from(text.trim()), BSTR::from(activity));
     // SAFETY: a plain notification about our own provider; the BSTRs and the provider outlive the call
     let _ = unsafe {
         raise(
             root.as_raw(),
             NotificationKind_Other.0,
-            NotificationProcessing_ImportantAll.0,
+            processing.0,
             text.as_ptr(),
             activity.as_ptr(),
         )

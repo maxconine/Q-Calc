@@ -81,17 +81,38 @@ pub struct AnswerState {
     /// a closed form the engine's search found after the answer, shown in place of `live.exact`
     pub upgraded_exact: Option<String>,
     closed: Option<Closed>,
+    /// the search job (`closed_form_job`) `upgraded_exact` or the search under way belongs to: an answer again for
+    /// the same text (a mode toggled, a d/dt chip) keeps them only for the same job (BarModel.swift `upgradeJob`)
+    upgrade_job: Option<String>,
     /// the "✓ copied" flash is up
     pub copied: bool,
 }
 
 impl AnswerState {
+    /// The closed form found, or being searched for, goes (`dropUpgrade`): the line changed, or was answered
+    /// outside the live lane.
+    pub fn drop_upgrade(&mut self) {
+        self.upgraded_exact = None;
+        self.closed = None;
+        self.upgrade_job = None;
+    }
+
+    /// A live answer with search job `job` landed for the line as it is: true when a new search starts (the old
+    /// one and its form dropped), false when the job is the one already searched or under way, kept as it is.
+    fn new_upgrade(&mut self, job: Option<&String>) -> bool {
+        if job.is_some() && job == self.upgrade_job.as_ref() {
+            return false;
+        }
+        self.drop_upgrade();
+        self.upgrade_job = job.cloned();
+        job.is_some()
+    }
+
     /// The line changed: what belonged to the old text goes (forms, the closed form, the flash).
     pub fn text_changed(&mut self, text: &str) {
         self.forms.clear();
         self.form_index = 0;
-        self.upgraded_exact = None;
-        self.closed = None;
+        self.drop_upgrade();
         if self.copied {
             self.copied = false;
             timer::stop(timer::COPIED);
@@ -151,6 +172,10 @@ fn pretty(m: &BarModel, s: &str) -> String {
     if let Some(p) = crate::matrices::pretty(m, s) {
         return p;
     }
+    // native only: an exact form with `pi` as maths (`π²/6`, QA item 105)
+    if let Some(t) = crate::exact_text::exact_answer(s) {
+        return t;
+    }
     match &m.live {
         Some(a) if s == a.display && !a.pretty.is_empty() => {
             roots_beside_words(radicals_if_math(&a.pretty))
@@ -166,11 +191,17 @@ pub fn pretty_text(s: &str) -> String {
     if s.starts_with('[') || s.starts_with('λ') || s.starts_with("span{") {
         return crate::matrix_text::pretty(&radicals(s));
     }
+    // native only: a typed target unit's powers raised (`1e+18 m2` → `1e+18 m²`, QA item 104), display only
+    let s = &*crate::exact_text::unit_powers(s);
     // a solve's `±2sqrt(2)`: the sign kept the rest from reading as maths, so the root stayed plain text
     if let Some(sign) = s.chars().next().filter(|c| matches!(c, '±' | '∓'))
         && s.len() > sign.len_utf8()
     {
         return format!("{sign}{}", pretty_text(&s[sign.len_utf8()..]));
+    }
+    // native only: an exact form with `pi` as maths (`pi^2/6` → `π²/6`, QA item 105)
+    if let Some(t) = crate::exact_text::exact_answer(s) {
+        return t;
     }
     roots_beside_words(radicals_if_math(&pretty_answer(s)))
 }
@@ -466,7 +497,10 @@ pub fn specs(m: &BarModel) -> Vec<Spec> {
     let lead = a
         .solve
         .as_ref()
-        .filter(|s| matches!(s.outcome, SolveOutcome::Roots | SolveOutcome::Complex) && !s.variable.is_empty())
+        .filter(|s| {
+            matches!(s.outcome, SolveOutcome::Roots | SolveOutcome::Complex)
+                && !s.variable.is_empty()
+        })
         .map(|s| {
             spec(
                 format!("{} =", s.variable),
@@ -684,7 +718,7 @@ fn total(items: &[Item]) -> f32 {
 /// The answer's pieces fitted to `max_w`: at their sizes, else shrunk (to half at most), else the one piece cut.
 pub fn measure(gfx: &Gfx, m: &BarModel, max_w: f32) -> AnswerLayout {
     let mut specs = specs(m);
-    if specs.is_empty() || max_w <= 0.0 {
+    if (specs.is_empty() && !m.answer.copied) || max_w <= 0.0 {
         return AnswerLayout::default();
     }
     let flash = if m.answer.copied {
@@ -701,6 +735,14 @@ pub fn measure(gfx: &Gfx, m: &BarModel, max_w: f32) -> AnswerLayout {
         None
     };
     let flash_w = flash.as_ref().map_or(0.0, |f| f.w + f.pad.0 + f.pad.1);
+    // a copy from the tape with no answer up: the flash alone
+    if specs.is_empty() {
+        return AnswerLayout {
+            items: Vec::new(),
+            width: if flash.is_some() { flash_w } else { 0.0 },
+            flash,
+        };
+    }
     let room = (max_w - flash_w).max(1.0);
     let Some(mut items) = lay(gfx, &specs, 1.0, 0.0) else {
         return AnswerLayout::default();
@@ -824,12 +866,12 @@ fn ink(c: &Canvas, ink: Ink, copied: bool) -> Color {
         Ink::Answer if copied => t.answer_hover,
         Ink::Answer => t.answer,
         Ink::Muted => t.muted,
-        Ink::Steady => with_alpha(t.muted, 0.5),
+        Ink::Steady => crate::contrast::faded(t.muted, 0.5),
     }
 }
 
 pub fn paint(c: &Canvas, l: &AnswerLayout, r: Rect) {
-    if l.items.is_empty() || r.w <= 0.0 {
+    if (l.items.is_empty() && l.flash.is_none()) || r.w <= 0.0 {
         return;
     }
     c.push_clip(Rect::new(r.x, r.y - 4.0, r.w + PAD_X, r.h + 8.0));
@@ -901,8 +943,13 @@ pub fn landed(
     if !is_blank(&answer) {
         m.answer.last_live_text = typed.clone();
     }
+    // a closed form found under the old mode never stays beside the new decimal, and the same search isn't run
+    // twice (the new job's future is dropped unpolled)
+    let fresh = m.answer.new_upgrade(answer.closed_form_job.as_ref());
     m.set_live(&typed, answer, chained);
-    m.answer.closed = closed.map(|job| Closed { text: typed, job });
+    if fresh {
+        m.answer.closed = closed.map(|job| Closed { text: typed, job });
+    }
     poll(app);
     crate::typst_row::refresh(&mut app.model, &app.engine);
     crate::matrices::refresh_steps(&mut app.model, &app.engine);
@@ -996,12 +1043,13 @@ pub fn cycle_forms(m: &mut BarModel, engine: &EngineThread, back: bool) {
     });
 }
 
-/// The display, then the engine's other forms, without repeats or `undefined`.
+/// The display, then the engine's other forms, without repeats among them or `undefined`. Slot 0 is the answer as
+/// shown; the engine already leaves that out unless it is a dual (`√2 ≈ 1.41421`), whose decimal alone is a form
+/// of its own (useAnswerForms), so the forms aren't deduped against slot 0 (the cycle skipped it before).
 pub fn forms_list(display: String, others: impl Iterator<Item = String>) -> Vec<String> {
     let mut seen = std::collections::HashSet::new();
     std::iter::once(display)
-        .chain(others)
-        .filter(|f| !f.contains("undefined") && seen.insert(f.trim().to_string()))
+        .chain(others.filter(|f| !f.contains("undefined") && seen.insert(f.trim().to_string())))
         .collect()
 }
 
@@ -1016,29 +1064,88 @@ pub fn copied_text(unitless: bool, s: &str) -> String {
     }
 }
 
-/// Copies `value` (a piece clicked) and flashes.
+/// Copies `value` (a piece clicked) and flashes: without its unit when "copy unitless" is on, a reaction in ASCII,
+/// never the unit error (the core's `answer_copy`).
 pub fn copy(m: &mut BarModel, value: &str) {
     if value.trim().is_empty() {
         return;
     }
-    m.to_clipboard = Some(copied_text(m.settings.copy_unitless, value));
+    let copied = qcalc_core::app::touches::answer_copy(value, m.settings.copy_unitless);
+    if copied.is_empty() {
+        return;
+    }
+    m.to_clipboard = Some(copied);
     flash(m);
 }
 
-/// Ctrl+C with nothing selected: the answer as shown.
+/// Ctrl+C with nothing selected in the line: a tape row picked with ↑ copies its pick (history.rs), else the answer
+/// as shown.
 pub fn copy_shown(m: &mut BarModel) {
+    if crate::history::copy_selected(m, false) {
+        return;
+    }
     let shown = shown_answer(m);
     copy(m, &shown);
 }
 
-/// Ctrl+Shift+C: `line = answer`, the line as Typst when "copy Typst" is on.
+/// Ctrl+Shift+C: a tape row picked with ↑ copies its own line; else the live line as the tape would keep it, its
+/// grey parens filled, then `= answer` (the core's `live_line_copy`: `sqrt(8) = 2√2 ≈ 2.82843`,
+/// `x^2 = 9, x = -3, 3`), the line as Typst when "copy Typst" is on.
 pub fn copy_line(m: &mut BarModel) {
-    if live_of(m).is_none() {
+    let line = match crate::history::line_copy(m) {
+        Some(line) => line,
+        None => {
+            let Some(a) = live_of(m) else { return };
+            // a Ctrl+Shift+E form or an Alt+↑ step stands alone; otherwise the exact side and the decimal as Answer
+            // form reads them
+            let stepped = m.line.prefix_shown.is_some()
+                || (m.answer.form_index > 0 && m.answer.form_index < m.answer.forms.len());
+            let display = if stepped {
+                shown_answer(m)
+            } else {
+                crate::exponent::shown(m, &a.display)
+            };
+            // the exact side as the slot reads it (`2√2`, not `2sqrt(2)`)
+            let exact = if stepped {
+                None
+            } else {
+                exact(m).map(radicals_if_math)
+            };
+            let solve = a.solve.as_ref().map(|s| {
+                let roots = matches!(s.outcome, SolveOutcome::Roots | SolveOutcome::Complex);
+                (s.variable.as_str(), if roots { "roots" } else { "message" })
+            });
+            let form = if m.settings.answer_form == "approx" {
+                core_answer::AnswerForm::Approx
+            } else {
+                core_answer::AnswerForm::Exact
+            };
+            let text = m.field.text();
+            let line = qcalc_core::app::touches::live_line_copy(
+                text,
+                m.chained,
+                m.ans_value.as_deref(),
+                &display,
+                exact.as_deref(),
+                solve,
+                form,
+            );
+            // the line as Typst when that setting is on (`copiedEquation`), `= answer` after it as above
+            if m.settings.typst_copy
+                && !line.is_empty()
+                && let Some(rest) = line.strip_prefix(text.trim())
+            {
+                let typst = qcalc_core::app::typst_math::copied_equation(text.trim(), true);
+                format!("{typst}{rest}")
+            } else {
+                line
+            }
+        }
+    };
+    if line.is_empty() {
         return;
     }
-    let line =
-        qcalc_core::app::typst_math::copied_equation(m.field.text().trim(), m.settings.typst_copy);
-    m.to_clipboard = Some(format!("{line} = {}", shown_answer(m)));
+    m.to_clipboard = Some(line);
     flash(m);
 }
 
@@ -1165,11 +1272,17 @@ mod tests {
     fn forms_list_dedupes() {
         let l = forms_list(
             "0.5".into(),
-            ["1/2", " 0.5", "undefined m", "5e-1"]
+            ["1/2", " 1/2", "undefined m", "5e-1"]
                 .into_iter()
                 .map(String::from),
         );
         assert_eq!(l, ["0.5", "1/2", "5e-1"]);
+        // a dual's decimal alone is a form of its own: √2 ≈ 1.41421 → 1.41421 → √2 → the dual
+        let l = forms_list(
+            "1.41421".into(),
+            ["1.41421", "sqrt(2)"].into_iter().map(String::from),
+        );
+        assert_eq!(l, ["1.41421", "1.41421", "sqrt(2)"]);
     }
 
     fn live(display: &str, exact: Option<&str>) -> LiveAnswer {

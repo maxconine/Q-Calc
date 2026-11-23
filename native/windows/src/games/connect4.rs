@@ -13,7 +13,8 @@ use super::gfx::{Font, Hit, Rect, Ui};
 use super::keys::GameKey;
 use super::theme::{Rgba, ease, ease_out, m};
 use super::widgets as w;
-use super::{Env, GameDef, Play};
+use super::{Env, GameDef, Part, Play, speech};
+use crate::uia::Role;
 
 const SKILLS: [(&str, C4Skill); 3] = [
     ("easy", C4Skill::Easy),
@@ -371,7 +372,14 @@ impl Play for Connect4 {
             self.col = (self.col + 1) % 7;
         } else if let Some(n) = n {
             self.col = n - 1;
-        } else if k.lower() == "g" {
+        }
+        if k.key == "ArrowLeft" || k.key == "ArrowRight" || n.is_some() {
+            // the held disc is drawn only: say where it went
+            let full = landing_row(&self.view.state, self.col as f64).is_none();
+            env.say.push(speech::c4_column(self.col, full));
+            return true;
+        }
+        if k.lower() == "g" {
             if !k.repeat {
                 self.ghost = !self.ghost;
                 env.store
@@ -425,6 +433,26 @@ impl Play for Connect4 {
             }
             _ => {}
         }
+    }
+
+    fn parts(&self) -> Vec<Part> {
+        let board: Vec<Option<bool>> = self
+            .view
+            .state
+            .board
+            .iter()
+            .map(|c| c.map(|s| s == self.role))
+            .collect();
+        vec![
+            Part::new(
+                1,
+                Role::Text,
+                &self.status(),
+                Rect::new(self.board.x, self.board.y - 24.0, self.board.w, 20.0),
+            ),
+            Part::new(2, Role::Text, "board", self.board)
+                .value(&speech::c4_board(&board, "you", &self.peer)),
+        ]
     }
 
     fn closing(&mut self, _env: &mut Env) {

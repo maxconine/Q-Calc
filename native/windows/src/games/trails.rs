@@ -17,7 +17,7 @@ use super::gfx::{Font, Rect, Ui};
 use super::keys::GameKey;
 use super::theme::{Rgba, m};
 use super::widgets as w;
-use super::{Env, GameDef, Play};
+use super::{Env, GameDef, Part, Play, speech};
 
 const TCOLS: f64 = 64.0;
 const TROWS: f64 = 26.0;
@@ -71,6 +71,8 @@ struct Trails {
     last_frame: f64,
     done: bool,
     res: Option<Res>,
+    /// where the last frame drew the arena, for a reader
+    arena_at: Rect,
 }
 
 impl Trails {
@@ -115,6 +117,7 @@ impl Trails {
             last_frame: 0.0,
             done: false,
             res: None,
+            arena_at: Rect::default(),
         }
     }
 
@@ -181,6 +184,21 @@ impl Trails {
 }
 
 impl Play for Trails {
+    fn parts(&self) -> Vec<Part> {
+        let (names, score, banner) = match &self.view {
+            Some(v) => (
+                [v.names[0].as_str(), v.names[1].as_str()],
+                v.score,
+                v.banner.as_str(),
+            ),
+            None => (["you", "computer"], [0, 0], ""),
+        };
+        vec![
+            Part::new(1, crate::uia::Role::Text, "arena", self.arena_at)
+                .value(&speech::trails_arena(&names, &score, banner)),
+        ]
+    }
+
     fn paint(&mut self, ui: &mut Ui, x: f32, y: f32, width: f32, env: &mut Env) -> f32 {
         self.pump(env);
         if !self.done {
@@ -224,6 +242,7 @@ impl Play for Trails {
         };
         let ch = cw * 260.0 / 640.0;
         let area = Rect::new(x + (width - cw) / 2.0, yy, cw, ch);
+        self.arena_at = area;
         ui.round(area, m::RADIUS_S, c.court());
         if self.res.is_none() {
             self.res = Some(Res::new(ui));

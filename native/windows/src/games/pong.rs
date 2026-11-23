@@ -13,7 +13,8 @@ use super::gfx::{Font, Hit, Rect, Ui};
 use super::keys::GameKey;
 use super::theme::m;
 use super::widgets as w;
-use super::{Env, GameDef, Play};
+use super::{Env, GameDef, Part, Play, speech};
+use crate::uia::Role;
 
 const SKILLS: [(&str, Skill); 3] = [
     ("easy", Skill::Easy),
@@ -46,6 +47,9 @@ struct Pong {
     peer: String,
     view: SessionView,
     done: bool,
+    /// the score and whether it was over when last spoken, and where the court was drawn (for a reader)
+    spoken: ([u32; 2], bool),
+    court: Rect,
 }
 
 impl Pong {
@@ -59,6 +63,8 @@ impl Pong {
             peer: peer.unwrap_or_else(|| "computer".into()),
             view,
             done: false,
+            spoken: ([0, 0], false),
+            court: Rect::default(),
         };
         p.flush(env);
         p
@@ -92,6 +98,45 @@ impl Pong {
             self.view.started = v.started;
             self.view.again = v.again;
         }
+        self.speak(env);
+    }
+
+    /// (mine, theirs) from host-first.
+    fn mine(&self, s: [u32; 2]) -> (u32, u32) {
+        if self.role == Side::Host {
+            (s[0], s[1])
+        } else {
+            (s[1], s[0])
+        }
+    }
+
+    /// The score is drawn, not read: each point (and the end) is spoken as it lands.
+    fn speak(&mut self, env: &mut Env) {
+        let Some(s) = self.view.snap else { return };
+        let over = s.phase == Phase::Over;
+        let next = (s.score, over);
+        if !self.view.started || next == self.spoken {
+            return;
+        }
+        let old = std::mem::replace(&mut self.spoken, next);
+        let ((mine, theirs), (was_mine, was_theirs)) = (self.mine(s.score), self.mine(old.0));
+        let scorer = if mine > was_mine {
+            Some(true)
+        } else if theirs > was_theirs {
+            Some(false)
+        } else {
+            None
+        };
+        let won = if over {
+            s.winner.map(|w| w == self.role)
+        } else {
+            None
+        };
+        if scorer.is_none() && won.is_none() {
+            return;
+        }
+        env.say
+            .push(speech::pong_score(mine, theirs, &self.peer, scorer, won));
     }
 
     fn banner(&self) -> String {
@@ -216,6 +261,7 @@ impl Play for Pong {
             w::banner(ui, court, &text);
         }
         ui.hit(court, Hit::Board(0));
+        self.court = court;
         yy += ch + m::SP2;
         let skill = self
             .solo
@@ -268,6 +314,14 @@ impl Play for Pong {
 
     fn release(&mut self) {
         self.game.release();
+    }
+
+    fn parts(&self) -> Vec<Part> {
+        let (mine, theirs) = self.mine(self.view.snap.map_or([0, 0], |s| s.score));
+        vec![
+            Part::new(1, Role::Text, "court", self.court)
+                .value(&speech::pong_score(mine, theirs, &self.peer, None, None)),
+        ]
     }
 
     fn closing(&mut self, _env: &mut Env) {

@@ -26,6 +26,17 @@ pub enum Spot {
 
 thread_local! {
     static SPOT: Cell<Option<Spot>> = const { Cell::new(None) };
+    /// where the pointer was (screen pixels) when a key or click took the highlight: it comes back only once the
+    /// pointer really moves, not for the mouse move Windows makes up when the tape moves under it (the Mac's
+    /// `HistoryTape.muted`)
+    static MUTED_AT: Cell<Option<(i32, i32)>> = const { Cell::new(None) };
+}
+
+fn cursor_pos() -> (i32, i32) {
+    let mut pt = windows::Win32::Foundation::POINT::default();
+    // SAFETY: a live out point
+    let _ = unsafe { windows::Win32::UI::WindowsAndMessaging::GetCursorPos(&mut pt) };
+    (pt.x, pt.y)
 }
 
 const TIP_MS: u32 = 450;
@@ -103,6 +114,15 @@ pub fn pointer(app: &mut App, at: Option<(f32, f32)>) {
 }
 
 fn spot_moved(app: &mut App, at: Option<(f32, f32)>) {
+    if at.is_some()
+        && let Some((mx, my)) = MUTED_AT.with(Cell::get)
+    {
+        let (x, y) = cursor_pos();
+        if (x - mx).abs() <= 2 && (y - my).abs() <= 2 {
+            return;
+        }
+        MUTED_AT.with(|m| m.set(None));
+    }
     let spot = at.and_then(|(x, y)| spot_at(app, x, y));
     if spot == SPOT.with(Cell::get) {
         return;
@@ -149,6 +169,7 @@ pub fn cursor(app: &App, x: f32, y: f32) -> Option<windows::core::PCWSTR> {
 
 /// A key or a click: the tip goes, and the highlight waits for the pointer to move again (the rows may move).
 pub fn key_down() {
+    MUTED_AT.with(|m| m.set(Some(cursor_pos())));
     if SPOT.with(|s| s.take()).is_some() || tip::shown() {
         crate::later::cancel("hover-tip");
         tip::hide();
@@ -204,6 +225,7 @@ pub fn triple_click(app: &mut App, x: f32, y: f32) -> bool {
 /// The bar hid.
 pub fn will_hide() {
     SPOT.with(|s| s.set(None));
+    MUTED_AT.with(|m| m.set(None));
     crate::later::cancel("hover-tip");
     crate::word_tip::will_hide();
     tip::hide();

@@ -48,9 +48,21 @@ impl Default for GraphPrefs {
 }
 
 impl GraphPrefs {
-    /// From settings.json's `graphPrefs` (anything missing or odd is the default).
+    /// From settings.json's `graphPrefs`, key by key as the Mac reads it: a key missing or odd keeps its default
+    /// rather than resetting all of them.
     pub fn from_value(v: &serde_json::Value) -> GraphPrefs {
-        serde_json::from_value(v.clone()).unwrap_or_default()
+        let Some(obj) = v.as_object() else {
+            return GraphPrefs::default();
+        };
+        let good: serde_json::Map<String, serde_json::Value> = obj
+            .iter()
+            .filter(|(k, val)| {
+                let one = serde_json::json!({ k.as_str(): val });
+                serde_json::from_value::<GraphPrefs>(one).is_ok()
+            })
+            .map(|(k, val)| (k.clone(), val.clone()))
+            .collect();
+        serde_json::from_value(serde_json::Value::Object(good)).unwrap_or_default()
     }
 
     /// GraphPrefs.load: as kept, with the settings taken out of the panel (text size, reverse contrast, arrows,
@@ -356,6 +368,11 @@ mod tests {
             &serde_json::json!({ "polar": true, "minorGrid": false, "bogus": 1 }),
         );
         assert!(p.polar && !p.minor_grid && p.grid && p.axis_numbers);
+        // key by key: an odd one keeps its default, the rest are still read
+        let odd = GraphPrefs::from_value(
+            &serde_json::json!({ "grid": "yes", "polar": true, "minorGrid": false }),
+        );
+        assert!(odd.grid && odd.polar && !odd.minor_grid);
         assert_eq!(
             GraphPrefs::from_value(&serde_json::Value::Null),
             GraphPrefs::default()

@@ -74,6 +74,8 @@ const NAV_W: f32 = 196.0;
 const PAD: f32 = 28.0;
 const ROW_PAD: f32 = 14.0;
 const GAP: f32 = 4.0;
+/// What recording a key says for a key no chord can name (SettingsWindow.swift's keybinds sheet)
+const UNUSABLE_KEY: &str = "That key can’t be used. Try a letter, number or F-key";
 /// the id RegisterHotKey uses while trying a chord (never the app's own HOTKEY_ID)
 const PROBE_ID: i32 = 0x5150;
 
@@ -1377,7 +1379,8 @@ impl Win {
             },
             vk,
         ) else {
-            self.note = "Press a key".into();
+            // keypad digits, media keys...: no chord can name them, so say so rather than wait in silence
+            self.note = UNUSABLE_KEY.into();
             self.dirty = true;
             return true;
         };
@@ -1595,6 +1598,26 @@ impl Win {
                     if let Some(t) = crate::clip::get(self.hwnd) {
                         field.paste(&t);
                     }
+                }
+                // the rest of the Edit menu's keys (SettingsWindow.swift): copy, cut, undo, redo
+                0x43 if m.0 => {
+                    if field.has_selection() {
+                        crate::clip::set(self.hwnd, field.selected_text());
+                    }
+                }
+                0x58 if m.0 => {
+                    if let Some(t) = field.cut() {
+                        crate::clip::set(self.hwnd, &t);
+                    }
+                }
+                0x5A if m.0 && m.2 => {
+                    field.redo();
+                }
+                0x5A if m.0 => {
+                    field.undo();
+                }
+                0x59 if m.0 => {
+                    field.redo();
                 }
                 0x09 => {
                     self.commit_text(app);

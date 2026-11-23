@@ -49,6 +49,56 @@ pub struct Tour {
     /// the stored onboarding as last saved, and the shortcut's title, so a keystroke's refresh needs only the bar
     o: Onboarding,
     hotkey: String,
+    /// `?` was showing at the last look (`after`): its extra is marked as it opens
+    help_seen: bool,
+}
+
+/// The Ctrl+C hint (`⌘C copies the answer`, bit 16): a copy has taught it, so it's marked with the copy step
+/// (TourRules.swift `copyHintBit`).
+pub const COPY_HINT_BIT: u32 = 16;
+
+/// The shortcut the walkthrough and `?` teach (TourRules.swift `hotkeyTitle`): the one registered, the one
+/// chosen while it is still being tried, and none once no shortcut works (the hotkey step and `?`'s show / hide row
+/// are left out then).
+pub fn hotkey_chord(active: Option<&str>, wanted: &str, gave_up: bool) -> String {
+    match active {
+        Some(a) => a.to_string(),
+        None if gave_up => String::new(),
+        None => wanted.to_string(),
+    }
+}
+
+/// A line that plots (`graph …` or `plot …`), counted toward the walkthrough's graph extra (TourRules.swift
+/// `isGraphLine`).
+pub fn is_graph_line(text: &str) -> bool {
+    let t = text.trim_start();
+    ["graph", "plot"].iter().any(|w| {
+        t.get(..w.len()).is_some_and(|h| h.eq_ignore_ascii_case(w))
+            && t[w.len()..].starts_with(char::is_whitespace)
+    })
+}
+
+/// An example's answer as the empty bar shows it (`exampleAnswer`): exact ≈ approx when there are two, and a
+/// solve's `x =` from its own variable (the line's JSON `solve.variable`; `variable` is a definition's name, so
+/// `x^2 = 2` showed `±√2 ≈ ±1.41421` with no `x =`).
+pub fn answer_of_example(line: &qcalc_ffi::LineAnswer) -> Option<String> {
+    if line.display.is_empty() {
+        return None;
+    }
+    let mut answer = line.display.clone();
+    if let Some(e) = &line.exact
+        && e.trim() != line.display.trim()
+    {
+        answer = format!("{e} ≈ {}", line.display);
+    }
+    let json: serde_json::Value = serde_json::from_str(&line.json).unwrap_or_default();
+    let solve = &json["solve"];
+    if solve["outcome"] == "roots"
+        && let Some(v) = solve["variable"].as_str().filter(|v| !v.is_empty())
+    {
+        answer = format!("{v} = {answer}");
+    }
+    Some(answer)
 }
 
 /// The Mac's key glyphs in the core's words, as the Windows chords (the user's own, from keybinds).
@@ -109,11 +159,14 @@ mod ui {
     use crate::render::{Canvas, Gfx, Rect, measure, size, with_alpha};
 
     fn hotkey_title(app: &App) -> String {
-        let chord = app
-            .hotkey
-            .active
-            .clone()
-            .unwrap_or_else(|| app.hotkey.wanted.clone());
+        let chord = hotkey_chord(
+            app.hotkey.active.as_deref(),
+            &app.hotkey.wanted,
+            app.hotkey.gave_up,
+        );
+        if chord.is_empty() {
+            return chord;
+        }
         crate::hotkey::title(&chord)
     }
 
@@ -151,6 +204,34 @@ mod ui {
     /// The walkthrough owns the line under the bar until its basics are done.
     pub fn basics_left(app: &App) -> bool {
         step(app).is_some()
+    }
+
+    /// The same from the model's copy of the state (as of the last showing or save), for the command parser:
+    /// `skip` is a command only while the basics are left (Tour.swift `barCommand`).
+    pub fn basics_left_in(m: &BarModel) -> bool {
+        step_now(&m.tour.o, m.tour.replay, &m.tour.hotkey).is_some()
+    }
+
+    /// The basics just finished (a save or a copy did the last): the replay ends and the bar says so.
+    fn finished(app: &mut App) {
+        app.model.tour.replay = None;
+        app.model.hint = Some(core_tour::TOUR_DONE_HINT.into());
+        app.model.touch();
+    }
+
+    /// Each message, before the layout (app.rs `App::after`): a copy does the copy step, and `?` showing marks its
+    /// extra. Two checks on a keystroke.
+    pub fn after(app: &mut App) {
+        if app.model.to_clipboard.is_some() && app.model.answer.copied {
+            copied(app);
+        }
+        let help = app.model.tape.help;
+        if help != app.model.tour.help_seen {
+            app.model.tour.help_seen = help;
+            if help {
+                mark(app, core_tour::tour_bit(TourId::Help));
+            }
+        }
     }
 
     pub fn mark(app: &mut App, bits: u32) {
@@ -195,6 +276,12 @@ mod ui {
     /// Each showing (`beginShowing`), after the open was counted: the tour enrolled, the open's hint or an extra.
     pub fn will_show(app: &mut App) {
         app.model.tour.hotkey = hotkey_title(app);
+        // `?`'s first row: the shortcut that works, none when none does
+        app.model.tape.hotkey = hotkey_chord(
+            app.hotkey.active.as_deref(),
+            &app.hotkey.wanted,
+            app.hotkey.gave_up,
+        );
         app.model.tour.o = state(app);
         let o = core_tour::enrol_tour(&state(app), true);
         save(app, &o);
@@ -348,20 +435,7 @@ mod ui {
                 .evaluate(vec![expr.clone()], options)
                 .into_iter()
                 .next()?;
-            if line.display.is_empty() {
-                return None;
-            }
-            let mut answer = line.display.clone();
-            if let Some(e) = &line.exact
-                && e.trim() != line.display.trim()
-            {
-                answer = format!("{e} ≈ {}", line.display);
-            }
-            if let Some(v) = &line.variable
-                && line.kind == qcalc_ffi::AnswerKind::Solve
-            {
-                answer = format!("{v} = {answer}");
-            }
+            let answer = answer_of_example(&line)?;
             done(move |app| {
                 if let Some(ex) = &mut app.model.tour.example
                     && ex.id == id
@@ -408,7 +482,8 @@ mod ui {
 
     /// After a save: the commit's hint (unless the tour has the line), the count, and the tour steps it used.
     pub fn after_commit(app: &mut App, expr: &str, c: Committed) {
-        let next = if basics_left(app) {
+        let basics_before = basics_left(app);
+        let next = if basics_before {
             None
         } else {
             ob::pick_hint(hints(app), &c.facts, HintOn::Commit)
@@ -421,12 +496,12 @@ mod ui {
             unit: c.facts.unit == Some(true),
             chained: c.facts.chained == Some(true),
             solve: c.solve,
-            graph: expr.trim().to_lowercase().starts_with("graph"),
+            graph: is_graph_line(expr),
         };
         mark(app, core_tour::tour_used(&used));
-        if app.model.tour.replay.is_some() && step(app).is_none() {
-            app.model.tour.replay = None;
-            app.model.hint = Some(core_tour::TOUR_DONE_HINT.into());
+        // a save that finishes the basics says so, first run or replay (it had said so only on a replay)
+        if basics_before && step(app).is_none() {
+            finished(app);
         } else if let Some(h) = next {
             app.model.hint = Some(winify(&h.text, &app.model.keybinds));
         }
@@ -454,9 +529,20 @@ mod ui {
         });
     }
 
-    /// The copy shortcut copied an answer: the walkthrough's copy step is done.
+    /// An answer was copied (Ctrl+C, a row's copy, Copy As...: anything that flashes "copied"): the walkthrough's
+    /// copy step and the Ctrl+C hint are done (Tour.swift `tourAfterCopy`), and finishing the basics says so.
     pub fn copied(app: &mut App) {
-        mark(app, core_tour::tour_bit(TourId::Copy));
+        let before = basics_left(app);
+        mark(app, core_tour::tour_bit(TourId::Copy) | COPY_HINT_BIT);
+        if before && !basics_left(app) {
+            finished(app);
+            refresh(&mut app.model, &app.engine);
+        }
+    }
+
+    /// `periodic` opened the table: its extra isn't offered again.
+    pub fn periodic_opened(app: &mut App) {
+        mark(app, core_tour::tour_bit(TourId::Periodic));
     }
 
     // ---- the empty bar's example and the line under the bar ----
@@ -623,6 +709,90 @@ mod tests {
             winify("⌘C copies the answer: type 2^10, then ⌘C", &mine),
             "Ctrl+Alt+C copies the answer: type 2^10, then Ctrl+Alt+C"
         );
+    }
+
+    // test-tour.sh's rules, as Windows has them
+    #[test]
+    fn plot_lines_count_as_graphs() {
+        assert!(is_graph_line("graph sin(x)"));
+        assert!(is_graph_line("  Plot x^2"));
+        assert!(!is_graph_line("graphite"));
+        assert!(!is_graph_line("graph"));
+        assert!(!is_graph_line("2 plot x"));
+        let used = |e: &str| {
+            core_tour::tour_used(&TourFacts {
+                expr: e.into(),
+                graph: is_graph_line(e),
+                ..TourFacts::default()
+            })
+        };
+        assert_eq!(used("plot x^2"), core_tour::tour_bit(TourId::Graph));
+    }
+
+    #[test]
+    fn no_working_shortcut_is_taught_none() {
+        assert_eq!(hotkey_chord(Some("alt+space"), "ctrl+k", true), "alt+space");
+        assert_eq!(hotkey_chord(None, "ctrl+k", false), "ctrl+k");
+        assert_eq!(hotkey_chord(None, "ctrl+k", true), "");
+        // the walkthrough leaves its shortcut step out, and `?` its show / hide row
+        let fresh = core_tour::enrol_tour(&ob::record_open(&Onboarding::default()), true);
+        let first = step_now(&fresh, None, "").unwrap();
+        assert_ne!(first.id, TourId::Hotkey);
+        let k = Keybinds::new(&std::collections::BTreeMap::new());
+        let [keys, _] = k.cheat_sheet("");
+        assert!(keys.iter().all(|(_, l)| l != "show / hide"));
+        assert!(keys.iter().all(|(key, _)| !key.trim().is_empty()));
+    }
+
+    #[test]
+    fn a_copy_finishes_the_copy_step_and_the_ctrl_c_hint() {
+        let fresh = core_tour::enrol_tour(&ob::record_open(&Onboarding::default()), true);
+        let all = core_tour::tour_steps("Alt+Space")
+            .iter()
+            .fold(0, |a, s| a | s.bit);
+        let copy = core_tour::tour_bit(TourId::Copy);
+        // every step but the copy done: the copy is what's left, and a copy ends the basics
+        let left = Onboarding {
+            hints: fresh.hints | (all & !copy),
+            ..fresh.clone()
+        };
+        assert_eq!(
+            step_now(&left, None, "Alt+Space").map(|s| s.id),
+            Some(TourId::Copy)
+        );
+        let copied = Onboarding {
+            hints: left.hints | copy | COPY_HINT_BIT,
+            ..left
+        };
+        assert!(step_now(&copied, None, "Alt+Space").is_none());
+        // and the one-time Ctrl+C hint is never picked after
+        let facts = HintFacts {
+            expr: "2^10".into(),
+            answer: Some("1024".into()),
+            native: Some(true),
+            ..HintFacts::default()
+        };
+        for on in [HintOn::Pause, HintOn::Commit] {
+            if let Some(h) = ob::pick_hint(copied.hints, &facts, on) {
+                assert_ne!(h.bit, COPY_HINT_BIT, "{}", h.text);
+            }
+        }
+    }
+
+    #[test]
+    fn a_solve_example_reads_x_equals() {
+        let opts = qcalc_ffi::EvalOptions::default();
+        let line = qcalc_ffi::evaluate(vec!["x^2 = 2".into()], opts.clone())
+            .into_iter()
+            .next()
+            .unwrap();
+        let a = answer_of_example(&line).unwrap();
+        assert!(a.starts_with("x = "), "{a}");
+        let line = qcalc_ffi::evaluate(vec!["12 * 7".into()], opts)
+            .into_iter()
+            .next()
+            .unwrap();
+        assert_eq!(answer_of_example(&line).as_deref(), Some("84"));
     }
 
     #[test]

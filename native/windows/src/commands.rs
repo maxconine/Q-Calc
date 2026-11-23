@@ -341,6 +341,12 @@ mod ui {
     use crate::render::{Canvas, Gfx, Rect, measure, size, with_alpha};
     use crate::{games, messaging, sheets, tour};
 
+    /// `parse` for the bar now: `skip` is a command only while the walkthrough's basics are left, so with nothing
+    /// running it is an ordinary line and doesn't say `skipped` (Tour.swift `barCommand`).
+    fn parse_for(m: &BarModel, text: &str) -> Option<Command> {
+        parse(text).filter(|c| *c != Command::Skip || tour::basics_left_in(m))
+    }
+
     /// The games list's row height and its name column (`.cheat-row.game-row`).
     pub const GAME_ROW: f32 = 28.0;
     const GAME_NAME_W: f32 = 126.0;
@@ -349,7 +355,7 @@ mod ui {
     /// nothing. True when the line was a command (the live answer is then blank).
     pub fn live(m: &mut BarModel, engine: &EngineThread) -> bool {
         let typed = m.field.text().to_string();
-        let Some(command) = parse(&typed) else {
+        let Some(command) = parse_for(m, &typed) else {
             if m.command.take().is_some() {
                 m.games_pick = None;
                 m.touch();
@@ -422,13 +428,14 @@ mod ui {
             // with nothing picked, ↵ on `games` does nothing (the Mac commits the word, which saves nothing)
             return true;
         }
-        let Some(command) = parse(app.model.field.text()) else {
+        let Some(command) = parse_for(&app.model, app.model.field.text()) else {
             return false;
         };
         match command {
             Command::Periodic => {
                 clear_line(app, false);
                 sheets::open_periodic(app);
+                tour::periodic_opened(app);
             }
             Command::Identities { id, section, .. } => {
                 clear_line(app, false);
@@ -440,6 +447,9 @@ mod ui {
                 if !messaging::has_name() {
                     clear_line(app, false);
                     crate::settings_window::open(app);
+                    return true;
+                }
+                if crate::share::message_enter(app, &name) {
                     return true;
                 }
                 if name.is_empty() || text.is_empty() {
@@ -560,20 +570,8 @@ mod ui {
                 app.model.selected.is_none() && enter(app)
             }
             UP | DOWN if plain && !mods.shift => games_key(&mut app.model, vk == UP),
-            _ => {
-                // the walkthrough's copy step: the copy shortcut with an answer to copy
-                if app.model.keybinds.action(mods, vk) == Some(crate::keys::KeyAction::CopyAnswer)
-                    && !app.model.field.has_selection()
-                    && app
-                        .model
-                        .live
-                        .as_ref()
-                        .is_some_and(|a| !a.display.is_empty())
-                {
-                    tour::copied(app);
-                }
-                false
-            }
+            // the walkthrough's copy step follows any copy (tour.rs `after`)
+            _ => false,
         }
     }
 

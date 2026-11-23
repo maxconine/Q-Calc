@@ -226,6 +226,9 @@ pub enum Line {
 pub enum Piece {
     /// a patch of a surface: its corners on the plot, its shade (0…SHADES) and its equation (0 the bar's)
     Patch(Vec<P2>, u8, usize),
+    /// a triangle of an implicit surface's mesh, likewise, edged in its own fill so the tetrahedra it was found
+    /// on don't show as lines
+    Triangle(Vec<P2>, u8, usize),
     Segment(P2, P2, Line),
 }
 
@@ -373,6 +376,39 @@ pub fn scene(c: &Cube, f: &Frame, plane: &Plane, surfaces: &[(&SurfaceGrid, usiz
     );
     let light = normalize(LIGHT);
     for &(grid, layer) in surfaces {
+        // an implicit surface (`x^2 + y^2 + z^2 = 1`): its mesh's triangles, nine numbers each
+        if grid.mesh.len() >= 9 {
+            for t in grid.mesh.as_chunks::<9>().0 {
+                let [a, b, cc] = [0, 3, 6].map(|k| [c.u(t[k]), c.v(t[k + 1]), c.w(t[k + 2])]);
+                if [a, b, cc].iter().any(|p| p.iter().any(|v| !v.is_finite()))
+                    || [a, b, cc].iter().all(|p| p[2] > 1.0)
+                    || [a, b, cc].iter().all(|p| p[2] < -1.0)
+                {
+                    continue;
+                }
+                let poly = clip(&[a, b, cc]);
+                if poly.len() < 3 {
+                    continue;
+                }
+                let n = normalize(cross(
+                    [b[0] - a[0], b[1] - a[1], b[2] - a[2]],
+                    [cc[0] - a[0], cc[1] - a[1], cc[2] - a[2]],
+                ));
+                let lit = (n[0] * light[0] + n[1] * light[1] + n[2] * light[2]).abs();
+                let level = ((lit * SHADES as f64).round() as usize).min(SHADES) as u8;
+                let projected: Vec<(P2, f64)> = poly.iter().map(|p| c.at(*p)).collect();
+                let depth = projected.iter().map(|p| p.1).sum::<f64>() / projected.len() as f64;
+                let screen: Vec<P2> = projected.iter().map(|p| p.0).collect();
+                pieces.push((depth, Piece::Triangle(screen.clone(), level, layer)));
+                patches.push(Patch {
+                    depth,
+                    screen,
+                    cube: poly,
+                    layer,
+                });
+            }
+            continue;
+        }
         let (nx, ny) = (grid.nx as usize, grid.ny as usize);
         if nx == 0 || ny == 0 || grid.z.len() < (nx + 1) * (ny + 1) {
             continue;
@@ -627,5 +663,40 @@ mod tests {
         );
         assert!(patch_hit((-50.0, -50.0), &s.patches).is_none());
         assert!(shade(SHADES as u8, false) == 1.0 && shade(0, true) < shade(0, false));
+    }
+
+    #[test]
+    fn an_implicit_surfaces_mesh_draws_as_triangles_hit_on_the_surface() {
+        let c = cube();
+        let f = Frame::new(&c);
+        // a flat triangle at z = 2 over the origin, one wholly above the cube, one with a pole
+        let mut mesh = vec![-5.0, -5.0, 2.0, 5.0, -5.0, 2.0, 0.0, 5.0, 2.0];
+        mesh.extend([0.0, 0.0, 20.0, 1.0, 0.0, 20.0, 0.0, 1.0, 20.0]);
+        mesh.extend([0.0, 0.0, f64::NAN, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0]);
+        let grid = SurfaceGrid {
+            nx: 0,
+            ny: 0,
+            x_lo: -10.0,
+            x_hi: 10.0,
+            y_lo: -10.0,
+            y_hi: 10.0,
+            z: vec![f64::NAN],
+            z_lo: -10.0,
+            z_hi: 10.0,
+            mesh,
+        };
+        let s = scene(&c, &f, &Plane::default(), &[(&grid, 0)]);
+        assert_eq!(s.patches.len(), 1);
+        assert_eq!(
+            s.pieces
+                .iter()
+                .filter(|p| matches!(p, Piece::Triangle(..)))
+                .count(),
+            1
+        );
+        let (o, _) = c.unit(c.u(0.0), c.v(0.0), c.w(2.0));
+        let (hit, _) = patch_hit(o, &s.patches).unwrap();
+        let d = c.data(hit);
+        assert!((d[2] - 2.0).abs() < 1e-6, "{d:?}");
     }
 }
