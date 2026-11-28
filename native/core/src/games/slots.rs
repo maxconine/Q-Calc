@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use super::Rand;
 
-/// The symbols, by id. 6 is a blank stop.
+/// The symbols, by id. 6 is a blank, which the strip no longer has (every stop is an icon); kept as an id.
 pub const SYMBOLS: [&str; 7] = ["7", "π", "∞", "∑", "√", "e", ""];
 pub const SEVEN: u8 = 0;
 pub const PI: u8 = 1;
@@ -23,18 +23,19 @@ pub const ROOT: u8 = 4;
 pub const E: u8 = 5;
 pub const BLANK: u8 = 6;
 
-/// One reel's stops, top to bottom; all three reels share it. 7 ×1, π ×2, ∞ ×3, ∑ ×4, √ ×5, e ×4, blank ×13,
-/// spread so no two of a symbol touch.
+/// One reel's stops, top to bottom; all three reels share it. 7 ×1, π ×3, ∞ ×5, ∑ ×7, √ ×8, e ×8, and no
+/// blanks, so every stop on the line is an icon (the user's call); spread so no two of a symbol touch.
 pub const STRIP: [u8; 32] = [
-    SEVEN, BLANK, ROOT, BLANK, E, BLANK, SUM, BLANK, INF, BLANK, ROOT, BLANK, PI, BLANK, E, BLANK,
-    SUM, ROOT, BLANK, INF, E, BLANK, ROOT, SUM, BLANK, PI, BLANK, E, SUM, ROOT, INF, BLANK,
+    SEVEN, SUM, E, INF, ROOT, PI, SUM, E, ROOT, INF, SUM, E, PI, ROOT, INF, E,
+    SUM, ROOT, E, INF, SUM, ROOT, E, SUM, ROOT, E, ROOT, SUM, E, INF, PI, ROOT,
 ];
 
-/// What three of a kind pays, as times the bet (7, π, ∞, ∑, √, e); blanks pay nothing.
-pub const THREE: [u32; 6] = [500, 200, 100, 60, 30, 20];
-/// Two e's anywhere on the line, and one (the bet back).
-pub const TWO_E: u32 = 6;
-pub const ONE_E: u32 = 1;
+/// What three of a kind pays, as times the bet (7, π, ∞, ∑, √, e). With no blanks three of a kind comes up far
+/// more often, so these are lower than they were (but 7 7 7); the machine pays back about 97% (`return_to_player`).
+pub const THREE: [u32; 6] = [500, 100, 50, 25, 12, 6];
+/// Two e's anywhere on the line (the bet back), and one (nothing now: one e is on 4 lines in 10).
+pub const TWO_E: u32 = 1;
+pub const ONE_E: u32 = 0;
 /// A win of this many times the bet or more is a big one (the panel makes more of it).
 pub const BIG: u32 = 50;
 
@@ -336,7 +337,9 @@ pub fn pay_table() -> Vec<(String, u32)> {
         .map(|(i, &x)| ([SYMBOLS[i]; 3].join(" "), x))
         .collect();
     rows.push(("e e".into(), TWO_E));
-    rows.push(("e".into(), ONE_E));
+    if ONE_E > 0 {
+        rows.push(("e".into(), ONE_E));
+    }
     rows
 }
 
@@ -356,21 +359,25 @@ mod tests {
     fn the_strip() {
         assert_eq!(
             [SEVEN, PI, INF, SUM, ROOT, E, BLANK].map(count),
-            [1, 2, 3, 4, 5, 4, 13]
+            [1, 3, 5, 7, 8, 8, 0]
         );
         for i in 0..STRIP.len() {
             let (a, b) = (STRIP[i], STRIP[(i + 1) % STRIP.len()]);
-            assert!(a != b || a == BLANK, "two {a} touch at {i}");
+            assert!(a != b, "two {a} touch at {i}");
         }
+        // every stop is an icon: the line, and the stops above and below it, never show an empty slot
+        assert!(STRIP.iter().all(|&s| !SYMBOLS[s as usize].is_empty()));
     }
 
     #[test]
     fn pays() {
         assert_eq!(multiplier([SEVEN; 3]), 500);
-        assert_eq!(multiplier([E; 3]), 20);
+        assert_eq!(multiplier([E; 3]), 6);
         assert_eq!(multiplier([BLANK; 3]), 0);
         assert_eq!(multiplier([E, BLANK, E]), TWO_E);
-        assert_eq!(multiplier([ROOT, ROOT, E]), ONE_E);
+        assert_eq!(multiplier([ROOT, ROOT, E]), 0);
+        assert_eq!(multiplier([E, E, E]), 6);
+        assert_eq!(multiplier([PI, PI, PI]), 100);
         assert_eq!(multiplier([SEVEN, SEVEN, PI]), 0);
     }
 
@@ -388,6 +395,12 @@ mod tests {
         }
         let rtp = paid as f64 / (n * n * n) as f64;
         assert!((0.9..0.99).contains(&rtp), "rtp {rtp}");
+        // and about one spin in five wins something
+        let hits = (0..n * n * n)
+            .filter(|i| multiplier(line([(i / (n * n)) as u32, (i / n % n) as u32, (i % n) as u32])) > 0)
+            .count() as f64
+            / (n * n * n) as f64;
+        assert!((0.15..0.25).contains(&hits), "hits {hits}");
     }
 
     #[test]
@@ -449,7 +462,10 @@ mod tests {
             (s.chips, s.win, s.best, s.phase),
             (95 + 2500, 2500, 2595, SlotsPhase::Idle)
         );
-        let (s, _) = spin(s, 0.0, &mut fixed(0.9999));
+        // 7 π ∑: no blank to lose on now, so a losing line is three different icons with fewer than two e's
+        let mut picks = [0.0, 5.0, 1.0].map(|k: f64| (k + 0.5) / 32.0).into_iter();
+        let (s, _) = spin(s, 0.0, &mut move || picks.next().unwrap());
+        assert_eq!(line(s.reels), [SEVEN, PI, SUM]);
         let (s, e) = tick(s, 1e6);
         assert_eq!((e, s.win), (Some(SlotsEvent::Lose), 0));
     }
@@ -487,7 +503,9 @@ mod tests {
     #[test]
     fn running_out() {
         let s = new_game(3, 10, 100);
-        let (s, _) = spin(s, 0.0, &mut fixed(0.99));
+        // 7 π ∑, a losing line
+        let mut picks = [0.0, 5.0, 1.0].map(|k: f64| (k + 0.5) / 32.0).into_iter();
+        let (s, _) = spin(s, 0.0, &mut move || picks.next().unwrap());
         assert_eq!((s.chips, s.bet), (0, 3));
         let (s, _) = tick(s, 1e6);
         assert_eq!(s.chips, 0);

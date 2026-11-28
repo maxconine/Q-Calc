@@ -30,6 +30,8 @@ On Windows (branch `win-port-302`) all three pass, with the golden floors as set
 
 - **The `ans` chip sits on the line** (`anschip` in `typst/src/macros.typ` and its two copies: `box(baseline: 9.5pt, inset: (bottom: 6.5pt), …)`): the number in the chip rode about 7.5pt above the rest of the line (`6.3489 in · 2`), because the room for the "ans" pill lifted the baseline. Now the number shares the baseline with what's next to it, and the extra 2pt of room keeps the pill off a fraction bar (`ans/3`). Comes from the core's macros, nothing to port. Test: `cargo test -p qcalc-typst --test render an_ans_chip`.
 
+- **Slots has no empty stops** (core `games/slots.rs`): the reel strip's 13 blanks are icons now (7 ×1, π ×3, ∞ ×5, ∑ ×7, √ ×8, e ×8), so the line and the stops above and below it always show an icon. With far more three-of-a-kinds the pays came down to keep about 97% back: 7 7 7 500, π 100, ∞ 50, ∑ 25, √ 12, e e e 6, two e's the bet back, one e nothing (its pay table row is gone). Nothing to port: the panel draws the core's `STRIP` and `pay_table()`, and `BLANK` stays as an id. Test: `cargo test -p qcalc-core --lib games::slots`, then `slots` in the bar and spin a few times.
+
 The rest is done. (`dx` touching the integrand, halves powers as roots and the faster intersections were checked in the app on 8 Nov 2026, with the linear algebra tables.)
 
 - **Imaginary roots: the row's copy button** (core `solve.rs` `ComplexRoots`; 21 Nov 2026 the answers, the live `x = ±i`, the saved `complex` outcome and the row after a relaunch were checked on Windows): left, check the row's copy button copies `±i` after `x^2=-1` ↵ (with the tape's copy work).
