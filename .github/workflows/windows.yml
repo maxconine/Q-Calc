@@ -17,6 +17,8 @@ on:
       - "v*"
       # 3.0.3 shipped the mac only; windows stays on 3.0.2 (a hand run can still publish it)
       - "!v3.0.3"
+      # 3.0.4 shipped the mac only too
+      - "!v3.0.4"
   workflow_dispatch:
     inputs:
       publish:
