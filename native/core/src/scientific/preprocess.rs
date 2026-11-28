@@ -566,6 +566,85 @@ fn rewrite_factorial(expr: &str) -> String {
     s.into_iter().collect()
 }
 
+/// native only: `7k` (a lowercase k touching its number) is 7000, as the money reading's shorthand has it; it
+/// read as 7 kelvin (shown in °R). `5 K`, `5K` and `5 k` stay kelvin, and a `k` the user defined, or one used
+/// as a letter on the line, is theirs.
+pub fn thousands(s: &str, k_defined: bool) -> String {
+    static K: Lazy = Lazy::new(|| {
+        js(
+            r"(?<![A-Za-z_\d.$€£¥₹])(\d+(?:\.\d+)?)k(?![A-Za-z_\d(.^ΩµμΩ°])",
+            "",
+        )
+    });
+    // a `k` of its own elsewhere is a letter (`Σ (2k - 1), k = 1..n`), so `2k` is 2·k there
+    static LETTER_K: Lazy = Lazy::new(|| js(r"(?<![A-Za-z_\d.])k(?![A-Za-z_\d])", ""));
+    if k_defined || !s.contains('k') || jsre::test(&LETTER_K, s) {
+        return s.to_string();
+    }
+    replace(&K, s, |c| match crate::jsnum::parse(g(c, 1)) {
+        Some(n) => crate::jsnum::to_string(n * 1000.0),
+        None => g(c, 0).to_string(),
+    })
+}
+
+/// native only: `log base 2 of 8`, `log_2 of 8`, `log base 2 (8)` in words, as `log(8, 2)`.
+pub fn log_base_words(s: &str) -> String {
+    static LOG_BASE_WORDS: Lazy = Lazy::new(|| {
+        js(
+            r"(?<!\\)\blog\s*(?:base\s*(\d+(?:\.\d+)?|[A-Za-z])\s*(?:of\s+|(?=\())|_\s*(\d+(?:\.\d+)?|[A-Za-z])\s*of\s+)(\d+(?:\.\d+)?(?![\w.(^!])|[A-Za-z](?![\w.(^!])|\([^()]*\))",
+            "i",
+        )
+    });
+    // `sum(1 to 10)`, `sum(1..10)`: a run of whole numbers, as `sum([1...10])`
+    static RUN: Lazy = Lazy::new(|| {
+        js(
+            r"\b(sum|prod|product|mean|avg|average|median|max|min)\(\s*(-?\d+)\s*(?:\.\.(?!\.)|to\b)\s*(-?\d+)\s*\)",
+            "i",
+        )
+    });
+    // `mean 1 2 3`, `average of 1, 2, 3`, `max of 3, 7, 2`: a list (`mean 1 2 3` read 1·2·3 and answered 6)
+    static LIST_WORDS: Lazy = Lazy::new(|| {
+        js(
+            r"^\s*(mean|average|avg|median|sum|total|max|min|mode|product|prod|std)\s+(?:of\s+)?(-?\d+(?:\.\d+)?(?:\s*,\s*-?\d+(?:\.\d+)?|\s+-?\d+(?:\.\d+)?)+)\s*$",
+            "i",
+        )
+    });
+    // `sqrt of 16`, `ln of 5`
+    static FN_OF: Lazy = Lazy::new(|| {
+        js(
+            r"\b(sqrt|cbrt|ln|log|exp|abs|sin|cos|tan|floor|ceil|round)\s+of\s+",
+            "i",
+        )
+    });
+    // `1/2 of 10`, `3/4 of 200`
+    static FRACTION_OF: Lazy =
+        Lazy::new(|| js(r"(?<![\d.])(\d+)\s*/\s*(\d+)\s+of\s+(?=[\d$€£(.])", "i"));
+    let s = replace(&LIST_WORDS, s, |c| {
+        let name = match g(c, 1).to_lowercase().as_str() {
+            "average" | "avg" => "mean".to_string(),
+            "total" => "sum".to_string(),
+            "product" => "prod".to_string(),
+            n => n.to_string(),
+        };
+        let items: Vec<&str> = g(c, 2)
+            .split(|ch: char| ch == ',' || ch.is_whitespace())
+            .filter(|p| !p.is_empty())
+            .collect();
+        format!("{name}({})", items.join(", "))
+    });
+    let s = replace(&FN_OF, &s, |c| format!("{} ", g(c, 1)));
+    let s = replace(&FRACTION_OF, &s, |c| {
+        format!("({}/{}) * ", g(c, 1), g(c, 2))
+    });
+    let s = replace(&LOG_BASE_WORDS, &s, |c| {
+        let base = if c.get(1).is_some() { g(c, 1) } else { g(c, 2) };
+        format!("log({}, {base})", g(c, 3))
+    });
+    replace(&RUN, &s, |c| {
+        format!("{}([{}...{}])", g(c, 1), g(c, 2), g(c, 3))
+    })
+}
+
 /// Every rewrite from typed maths to mathjs syntax, in the TS order.
 pub fn preprocess_ascii(expr: &str, extra: &[String]) -> String {
     static ROOT_LETTER: Lazy =
@@ -727,6 +806,7 @@ pub fn preprocess_ascii(expr: &str, extra: &[String]) -> String {
         format!("inclusiveRange({},{})", g(c, 1), g(c, 2))
     });
     let s = lit(&IMAG, &lit(&REAL, &s, "re"), "im");
+    let s = log_base_words(&s);
     let s = replace(&LOG_BASE, &s, |c| format!("log({}, {})", g(c, 2), g(c, 1)));
     let s = replace(&LOG_BASE_BARE, &s, |c| {
         format!("log({}, {})", g(c, 2), g(c, 1))

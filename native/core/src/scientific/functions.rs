@@ -871,6 +871,43 @@ fn mean(a: &[Val], _: &Scope) -> EvalResult {
 fn median(a: &[Val], _: &Scope) -> EvalResult {
     num(median_of(&sorted(&nums(a))))
 }
+fn fib(a: &[Val], _: &Scope) -> EvalResult {
+    let n = match a.first() {
+        Some(Val::Num(n)) => *n,
+        _ => return num(f64::NAN),
+    };
+    if n < 0.0 || n.fract() != 0.0 || n > 1476.0 {
+        return num(f64::NAN);
+    }
+    let (mut x, mut y) = (0.0f64, 1.0f64);
+    for _ in 0..n as u32 {
+        (x, y) = (y, x + y);
+    }
+    num(x)
+}
+fn mode(a: &[Val], _: &Scope) -> EvalResult {
+    let xs = nums(a);
+    let mut counts: Vec<(f64, usize)> = Vec::new();
+    for x in xs {
+        match counts.iter_mut().find(|(v, _)| *v == x) {
+            Some(c) => c.1 += 1,
+            None => counts.push((x, 1)),
+        }
+    }
+    let Some(top) = counts.iter().map(|c| c.1).max() else {
+        return num(f64::NAN);
+    };
+    let modes: Vec<Val> = counts
+        .iter()
+        .filter(|c| c.1 == top)
+        .map(|c| Val::Num(c.0))
+        .collect();
+    Ok(if modes.len() == 1 {
+        modes[0].clone()
+    } else {
+        Val::List(modes)
+    })
+}
 fn mad(a: &[Val], _: &Scope) -> EvalResult {
     let xs = nums(a);
     let m = avg(&xs);
@@ -1207,6 +1244,10 @@ pub const TABLE: &[Builtin] = &[
     entry!("max", 0, max),
     entry!("mean", 0, mean),
     entry!("median", 0, median),
+    // native only: the nth Fibonacci number, and the most common value (a tie gives each, as a list)
+    entry!("fib", 1, fib),
+    entry!("fibonacci", 1, fib),
+    entry!("mode", 0, mode),
     entry!("stdev", 0, |a, _| num(variance_of(&nums(a), false).sqrt())),
     entry!("stdevp", 0, |a, _| num(variance_of(&nums(a), true).sqrt())),
     entry!("var", 0, |a, _| num(variance_of(&nums(a), false))),

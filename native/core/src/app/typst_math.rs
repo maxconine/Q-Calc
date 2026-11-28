@@ -584,6 +584,14 @@ pub fn preview_math(expr: &str) -> String {
     } else {
         s
     };
+    // native only: the word `integral` previews as ∫ (`integral rho V · d A` drew "integral" in quotes and hid the
+    // preview); `integral of …` is the calculator's phrase and stays as typed
+    let s = jsre::replace_all(
+        lazy!(r"(?<![A-Za-z_])integral(?=\s+(?!of\b)\S)", "i"),
+        &s,
+        |_| "∫".into(),
+    )
+    .into_owned();
     if let Some(d) = derivative_math(&s) {
         return d;
     }
@@ -635,7 +643,7 @@ fn bare_fractions(s: &str) -> String {
 fn indefinite_math(s: &str) -> Option<String> {
     let m = caps(
         lazy!(
-            r"^(?:∫|int\b|(?:the\s+)?integral\s+of\b|integrate\b)\s*(.+?)(?:\s*\bd([A-Za-z]))?$",
+            r"^(?:∫|int\b|(?:the\s+)?integral\s+of\b|integrate\b)\s*(.+?)(?:\s*\bd ?([A-Za-z]))?$",
             "is"
         ),
         s,

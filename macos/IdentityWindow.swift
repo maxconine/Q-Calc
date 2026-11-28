@@ -40,6 +40,8 @@ struct IdentitySheet {
         // typeset, when the sheet is: the lead cells then the runs, and the note
         var cells: [Drawn] = []
         var drawnNote: Drawn?
+        // the picture at the head of the first cell, on its own: a click on it shows it enlarged
+        var picture: Drawn?
         // a whole typeset picture rather than a row: centred, and no click
         var figure = false
         // its labels, each clicked to copy
@@ -118,6 +120,7 @@ struct IdentitySheet {
                     return runs.isEmpty ? nil : Item(runs: runs, copy: copy, note: i["note"] as? String ?? "", lead: lead,
                                                      leadCopy: i["leadCopy"] as? [String] ?? [], open: i["open"] as? String ?? "",
                                                      cells: (i["cellDocs"] as? [String] ?? []).compactMap(drawn), drawnNote: cell(i["noteDoc"]),
+                                                     picture: cell(i["pictureDoc"]),
                                                      figure: i["figure"] as? Bool ?? false,
                                                      parts: (i["parts"] as? [[String: Any]] ?? []).compactMap { part in
                                                          guard let picture = cell(part["doc"]), let copy = part["copy"] as? String else { return nil }
@@ -217,6 +220,18 @@ private final class IdentityRow: NSView {
     var onPick: ((IdentityRow) -> Void)?
     // a row that opens a sheet: its right-click menu's Open in New Window
     var onOpenNew: ((IdentityRow) -> Void)?
+    // a row with a picture: a click on the picture shows it enlarged, in place of a copy
+    var onEnlarge: ((IdentityRow) -> Void)? {
+        didSet {
+            guard onEnlarge != nil, pictureBox != nil else { return }
+            toolTip = "Click the picture to enlarge it, the formula to copy it"
+            setAccessibilityCustomActions([NSAccessibilityCustomAction(name: "Enlarge picture") { [weak self] in
+                guard let self else { return false }
+                self.onEnlarge?(self)
+                return true
+            }])
+        }
+    }
     var copied = false { didSet { if copied != oldValue { needsDisplay = true } } }
     private var hovered = false { didSet { if hovered != oldValue { fill() } } }
     private var pressed = false { didSet { if pressed != oldValue { fill() } } }
@@ -306,12 +321,24 @@ private final class IdentityRow: NSView {
     private var copiedBox: NSRect?
     private func pointer(_ event: NSEvent) {
         guard typeset else { return }
-        let box = target(at: convert(event.locationInWindow, from: nil))?.box
+        let at = convert(event.locationInWindow, from: nil)
+        let box = onPicture(at) ? pictureBox : target(at: at)?.box
         if box != boxed { boxed = box; needsDisplay = true }
     }
 
     private var typeset: Bool { !item.cells.isEmpty }
     private static let partGap: CGFloat = 3
+
+    // the picture's place in the row: it heads the first cell, which starts 6 in and is centred on the row's height
+    var pictureBox: NSRect? {
+        guard let picture = item.picture, item.parts.isEmpty, !item.figure else { return nil }
+        let size = picture.size
+        return NSRect(x: 6, y: (bounds.height - size.height) / 2, width: size.width, height: size.height).insetBy(dx: -3, dy: -3)
+    }
+
+    private func onPicture(_ p: NSPoint) -> Bool {
+        onEnlarge != nil && pictureBox?.contains(p) == true
+    }
 
     // where a figure's page starts in this row
     private var figureOrigin: CGPoint {
@@ -389,6 +416,12 @@ private final class IdentityRow: NSView {
             NSMenu.popUpContextMenu(menu, with: event, for: self)
             return
         }
+        // the picture enlarges rather than copies
+        if onPicture(convert(event.locationInWindow, from: nil)) {
+            enlargedOnDown = true
+            onEnlarge?(self)
+            return
+        }
         pressed = true
         // a typeset row copies the moment it's pressed, and shows it then
         guard typeset, item.open.isEmpty else { return }
@@ -399,6 +432,7 @@ private final class IdentityRow: NSView {
         displayIfNeeded()
     }
     private var pickedOnDown = false
+    private var enlargedOnDown = false
 
     override func mouseDragged(with event: NSEvent) {
         pressed = bounds.contains(convert(event.locationInWindow, from: nil))
@@ -414,6 +448,10 @@ private final class IdentityRow: NSView {
         }
         if pickedOnDown {
             pickedOnDown = false
+            return
+        }
+        if enlargedOnDown {
+            enlargedOnDown = false
             return
         }
         let at = convert(event.locationInWindow, from: nil)
@@ -475,6 +513,15 @@ private final class IdentityRow: NSView {
             NSColor.labelColor.withAlphaComponent(copied ? 0.6 : 0.3).setStroke()
             box.lineWidth = 1
             box.stroke()
+            // a magnifier in the corner says a click there enlarges it
+            if !copied, shown == pictureBox, let glass = NSImage(systemSymbolName: "plus.magnifyingglass", accessibilityDescription: nil) {
+                let config = NSImage.SymbolConfiguration(pointSize: 11, weight: .regular)
+                    .applying(NSImage.SymbolConfiguration(paletteColors: [.secondaryLabelColor]))
+                let image = glass.withSymbolConfiguration(config) ?? glass
+                let size = image.size
+                image.draw(in: NSRect(x: shown.maxX - size.width - 3, y: shown.maxY - size.height - 3, width: size.width, height: size.height),
+                           from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+            }
         }
         if item.figure {
             let origin = figureOrigin
@@ -560,6 +607,36 @@ private final class IdentityRow: NSView {
             text.append(NSAttributedString(string: run.text, attributes: [.font: font, .foregroundColor: color, .baselineOffset: offset]))
         }
         return text
+    }
+}
+
+// a sheet's picture, enlarged: about three times its size, at most 600 points either way
+private final class EnlargedPicture: NSView {
+    private let picture: IdentitySheet.Drawn
+    private let scale: CGFloat
+    private static let pad: CGFloat = 16
+
+    init(_ picture: IdentitySheet.Drawn) {
+        self.picture = picture
+        let size = picture.size
+        scale = min(3, 600 / max(size.width, 1), 600 / max(size.height, 1))
+        super.init(frame: NSRect(x: 0, y: 0, width: size.width * scale + Self.pad * 2, height: size.height * scale + Self.pad * 2))
+        setAccessibilityElement(true)
+        setAccessibilityRole(.image)
+        setAccessibilityLabel("Enlarged picture")
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    override var isFlipped: Bool { true }
+
+    override func draw(_ dirtyRect: NSRect) {
+        guard let cg = NSGraphicsContext.current?.cgContext else { return }
+        cg.saveGState()
+        cg.translateBy(x: Self.pad, y: Self.pad)
+        cg.scaleBy(x: scale, y: scale)
+        picture.draw(cg)
+        cg.restoreGState()
     }
 }
 
@@ -935,7 +1012,7 @@ private final class ExplanationView: NSView, NSTextViewDelegate {
 
 // One window of sheets, a page at a time: a row that opens a sheet (`formulas`) replaces the page, and back and forward
 // (⌘[ ⌘], the header's arrows, a sideways swipe) step through what was shown. Each window keeps its own pages.
-final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowDelegate {
+final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowDelegate, NSPopoverDelegate {
     // reuses the periodic table's panel: never key, so the overlay keeps its caret and stays up while rows are clicked
     private var panel: PeriodicPanel?
     private var status: NSTextField?
@@ -948,6 +1025,9 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
     var onOpenNew: ((String) -> Void)?
     // an explanation's Try button: its line, into the bar
     var onTry: ((String) -> Void)?
+    /// An explanation card opened (true) or closed (false): the native bar steps aside while one is up, as it sat
+    /// over the card
+    var onExplaining: ((Bool) -> Void)?
     // every sheet (the native app's): a search lists matches from the others too, and a Related formula opens its
     // own explanation wherever it is. Nil in the web-view app, which searches the open sheet alone
     static var allSheets: (() -> [IdentitySheet])?
@@ -1378,6 +1458,7 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
                 if onOpenNew != nil { row.onOpenNew = { [weak self] in self?.onOpenNew?($0.item.open) } }
             } else if !item.copy.isEmpty || item.figure {
                 row.onPick = { [weak self] in self?.copy($0) }
+                if item.picture != nil { row.onEnlarge = { [weak self] in self?.enlarge($0) } }
             }
             return row
         }
@@ -1778,6 +1859,25 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: clear)
     }
 
+    // a row's picture, drawn larger in a popover beside it: its paths scale, so it stays sharp
+    private var enlarged: NSPopover?
+    private func enlarge(_ row: IdentityRow) {
+        guard let picture = row.item.picture, let box = row.pictureBox else { return }
+        enlarged?.close()
+        let popover = NSPopover()
+        popover.behavior = .transient
+        popover.animates = false
+        popover.appearance = panel?.appearance
+        let controller = NSViewController()
+        controller.view = EnlargedPicture(picture)
+        popover.contentViewController = controller
+        enlarged = popover
+        let onScreen = row.window?.convertToScreen(row.convert(row.bounds, to: nil)) ?? .zero
+        let screen = (row.window?.screen ?? NSScreen.main)?.visibleFrame ?? .zero
+        let edge: NSRectEdge = screen.maxX - onScreen.maxX >= onScreen.minX - screen.minX ? .maxX : .minX
+        popover.show(relativeTo: box, of: row, preferredEdge: edge)
+    }
+
     // a row's explanation, in a popover beside it; another click replaces it
     private func showExplanation(_ explain: IdentitySheet.Explanation, for row: IdentityRow) {
         explainer?.close()
@@ -1789,6 +1889,8 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         popover.animates = false
         popover.appearance = panel?.appearance
         popover.contentViewController = NSViewController()
+        // dragging the card tears it off into a window of its own, which stays where it's put
+        popover.delegate = self
         explainer = popover
         fillExplainer()
         // beside the row, on whichever side has more room on the screen
@@ -1797,6 +1899,19 @@ final class IdentityWindowController: NSObject, NSSearchFieldDelegate, NSWindowD
         let edge: NSRectEdge = screen.maxX - onScreen.maxX >= onScreen.minX - screen.minX ? .maxX : .minX
         popover.show(relativeTo: row.bounds, of: row, preferredEdge: edge)
         (popover.contentViewController?.view as? ExplanationView).map { $0.window?.makeFirstResponder($0.textView) }
+        onExplaining?(true)
+    }
+
+    func popoverShouldDetach(_ popover: NSPopover) -> Bool { true }
+
+    // closed by a click elsewhere, Esc, Try or the sheet closing; a card another click replaced isn't the one up
+    func popoverDidClose(_ notification: Notification) {
+        if explainer === notification.object as? NSPopover { onExplaining?(false) }
+    }
+
+    // torn off and moved aside, the card no longer covers the bar
+    func popoverDidDetach(_ popover: NSPopover) {
+        if explainer === popover { onExplaining?(false) }
     }
 
     // the popover shows the last explanation gone to, with Back when a Related link brought it there

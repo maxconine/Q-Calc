@@ -38,7 +38,7 @@ fn can_lead(c: char) -> bool {
 
 fn known() -> &'static BTreeSet<String> {
     static KNOWN: std::sync::LazyLock<BTreeSet<String>> = std::sync::LazyLock::new(|| {
-        format!("{SCIENTIFIC_NAMES}|e|i|in|to|as|of|mod|and|or|not|xor|graph|sys")
+        format!("{SCIENTIFIC_NAMES}|e|i|in|to|as|of|mod|and|or|not|xor|graph|sys|lim|limit|integral|integrate|derivative|from")
             .to_lowercase()
             .split('|')
             .map(str::to_string)
@@ -276,6 +276,117 @@ fn unfinished_hint(expr: &str) -> Option<String> {
     None
 }
 
+/// Native only: a line that reads but can't be worked out, said plainly (each went to "no answer for that" or
+/// named a word it knew): an empty call, a number with two points, a unit where only a number goes, a limit or
+/// integral with no answer.
+fn misuse_hint(expr: &str) -> Option<String> {
+    // a bare `∫` or `lim` is unfinished, which `unfinished_hint` says
+    if unfinished_hint(expr).is_some() {
+        return None;
+    }
+    static EMPTY_CALL: Lazy = Lazy::new(|| js(r"(?<![A-Za-z])([A-Za-z]+)\s*\(\s*\)", ""));
+    static TWO_POINTS: Lazy = Lazy::new(|| js(r"\d*\.\d+\.|\d+\.\d*\.(?!\.)", ""));
+    static UNIT_IN_CALL: Lazy = Lazy::new(|| {
+        js(
+            r"(?<![A-Za-z])(a?(?:sin|cos|tan|sec|csc|cot)h?|log(?:10|2)?|ln|exp)\s*\(\s*-?[\d.]+\s*(°?[A-Za-zµμΩ]+)\s*\)",
+            "i",
+        )
+    });
+    static UNIT_POWER: Lazy = Lazy::new(|| js(r"\^\s*\(?\s*-?[\d.]+\s*([A-Za-zµμΩ]+)", ""));
+    static LIMIT: Lazy = Lazy::new(|| js(r"^(?:lim|limit)\b", "i"));
+    static INTEGRAL: Lazy = Lazy::new(|| js(r"^(?:∫|integral\b|integrate\b|int\s)", "i"));
+    if let Some(c) = EMPTY_CALL.captures(expr).ok().flatten() {
+        let name = jsre::group(&c, 1);
+        if !matches!(
+            name.to_lowercase().as_str(),
+            "rand" | "random" | "now" | "today"
+        ) {
+            let lower = name.to_lowercase();
+            let example = if [
+                "max", "min", "mean", "median", "sum", "avg", "average", "gcd", "lcm", "prod",
+            ]
+            .contains(&lower.as_str())
+            {
+                "2, 5"
+            } else {
+                "2"
+            };
+            return Some(format!(
+                "{name}() needs something inside, like {name}({example})"
+            ));
+        }
+    }
+    if jsre::test(&TWO_POINTS, expr) {
+        return Some("a number there has two decimal points".into());
+    }
+    if let Some(c) = UNIT_IN_CALL.captures(expr).ok().flatten() {
+        let (name, unit) = (jsre::group(&c, 1), jsre::group(&c, 2));
+        let angle = crate::units::unit_dim(unit) == Some(crate::units::table::Dim::Angle);
+        if !angle && crate::units::reads_as_unit(unit) {
+            return Some(format!("{name} takes a plain number, not {unit}"));
+        }
+    }
+    if let Some(c) = UNIT_POWER.captures(expr).ok().flatten() {
+        let unit = jsre::group(&c, 1);
+        if crate::units::reads_as_unit(unit) {
+            return Some(format!("a power can’t have a unit ({unit})"));
+        }
+    }
+    static TIMES_X: Lazy = Lazy::new(|| js(r"\d\s*x\s*\d", ""));
+    static I_PI: Lazy = Lazy::new(|| js(r"(?<![A-Za-z])([ij])(pi|π)(?![A-Za-z])", ""));
+    static OF_END: Lazy = Lazy::new(|| js(r"\bof\s*$", "i"));
+    static EURO_DECIMAL: Lazy = Lazy::new(|| js(r"(?<![\d.,])\d{1,3}(?:\.\d{3})+,\d+", ""));
+    static TEMP_PLUS_BARE: Lazy = Lazy::new(|| {
+        js(
+            r"\d\s*(?:K|°\s*[CF]|deg\s*[CF]|kelvin)\s*[+\-−]\s*(\d+(?:\.\d+)?)(?![\d.]|\s*[A-Za-z°])",
+            "i",
+        )
+    });
+    if let Some(c) = TEMP_PLUS_BARE.captures(expr).ok().flatten() {
+        let n = jsre::group(&c, 1);
+        return Some(format!(
+            "{n} has no unit · write {n} K for a change in temperature"
+        ));
+    }
+    if jsre::test(&TIMES_X, expr) {
+        return Some("x is a letter here · use * or × to multiply".into());
+    }
+    if let Some(c) = I_PI.captures(expr).ok().flatten() {
+        let (i, pi) = (jsre::group(&c, 1), jsre::group(&c, 2));
+        return Some(format!(
+            "write {i} {pi} or {i}*{pi}, with a space or *, for {i} times π"
+        ));
+    }
+    if jsre::test(&OF_END, expr) {
+        return Some("unfinished: a number goes after of, like 20% of 50".into());
+    }
+    if let Some(m) = EURO_DECIMAL.find(expr).ok().flatten() {
+        let plain = m.as_str().replace('.', "").replace(',', ".");
+        return Some(format!(
+            "a comma is a thousands mark here · write {plain} for a decimal"
+        ));
+    }
+    // `x = 5 = 6`: two equals with no comma or `and` between equations
+    let equals = expr
+        .char_indices()
+        .filter(|&(k, c)| {
+            c == '='
+                && !matches!(expr[..k].chars().last(), Some('=' | '<' | '>' | '!'))
+                && !expr[k + 1..].starts_with('=')
+        })
+        .count();
+    if equals > 1 && !expr.contains([',', ';']) && !expr.contains(" and ") {
+        return Some("a line can have only one =".into());
+    }
+    if jsre::test(&LIMIT, expr) {
+        return Some("no limit found there (it may not settle on one value)".into());
+    }
+    if jsre::test(&INTEGRAL, expr) {
+        return Some("couldn’t work out that integral".into());
+    }
+    None
+}
+
 /// One line for ↵ that saved nothing: what stopped the answer and where to look, never the answer.
 pub fn enter_hint(f: &EnterFacts) -> String {
     static TRAILING_OPERATOR: Lazy = Lazy::new(|| js(r"([+\-−*×·/÷^])\s*$", ""));
@@ -300,6 +411,9 @@ pub fn enter_hint(f: &EnterFacts) -> String {
     }
     if flag(f.improper) {
         return "those units measure different things".into();
+    }
+    if let Some(hint) = misuse_hint(expr) {
+        return hint;
     }
     let opens = expr.matches('(').count();
     let closes = expr.matches(')').count();

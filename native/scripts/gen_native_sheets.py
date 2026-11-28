@@ -1586,6 +1586,190 @@ for sh in (fourier,ct,dt,laplace,ztr,circle,linalg):
                 if extra: it['tags']=(it.get('tags','')+' '+extra).strip()
 assert not R4_TAGS,R4_TAGS
 
+# ---- the dynamics sheet's little pictures: each body drawn in Typst beside its volume, with its axes, so the
+# formulas under it say which axis is which. black is the ink colour (it follows light and dark); the shading is a
+# see-through grey, which reads in both
+GREY='rgb(128, 128, 128, 70)'
+def proj(x,y,z,k=0.42):
+    "oblique: z comes toward the reader, down and to the left"
+    return (x-k*z*0.866, y-k*z*0.5)
+def ell(cx,cy,rx,ry,a0=0,a1=360,n=48,tilt=0):
+    out=[]
+    for i in range(n+1):
+        t=math.radians(a0+(a1-a0)*i/n)
+        x,y=rx*math.cos(t),ry*math.sin(t)
+        c,s=math.cos(math.radians(tilt)),math.sin(math.radians(tilt))
+        out.append((cx+x*c-y*s,cy+x*s+y*c))
+    return out
+def bez(S,C,E,n=16):
+    "a quadratic curve from S to E, pulled toward C"
+    return [((1-t)**2*S[0]+2*(1-t)*t*C[0]+t*t*E[0],(1-t)**2*S[1]+2*(1-t)*t*C[1]+t*t*E[1]) for t in [i/n for i in range(n+1)]]
+def bvec(l):
+    "the book's unit vector: a bold upright b, hatted, its bold upright letter beside it"
+    return 'hat(bold(upright(b)))_(bold(upright(%s)))'%l
+class Pic:
+    "a picture in points, y up; its box fits what's drawn, whatever the origin; the dynamics bodies drawn at 1.6"
+    SCALE=1.6
+    def __init__(s,*_,**__): s.ops=[]; s.box=[]; s.curl=0
+    def at(s,p): return (p[0]*s.SCALE,p[1]*s.SCALE)
+    def grow(s,p,dx=0,dy=0):
+        x,y=s.at(p); s.box+=[(x-dx,y-dy),(x+dx,y+dy)]
+    def stroke(s,w,dash): return '(paint: black, thickness: %gpt%s)'%(w,', dash: "%s"'%dash if dash else '')
+    def path(s,pts,closed=False,fill=None,w=0.7,dash=None,stroke=True,holes=()):
+        for q in list(pts)+[q for h in holes for q in h]: s.grow(q,w,w)
+        opts=(['fill: '+fill] if fill else [])+(['fill-rule: "even-odd"'] if holes else [])+['stroke: '+(s.stroke(w,dash) if stroke else 'none')]
+        def draw(T):
+            parts=['curve.move(%s)'%T(pts[0])]+['curve.line(%s)'%T(q) for q in pts[1:]]
+            if closed: parts.append('curve.close()')
+            for h in holes: parts+=['curve.move(%s)'%T(h[0])]+['curve.line(%s)'%T(q) for q in h[1:]]+['curve.close()']
+            return 'place(top + left, curve(%s, %s))'%(', '.join(opts),', '.join(parts))
+        s.ops.append(draw)
+    def line(s,a,b,w=0.7,dash=None): s.path([a,b],w=w,dash=dash)
+    def head(s,p,u,head=3.2):
+        "a filled arrowhead with its point at p, pointing along u (unit), head long in points"
+        head/=s.SCALE; ux,uy=u
+        s.path([p,(p[0]-ux*head-uy*head*.42,p[1]-uy*head+ux*head*.42),(p[0]-ux*head+uy*head*.42,p[1]-uy*head-ux*head*.42)],closed=True,fill='black',stroke=False)
+    def arrow(s,a,b,w=0.7,head=3.2,both=False):
+        h=head/s.SCALE
+        dx,dy=b[0]-a[0],b[1]-a[1]; L=math.hypot(dx,dy); ux,uy=dx/L,dy/L
+        a2=(a[0]+ux*h*.8,a[1]+uy*h*.8) if both else a
+        s.line(a2,(b[0]-ux*h*.8,b[1]-uy*h*.8),w)
+        s.head(b,(ux,uy),head)
+        if both: s.head(a,(-ux,-uy),head)
+    def curved(s,pts,w=0.7,head=3.2):
+        "a curve through pts with an arrowhead at its last point"
+        a,b=pts[-3],pts[-1]; L=math.hypot(b[0]-a[0],b[1]-a[1]); u=((b[0]-a[0])/L,(b[1]-a[1])/L); h=head/s.SCALE*.8
+        s.path(pts[:-1]+[(b[0]-u[0]*h,b[1]-u[1]*h)],w=w); s.head(b,u,head)
+    def angle(s,c,r,a0,a1,m=None,at=None,w=0.45,head=2.4):
+        "an angle's arc about c from a0 to a1 degrees, an arrowhead at each end, its name at radius at"
+        pts=ell(c[0],c[1],r,r,a0,a1,24); s.curved(pts,w,head); s.curved(pts[::-1],w,head)
+        if m: q=ell(c[0],c[1],at or r*0.62,at or r*0.62,(a0+a1)/2,(a0+a1)/2,1)[0]; s.label(q,m,6.5)
+    def label(s,p,m,size=7,w=None,h=None):
+        # roughly the label's own size, so the box holds it
+        wide=w if w else len(re.sub(r'[a-z]+\(|\)|_|"','',m))*size*0.3+size*0.3
+        s.grow(p,wide,h or size*0.55)
+        s.ops.append(lambda T,P=p: 'place(center + horizon, dx: %s, dy: %s, text(size: %gpt, $%s$))'%(*T(P,True),size,m))
+    def tick(s,p,u,n=3.2,w=0.45):
+        "a short stroke across p, square to the direction u: where a measure ends"
+        s.line((p[0]-u[1]*n,p[1]+u[0]*n),(p[0]+u[1]*n,p[1]-u[0]*n),w)
+    def dim(s,a,b,m,off=(0,0),ticks=False,gap=0,out=False,w=None,h=None):
+        """a measure, its label beside the middle; ticks: the book's short strokes at both ends; gap: the line breaks
+        that far either side of the middle and the label sits in the break; out: arrows from outside point in at the ends"""
+        dx,dy=b[0]-a[0],b[1]-a[1]; L=math.hypot(dx,dy); u=(dx/L,dy/L)
+        mid=((a[0]+b[0])/2,(a[1]+b[1])/2)
+        if out:
+            s.arrow((a[0]-u[0]*8,a[1]-u[1]*8),a,w=0.45,head=2.4); s.arrow((b[0]+u[0]*8,b[1]+u[1]*8),b,w=0.45,head=2.4)
+            s.line(a,b,w=0.3,dash='dotted')
+        elif gap:
+            s.arrow((mid[0]-u[0]*gap,mid[1]-u[1]*gap),a,w=0.45,head=2.4); s.arrow((mid[0]+u[0]*gap,mid[1]+u[1]*gap),b,w=0.45,head=2.4)
+        else: s.arrow(a,b,w=0.45,head=2.4,both=True)
+        if ticks or out: s.tick(a,u); s.tick(b,u)
+        s.label((mid[0]+off[0],mid[1]+off[1]),m,6.5,w,h)
+    def dot(s,p,r=1.4):
+        s.grow(p,r,r)
+        s.ops.append(lambda T,P=p: 'place(center + horizon, dx: %s, dy: %s, circle(radius: %gpt, fill: black, stroke: none))'%(*T(P,True),r))
+    def cm(s,p,r=3.2,name='B'):
+        "the textbook's centre of mass: a circle, its top-right and bottom-left quarters filled, named B_cm under it"
+        for a0 in (0,180): s.path([p]+ell(p[0],p[1],r,r,a0,a0+90,12),closed=True,fill='black',stroke=False)
+        s.path(ell(p[0],p[1],r,r),closed=True,w=0.6)
+        if name: s.label((p[0]+0.5,p[1]-max(r+5,s.curl+3.6)),'upright(%s)_"cm"'%name,6.5)
+    def body(s,tip,name='B',d=(-14,12),ow=1.0):
+        """the body's name in a circle, a short hooked arrow from it to a point on its outline; ow is that outline's
+        stroke in points: the head stops clear of it, half the stroke plus a hair short of tip"""
+        at=(tip[0]+d[0],tip[1]+d[1]); L=math.hypot(*d); u=(d[0]/L,d[1]/L); R=4.6
+        g=(ow/2+0.9)/s.SCALE; tip=(tip[0]+u[0]*g,tip[1]+u[1]*g)
+        S=(at[0]-u[0]*R,at[1]-u[1]*R); bend=0.22*L*(1 if d[0]*d[1]<0 else -1)
+        C=((S[0]+tip[0])/2-u[1]*bend,(S[1]+tip[1])/2+u[0]*bend)
+        s.curved(bez(S,C,tip,10),w=0.5,head=2.6)
+        s.grow(at,R*s.SCALE,R*s.SCALE)
+        s.ops.append(lambda T,P=at: 'place(center + horizon, dx: %s, dy: %s, circle(radius: %gpt, stroke: 0.6pt + black, inset: 0pt, align(center + horizon, text(size: 7pt, $upright(%s)$))))'%(*T(P,True),R*s.SCALE,name))
+    def axes(s,p,L=13,z=True,which='xyz',gap=3.2,Ly=None,xl=None,yl=None,zl=None):
+        """bold unit vectors from the centre of mass, as the textbook draws them: x right, y up, z toward the reader.
+        z="curve" is the book's b̂z out of a flat page: a curled arrow round the mass centre, its head at the left.
+        Ly: a shorter b̂y; xl, yl, zl: where a label sits from its arrow's tip (b̂z's from the mass centre)"""
+        R=6.4 if z=='curve' else 0
+        def v(e,lab,off):
+            Le=math.hypot(*e); u=(e[0]/Le,e[1]/Le); g=max(gap,R+1.6)
+            if R: e=(e[0]+u[0]*(R-1),e[1]+u[1]*(R-1))
+            s.arrow((p[0]+u[0]*g,p[1]+u[1]*g),(p[0]+e[0],p[1]+e[1]),w=1.1,head=4.4)
+            s.label((p[0]+e[0]+off[0],p[1]+e[1]+off[1]),bvec(lab),7)
+        if 'x' in which: v((L,0),'x',xl or ((-2.5,5.6) if R else (6,0)))
+        if 'y' in which: v((0,Ly or L),'y',yl or ((-6.2,-2.5) if R else (-6,-1)))
+        if z=='curve':
+            s.curl=R
+            # from the lower right, over the top, round to the left, where its head points down past the symbol
+            A=172; s.path(ell(p[0],p[1],R,R,-58,A+3,32),w=1.3)
+            # the book's big head, its base on the arc's end, pointing on along it (down, a little out to the left)
+            t=ell(p[0],p[1],R,R,A,A,1)[0]; a=math.radians(A-10); u=(-math.sin(a),math.cos(a)); hl=6.0/s.SCALE
+            s.head((t[0]+u[0]*hl,t[1]+u[1]*hl),u,6.0)
+            zl=zl or (-R-7.2,1.2); s.label((p[0]+zl[0],p[1]+zl[1]),bvec('z'),7)
+        elif z and 'z' in which: v(proj(0,0,L*2.0),'z',(-5,4))
+    def typst(s):
+        pad=2; x0=min(x for x,_ in s.box)-pad; x1=max(x for x,_ in s.box)+pad
+        y0=min(y for _,y in s.box)-pad; y1=max(y for _,y in s.box)+pad
+        w,h=x1-x0,y1-y0
+        def T(p,pair=False):
+            x,y=s.at(p); x,y=x-x0,y1-y
+            # a pair: from the box's centre, for what's placed by its own centre
+            return ('%.1fpt'%(x-w/2),'%.1fpt'%(y-h/2)) if pair else '(%.1fpt, %.1fpt)'%(x,y)
+        return '#box(width: %.1fpt, height: %.1fpt, baseline: %.1fpt, {\n%s\n})'%(w,h,h/2-3.3,'\n'.join(op(T) for op in s.ops))
+
+def W(text):
+    "a line of words: drawn in the app's font, copied as it is"
+    return {'show':text,'copy':text,'words':True}
+# ---- the fluids pictures: the velocity profiles a fluids course draws, arrows from a line of fluid
+def hatch(p,x0,x1,y,down=True,step=6,n=4):
+    "a wall: its line, short strokes slanting the same way on the solid side"
+    p.line((x0,y),(x1,y),w=0.9)
+    s=-1 if down else 1
+    x=x0+4
+    while x<x1-1:
+        p.line((x,y),(x+s*n*0.8,y+s*n),w=0.45); x+=step
+def profile(p,x,ys,u):
+    "arrows from x, each as long as u(y), the line they start on, and the curve through their tips"
+    tips=[]
+    for y in ys:
+        L=u(y); tips.append((x+L,y))
+        if L>3: p.arrow((x,y),(x+L,y),w=0.5,head=2.2)
+    p.line((x,ys[0]),(x,ys[-1]),w=0.45)
+    p.path(tips,w=0.6)
+    return tips
+# every picture's arrows to one scale: 14 is the average velocity v
+V0=14
+def pic_uniform():
+    p=Pic(); p.SCALE=1.25; profile(p,0,[-12,-6,0,6,12],lambda y:V0)
+    p.label((V0+5,0),'v',7.5); return p
+def pic_pipe():
+    p=Pic(); p.SCALE=1.25; R=14; x1=104
+    hatch(p,-4,x1,R,down=False); hatch(p,-4,x1,-R,down=True)
+    ys=[-R]+[-R+2+3*i for i in range(9)]+[R]
+    # the entrance: flat at v, at rest only at the wall
+    profile(p,2,ys,lambda y:V0*(1-(abs(y)/R)**30))
+    # the boundary layers grow from each wall and meet: from there on the profile is a parabola, its centre 2v
+    for s in (1,-1):
+        p.path([(2+70*t,s*R*(1-t**0.5)) for t in [i/20 for i in range(21)] if 2+70*t>V0+4],w=0.4,dash='dashed')
+    profile(p,72,ys,lambda y:2*V0*(1-(y/R)**2))
+    p.dim((2,-R-9),(72,-R-9),'L_(e)',off=(0,-5.5))
+    p.label((22,R+9),'"no slip"',7); p.label((86,R+9),'"fully developed"',7)
+    return p
+def pic_bl():
+    p=Pic(); p.SCALE=1.25; U=V0; L=92
+    hatch(p,0,L,0,down=True)
+    profile(p,-24,[0,6,12,18,24],lambda y:U)
+    p.label((-17,31),'U_(infinity)',7)
+    d=lambda x:2.6*x**0.5
+    p.path([(x,d(x)) for x in [0,0.5,1,2,3]+list(range(4,L+1,4))],w=0.4,dash='dashed')
+    x=56; D=d(x)
+    profile(p,x,[D*k/5 for k in range(0,6)],lambda y:U*(2*y/D-(y/D)**2))
+    p.line((x,D),(x,D+5),w=0.45); p.arrow((x,D+5),(x+U,D+5),w=0.5,head=2.2)
+    xd=L-4; p.arrow((xd,0.8),(xd,d(xd)-0.6),w=0.45,head=2.2,both=True); p.label((xd+6,d(xd)/2),'delta',7)
+    p.label((x+8,-11),'"boundary layer"',7)
+    return p
+PICW=182
+def Pf(pic,show,note=None):
+    "a picture in a cell of one width, then the row it draws: the row is what a click copies"
+    d=I(show,note=note); t=pic.typst(); d['pic']='#box(width: %dpt)[%s]'%(PICW,t); d['picture']=t; return d
+
 continuum=SH('continuum mechanics','Continuum Mechanics','continuum mechanics: stress, beams, torsion, fluids',
  S('Stress and strain',
   G('Simple loading',
@@ -1711,33 +1895,64 @@ continuum=SH('continuum mechanics','Continuum Mechanics','continuum mechanics: s
     I('I_{2} = (σ_{ii} σ_{jj} − σ_{ij} σ_{ij})/2',note='second invariant'),
     I('I_{3} = det(σ)',note='third invariant')),
   wide=True),
- S('Fluids',
+ S('Fluid properties and pressure',
+  G('Properties',
+    I('ρ = m/V',note='density, kg/m³: mass per volume; water 1000 at 4 °C'),
+    I('γ = W/V = ρg',note='specific weight, N/m³: weight per volume; water 9.81 kN/m³'),
+    I('SG = ρ/ρ_{w} = γ/γ_{w}',note='specific gravity, against water at 4 °C'),
+    I('τ = μ du/dy',note='Newtonian fluid: μ dynamic viscosity, Pa·s'),
+    I('ν = μ/ρ',note='kinematic viscosity, m²/s'),
+    I('p = ρRT',note='ideal gas, absolute p and T: R = 287 J/(kg·K) for air'),
+    I('ρ = constant',note='incompressible: liquids, and gases below Mach 0.3'),
+    I('Ma = v/c',note='Mach number, c the speed of sound')),
   G('At rest',
     I('dp/dz = −ρg',note='z up'),
     I('p = p_{0} + ρgh',note='hydrostatic pressure, h below the surface'),
+    I('p_{abs} = p_{gage} + p_{atm}',note='atmospheric 101.3 kPa at sea level'),
     I('F_{b} = ρgV',note='buoyancy, Archimedes'),
-    I('F = p_{c} A',note='on a flat plate, at its centroid')),
-  G('Moving (Bernoulli: steady, incompressible, no friction)',
-    I('p + ρv^{2}/2 + ρgz = constant',note='Bernoulli'),
+    I('F = p_{c} A',note='on a flat plate: the gage pressure at its centroid times its area'),
+    I('y_{cp} = y_{c} + I_{xc}/(y_{c} A)',note='centre of pressure, y down the slant from the free surface'))),
+ S('Flow rate and velocity profiles',
+  G('Flow rate',
+    I('Q = A v',note='volume flow rate, m³/s: A perpendicular to the flow, v the uniform or average velocity'),
+    I('ṁ = ρQ = ρ A v',note='mass flow rate, kg/s'),
+    I('ṁ = ∫_{A} ρ u dA',note='non-uniform: u the local velocity normal to A; as vectors ∫ ρ (v · n) dA'),
+    I('v = (1/A) ∫_{A} u dA',note='average velocity')),
+  G('Velocity profiles',
+    Pf(pic_uniform(),'u = v',note='uniform: the same speed across the flow'),
+    Pf(pic_pipe(),'u = 2v (1 − r^{2}/R^{2})',note='internal flow: no slip, u = 0 at the wall; laminar and fully developed past the entrance length'),
+    I('L_{e}/D ≈ 0.06 Re',note='entrance length, laminar'),
+    I('L_{e}/D ≈ 4.4 Re^{1/6}',note='entrance length, turbulent'),
+    Pf(pic_bl(),'δ ≈ 5x/√(Re_{x})',note='external flow: laminar boundary layer on a flat plate; viscosity matters inside δ'),
+    I('Re_{x} = ρU_{∞}x/μ',note='turbulent past about 500,000')),
+  wide=True),
+ S('Bernoulli, pipe flow and drag',
+  G('Bernoulli: steady, incompressible, no friction',
+    I('p + ρv^{2}/2 + ρgz = constant',note='along a streamline'),
     I('A_{1} v_{1} = A_{2} v_{2}',note='continuity, incompressible'),
-    I('v = √(2gh)',note="Torricelli: outflow from a tank"),
-    I('F_{D} = (1/2) C_{D} ρ v^{2} A',note='drag force'),
-    I('F_{L} = (1/2) C_{L} ρ v^{2} A',note='lift force')),
+    I('v = √(2gh)',note="Torricelli: outflow from a tank, h below the free surface"),
+    I('v = √(2(p_{0} − p)/ρ)',note='Pitot tube: p₀ stagnation, p static pressure')),
   G('Pipe flow',
     I('Re = ρvD/μ',note='Reynolds number: laminar below about 2300'),
-    I('Q = πR^{4}Δp/(8μL)',note='Poiseuille, laminar pipe'),
-    I('h_{f} = f (L/D) v^{2}/(2g)',note='Darcy-Weisbach head loss'),
+    I('Q = πR^{4}Δp/(8μL)',note='Poiseuille: laminar, horizontal, Δp the drop over L'),
     I('f = 64/Re',note='laminar friction factor'),
+    I('1/√f = −1.8 log_{10}((ε/(3.7D))^{1.11} + 6.9/Re)',note='Haaland: turbulent, ε/D the relative roughness'),
+    I('D_{h} = 4A/P_{w}',note='hydraulic diameter: 4 × area over wetted perimeter')),
+  G('Head loss and energy',
+    I('h_{f} = f (L/D) v^{2}/(2g)',note='Darcy-Weisbach head loss'),
     I('h_{m} = K v^{2}/(2g)',note='minor losses: fittings, valves, bends'),
-    I('D_{h} = 4A/P_{w}',note='hydraulic diameter, wetted perimeter P_w'),
-    I('P = ρ g Q h',note='pump (hydraulic) power'))),
+    I('p_{1}/γ + v_{1}^{2}/(2g) + z_{1} + h_{p} = p_{2}/γ + v_{2}^{2}/(2g) + z_{2} + h_{t} + h_{L}',note='energy in heads: the pump adds head, a turbine takes it, losses add up'),
+    I('P = ρ g Q h',note='pump (hydraulic) power')),
+  G('Drag and lift',
+    I('F_{D} = (1/2) C_{D} ρ v^{2} A',note='drag force: A frontal area, v speed past the body'),
+    I('F_{L} = (1/2) C_{L} ρ v^{2} A',note='lift force: A planform (wing) area'))),
  S('Conservation laws on a control volume',
   G('In general',
     I('dB/dt = d/dt ∫_{CV} ρb dV + ∫_{CS} ρb (v · n) dA',note='Reynolds transport'),
     I('0 = d/dt ∫_{CV} ρ dV + ∫_{CS} ρ (v · n) dA',note='mass'),
     I('Σ F = d/dt ∫_{CV} ρv dV + ∫_{CS} ρv (v · n) dA',note='momentum'),
-    I('Σ τ = d/dt ∫_{CV} ρ(r × v) dV + ∫_{CS} ρ(r × v)(v · n) dA',note='angular momentum'),
-    I('Q̇ − Ẇ = d/dt ∫_{CV} ρe dV + ∫_{CS} ρ(e + p/ρ)(v · n) dA',note='energy, e = u + v²/2 + gz')),
+    I('Σ M = d/dt ∫_{CV} ρ(r × v) dV + ∫_{CS} ρ(r × v)(v · n) dA',note='angular momentum, M the moments'),
+    I('Q̇ − Ẇ = d/dt ∫_{CV} ρe dV + ∫_{CS} ρ(e + p/ρ)(v · n) dA',note='energy, e = û + v²/2 + gz, û internal energy')),
   G('Steady, one way in and one out',
     I('ṁ = ρ_{1} A_{1} v_{1} = ρ_{2} A_{2} v_{2}',note='mass'),
     I('Σ F = ṁ (v_{2} − v_{1})',note='momentum, as vectors'),
@@ -1976,134 +2191,6 @@ numerical=SH('numerical methods','Numerical Methods','numerical methods: roots, 
     I('|x − x_{a}|/|x|',note='relative error'),
     I('|e_{n+1}| ≈ C |e_{n}|^{p}',note='order p (1 linear, 2 quadratic)')),
   wide=True))
-
-# ---- the dynamics sheet's little pictures: each body drawn in Typst beside its volume, with its axes, so the
-# formulas under it say which axis is which. black is the ink colour (it follows light and dark); the shading is a
-# see-through grey, which reads in both
-GREY='rgb(128, 128, 128, 70)'
-def proj(x,y,z,k=0.42):
-    "oblique: z comes toward the reader, down and to the left"
-    return (x-k*z*0.866, y-k*z*0.5)
-def ell(cx,cy,rx,ry,a0=0,a1=360,n=48,tilt=0):
-    out=[]
-    for i in range(n+1):
-        t=math.radians(a0+(a1-a0)*i/n)
-        x,y=rx*math.cos(t),ry*math.sin(t)
-        c,s=math.cos(math.radians(tilt)),math.sin(math.radians(tilt))
-        out.append((cx+x*c-y*s,cy+x*s+y*c))
-    return out
-def bez(S,C,E,n=16):
-    "a quadratic curve from S to E, pulled toward C"
-    return [((1-t)**2*S[0]+2*(1-t)*t*C[0]+t*t*E[0],(1-t)**2*S[1]+2*(1-t)*t*C[1]+t*t*E[1]) for t in [i/n for i in range(n+1)]]
-def bvec(l):
-    "the book's unit vector: a bold upright b, hatted, its bold upright letter beside it"
-    return 'hat(bold(upright(b)))_(bold(upright(%s)))'%l
-class Pic:
-    "a picture in points, y up; its box fits what's drawn, whatever the origin"
-    SCALE=1.25
-    def __init__(s,*_,**__): s.ops=[]; s.box=[]; s.curl=0
-    def at(s,p): return (p[0]*s.SCALE,p[1]*s.SCALE)
-    def grow(s,p,dx=0,dy=0):
-        x,y=s.at(p); s.box+=[(x-dx,y-dy),(x+dx,y+dy)]
-    def stroke(s,w,dash): return '(paint: black, thickness: %gpt%s)'%(w,', dash: "%s"'%dash if dash else '')
-    def path(s,pts,closed=False,fill=None,w=0.7,dash=None,stroke=True,holes=()):
-        for q in list(pts)+[q for h in holes for q in h]: s.grow(q,w,w)
-        opts=(['fill: '+fill] if fill else [])+(['fill-rule: "even-odd"'] if holes else [])+['stroke: '+(s.stroke(w,dash) if stroke else 'none')]
-        def draw(T):
-            parts=['curve.move(%s)'%T(pts[0])]+['curve.line(%s)'%T(q) for q in pts[1:]]
-            if closed: parts.append('curve.close()')
-            for h in holes: parts+=['curve.move(%s)'%T(h[0])]+['curve.line(%s)'%T(q) for q in h[1:]]+['curve.close()']
-            return 'place(top + left, curve(%s, %s))'%(', '.join(opts),', '.join(parts))
-        s.ops.append(draw)
-    def line(s,a,b,w=0.7,dash=None): s.path([a,b],w=w,dash=dash)
-    def head(s,p,u,head=3.2):
-        "a filled arrowhead with its point at p, pointing along u (unit), head long in points"
-        head/=s.SCALE; ux,uy=u
-        s.path([p,(p[0]-ux*head-uy*head*.42,p[1]-uy*head+ux*head*.42),(p[0]-ux*head+uy*head*.42,p[1]-uy*head-ux*head*.42)],closed=True,fill='black',stroke=False)
-    def arrow(s,a,b,w=0.7,head=3.2,both=False):
-        h=head/s.SCALE
-        dx,dy=b[0]-a[0],b[1]-a[1]; L=math.hypot(dx,dy); ux,uy=dx/L,dy/L
-        a2=(a[0]+ux*h*.8,a[1]+uy*h*.8) if both else a
-        s.line(a2,(b[0]-ux*h*.8,b[1]-uy*h*.8),w)
-        s.head(b,(ux,uy),head)
-        if both: s.head(a,(-ux,-uy),head)
-    def curved(s,pts,w=0.7,head=3.2):
-        "a curve through pts with an arrowhead at its last point"
-        a,b=pts[-3],pts[-1]; L=math.hypot(b[0]-a[0],b[1]-a[1]); u=((b[0]-a[0])/L,(b[1]-a[1])/L); h=head/s.SCALE*.8
-        s.path(pts[:-1]+[(b[0]-u[0]*h,b[1]-u[1]*h)],w=w); s.head(b,u,head)
-    def angle(s,c,r,a0,a1,m=None,at=None,w=0.45,head=2.4):
-        "an angle's arc about c from a0 to a1 degrees, an arrowhead at each end, its name at radius at"
-        pts=ell(c[0],c[1],r,r,a0,a1,24); s.curved(pts,w,head); s.curved(pts[::-1],w,head)
-        if m: q=ell(c[0],c[1],at or r*0.62,at or r*0.62,(a0+a1)/2,(a0+a1)/2,1)[0]; s.label(q,m,6.5)
-    def label(s,p,m,size=7,w=None,h=None):
-        # roughly the label's own size, so the box holds it
-        wide=w if w else len(re.sub(r'[a-z]+\(|\)|_|"','',m))*size*0.3+size*0.3
-        s.grow(p,wide,h or size*0.55)
-        s.ops.append(lambda T,P=p: 'place(center + horizon, dx: %s, dy: %s, text(size: %gpt, $%s$))'%(*T(P,True),size,m))
-    def tick(s,p,u,n=3.2,w=0.45):
-        "a short stroke across p, square to the direction u: where a measure ends"
-        s.line((p[0]-u[1]*n,p[1]+u[0]*n),(p[0]+u[1]*n,p[1]-u[0]*n),w)
-    def dim(s,a,b,m,off=(0,0),ticks=False,gap=0,out=False,w=None,h=None):
-        """a measure, its label beside the middle; ticks: the book's short strokes at both ends; gap: the line breaks
-        that far either side of the middle and the label sits in the break; out: arrows from outside point in at the ends"""
-        dx,dy=b[0]-a[0],b[1]-a[1]; L=math.hypot(dx,dy); u=(dx/L,dy/L)
-        mid=((a[0]+b[0])/2,(a[1]+b[1])/2)
-        if out:
-            s.arrow((a[0]-u[0]*8,a[1]-u[1]*8),a,w=0.45,head=2.4); s.arrow((b[0]+u[0]*8,b[1]+u[1]*8),b,w=0.45,head=2.4)
-            s.line(a,b,w=0.3,dash='dotted')
-        elif gap:
-            s.arrow((mid[0]-u[0]*gap,mid[1]-u[1]*gap),a,w=0.45,head=2.4); s.arrow((mid[0]+u[0]*gap,mid[1]+u[1]*gap),b,w=0.45,head=2.4)
-        else: s.arrow(a,b,w=0.45,head=2.4,both=True)
-        if ticks or out: s.tick(a,u); s.tick(b,u)
-        s.label((mid[0]+off[0],mid[1]+off[1]),m,6.5,w,h)
-    def dot(s,p,r=1.4):
-        s.grow(p,r,r)
-        s.ops.append(lambda T,P=p: 'place(center + horizon, dx: %s, dy: %s, circle(radius: %gpt, fill: black, stroke: none))'%(*T(P,True),r))
-    def cm(s,p,r=3.2,name='B'):
-        "the textbook's centre of mass: a circle, its top-right and bottom-left quarters filled, named B_cm under it"
-        for a0 in (0,180): s.path([p]+ell(p[0],p[1],r,r,a0,a0+90,12),closed=True,fill='black',stroke=False)
-        s.path(ell(p[0],p[1],r,r),closed=True,w=0.6)
-        if name: s.label((p[0]+0.5,p[1]-max(r+5,s.curl+3.6)),'upright(%s)_"cm"'%name,6.5)
-    def body(s,tip,name='B',d=(-14,12),ow=1.0):
-        """the body's name in a circle, a short hooked arrow from it to a point on its outline; ow is that outline's
-        stroke in points: the head stops clear of it, half the stroke plus a hair short of tip"""
-        at=(tip[0]+d[0],tip[1]+d[1]); L=math.hypot(*d); u=(d[0]/L,d[1]/L); R=4.6
-        g=(ow/2+0.9)/s.SCALE; tip=(tip[0]+u[0]*g,tip[1]+u[1]*g)
-        S=(at[0]-u[0]*R,at[1]-u[1]*R); bend=0.22*L*(1 if d[0]*d[1]<0 else -1)
-        C=((S[0]+tip[0])/2-u[1]*bend,(S[1]+tip[1])/2+u[0]*bend)
-        s.curved(bez(S,C,tip,10),w=0.5,head=2.6)
-        s.grow(at,R*s.SCALE,R*s.SCALE)
-        s.ops.append(lambda T,P=at: 'place(center + horizon, dx: %s, dy: %s, circle(radius: %gpt, stroke: 0.6pt + black, inset: 0pt, align(center + horizon, text(size: 7pt, $upright(%s)$))))'%(*T(P,True),R*s.SCALE,name))
-    def axes(s,p,L=13,z=True,which='xyz',gap=3.2,Ly=None,xl=None,yl=None,zl=None):
-        """bold unit vectors from the centre of mass, as the textbook draws them: x right, y up, z toward the reader.
-        z="curve" is the book's b̂z out of a flat page: a curled arrow round the mass centre, its head at the left.
-        Ly: a shorter b̂y; xl, yl, zl: where a label sits from its arrow's tip (b̂z's from the mass centre)"""
-        R=6.4 if z=='curve' else 0
-        def v(e,lab,off):
-            Le=math.hypot(*e); u=(e[0]/Le,e[1]/Le); g=max(gap,R+1.6)
-            if R: e=(e[0]+u[0]*(R-1),e[1]+u[1]*(R-1))
-            s.arrow((p[0]+u[0]*g,p[1]+u[1]*g),(p[0]+e[0],p[1]+e[1]),w=1.1,head=4.4)
-            s.label((p[0]+e[0]+off[0],p[1]+e[1]+off[1]),bvec(lab),7)
-        if 'x' in which: v((L,0),'x',xl or ((-2.5,5.6) if R else (6,0)))
-        if 'y' in which: v((0,Ly or L),'y',yl or ((-6.2,-2.5) if R else (-6,-1)))
-        if z=='curve':
-            s.curl=R
-            # from the lower right, over the top, round to the left, where its head points down past the symbol
-            A=172; s.path(ell(p[0],p[1],R,R,-58,A+3,32),w=1.3)
-            # the book's big head, its base on the arc's end, pointing on along it (down, a little out to the left)
-            t=ell(p[0],p[1],R,R,A,A,1)[0]; a=math.radians(A-10); u=(-math.sin(a),math.cos(a)); hl=6.0/s.SCALE
-            s.head((t[0]+u[0]*hl,t[1]+u[1]*hl),u,6.0)
-            zl=zl or (-R-7.2,1.2); s.label((p[0]+zl[0],p[1]+zl[1]),bvec('z'),7)
-        elif z and 'z' in which: v(proj(0,0,L*2.0),'z',(-5,4))
-    def typst(s):
-        pad=2; x0=min(x for x,_ in s.box)-pad; x1=max(x for x,_ in s.box)+pad
-        y0=min(y for _,y in s.box)-pad; y1=max(y for _,y in s.box)+pad
-        w,h=x1-x0,y1-y0
-        def T(p,pair=False):
-            x,y=s.at(p); x,y=x-x0,y1-y
-            # a pair: from the box's centre, for what's placed by its own centre
-            return ('%.1fpt'%(x-w/2),'%.1fpt'%(y-h/2)) if pair else '(%.1fpt, %.1fpt)'%(x,y)
-        return '#box(width: %.1fpt, height: %.1fpt, baseline: %.1fpt, {\n%s\n})'%(w,h,h/2-3.3,'\n'.join(op(T) for op in s.ops))
 
 def up(m):
     "the book sets its measures upright: r, a, b, L, θ"
@@ -2479,9 +2566,6 @@ def Pc(pic,show,note=None):
 def U(name,value):
     "a constant: its name in words, its value as a value with its unit"
     d=L(name,value); d['unit']=True; return d
-def W(text):
-    "a line of words: drawn in the app's font, copied as it is"
-    return {'show':text,'copy':text,'words':True}
 def body_group(title,pic,first,*rows,note=None):
     return G(title,Pc(pic,first,note),*rows)
 
@@ -3616,7 +3700,7 @@ def circle_figure():
         drawn(at+wide[sn]/2,'$ %s $'%body(sn),13,plain(sn)); at+=wide[sn]
         drawn(at+paren/2,'#")"',bracket)
     return '\n'.join(out)+'\n',spots
-UPRIGHT={'Cs','Si','Ry','PV','FV','NPV','PMT','ROI','MSE','TP','FP','FN','TN','Nu','Bi','Pr','CPI','RTT','hit','real','miss','and','mW','BW','SR','GBW','SNR','dBm','LSB','PF','OS','to','GS','DS','BE','ox','ov','ph','FS','ref','clk','cq','su','dc','pk','cm','dB','pH','pOH','pK','HA','OH','vap','tot','sp','eV','mV','kJ','mol','RF','CO','HR','SV','MAP','TPR','BMI','app','cat','out','max','cr','lat','CV','CS','along','for','Re','Im','Var','KE','PE','CT','DT','out','in','th','oc','sc','rms','dB','Ptr','FS'}
+UPRIGHT={'Cs','Si','Ry','PV','FV','NPV','PMT','ROI','MSE','TP','FP','FN','TN','Nu','Bi','Pr','CPI','RTT','hit','real','miss','and','mW','BW','SR','GBW','SNR','dBm','LSB','PF','OS','to','GS','DS','BE','ox','ov','ph','FS','ref','clk','cq','su','dc','pk','cm','dB','pH','pOH','pK','HA','OH','vap','tot','sp','eV','mV','kJ','mol','RF','CO','HR','SV','MAP','TPR','BMI','app','cat','out','max','cr','lat','CV','CS','along','for','Re','Im','Var','KE','PE','CT','DT','out','in','th','oc','sc','rms','dB','Ptr','FS','abs','atm','SG','Ma'}
 OPS={'sin','cos','tan','sinh','cosh','ln','log','exp','lim','det','tr','cot','sec','csc','arcsin','arccos','arctan'}
 OVERRIDE={
  # the dynamics sheet's matrices
@@ -4110,6 +4194,8 @@ for sh in native:
                 pic=it.pop('pic',None)
                 if pic:
                     it['typst']=[pic+' quad '+body(it['show'])]
+                    # the picture alone, which a click on it shows enlarged
+                    it['picture']=it.pop('picture',None) or pic
                     if it.get('note'):
                         d=note_doc(it['note'])
                         if 'math' in d: it['noteTypst']=d['math']

@@ -90,8 +90,9 @@ fn rectangular_impedance_with_a_trailing_unit() {
     ] {
         assert_eq!(show(t), want, "{t}");
     }
-    // a plain sum of reals with a unit is still a mismatch, and sqrt of ohms has no unit to show (as sqrt(4 Ω))
-    assert_eq!(show("100 + 377 Ω"), "");
+    // a plain sum of reals with a unit is still a mismatch (native: it says so, and ↵ offers 100 Ω), and sqrt of
+    // ohms has no unit to show (as sqrt(4 Ω))
+    assert_eq!(show("100 + 377 Ω"), "improper unit conversion");
     assert_eq!(show("sqrt((3+4j) Ω)"), "");
 }
 

@@ -15,7 +15,7 @@ use crate::types::{AngleMode, Complex, UserFunction, Value, ValueKind};
 pub use preprocess::{names_pattern, preprocess_ascii, preprocess_checked, split_glued_functions};
 
 /// Every built-in name, as `SCIENTIFIC_NAMES` lists them.
-pub const NAMES: &str = "sqrt|cbrt|nthroot|nthRoot|sinc|sin|cos|tan|csc|sec|cot|asin|acos|atan|atan2|arcsin|arccos|arctan|arctan2|arccsc|arcsec|arccot|acsc|asec|acot|sinh|cosh|tanh|csch|sech|coth|asinh|acosh|atanh|arsinh|arcosh|artanh|arcsinh|arccosh|arctanh|arccsch|arcsech|arccoth|acsch|asech|acoth|ln|log|log2|log10|exp|abs|sign|floor|ceil|round|clamp|min|max|mean|median|mad|std|stdev|stdevp|var|varp|sum|total|length|count|quartile|quantile|corr|gcd|gcf|hcf|lcm|lcf|lcd|mod|hypot|factorial|nCr|nPr|combinations|permutations|randint|rand|random|re|im|real|imag|conj|arg|range|inclusiveRange|zeta|catalan|pi|tau|inf|infinity|ans";
+pub const NAMES: &str = "sqrt|cbrt|nthroot|nthRoot|sinc|sin|cos|tan|csc|sec|cot|asin|acos|atan|atan2|arcsin|arccos|arctan|arctan2|arccsc|arcsec|arccot|acsc|asec|acot|sinh|cosh|tanh|csch|sech|coth|asinh|acosh|atanh|arsinh|arcosh|artanh|arcsinh|arccosh|arctanh|arccsch|arcsech|arccoth|acsch|asech|acoth|ln|log|log2|log10|exp|abs|sign|floor|ceil|round|clamp|min|max|mean|median|mode|fibonacci|fib|mad|std|stdev|stdevp|var|varp|sum|total|length|count|quartile|quantile|corr|gcd|gcf|hcf|lcm|lcf|lcd|mod|hypot|factorial|nCr|nPr|combinations|permutations|randint|rand|random|re|im|real|imag|conj|arg|range|inclusiveRange|zeta|catalan|pi|tau|inf|infinity|ans";
 
 /// Cap on list sizes from `[a...b]`, `random(N)` and `randint(lo, hi, count)`.
 pub const MAX_LIST_ALLOC: usize = 10_000;
@@ -200,11 +200,33 @@ pub fn scope_for(expr: &str, ctx: &ScientificContext) -> Scope {
 /// `evalScientific`: the float answer, before `crate::precise` replaces float artefacts with true digits.
 pub fn eval_scientific(text: &str, ctx: &ScientificContext) -> Option<Value> {
     let expr = preprocess_checked(text, ctx)?;
+    // native only: `max()`, `sin()`: a call with nothing in it has no answer (it showed overflow or undefined)
+    if empty_call(&expr) {
+        return None;
+    }
     // parsing costs several times an evaluation
     crate::work::spend(300 + 10 * expr.chars().count() as u64);
     let node = parse(&expr).ok()?;
-    let v = eval::evaluate(&node, &scope_for(&expr, ctx)).ok()?;
+    let v = match eval::evaluate(&node, &scope_for(&expr, ctx)) {
+        Ok(v) => v,
+        // native only: a list error that says why (`[1,2] + [1,2,3]`)
+        Err(eval::EvalError::Other(m)) if m.starts_with(eval::matrix::SHOWN) => {
+            return Some(Value::text(&m[eval::matrix::SHOWN.len()..]));
+        }
+        Err(_) => return None,
+    };
     finish(&v, &expr)
+}
+
+/// Native only: a function that needs an input, called with none (`sin()`, `max( )`). `rand()` takes none.
+pub fn empty_call(expr: &str) -> bool {
+    static EMPTY: Lazy = Lazy::new(|| {
+        jsre::js(
+            r"\b(?:a?(?:sin|cos|tan|sec|csc|cot)h?|arc(?:sin|cos|tan)|log(?:10|2)?|ln|exp|sqrt|cbrt|abs|floor|ceil|round|max|min|mean|median|avg|average|sum|prod|gcd|lcm|ncr|npr|std|var|mode|sign|fact|factorial)\s*\(\s*\)",
+            "i",
+        )
+    });
+    jsre::test(&EMPTY, expr)
 }
 
 /// `formatAsFraction` lives in `crate::format`; this is the name the TS callers use.
@@ -231,6 +253,8 @@ mod tests {
         assert_eq!(shown("√16"), "4");
         assert_eq!(shown("|-3|"), "3");
         assert_eq!(shown("2:30"), "");
+        assert_eq!(shown("max()"), "");
+        assert_eq!(shown("sin( )"), "");
         assert_eq!(shown("[1,2,3]"), "[1, 2, 3]");
     }
 

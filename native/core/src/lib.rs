@@ -31,6 +31,7 @@ pub mod work;
 pub mod app;
 
 // ---- WP-FUNCTIONS ----
+pub mod algebra_words;
 pub mod angles;
 pub mod dots;
 pub mod letters;

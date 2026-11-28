@@ -991,7 +991,7 @@ fn drifts_away(vals: &[f64], value: f64) -> bool {
 
 const LIMIT_STEPS: usize = 44;
 
-fn one_sided(f: RealFn, to: f64, side: f64) -> Option<Estimate> {
+pub(crate) fn one_sided(f: RealFn, to: f64, side: f64) -> Option<Estimate> {
     let fin = to.is_finite();
     let g = |h: f64| {
         if fin {

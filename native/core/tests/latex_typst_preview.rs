@@ -60,3 +60,12 @@ fn typed_typst_and_latex_preview_as_math() {
     assert!(typst_preview_useful("integral_0^1 x^2 dif x"));
     assert!(typst_preview_useful("$frac(1, 2)$"));
 }
+
+/// Native only: the word `integral` previews as ∫, and `d A` with a space is still the differential.
+#[test]
+fn integral_in_words_typesets() {
+    use qcalc_core::app::typst_math::{preview_math, typst_preview_useful};
+    assert_eq!(preview_math("integral rho V · d A"), "integral rho V dot.op dif A");
+    assert_eq!(preview_math("∫ ρ V · d A"), "integral ρ V dot.op dif A");
+    assert!(typst_preview_useful("integral rho V · d A"));
+}

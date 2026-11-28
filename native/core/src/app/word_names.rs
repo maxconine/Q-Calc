@@ -58,6 +58,8 @@ fn function_name(word: &str) -> Option<&'static str> {
         "max" => "maximum",
         "mean" => "mean (average)",
         "median" => "median",
+        "mode" => "mode (most common value)",
+        "fib" | "fibonacci" => "Fibonacci number",
         "mad" => "mean absolute deviation",
         "std" | "stdev" => "standard deviation",
         "stdevp" => "population standard deviation",

@@ -123,8 +123,11 @@ fn matrix_operations() {
     assert_eq!(show("inv([1,2;3,4])"), "[-2 1; 1.5 -0.5]");
     assert_eq!(show("[1,2;3,4]^-1"), "[-2 1; 1.5 -0.5]");
     assert_eq!(show("trace([1,2;3,4])"), "5");
-    // sizes that don't match have no answer
-    assert_eq!(show("[1,2]+[1,2,3]"), "");
+    // sizes that don't match have no answer; native only (22 Nov 2026): they say so
+    assert_eq!(
+        show("[1,2]+[1,2,3]"),
+        "can't add lists of 2 and 3: lengths must match"
+    );
 }
 
 // 2026-09-30: isolate a variable; the R_eq line that didn't work

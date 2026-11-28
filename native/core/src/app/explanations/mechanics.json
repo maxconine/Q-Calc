@@ -4775,7 +4775,7 @@
     },
     "try": "1000 kg/m^3 * pi * (30 mm)^2 / 4 * (20 m/s)^2 to N"
   },
-  "Σ τ = d/dt ∫_{CV} ρ(r × v) dV + ∫_{CS} ρ(r × v)(v · n) dA": {
+  "Σ M = d/dt ∫_{CV} ρ(r × v) dV + ∫_{CS} ρ(r × v)(v · n) dA": {
     "title": "Angular momentum equation for a control volume",
     "about": "The net torque on a control volume equals the rate of change of angular momentum inside plus its net outflow: Newton's second law for rotation applied to a fixed region that fluid passes through. It gives the torque on pumps, turbines and lawn sprinklers (Euler's turbomachine equation).",
     "assumptions": [
@@ -5333,5 +5333,1039 @@
       "answer": "ȳ ≈ 67.8 mm"
     },
     "try": "(1600*40 + 2000*90)/(1600 + 2000)"
+  },
+  "ρ = m/V": {
+    "title": "Density: mass per volume",
+    "about": "Density says how much mass fills a unit of volume. It is the starting property of every fluid problem: it turns volumes into masses, flow rates into mass flow rates and depths into pressures.",
+    "assumptions": [
+      "Uniform fluid, or an average over the volume",
+      "Liquids barely change density with pressure; gases follow p = ρRT"
+    ],
+    "vars": [
+      [
+        "ρ",
+        "density",
+        "kg/m^{3}"
+      ],
+      [
+        "m",
+        "mass",
+        "kg"
+      ],
+      [
+        "V",
+        "volume",
+        "m^{3}"
+      ]
+    ],
+    "related": [
+      [
+        "γ = W/V = ρg",
+        "specific weight"
+      ],
+      [
+        "SG = ρ/ρ_{w} = γ/γ_{w}",
+        "specific gravity"
+      ]
+    ],
+    "example": {
+      "problem": "A 2.5 L jug of liquid has a mass of 3.15 kg. Find its density.",
+      "steps": [
+        "ρ = 3.15 kg / 0.0025 m^{3}",
+        "ρ = 1260 kg/m^{3} (glycerin)"
+      ],
+      "answer": "ρ = 1260 kg/m^{3}"
+    },
+    "try": "3.15 kg / 2.5 L to kg/m^3"
+  },
+  "γ = W/V = ρg": {
+    "title": "Specific weight: weight per volume",
+    "about": "Specific weight is the weight of a unit volume of fluid, density times g. It appears wherever gravity acts on a fluid: hydrostatic pressure p = γh, buoyancy and the energy equation written in heads.",
+    "assumptions": [
+      "g constant, 9.81 m/s^{2} at the Earth's surface",
+      "Water at 4 °C: γ = 9.81 kN/m^{3}"
+    ],
+    "vars": [
+      [
+        "γ",
+        "specific weight",
+        "N/m^{3}"
+      ],
+      [
+        "W",
+        "weight",
+        "N"
+      ],
+      [
+        "V",
+        "volume",
+        "m^{3}"
+      ],
+      [
+        "ρ",
+        "density",
+        "kg/m^{3}"
+      ],
+      [
+        "g",
+        "gravitational acceleration",
+        "m/s^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "ρ = m/V",
+        "density"
+      ],
+      [
+        "p = p_{0} + ρgh",
+        "pressure grows by γ per metre of depth"
+      ]
+    ],
+    "example": {
+      "problem": "Find the specific weight of seawater, ρ = 1025 kg/m^{3}.",
+      "steps": [
+        "γ = 1025 × 9.81",
+        "γ = 10 055 N/m^{3}"
+      ],
+      "answer": "γ ≈ 10.1 kN/m^{3}"
+    },
+    "try": "1025 kg/m^3 * 9.81 m/s^2 to kN/m^3"
+  },
+  "SG = ρ/ρ_{w} = γ/γ_{w}": {
+    "title": "Specific gravity",
+    "about": "Specific gravity compares a fluid with water at 4 °C (ρ = 1000 kg/m^{3}). It has no units, so tables list it instead of density: multiply by 1000 kg/m^{3} to get ρ.",
+    "assumptions": [
+      "Reference is water at 4 °C, ρ_{w} = 1000 kg/m^{3}, γ_{w} = 9.81 kN/m^{3}",
+      "For gases, SG is sometimes taken against air instead: check the table"
+    ],
+    "vars": [
+      [
+        "SG",
+        "specific gravity",
+        ""
+      ],
+      [
+        "ρ_{w}",
+        "density of water at 4 °C, 1000",
+        "kg/m^{3}"
+      ],
+      [
+        "γ_{w}",
+        "specific weight of water, 9.81",
+        "kN/m^{3}"
+      ]
+    ],
+    "related": [
+      [
+        "ρ = m/V",
+        "density"
+      ],
+      [
+        "γ = W/V = ρg",
+        "specific weight"
+      ]
+    ],
+    "example": {
+      "problem": "Mercury has SG = 13.6. Find its density and specific weight.",
+      "steps": [
+        "ρ = 13.6 × 1000 = 13 600 kg/m^{3}",
+        "γ = 13.6 × 9.81 = 133.4 kN/m^{3}"
+      ],
+      "answer": "ρ = 13 600 kg/m^{3}, γ ≈ 133 kN/m^{3}"
+    },
+    "try": "13.6 * 9.81 kN/m^3"
+  },
+  "ν = μ/ρ": {
+    "title": "Kinematic viscosity",
+    "about": "Kinematic viscosity is dynamic viscosity divided by density. It is how fast momentum diffuses through the fluid, and it is what the Reynolds number really needs: Re = vD/ν.",
+    "assumptions": [
+      "μ is the dynamic viscosity from τ = μ du/dy",
+      "Both μ and ν depend strongly on temperature"
+    ],
+    "vars": [
+      [
+        "ν",
+        "kinematic viscosity",
+        "m^{2}/s"
+      ],
+      [
+        "μ",
+        "dynamic viscosity",
+        "Pa·s"
+      ],
+      [
+        "ρ",
+        "density",
+        "kg/m^{3}"
+      ]
+    ],
+    "related": [
+      [
+        "τ = μ du/dy",
+        "where μ comes from"
+      ],
+      [
+        "Re = ρvD/μ",
+        "Re = vD/ν"
+      ]
+    ],
+    "example": {
+      "problem": "Water at 20 °C has μ = 1.002 × 10^{−3} Pa·s and ρ = 998 kg/m^{3}. Find ν.",
+      "steps": [
+        "ν = 1.002e−3 / 998"
+      ],
+      "answer": "ν ≈ 1.00 × 10^{−6} m^{2}/s"
+    },
+    "try": "1.002e-3 Pa s / (998 kg/m^3) to m^2/s"
+  },
+  "p = ρRT": {
+    "title": "Ideal gas law (density form)",
+    "about": "For a gas, density follows from pressure and temperature. Use it to find ρ for air before Bernoulli, drag or Reynolds number, and to see when a gas is compressible.",
+    "assumptions": [
+      "p and T absolute: Pa and kelvin, never gage pressure or °C",
+      "R is the gas constant of that gas: 287 J/(kg·K) for air"
+    ],
+    "vars": [
+      [
+        "p",
+        "absolute pressure",
+        "Pa"
+      ],
+      [
+        "ρ",
+        "density",
+        "kg/m^{3}"
+      ],
+      [
+        "R",
+        "specific gas constant",
+        "J/(kg·K)"
+      ],
+      [
+        "T",
+        "absolute temperature",
+        "K"
+      ]
+    ],
+    "related": [
+      [
+        "ρ = constant",
+        "when a gas may be treated as incompressible"
+      ],
+      [
+        "dp/dz = −ρg",
+        "with ρ = p/(RT) for the atmosphere"
+      ]
+    ],
+    "example": {
+      "problem": "Find the density of air at 101.3 kPa and 15 °C.",
+      "steps": [
+        "T = 288.15 K",
+        "ρ = 101 300 / (287 × 288.15)"
+      ],
+      "answer": "ρ ≈ 1.225 kg/m^{3}"
+    },
+    "try": "101.3 kPa / (287 J/(kg K) * 288.15 K) to kg/m^3"
+  },
+  "ρ = constant": {
+    "title": "Incompressible flow",
+    "about": "A fluid whose density does not change is incompressible. Liquids nearly always are, and gases are too when they move slower than about Mach 0.3, where density changes stay under about 5 %. It makes continuity A_{1}v_{1} = A_{2}v_{2} and Bernoulli's equation hold.",
+    "assumptions": [
+      "Liquids: nearly always",
+      "Gases: Ma = v/c below about 0.3, and small temperature changes"
+    ],
+    "vars": [
+      [
+        "ρ",
+        "density",
+        "kg/m^{3}"
+      ]
+    ],
+    "related": [
+      [
+        "Ma = v/c",
+        "the Mach number test"
+      ],
+      [
+        "A_{1} v_{1} = A_{2} v_{2}",
+        "continuity when ρ is constant"
+      ]
+    ],
+    "example": {
+      "problem": "Air flows past a car at 30 m/s (c = 343 m/s). May it be treated as incompressible?",
+      "steps": [
+        "Ma = 30/343 = 0.087",
+        "0.087 < 0.3"
+      ],
+      "answer": "Yes: Ma ≈ 0.09, incompressible"
+    },
+    "try": "30/343"
+  },
+  "Ma = v/c": {
+    "title": "Mach number",
+    "about": "The Mach number is flow speed over the speed of sound. It sorts gas flows: below about 0.3 density hardly changes, near 1 shocks can form.",
+    "assumptions": [
+      "c = √(kRT) for an ideal gas, about 343 m/s in air at 20 °C"
+    ],
+    "vars": [
+      [
+        "Ma",
+        "Mach number",
+        ""
+      ],
+      [
+        "v",
+        "flow speed",
+        "m/s"
+      ],
+      [
+        "c",
+        "speed of sound",
+        "m/s"
+      ]
+    ],
+    "related": [
+      [
+        "ρ = constant",
+        "incompressible below Ma ≈ 0.3"
+      ]
+    ],
+    "example": {
+      "problem": "An airliner cruises at 250 m/s where c = 295 m/s. Find its Mach number.",
+      "steps": [
+        "Ma = 250/295"
+      ],
+      "answer": "Ma ≈ 0.85"
+    },
+    "try": "250/295"
+  },
+  "p_{abs} = p_{gage} + p_{atm}": {
+    "title": "Absolute and gage pressure",
+    "about": "Gauges read pressure above the atmosphere; absolute pressure counts from a vacuum. Use absolute pressure in the ideal gas law and gage pressure for forces on walls that have air on the other side.",
+    "assumptions": [
+      "p_{atm} = 101.3 kPa at sea level; less at altitude",
+      "A vacuum reading is a negative gage pressure"
+    ],
+    "vars": [
+      [
+        "p_{abs}",
+        "absolute pressure",
+        "Pa"
+      ],
+      [
+        "p_{gage}",
+        "pressure above atmospheric",
+        "Pa"
+      ],
+      [
+        "p_{atm}",
+        "atmospheric pressure",
+        "Pa"
+      ]
+    ],
+    "related": [
+      [
+        "p = ρRT",
+        "needs absolute p"
+      ],
+      [
+        "p = p_{0} + ρgh",
+        "p_{0} = 0 gives gage pressure"
+      ]
+    ],
+    "example": {
+      "problem": "A tyre gauge reads 220 kPa at sea level. Find the absolute pressure.",
+      "steps": [
+        "p_{abs} = 220 + 101.3"
+      ],
+      "answer": "p_{abs} = 321.3 kPa"
+    },
+    "try": "220 kPa + 101.3 kPa"
+  },
+  "y_{cp} = y_{c} + I_{xc}/(y_{c} A)": {
+    "title": "Centre of pressure on a submerged flat plate",
+    "about": "The resultant force on a submerged plate acts below its centroid, because pressure grows with depth. The extra distance is the second moment of area over y_{c} A, which shrinks as the plate goes deeper.",
+    "assumptions": [
+      "Liquid at rest, constant density, free surface at gage pressure zero",
+      "y measured along the plate's slant from where its plane meets the free surface",
+      "I_{xc} about the horizontal axis through the centroid"
+    ],
+    "vars": [
+      [
+        "y_{cp}",
+        "depth along the slant to the centre of pressure",
+        "m"
+      ],
+      [
+        "y_{c}",
+        "slant distance to the centroid",
+        "m"
+      ],
+      [
+        "I_{xc}",
+        "second moment of area about the centroid",
+        "m^{4}"
+      ],
+      [
+        "A",
+        "plate area",
+        "m^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "F = p_{c} A",
+        "the size of the force"
+      ],
+      [
+        "I = bh^{3}/12",
+        "rectangle"
+      ]
+    ],
+    "example": {
+      "problem": "A vertical gate 2 m wide and 3 m tall has its top at the water surface. Find the centre of pressure.",
+      "steps": [
+        "y_{c} = 1.5 m, A = 6 m^{2}, I_{xc} = 2 × 3^{3}/12 = 4.5 m^{4}",
+        "y_{cp} = 1.5 + 4.5/(1.5 × 6) = 2.0 m"
+      ],
+      "answer": "y_{cp} = 2.0 m below the surface (two thirds down)"
+    },
+    "try": "1.5 + 4.5/(1.5*6)"
+  },
+  "Q = A v": {
+    "title": "Volume flow rate",
+    "about": "The volume flow rate is the area the fluid crosses times its average velocity, with the area taken perpendicular to the flow. It is the quantity pumps, pipes and continuity are written in.",
+    "assumptions": [
+      "A is perpendicular to the velocity; v is uniform across A or is its average",
+      "For a slanted area use the velocity component normal to it"
+    ],
+    "vars": [
+      [
+        "Q",
+        "volume flow rate",
+        "m^{3}/s"
+      ],
+      [
+        "A",
+        "area perpendicular to the flow",
+        "m^{2}"
+      ],
+      [
+        "v",
+        "uniform or average velocity",
+        "m/s"
+      ]
+    ],
+    "related": [
+      [
+        "ṁ = ρQ = ρ A v",
+        "mass flow rate"
+      ],
+      [
+        "v = (1/A) ∫_{A} u dA",
+        "average velocity"
+      ],
+      [
+        "A_{1} v_{1} = A_{2} v_{2}",
+        "continuity"
+      ]
+    ],
+    "example": {
+      "problem": "Water moves at 2 m/s in a 50 mm diameter pipe. Find Q.",
+      "steps": [
+        "A = π(0.05)^{2}/4 = 1.963 × 10^{−3} m^{2}",
+        "Q = 1.963e−3 × 2"
+      ],
+      "answer": "Q ≈ 3.93 × 10^{−3} m^{3}/s (3.93 L/s)"
+    },
+    "try": "pi (50 mm)^2/4 * 2 m/s to L/s"
+  },
+  "ṁ = ρQ = ρ A v": {
+    "title": "Mass flow rate",
+    "about": "Mass flow rate is mass crossing a section per second. Unlike Q it stays the same along a steady pipe even when density changes, so use it for gases and for the control-volume equations.",
+    "assumptions": [
+      "Uniform density and velocity across A, or averages",
+      "Steady flow: the same ṁ enters and leaves"
+    ],
+    "vars": [
+      [
+        "ṁ",
+        "mass flow rate",
+        "kg/s"
+      ],
+      [
+        "ρ",
+        "density",
+        "kg/m^{3}"
+      ],
+      [
+        "Q",
+        "volume flow rate",
+        "m^{3}/s"
+      ],
+      [
+        "A",
+        "area perpendicular to the flow",
+        "m^{2}"
+      ],
+      [
+        "v",
+        "average velocity",
+        "m/s"
+      ]
+    ],
+    "related": [
+      [
+        "Q = A v",
+        "volume flow rate"
+      ],
+      [
+        "ṁ = ∫_{A} ρ u dA",
+        "non-uniform velocity"
+      ],
+      [
+        "ṁ = ρ_{1} A_{1} v_{1} = ρ_{2} A_{2} v_{2}",
+        "continuity"
+      ]
+    ],
+    "example": {
+      "problem": "Water (ρ = 1000 kg/m^{3}) flows at 3.93 L/s. Find ṁ.",
+      "steps": [
+        "ṁ = 1000 × 3.93 × 10^{−3}"
+      ],
+      "answer": "ṁ = 3.93 kg/s"
+    },
+    "try": "1000 kg/m^3 * 3.93 L/s to kg/s"
+  },
+  "ṁ = ∫_{A} ρ u dA": {
+    "title": "Mass flow rate for a non-uniform velocity",
+    "about": "When the velocity varies across a section, add up ρu over each small piece of area. In vector form this is ∫ ρ (v · n) dA: only the velocity component normal to the area carries fluid through it.",
+    "assumptions": [
+      "u is the local velocity normal to the area",
+      "Same idea as the control-surface term in the mass balance"
+    ],
+    "vars": [
+      [
+        "ṁ",
+        "mass flow rate",
+        "kg/s"
+      ],
+      [
+        "ρ",
+        "density",
+        "kg/m^{3}"
+      ],
+      [
+        "u",
+        "local velocity normal to A",
+        "m/s"
+      ],
+      [
+        "A",
+        "area",
+        "m^{2}"
+      ]
+    ],
+    "related": [
+      [
+        "v = (1/A) ∫_{A} u dA",
+        "average velocity"
+      ],
+      [
+        "0 = d/dt ∫_{CV} ρ dV + ∫_{CS} ρ (v · n) dA",
+        "mass in a control volume"
+      ]
+    ],
+    "example": {
+      "problem": "Water (ρ = 1000 kg/m^{3}) flows in a 20 mm radius pipe with u = 2(1 − r^{2}/R^{2}) m/s. Find ṁ.",
+      "steps": [
+        "ṁ = ∫_{0}^{R} ρ u 2πr dr = ρ × 2 × πR^{2}/2",
+        "ṁ = 1000 × π × 0.02^{2}"
+      ],
+      "answer": "ṁ ≈ 1.257 kg/s"
+    },
+    "try": "1000 kg/m^3 * pi (20 mm)^2 * 1 m/s to kg/s"
+  },
+  "v = (1/A) ∫_{A} u dA": {
+    "title": "Average velocity",
+    "about": "The average velocity is the uniform speed that would carry the same flow rate, Q/A. It is the v in Q = Av, Reynolds number and head-loss formulas.",
+    "assumptions": [
+      "Incompressible, or density constant across the section"
+    ],
+    "vars": [
+      [
+        "v",
+        "average velocity",
+        "m/s"
+      ],
+      [
+        "A",
+        "area",
+        "m^{2}"
+      ],
+      [
+        "u",
+        "local velocity normal to A",
+        "m/s"
+      ]
+    ],
+    "related": [
+      [
+        "Q = A v",
+        "flow rate"
+      ],
+      [
+        "u = 2v (1 − r^{2}/R^{2})",
+        "laminar pipe: the centre is twice the average"
+      ]
+    ],
+    "example": {
+      "problem": "In laminar pipe flow the centreline speed is 0.6 m/s. Find the average velocity.",
+      "steps": [
+        "u_{max} = 2v",
+        "v = 0.6/2"
+      ],
+      "answer": "v = 0.3 m/s"
+    },
+    "try": "0.6/2"
+  },
+  "u = v": {
+    "title": "Uniform velocity profile",
+    "about": "Every bit of fluid crosses the section at the same speed, so the local velocity u equals the average v. It is the model for ideal (frictionless) flow and the usual assumption in Bernoulli and one-dimensional control-volume work.",
+    "assumptions": [
+      "Viscous effects ignored, or the flow is outside a boundary layer",
+      "A good model for turbulent pipe flow, whose profile is fairly flat"
+    ],
+    "vars": [
+      [
+        "u",
+        "local velocity",
+        "m/s"
+      ],
+      [
+        "v",
+        "uniform velocity",
+        "m/s"
+      ]
+    ],
+    "related": [
+      [
+        "Q = A v",
+        "flow rate"
+      ],
+      [
+        "u = 2v (1 − r^{2}/R^{2})",
+        "real laminar pipe flow, no slip at the wall"
+      ]
+    ],
+    "example": {
+      "problem": "A uniform 1.5 m/s stream crosses a 0.2 m^{2} opening. Find Q.",
+      "steps": [
+        "Q = 0.2 × 1.5"
+      ],
+      "answer": "Q = 0.3 m^{3}/s"
+    },
+    "try": "0.2 m^2 * 1.5 m/s"
+  },
+  "u = 2v (1 − r^{2}/R^{2})": {
+    "title": "Laminar pipe flow: the parabolic profile",
+    "about": "Fluid sticks to the wall (no slip), so the velocity grows from zero at the wall to a maximum at the centre. Once the boundary layers from the walls meet, past the entrance length, the laminar profile is a parabola whose centre speed is twice the average.",
+    "assumptions": [
+      "Laminar (Re below about 2300), steady, incompressible, Newtonian",
+      "Fully developed: past the entrance length L_{e}",
+      "Round pipe of radius R"
+    ],
+    "vars": [
+      [
+        "u",
+        "local velocity at radius r",
+        "m/s"
+      ],
+      [
+        "v",
+        "average velocity",
+        "m/s"
+      ],
+      [
+        "r",
+        "distance from the centreline",
+        "m"
+      ],
+      [
+        "R",
+        "pipe radius",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "Q = πR^{4}Δp/(8μL)",
+        "Poiseuille: the flow this profile carries"
+      ],
+      [
+        "L_{e}/D ≈ 0.06 Re",
+        "where it becomes fully developed"
+      ],
+      [
+        "f = 64/Re",
+        "its friction factor"
+      ]
+    ],
+    "example": {
+      "problem": "Oil flows with average velocity 0.4 m/s in a 30 mm pipe, laminar. Find the speed 10 mm from the centre.",
+      "steps": [
+        "R = 15 mm, r/R = 2/3",
+        "u = 2 × 0.4 × (1 − 4/9)"
+      ],
+      "answer": "u ≈ 0.444 m/s"
+    },
+    "try": "2*0.4*(1 - (10/15)^2)"
+  },
+  "L_{e}/D ≈ 0.06 Re": {
+    "title": "Entrance length, laminar",
+    "about": "Near a pipe inlet the velocity profile is still changing as the wall boundary layers grow. In laminar flow they meet after about 0.06 Re diameters; beyond that the profile is the fully developed parabola.",
+    "assumptions": [
+      "Laminar, Re below about 2300",
+      "Roughly uniform flow at the inlet"
+    ],
+    "vars": [
+      [
+        "L_{e}",
+        "entrance length",
+        "m"
+      ],
+      [
+        "D",
+        "pipe diameter",
+        "m"
+      ],
+      [
+        "Re",
+        "Reynolds number, ρvD/μ",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "L_{e}/D ≈ 4.4 Re^{1/6}",
+        "turbulent"
+      ],
+      [
+        "u = 2v (1 − r^{2}/R^{2})",
+        "the profile past it"
+      ]
+    ],
+    "example": {
+      "problem": "Laminar flow at Re = 1500 in a 10 mm tube. How long is the entrance region?",
+      "steps": [
+        "L_{e} = 0.06 × 1500 × 10 mm"
+      ],
+      "answer": "L_{e} = 900 mm"
+    },
+    "try": "0.06*1500*10 mm"
+  },
+  "L_{e}/D ≈ 4.4 Re^{1/6}": {
+    "title": "Entrance length, turbulent",
+    "about": "Turbulent mixing makes the profile develop much faster than in laminar flow: typically 20 to 30 diameters, and only weakly dependent on Re.",
+    "assumptions": [
+      "Turbulent, Re above about 4000"
+    ],
+    "vars": [
+      [
+        "L_{e}",
+        "entrance length",
+        "m"
+      ],
+      [
+        "D",
+        "pipe diameter",
+        "m"
+      ],
+      [
+        "Re",
+        "Reynolds number",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "L_{e}/D ≈ 0.06 Re",
+        "laminar"
+      ]
+    ],
+    "example": {
+      "problem": "Water flows at Re = 10^{5} in a 50 mm pipe. Find the entrance length.",
+      "steps": [
+        "Re^{1/6} = 6.81",
+        "L_{e} = 4.4 × 6.81 × 50 mm"
+      ],
+      "answer": "L_{e} ≈ 1.50 m"
+    },
+    "try": "4.4*(1e5)^(1/6)*50 mm to m"
+  },
+  "δ ≈ 5x/√(Re_{x})": {
+    "title": "Laminar boundary layer thickness (Blasius)",
+    "about": "Over a flat plate, fluid at the wall is at rest and a thin layer of slowed fluid grows downstream; outside it the flow is the free stream U_{∞}. Inside this boundary layer viscosity matters; outside it the flow is nearly frictionless. δ is where u reaches 99 % of U_{∞}.",
+    "assumptions": [
+      "Laminar: Re_{x} below about 5 × 10^{5}",
+      "Flat plate at zero angle, no pressure gradient",
+      "x measured from the leading edge"
+    ],
+    "vars": [
+      [
+        "δ",
+        "boundary layer thickness (99 %)",
+        "m"
+      ],
+      [
+        "x",
+        "distance from the leading edge",
+        "m"
+      ],
+      [
+        "Re_{x}",
+        "local Reynolds number, ρU_{∞}x/μ",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "Re_{x} = ρU_{∞}x/μ",
+        "the local Reynolds number"
+      ],
+      [
+        "τ = μ du/dy",
+        "the wall shear it causes"
+      ]
+    ],
+    "example": {
+      "problem": "Air (ν = 1.5 × 10^{−5} m^{2}/s) flows at 2 m/s over a plate. Find δ 0.5 m from the leading edge.",
+      "steps": [
+        "Re_{x} = 2 × 0.5 / 1.5e−5 = 66 667 (laminar)",
+        "δ = 5 × 0.5/√66 667"
+      ],
+      "answer": "δ ≈ 9.7 mm"
+    },
+    "try": "5*0.5 m/sqrt(2*0.5/1.5e-5) to mm"
+  },
+  "Re_{x} = ρU_{∞}x/μ": {
+    "title": "Local Reynolds number on a plate",
+    "about": "The Reynolds number built on the distance from the leading edge. It grows downstream; the boundary layer turns turbulent at about 5 × 10^{5}.",
+    "assumptions": [
+      "U_{∞} is the free-stream speed outside the boundary layer",
+      "Transition near 5 × 10^{5} on a smooth plate; earlier if rough or disturbed"
+    ],
+    "vars": [
+      [
+        "Re_{x}",
+        "local Reynolds number",
+        ""
+      ],
+      [
+        "ρ",
+        "density",
+        "kg/m^{3}"
+      ],
+      [
+        "U_{∞}",
+        "free-stream speed",
+        "m/s"
+      ],
+      [
+        "x",
+        "distance from the leading edge",
+        "m"
+      ],
+      [
+        "μ",
+        "dynamic viscosity",
+        "Pa·s"
+      ]
+    ],
+    "related": [
+      [
+        "δ ≈ 5x/√(Re_{x})",
+        "laminar thickness"
+      ],
+      [
+        "Re = ρvD/μ",
+        "pipe flow"
+      ]
+    ],
+    "example": {
+      "problem": "Water (ρ = 998 kg/m^{3}, μ = 1.0 × 10^{−3} Pa·s) flows at 1 m/s over a plate. Where does the boundary layer turn turbulent?",
+      "steps": [
+        "x = 5e5 × μ/(ρU_{∞})",
+        "x = 5e5 × 1e−3/(998 × 1)"
+      ],
+      "answer": "x ≈ 0.50 m"
+    },
+    "try": "5e5 * 1e-3/(998*1)"
+  },
+  "v = √(2(p_{0} − p)/ρ)": {
+    "title": "Pitot tube: speed from a pressure difference",
+    "about": "A Pitot tube brings the flow to rest at its tip, where the pressure rises to the stagnation pressure p_{0}. Bernoulli between the free stream and the tip turns the difference p_{0} − p into the speed.",
+    "assumptions": [
+      "Steady, incompressible, frictionless along the streamline into the tip",
+      "p is the static pressure of the stream, p_{0} the stagnation pressure at the tip",
+      "Airspeed below about Mach 0.3"
+    ],
+    "vars": [
+      [
+        "v",
+        "flow speed",
+        "m/s"
+      ],
+      [
+        "p_{0}",
+        "stagnation pressure",
+        "Pa"
+      ],
+      [
+        "p",
+        "static pressure",
+        "Pa"
+      ],
+      [
+        "ρ",
+        "fluid density",
+        "kg/m^{3}"
+      ]
+    ],
+    "related": [
+      [
+        "p + ρv^{2}/2 + ρgz = constant",
+        "Bernoulli"
+      ]
+    ],
+    "example": {
+      "problem": "A Pitot-static probe in air (ρ = 1.225 kg/m^{3}) reads p_{0} − p = 600 Pa. Find the airspeed.",
+      "steps": [
+        "v = √(2 × 600/1.225)"
+      ],
+      "answer": "v ≈ 31.3 m/s"
+    },
+    "try": "sqrt(2*600 Pa/(1.225 kg/m^3))"
+  },
+  "1/√f = −1.8 log_{10}((ε/(3.7D))^{1.11} + 6.9/Re)": {
+    "title": "Haaland: turbulent friction factor",
+    "about": "An explicit fit to the Colebrook equation and the Moody chart, within about 2 %. It gives the Darcy friction factor for turbulent flow from the relative roughness ε/D and Re, with no iteration.",
+    "assumptions": [
+      "Turbulent: Re above about 4000",
+      "Darcy friction factor (four times Fanning)",
+      "ε is the wall roughness height: about 0.0015 mm drawn tubing, 0.045 mm commercial steel"
+    ],
+    "vars": [
+      [
+        "f",
+        "Darcy friction factor",
+        ""
+      ],
+      [
+        "ε",
+        "wall roughness",
+        "m"
+      ],
+      [
+        "D",
+        "pipe diameter",
+        "m"
+      ],
+      [
+        "Re",
+        "Reynolds number",
+        ""
+      ]
+    ],
+    "related": [
+      [
+        "h_{f} = f (L/D) v^{2}/(2g)",
+        "head loss"
+      ],
+      [
+        "f = 64/Re",
+        "laminar"
+      ]
+    ],
+    "example": {
+      "problem": "Water flows at Re = 10^{5} in commercial steel pipe with ε/D = 0.001. Find f.",
+      "steps": [
+        "(0.001/3.7)^{1.11} = 1.09 × 10^{−4}; 6.9/10^{5} = 6.9 × 10^{−5}",
+        "1/√f = −1.8 log_{10}(1.78 × 10^{−4}) = 6.75",
+        "f = 1/6.75^{2}"
+      ],
+      "answer": "f ≈ 0.0220"
+    },
+    "try": "1/(-1.8*log10((0.001/3.7)^1.11 + 6.9/1e5))^2"
+  },
+  "p_{1}/γ + v_{1}^{2}/(2g) + z_{1} + h_{p} = p_{2}/γ + v_{2}^{2}/(2g) + z_{2} + h_{t} + h_{L}": {
+    "title": "Energy equation in heads",
+    "about": "Bernoulli with work and friction. Each term is a height of fluid: pressure head, velocity head and elevation. A pump adds head h_{p}, a turbine removes h_{t}, and friction and fittings lose h_{L} between section 1 and section 2.",
+    "assumptions": [
+      "Steady, incompressible, one inlet and one outlet",
+      "v the average velocity; the kinetic energy factor α taken as 1 (turbulent flow; laminar is 2)",
+      "h_{L} = Σ h_{f} + Σ h_{m}"
+    ],
+    "vars": [
+      [
+        "p",
+        "pressure",
+        "Pa"
+      ],
+      [
+        "γ",
+        "specific weight, ρg",
+        "N/m^{3}"
+      ],
+      [
+        "v",
+        "average velocity",
+        "m/s"
+      ],
+      [
+        "z",
+        "elevation",
+        "m"
+      ],
+      [
+        "h_{p}",
+        "pump head",
+        "m"
+      ],
+      [
+        "h_{t}",
+        "turbine head",
+        "m"
+      ],
+      [
+        "h_{L}",
+        "head loss",
+        "m"
+      ]
+    ],
+    "related": [
+      [
+        "h_{f} = f (L/D) v^{2}/(2g)",
+        "pipe friction"
+      ],
+      [
+        "h_{m} = K v^{2}/(2g)",
+        "fittings"
+      ],
+      [
+        "P = ρ g Q h",
+        "pump power"
+      ]
+    ],
+    "example": {
+      "problem": "A pump lifts water from one open tank to another 20 m higher, with 5 m of head loss in the pipe. Find the pump head.",
+      "steps": [
+        "Both surfaces: p = 0 gage, v ≈ 0",
+        "h_{p} = (z_{2} − z_{1}) + h_{L} = 20 + 5"
+      ],
+      "answer": "h_{p} = 25 m"
+    },
+    "try": "20 + 5"
   }
 }

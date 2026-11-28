@@ -127,6 +127,8 @@ final class OverlayController: NSObject {
     }()
     // the formula sheets' one window, a page at a time, made on the first open; Open in New Window adds the others
     private var sheetWindow: IdentityWindowController?
+    // the bar stepped aside for a sheet's explanation card, and comes back when the card closes
+    private var tuckedForCard = false
     private var extraSheetWindows: [IdentityWindowController] = []
     private lazy var games = GameWindowController()
     private lazy var effects = EggOverlay()
@@ -344,6 +346,7 @@ final class OverlayController: NSObject {
         }
         if panel == nil { build() }
         if NSApp.isHidden { NSApp.unhideWithoutActivation() }
+        tuckedForCard = false
         wantVisible = true
         tellMessagesBar()
         shownAt = uptime()
@@ -833,6 +836,8 @@ final class OverlayController: NSObject {
             }
         }
         controller.onOpenNew = { [weak self] line in self?.openSheetInNewWindow(line) }
+        // an equation's explanation card: the bar sat over it, so it steps aside while the card is up
+        controller.onExplaining = { [weak self] open in self?.cardShown(open) }
         // an explanation's Try: its line in the bar, in place of what was there
         controller.onTry = { [weak self] line in
             guard let self else { return }
@@ -840,6 +845,20 @@ final class OverlayController: NSObject {
             self.model.text = line
         }
         return controller
+    }
+
+    private func cardShown(_ open: Bool) {
+        guard let panel else { return }
+        if open {
+            guard wantVisible, panel.isVisible else { return }
+            tuckedForCard = true
+            panel.orderOut(nil)
+        } else if tuckedForCard {
+            tuckedForCard = false
+            // the user hid the bar meanwhile, or Try is about to show it with its line
+            guard wantVisible, !panel.isVisible else { return }
+            panel.orderFrontRegardless()
+        }
     }
 
     private func openSheetInNewWindow(_ line: String) {

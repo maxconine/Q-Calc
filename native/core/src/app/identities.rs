@@ -34,6 +34,10 @@ pub struct Identity {
     /// Native only: `note` as Typst maths, when it's maths rather than words.
     #[serde(rename = "noteTypst", default, skip_serializing_if = "Option::is_none")]
     pub note_typst: Option<String>,
+    /// Native only: a row's picture (the dynamics sheet's bodies, the fluids profiles) as Typst on its own, also
+    /// drawn at the head of its first `typst` cell; a click on it shows it enlarged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub picture: Option<String>,
     /// Native only: a whole Typst page drawn in place of the row (the unit circle). A sheet with one shows only it,
     /// where the app can typeset; elsewhere the row is blank and the sheet's other sections carry it.
     #[serde(default, skip_serializing_if = "Option::is_none")]

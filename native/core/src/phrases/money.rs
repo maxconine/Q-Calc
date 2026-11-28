@@ -68,6 +68,11 @@ fn value(m: &Caps<'_>, at: usize) -> Option<Val> {
 
 // the line as values, percentages and operators; any other word is a label and drops out
 fn tokens(s: &str) -> Option<Vec<Token>> {
+    tokens_or_measure(s).ok().flatten()
+}
+
+/// [`tokens`], or Err when a money line has a measured amount in it.
+fn tokens_or_measure(s: &str) -> Result<Option<Vec<Token>>, ()> {
     // the TS regex is sticky (`y`); here it is anchored and run on the rest of the line, which is the same
     // because the pattern starts with nothing that looks behind
     static RE: Lazy = Lazy::new(|| {
@@ -92,9 +97,15 @@ fn tokens(s: &str) -> Option<Vec<Token>> {
         }
         at += whole.end();
         if let Some(p) = m.get(1) {
-            out.push(Token::Pct(parse_number(p.as_str())?));
+            let Some(n) = parse_number(p.as_str()) else {
+                return Ok(None);
+            };
+            out.push(Token::Pct(n));
         } else if m.get(3).is_some() {
-            out.push(Token::Value(value(&m, 2)?));
+            let Some(v) = value(&m, 2) else {
+                return Ok(None);
+            };
+            out.push(Token::Value(v));
         } else if let Some(op) = m.get(7) {
             out.push(Token::Op(match op.as_str() {
                 "×" | "x" => '*',
@@ -106,12 +117,45 @@ fn tokens(s: &str) -> Option<Vec<Token>> {
                 out.push(Token::Op('*'));
             } else if matches!(w, "in" | "to" | "into" | "as") || currency_word(w, true).is_some() {
                 // `$20 in euros`, `100 usd to eur`: a conversion or a currency said in words, which isn't a sum
-                return None;
+                return Ok(None);
+            }
+            // native only: a measured amount (`$5 + 3 m`, `$5 * 3 kg`) isn't money, so the sum isn't one: the
+            // unit reading says the units don't match (it answered $8.00). A time is a label (`40 hr`), and so is
+            // any unit on a priced line (`$4/gal * 12 gal`, `$3 per lb`)
+            else if matches!(out.last(), Some(Token::Value(Val { currency: None, .. })))
+                && s[..at - w.len()]
+                    .trim_end()
+                    .ends_with(|c: char| c.is_ascii_digit())
+                && crate::units::reads_as_unit(w)
+                && crate::units::unit_dim(w).is_some_and(|d| d != crate::units::table::Dim::Time)
+                && !priced(s)
+            {
+                let money = out.iter().any(|t| {
+                    matches!(
+                        t,
+                        Token::Value(Val {
+                            currency: Some(_),
+                            ..
+                        })
+                    )
+                }) || s.contains(['$', '€', '£', '¥', '₹']);
+                return if money { Err(()) } else { Ok(None) };
             }
             // any other word is a label
         }
     }
-    super::js_trim(&s[at..]).is_empty().then_some(out)
+    Ok(super::js_trim(&s[at..]).is_empty().then_some(out))
+}
+
+/// Native only: money summed with a measured amount (`$5 + 3 m`, `$5 * 3 kg`), which [`money_math`] turns down.
+pub fn mixes_measure(s: &str) -> bool {
+    tokens_or_measure(s) == Err(())
+}
+
+/// Native only: a line that prices something by a unit (`$4/gal`, `$3 per lb`, `2 lb at $3`, `$5 each`).
+fn priced(s: &str) -> bool {
+    static PRICE: Lazy = Lazy::new(|| js_re(r"/|\b(?:per|at|each|for|a|an)\b", "i"));
+    jsre::test(&PRICE, s)
 }
 
 // left to right: * and / bind first; `+ 10%` and `- 10%` scale everything before them, as a calculator tape does
@@ -164,6 +208,16 @@ fn evaluate(list: &[Token]) -> Option<Sum> {
             let Token::Op(op @ ('*' | '/')) = list[i] else {
                 break;
             };
+            // native only: `$40 * 15%` is 15% of it
+            if let Some(Token::Pct(p)) = list.get(i + 1).copied() {
+                term = if op == '*' {
+                    term * p / 100.0
+                } else {
+                    term / (p / 100.0)
+                };
+                i += 2;
+                continue;
+            }
             let Some(Token::Value(next)) = list.get(i + 1).copied() else {
                 return None;
             };
@@ -306,5 +360,10 @@ mod tests {
         assert_eq!(sum("$20 in euros"), None);
         assert_eq!(sum("10 nights at $120"), Some((1200.0, Some("USD"))));
         assert_eq!(sum("$30/hr * 40 hr"), Some((1200.0, Some("USD"))));
+        // native only: a measured amount isn't money
+        assert_eq!(sum("$5 + 3 m"), None);
+        assert_eq!(sum("$5 * 3 kg"), None);
+        assert_eq!(sum("$4/gal * 12 gal"), Some((48.0, Some("USD"))));
+        assert_eq!(sum("$5 + 3 hours"), Some((8.0, Some("USD"))));
     }
 }

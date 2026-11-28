@@ -17,8 +17,22 @@ use super::ops;
 use super::{EvalError, EvalResult, Val};
 use crate::syntax::Op;
 
-fn size_error(op: Op) -> EvalError {
-    EvalError::Other(format!("Dimension mismatch in {}", op.name()))
+/// Native only: an error the line shows as its answer (the rest go blank), marked by this prefix.
+pub const SHOWN: &str = "shown: ";
+
+/// Native only: two lists of different lengths say so (`[1,2] + [1,2,3]` went blank).
+fn size_error(op: Op, a: usize, b: usize) -> EvalError {
+    let verb = match op {
+        Op::Add => "add",
+        Op::Subtract => "subtract",
+        Op::Multiply | Op::DotMultiply => "multiply",
+        Op::Divide | Op::DotDivide => "divide",
+        Op::DotPow => "raise",
+        _ => "combine",
+    };
+    EvalError::Other(format!(
+        "{SHOWN}can't {verb} lists of {a} and {b}: lengths must match"
+    ))
 }
 
 /// The scalar operator applied entry by entry.
@@ -40,7 +54,7 @@ fn elementwise(op: Op, a: &Val, b: &Val) -> EvalResult {
     match (a, b) {
         (Val::List(x), Val::List(y)) => {
             if x.len() != y.len() {
-                return Err(size_error(op));
+                return Err(size_error(op, x.len(), y.len()));
             }
             x.iter()
                 .zip(y)
@@ -98,7 +112,12 @@ fn sum_of_products(pairs: impl Iterator<Item = (Val, Val)>) -> EvalResult {
 /// mathjs `multiply` of two lists: vector·vector is a number, otherwise the matrix product.
 fn product(a: &Val, b: &Val) -> EvalResult {
     let (da, db) = (depth(a), depth(b));
-    let err = || EvalError::Other("Dimension mismatch in multiplication".into());
+    // native only: says why (it went blank)
+    let err = || {
+        EvalError::Other(format!(
+            "{SHOWN}can't multiply those: their sizes don't fit"
+        ))
+    };
     match (da, db) {
         (1, 1) => {
             let (Val::List(x), Val::List(y)) = (a, b) else {
@@ -165,7 +184,10 @@ pub fn binary(op: Op, a: &Val, b: &Val) -> Option<EvalResult> {
         Op::Mod => Ok(Val::Num(f64::NAN)),
         Op::Multiply if la && lb => product(a, b),
         Op::Divide if lb => Err(EvalError::Other("divide by a matrix".into())),
-        Op::Pow => Err(EvalError::Other("pow of a matrix".into())),
+        // native only: says why (it went blank)
+        Op::Pow => Err(EvalError::Other(format!(
+            "{SHOWN}a list can't take ^ · .^ raises each entry"
+        ))),
         Op::Add
         | Op::Subtract
         | Op::Multiply

@@ -1120,6 +1120,12 @@ fn convert_qty(q: &Qty, target: &Qty) -> Option<f64> {
     if no_angle(&q.dim) == no_angle(&target.dim) {
         return (target.si != 0.0).then(|| q.si / target.si);
     }
+    // native only: fuel economy both ways, distance per volume and volume per distance (`8 L/100km to mpg`)
+    let per_area: DimVec = std::array::from_fn(|i| if i == 1 { -2.0 } else { 0.0 });
+    if (q.dim == per_area || target.dim == per_area) && scale_vec(&q.dim, -1.0) == target.dim {
+        let n = 1.0 / (q.si * target.si);
+        return (q.si != 0.0 && target.si != 0.0).then_some(n);
+    }
     None
 }
 
@@ -1795,6 +1801,10 @@ struct Parser<'v> {
     i: usize,
     used_unit: bool,
     incompatible: bool,
+    /// native only: a quantity and a bare number in one sum (`5 m + 3`), improper once the whole line reads
+    bare_mismatch: bool,
+    /// native only: a quantity divided by zero (`5 m / 0`), which reads as undefined as `1/0` does
+    by_zero: bool,
     // a unit symbol that is also a stored variable (`n = 5`, then `2 n`) is ambiguous, so the whole reading goes
     shadowed: bool,
     vars: &'v BTreeMap<String, f64>,
@@ -1819,6 +1829,8 @@ impl<'v> Parser<'v> {
             i: 0,
             used_unit: false,
             incompatible: false,
+            by_zero: false,
+            bare_mismatch: false,
             shadowed: false,
             vars,
             depth: 0,
@@ -1873,6 +1885,12 @@ impl<'v> Parser<'v> {
     fn parse(&mut self) -> Option<Qty> {
         let q = self.parse_add();
         self.skip();
+        if self.bare_mismatch {
+            if q.is_some() && self.i == self.s.len() && self.used_unit && !self.shadowed {
+                self.incompatible = true;
+            }
+            return None;
+        }
         if self.i != self.s.len() || !self.used_unit || self.shadowed {
             return None;
         }
@@ -1893,10 +1911,26 @@ impl<'v> Parser<'v> {
             match add_qty(&left, &right, sign) {
                 Some(next) => left = next,
                 None => {
+                    // native only: `5 m + 3` too, a quantity and a bare number (it went blank, and ↵ said nothing
+                    // useful): improper, so ↵ offers the unit the number was owed (`missing_unit`)
+                    // (`10 m + 5%` is a percent the percent reading takes, and a temperature stays blank:
+                    // `1.5k + 500` is money shorthand, `6-F` a label)
+                    self.skip();
+                    let temp = Dim::Temperature.vec();
+                    let bare_by_temp = (left.dim == temp || right.dim == temp)
+                        && (is_zero_vec(&left.dim) || is_zero_vec(&right.dim));
                     if !is_zero_vec(&left.dim) && !is_zero_vec(&right.dim) {
                         self.incompatible = true;
+                        return None;
                     }
-                    return None;
+                    if self.at(self.i) == Some('%') || bare_by_temp {
+                        return None;
+                    }
+                    // read on, so a half-typed line (`2 + prod(k`) stays blank
+                    self.bare_mismatch = true;
+                    if is_zero_vec(&left.dim) {
+                        left = right;
+                    }
                 }
             }
         }
@@ -1914,6 +1948,9 @@ impl<'v> Parser<'v> {
                 if ch == Some('*') {
                     left = mul_qty(&left, &right);
                     continue;
+                }
+                if right.si == 0.0 && !(is_zero_vec(&left.dim) && is_zero_vec(&right.dim)) {
+                    self.by_zero = true;
                 }
                 left = div_qty(&left, &right)?;
                 continue;
@@ -2022,7 +2059,8 @@ impl<'v> Parser<'v> {
         }
         // Euler's number where a term starts with a bare e (`20 kg * (1 - e^-1)`, `20 V * e^(-1)`), unless e is a
         // variable; after an amount it's still the electron charge (`5 e to C`), which parse_unit_ref reads there
-        if self.at(self.i) == Some('e') && self.word_at(self.i, "e") && !self.vars.contains_key("e") {
+        if self.at(self.i) == Some('e') && self.word_at(self.i, "e") && !self.vars.contains_key("e")
+        {
             self.i += 1;
             let euler = Qty::plain(std::f64::consts::E);
             return Some(match self.parse_unit_ref() {
@@ -2039,6 +2077,9 @@ impl<'v> Parser<'v> {
                 None => golden,
             });
         }
+        if let Some(call) = self.parse_unit_call() {
+            return call;
+        }
         let amount = match self.parse_amount() {
             Some(a) => Some(a),
             None => self.parse_variable_ref(),
@@ -2052,6 +2093,121 @@ impl<'v> Parser<'v> {
             return Some(amount);
         }
         self.parse_unit_ref()
+    }
+
+    /// native only: `round(5.5 m)`, `floor(2.7 kg)`, `min(1 ft, 2 m)`, `sum(1 m, 2 ft)`, `mean(…)`, `median(…)`:
+    /// rounding happens in the unit shown, the rest compare or add in SI and keep the first unit. None when the
+    /// word isn't one of these calls (or is a variable); Some(None) when it is but can't be read.
+    fn parse_unit_call(&mut self) -> Option<Option<Qty>> {
+        const CALLS: &[&str] = &[
+            "round", "floor", "ceil", "trunc", "fix", "min", "max", "sum", "total", "mean", "avg",
+            "average", "median",
+        ];
+        let start = self.i;
+        let name = *CALLS.iter().find(|w| self.word_at(start, w))?;
+        if self.vars.contains_key(name) {
+            return None;
+        }
+        self.i += name.chars().count();
+        if !self.eat('(') {
+            self.i = start;
+            return None;
+        }
+        Some(self.unit_call_args(name))
+    }
+
+    fn unit_call_args(&mut self, name: &str) -> Option<Qty> {
+        if self.depth >= MAX_BRACKETS {
+            return None;
+        }
+        self.depth += 1;
+        let mut args = Vec::new();
+        loop {
+            let a = self.parse_add();
+            let Some(a) = a else {
+                self.depth -= 1;
+                return None;
+            };
+            args.push(a);
+            if !self.eat(',') {
+                break;
+            }
+        }
+        self.depth -= 1;
+        if !self.eat(')') {
+            return None;
+        }
+        // a unit with no amount (`sum(k`, `Σ(n^2, 1, 10)`) is a letter, not a quantity
+        if args.iter().any(|a| a.bare) {
+            return None;
+        }
+        let first = args.first()?.clone();
+        let rounding = matches!(name, "round" | "floor" | "ceil" | "trunc" | "fix");
+        if rounding {
+            // `round(x, 2)`: places in the unit shown; a temperature's zero isn't its unit's, so it stays out
+            let places = match args.get(1) {
+                None => 0.0,
+                Some(p) if args.len() == 2 && is_zero_vec(&p.dim) && p.si.fract() == 0.0 => p.si,
+                _ => return None,
+            };
+            if first.dim == Dim::Temperature.vec() || is_zero_vec(&first.dim) {
+                return None;
+            }
+            let per = first.prefer.as_deref().map_or(1.0, si_of);
+            let scale = 10f64.powf(places);
+            let v = first.si / per * scale;
+            let r = match name {
+                "round" => crate::jsnum::round(v),
+                "floor" => v.floor(),
+                "ceil" => v.ceil(),
+                _ => v.trunc(),
+            } / scale;
+            return Some(Qty {
+                si: r * per,
+                prec: None,
+                ..first
+            });
+        }
+        if args.iter().any(|a| a.dim != first.dim) {
+            // a length beside a mass, or a bare number beside a length: say so rather than go blank
+            if args.iter().any(|a| !is_zero_vec(&a.dim)) {
+                self.incompatible = true;
+            }
+            return None;
+        }
+        if is_zero_vec(&first.dim) {
+            return None;
+        }
+        let by = |a: &&Qty, b: &&Qty| a.si.total_cmp(&b.si);
+        match name {
+            "min" => args.iter().min_by(by).cloned(),
+            "max" => args.iter().max_by(by).cloned(),
+            "median" => {
+                let mut sorted: Vec<&Qty> = args.iter().collect();
+                sorted.sort_by(by);
+                let n = sorted.len();
+                let m = if n % 2 == 1 {
+                    sorted[n / 2].clone()
+                } else {
+                    let s = add_qty(sorted[n / 2 - 1], sorted[n / 2], 1.0)?;
+                    mul_qty(&s, &Qty::plain(0.5))
+                };
+                Some(Qty {
+                    prefer: first.prefer.clone(),
+                    ..m
+                })
+            }
+            _ => {
+                let mut total = first.clone();
+                for a in &args[1..] {
+                    total = add_qty(&total, a, 1.0)?;
+                }
+                if matches!(name, "sum" | "total") {
+                    return Some(total);
+                }
+                Some(mul_qty(&total, &Qty::plain(1.0 / args.len() as f64)))
+            }
+        }
     }
 
     fn parse_unit_power(&mut self, unit: Qty) -> Option<Qty> {
@@ -2319,6 +2475,9 @@ fn eval_unit_sides(
     }
     let Some(right) = right else {
         let Some(left_q) = left_q else {
+            if lp.by_zero && !lp.incompatible {
+                return Some(Value::text("undefined"));
+            }
             return lp.incompatible.then(unit_error);
         };
         return apply_default_unit(&left_q, defaults);
@@ -2515,9 +2674,32 @@ pub fn try_convert_opt(
     keep_units: bool,
     angle_mode: Option<AngleMode>,
 ) -> Option<Value> {
+    // native only: `pi r^2`, `2πr`: r beside π is a radius, not rankine
+    static PI_R: Lazy = Lazy::new(|| js(r"(?:pi|π|tau|τ)\s*\*?\s*r(?![A-Za-z_])", "i"));
+    if !variables.contains_key("r") && jsre::test(&PI_R, text) {
+        return None;
+    }
+    // native only: `mpg` is miles per US gallon, written back as typed
+    static MPG: Lazy = Lazy::new(|| js(r"(?<![A-Za-z_])mpg(?![A-Za-z_0-9])", "i"));
+    if !variables.contains_key("mpg")
+        && let Ok(true) = MPG.is_match(text)
+    {
+        let t = jsre::replace_all(&MPG, text, |_| "mi/gal".into());
+        let v = try_convert_opt(&t, defaults, variables, keep_units, angle_mode)?;
+        return Some(Value {
+            unit: v.unit.map(|u| if u == "mi/gal" { "mpg".into() } else { u }),
+            ..v
+        });
+    }
     with_angle(angle_mode, || {
         let t = preprocess(text);
-        convert_text(&bare_powers(&t, variables), defaults, variables, keep_units, 0)
+        convert_text(
+            &bare_powers(&t, variables),
+            defaults,
+            variables,
+            keep_units,
+            0,
+        )
     })
 }
 
@@ -2543,7 +2725,11 @@ fn bare_powers(t: &str, variables: &BTreeMap<String, f64>) -> String {
             jsre::group(c, 4),
         );
         let joined = format!("{word}{digit}");
-        if unit(num) && unit(word) && unit_info(&joined).is_none() && !variables.contains_key(&joined) {
+        if unit(num)
+            && unit(word)
+            && unit_info(&joined).is_none()
+            && !variables.contains_key(&joined)
+        {
             format!("{num}{pow}/{word}^{digit}")
         } else {
             format!("{num}{pow}/{joined}")
@@ -2630,7 +2816,10 @@ fn convert_text(
     } else {
         try_simple_convert(src, &units, keep_units)
     };
-    let value = simple.or_else(|| try_unit_expression(src, &units, variables));
+    let value = simple
+        .or_else(|| try_unit_expression(src, &units, variables))
+        // native only: `$5 + 3 m` adds money to a length (the money reading answered $8.00)
+        .or_else(|| crate::phrases::money::mixes_measure(src).then(unit_error));
     // `ans in to mm`: once the left already has a unit, `in to` is into, not inches
     if let Ok(Some(c)) = INTO.captures(src) {
         let improper = value.as_ref().is_none_or(|v| {

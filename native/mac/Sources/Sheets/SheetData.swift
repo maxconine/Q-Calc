@@ -77,6 +77,9 @@ final class SheetData {
                             }
                             return logic.string("lib/identities", "sheetMathDocument", [cell])
                         }
+                        if let picture = i["picture"] as? String {
+                            item["pictureDoc"] = logic.string("lib/identities", "sheetMathDocument", [picture])
+                        }
                         if let maths = i["noteTypst"] as? String {
                             item["noteDoc"] = logic.string("lib/identities", "sheetMathDocument", ["#text(size: 10.5pt)[$\(maths)$]"])
                         }

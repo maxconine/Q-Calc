@@ -44,6 +44,11 @@ fn tries(expr: &str, ok: &dyn Fn(&str) -> bool) -> Option<UnitFix> {
     let quoted = jsre::test(&QUOTED_UNIT, expr);
     let mut budget = BUDGET;
     let work = crate::work::WorkBudget::new(WORK);
+    // native only: a bare number added to a quantity (`6.3489 in + (-5.8221)`, `1 hour + 30`) is offered the
+    // line's own units first, in the order they appear
+    if let Some(fix) = added_term(expr, quoted, ok, &mut budget, &work) {
+        return Some(fix);
+    }
     for m in BARE_NUMERATOR.find_iter(expr).filter_map(Result::ok) {
         let at = m.end();
         for unit in SI_UNITS {
@@ -54,6 +59,62 @@ fn tries(expr: &str, ok: &dyn Fn(&str) -> bool) -> Option<UnitFix> {
             };
             let filled = format!("{}{text}{}", &expr[..at], &expr[at..]);
             budget = budget.checked_sub(filled.len())?;
+            if work.over() {
+                return None;
+            }
+            if ok(&filled) {
+                let n = m.as_str();
+                return Some(UnitFix {
+                    at: expr[..at].encode_utf16().count(),
+                    text,
+                    filled,
+                    hint: format!("{n} has no unit · ↵ again makes it {n} {unit}"),
+                });
+            }
+        }
+    }
+    None
+}
+
+/// Native only: a number that is a term of a sum with no unit of its own, tried with each unit the line already
+/// uses (`161.262 mm - 5.8221` offers mm). None when no unit of the line makes it read.
+fn added_term(
+    expr: &str,
+    quoted: bool,
+    ok: &dyn Fn(&str) -> bool,
+    budget: &mut usize,
+    work: &crate::work::WorkBudget,
+) -> Option<UnitFix> {
+    // a number with no unit, power, digit or call after it
+    static BARE: Lazy = Lazy::new(|| {
+        jsre::js(
+            r#"(?<![A-Za-z_.\d^])\d+(?:\.\d+)?(?:e[+-]?\d+)?(?![\d.]|\s*[A-Za-z_°µμΩ'"%(\[^/*×·÷!])"#,
+            "i",
+        )
+    });
+    // the line's units: a word right after a number (`5 mm`, `2.5in`, `3 °C`)
+    static UNIT: Lazy = Lazy::new(|| jsre::js(r"\d\s*(°?[A-Za-zµμΩ]+)", ""));
+    let mut units: Vec<&str> = Vec::new();
+    for c in UNIT.captures_iter(expr).filter_map(Result::ok) {
+        let u = jsre::group(&c, 1);
+        if !units.contains(&u) {
+            units.push(u);
+        }
+    }
+    // a sum, or a list of quantities (`min(1 ft, 2)`)
+    if units.is_empty() || !expr.contains(['+', '-', '−', ',']) {
+        return None;
+    }
+    for m in BARE.find_iter(expr).filter_map(Result::ok) {
+        let at = m.end();
+        for unit in &units {
+            let text = if quoted {
+                format!(" \"{unit}\"")
+            } else {
+                format!(" {unit}")
+            };
+            let filled = format!("{}{text}{}", &expr[..at], &expr[at..]);
+            *budget = budget.checked_sub(filled.len())?;
             if work.over() {
                 return None;
             }
@@ -99,6 +160,24 @@ mod tests {
                 "{text}"
             );
         }
+        // native only: a bare number added to a quantity takes the line's own unit
+        for (text, filled) in [
+            ("6.3489 in + (-5.8221)", "6.3489 in + (-5.8221 in)"),
+            ("161.262mm - 5.8221", "161.262mm - 5.8221 mm"),
+            ("3 + 5 m", "3 m + 5 m"),
+            ("1 hour + 30", "1 hour + 30 hour"),
+        ] {
+            assert!(!ok(text), "{text}");
+            assert_eq!(
+                missing_unit(text, &ok).map(|f| f.filled),
+                Some(filled.to_string()),
+                "{text}"
+            );
+        }
+        assert_eq!(
+            missing_unit("6.3489 in + (-5.8221)", &ok).map(|f| f.hint),
+            Some("5.8221 has no unit · ↵ again makes it 5.8221 in".to_string())
+        );
         assert_eq!(
             missing_unit("10 mA + 5 / 1 kohm", &ok).map(|f| f.hint),
             Some("5 has no unit · ↵ again makes it 5 V".to_string())

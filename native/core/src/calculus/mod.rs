@@ -25,7 +25,7 @@ use crate::symbolic::Op;
 use crate::types::{AngleMode, TimeLetters, UserFunction, Value, ValueKind};
 
 use closed_form::{Ast, Bound, Job, JobKind};
-use numeric::{derivative_at, integrate, justified, limit};
+use numeric::{derivative_at, integrate, justified, limit, one_sided};
 use pretty::{has_symbol, pretty};
 use together::together;
 use tree::{N, T, call, constant, op, symbol};
@@ -1974,7 +1974,9 @@ fn run_integral(
     let a = bound_value(lower, sci);
     let b = bound_value(upper, sci);
     let (f, a, b) = (f?, a?, b?);
-    let est = integrate(&f, a, b)?;
+    let Some(est) = integrate(&f, a, b) else {
+        return blows_up(&*f, a, b, &v);
+    };
     let tctx = TreeCtx {
         sci,
         bound: Some(v.clone()),
@@ -2094,7 +2096,9 @@ fn run_limit(
     let f = body_fn(body, sci, v);
     let to_v = bound_value(to, sci);
     let (f, to_v) = (f?, to_v?);
-    let est = limit(&f, to_v, side)?;
+    let Some(est) = limit(&f, to_v, side) else {
+        return no_limit(&*f, to_v, side, v);
+    };
     if !est.value.is_finite() {
         return Some(CalculusResult {
             value: Some(Value::number(est.value)),
@@ -2114,6 +2118,52 @@ fn run_limit(
         _ => None,
     };
     Some(with_job(est.value, est.err, draft, sci))
+}
+
+/// Native only: why a two-sided limit has no answer, when its sides say so (`lim x->0 1/x`: the left goes to −∞,
+/// the right to ∞). It went blank, and ↵ said `lim` wasn't a word it knew.
+fn no_limit(f: numeric::RealFn, to: f64, side: i32, v: &str) -> Option<CalculusResult> {
+    if side != 0 || !to.is_finite() {
+        return None;
+    }
+    let left = one_sided(f, to, -1.0)?.value;
+    let right = one_sided(f, to, 1.0)?.value;
+    let shown = |n: f64| {
+        if n == f64::INFINITY {
+            "∞".to_string()
+        } else if n == f64::NEG_INFINITY {
+            "−∞".to_string()
+        } else {
+            crate::format::format_number(n, 6.0)
+        }
+    };
+    if shown(left) == shown(right) {
+        return None;
+    }
+    let at = crate::format::format_number(to, 6.0);
+    Some(CalculusResult {
+        value: Some(Value::text(format!(
+            "no limit: {} from the left ({v}→{at}⁻), {} from the right",
+            shown(left),
+            shown(right)
+        ))),
+        ..CalculusResult::default()
+    })
+}
+
+/// Native only: a definite integral with no answer whose function goes to infinity at a bound (`∫ 1/x dx from 0
+/// to 1`); it went blank, and ↵ said x had no value.
+fn blows_up(f: numeric::RealFn, a: f64, b: f64, v: &str) -> Option<CalculusResult> {
+    let at = [(a, 1.0), (b, -1.0)].into_iter().find(|&(x, side)| {
+        x.is_finite() && one_sided(f, x, side).is_some_and(|e| e.value.is_infinite())
+    })?;
+    Some(CalculusResult {
+        value: Some(Value::text(format!(
+            "no answer: the function goes to ∞ at {v} = {}",
+            crate::format::format_number(at.0, 6.0)
+        ))),
+        ..CalculusResult::default()
+    })
 }
 
 /// `evaluateCalculus`: None when `text` isn't calculus; a None value when it is but has no trustworthy answer.

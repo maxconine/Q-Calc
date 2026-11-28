@@ -1009,6 +1009,48 @@ fn re(p: &str) -> Regex {
     js_re(p, "")
 }
 
+/// `h:mm` (or `h:mm:ss`) spans added and taken away, shown the same way; None unless every term is one.
+fn clock_span_sum(s: &str) -> Option<String> {
+    static TERM: Lazy = Lazy::new(|| re(r"^\s*(\d+):([0-5]\d)(?::([0-5]\d))?\s*$"));
+    let mut total = 0.0;
+    let mut seconds = false;
+    let mut terms = 0;
+    let mut sign = 1.0;
+    let mut rest = s;
+    loop {
+        let cut = rest.find(['+', '-']).unwrap_or(rest.len());
+        let c = caps(&TERM, &rest[..cut])?;
+        let n = |k: usize| jsnum::parse(g(&c, k)).unwrap_or(0.0);
+        seconds |= c.get(3).is_some();
+        total += sign * (n(1) * 3600.0 + n(2) * 60.0 + n(3));
+        terms += 1;
+        if cut == rest.len() {
+            break;
+        }
+        sign = if rest[cut..].starts_with('+') {
+            1.0
+        } else {
+            -1.0
+        };
+        rest = &rest[cut + 1..];
+    }
+    if terms < 2 {
+        return None;
+    }
+    let neg = if total < 0.0 { "-" } else { "" };
+    let t = total.abs();
+    let (h, m, sec) = (
+        (t / 3600.0).floor(),
+        ((t % 3600.0) / 60.0).floor(),
+        t % 60.0,
+    );
+    Some(if seconds {
+        format!("{neg}{h}:{m:02}:{sec:02}")
+    } else {
+        format!("{neg}{h}:{m:02}")
+    })
+}
+
 /// `answerTimePhrase` on a normalized line.
 pub fn answer_time_phrase(s: &str, now: f64, tz: &TimeZone) -> Answered {
     static ARITH: Lazy = Lazy::new(|| re(r"^(.+?)\s*([+-])\s*(.+)$"));
@@ -1054,6 +1096,11 @@ pub fn answer_time_phrase(s: &str, now: f64, tz: &TimeZone) -> Answered {
         {
             return shown(format_duration(a - b));
         }
+    }
+
+    // native only: `3:30 + 1:45` adds spans of hours and minutes (`5:15`), `2:30:15 - 0:45` with seconds
+    if let Some(d) = clock_span_sum(s) {
+        return shown(d);
     }
 
     if let Some(zone) = city_time(s, now) {

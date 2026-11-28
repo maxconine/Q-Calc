@@ -1257,7 +1257,8 @@ mod tests {
         assert_eq!(span(&format!("e{}", "^/".repeat(60))), None);
         assert_eq!(span("2 ++ 3 = = 4"), None);
         assert_eq!(span("sin(30) + foo(2) + 1"), Some((10, 13)));
-        assert_eq!(span("3 kg to m + 2"), None);
+        // native only (22 Nov 2026): `1 m + 2` now reads (improper), so the target is what's marked
+        assert_eq!(span("3 kg to m + 2"), Some((8, 13)));
     }
 
     #[test]

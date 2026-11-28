@@ -818,7 +818,29 @@ impl<'o> Sheet<'o> {
             };
         }
         // native only: `Earth's axial tilt`, `mass of the moon`, before an apostrophe could read as feet
-        let named = crate::named_constants::rewrite(raw, &|n| self.known(n));
+        // native only: `simplify …`, `expand …`, `factor 12`, `is 7 prime`, `fib(10)`, `mode(…)`
+        let rewritten;
+        let raw = match crate::algebra_words::answer(raw, &|n| self.known(n)) {
+            Some(crate::algebra_words::Answer::Text(t)) => {
+                return LineResult {
+                    value: Some(Value::text(t.clone())),
+                    display: t,
+                    ..LineResult::blank(raw)
+                };
+            }
+            Some(crate::algebra_words::Answer::Rewrite(e)) => {
+                rewritten = e;
+                let mut r = self.line_as_typed(&rewritten);
+                r.raw = raw.to_string();
+                return r;
+            }
+            None => raw,
+        };
+        let worded = crate::scientific::preprocess::thousands(
+            &crate::scientific::preprocess::log_base_words(raw),
+            self.known("k"),
+        );
+        let named = crate::named_constants::rewrite(&worded, &|n| self.known(n));
         let marked = crate::feet_inches::foot_marks(&named);
         // native only: `1.8 m to ft in`, `2 m in feet and inches` answer `5 ft 10.8661 in`
         if let Some(mut result) = crate::feet_inches::split_target(&marked)

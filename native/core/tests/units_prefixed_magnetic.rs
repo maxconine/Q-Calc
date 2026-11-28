@@ -61,8 +61,11 @@ fn prefixed_siemens() {
 
 #[test]
 fn ans_plus_a_number_after_moles() {
-    // blank, as after `5 kg` (a number can't be added to an amount); with a unit it adds
-    assert_eq!(sheet(&["5 kg", "ans + 1"])[1], "");
+    // a number can't be added to an amount, as after `5 kg` (native only, 22 Nov 2026: it says so, where it was
+    // blank, and ↵ offers the unit); with a unit it adds
+    const IMPROPER: &str = "improper unit conversion";
+    assert_eq!(sheet(&["5 kg", "ans + 1"])[1], IMPROPER);
+    // (an amount of substance still reads blank there)
     assert_eq!(sheet(&["0.5 mol/L * 2 L", "ans + 1"]), ["1 mol", ""]);
     assert_eq!(sheet(&["x = 1 mol/L * 2 L", "x + 1"]), ["2 mol", ""]);
     assert_eq!(sheet(&["0.5 mol/L * 2 L", "ans + 1 mol"])[1], "2 mol");
