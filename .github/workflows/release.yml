@@ -119,13 +119,15 @@ jobs:
           printf '%s' "$SPARKLE_PRIVATE_KEY" | zsh macos/update-appcast.sh "$ARM_ZIP" "${BASE}/Q-Calc-${VERSION}-apple-silicon.zip"
           printf '%s' "$SPARKLE_PRIVATE_KEY" | QCALC_APPCAST="$PWD/docs/appcast-intel.xml" \
             zsh macos/update-appcast.sh "$INTEL_ZIP" "${BASE}/Q-Calc-${VERSION}-intel.zip"
-          if git diff --quiet -- Casks/q-calc.rb docs/appcast.xml docs/appcast-intel.xml; then
+          # the download page's mac links move only now, once the files are on the release (never before: they'd 404)
+          V="$VERSION" perl -pi -e 's{v[0-9.]+/Q-Calc-[0-9.]+-(apple-silicon|intel)\.}{v$ENV{V}/Q-Calc-$ENV{V}-$1.}g; s{Q Calc [0-9.]+ for Apple silicon}{Q Calc $ENV{V} for Apple silicon}g' docs/index.html
+          if git diff --quiet -- Casks/q-calc.rb docs/appcast.xml docs/appcast-intel.xml docs/index.html; then
             echo "Cask and appcast already match ${VERSION}"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Casks/q-calc.rb docs/appcast.xml docs/appcast-intel.xml
+          git add Casks/q-calc.rb docs/appcast.xml docs/appcast-intel.xml docs/index.html
           git commit -m "q-calc ${VERSION}" -m "[skip ci]"
           git push origin main
 
